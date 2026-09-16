@@ -1,0 +1,18 @@
+{
+  "queryType": "flat",
+  "queryResultType": "workItem",
+  "asOf": "2026-09-15T13:20:30.123-03:00",
+  "columns": [
+    { "referenceName": "System.Id", "name": "ID", "url": "https://untrusted.example.test/fields/System.Id" },
+    { "referenceName": "System.Title", "name": "Titre", "url": "https://untrusted.example.test/fields/System.Title" },
+    { "referenceName": "Microsoft.VSTS.Common.Priority", "name": "Priorité", "url": "https://untrusted.example.test/fields/Priority" }
+  ],
+  "sortColumns": [
+    { "field": { "referenceName": "Microsoft.VSTS.Common.Priority" }, "descending": false }
+  ],
+  "workItems": [
+    { "id": 1203, "url": "https://untrusted.example.test/workItems/1203" },
+    { "id": 1201, "url": "https://untrusted.example.test/workItems/1201" },
+    { "id": 1202, "url": "https://untrusted.example.test/workItems/1202" }
+  ]
+}

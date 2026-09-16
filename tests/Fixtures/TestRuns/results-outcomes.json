@@ -1,0 +1,35 @@
+{
+  "count": 5,
+  "value": [
+    {
+      "id": 91,
+      "outcome": "Error",
+      "automatedTestName": "Contoso.Web.Tests.OutcomeTests.Errored",
+      "automatedTestStorage": "Contoso.Web.Tests.dll"
+    },
+    {
+      "id": 92,
+      "outcome": "Timeout",
+      "automatedTestName": "Contoso.Web.Tests.OutcomeTests.TimedOut",
+      "automatedTestStorage": "Contoso.Web.Tests.dll"
+    },
+    {
+      "id": 93,
+      "outcome": "Aborted",
+      "automatedTestName": "Contoso.Web.Tests.OutcomeTests.Aborted",
+      "automatedTestStorage": "Contoso.Web.Tests.dll"
+    },
+    {
+      "id": 94,
+      "outcome": "Inconclusive",
+      "automatedTestName": "Contoso.Web.Tests.OutcomeTests.Inconclusive",
+      "automatedTestStorage": "Contoso.Web.Tests.dll"
+    },
+    {
+      "id": 95,
+      "outcome": "Ecoulé",
+      "automatedTestName": "Contoso.Web.Tests.OutcomeTests.Unknown",
+      "automatedTestStorage": "Contoso.Web.Tests.dll"
+    }
+  ]
+}

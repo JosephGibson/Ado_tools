@@ -1,0 +1,2 @@
+Synthetic build output — préparation.
+Synthetic task failed: exemple seulement.

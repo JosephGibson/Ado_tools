@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "generator": {
+    "name": "AdoToolkit",
+    "version": "2.1.0-test"
+  },
+  "generatedAt": "2026-09-15T10:30:00-03:00",
+  "culture": "en-US",
+  "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+  "project": "\u00C9quipe / Web?#",
+  "source": "TestCase",
+  "cases": [
+    {
+      "id": 10,
+      "rev": 3,
+      "title": "Synthetic case \u003Ctitle\u003E",
+      "workItemType": "Cas personnalis\u00E9",
+      "state": "Ready",
+      "serverUrl": "https://ado.example.test/",
+      "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+      "project": "\u00C9quipe / Web?#",
+      "changedDate": "2026-09-13T10:30:00-03:00",
+      "retrievedAt": "2026-09-15T10:29:00-03:00",
+      "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/10",
+      "status": "Complete",
+      "stepCount": 1,
+      "rows": [
+        {
+          "number": "1",
+          "sequence": 1,
+          "kind": "Action",
+          "action": "Enter @user",
+          "expectedResult": "",
+          "isExpanded": false,
+          "sourceWorkItemId": 10,
+          "sourceRev": 3,
+          "sourceStepId": 11,
+          "depth": 0,
+          "sharedStepPath": []
+        }
+      ],
+      "sharedSteps": [],
+      "parameters": {
+        "source": "None",
+        "names": [],
+        "rows": [],
+        "sharedParameterSets": []
+      },
+      "diagnosticsSummary": {
+        "errorCount": 0,
+        "warningCount": 0,
+        "informationCount": 0
+      },
+      "diagnostics": []
+    }
+  ]
+}

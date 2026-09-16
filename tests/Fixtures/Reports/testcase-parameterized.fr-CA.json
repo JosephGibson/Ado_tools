@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "generator": {
+    "name": "AdoToolkit",
+    "version": "2.1.0-test"
+  },
+  "generatedAt": "2026-09-15T10:30:00-03:00",
+  "culture": "fr-CA",
+  "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+  "project": "\u00C9quipe / Web?#",
+  "source": "TestCase",
+  "cases": [
+    {
+      "id": 10,
+      "rev": 3,
+      "title": "Synthetic case \u003Ctitle\u003E",
+      "workItemType": "Cas personnalis\u00E9",
+      "state": "Ready",
+      "serverUrl": "https://ado.example.test/",
+      "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+      "project": "\u00C9quipe / Web?#",
+      "priority": 2,
+      "automationStatus": "Not Automated",
+      "areaPath": "Area\\\u00C9quipe",
+      "iterationPath": "Iteration\\One",
+      "assignedTo": {
+        "id": "opaque-id",
+        "displayName": "Fictional Person",
+        "uniqueName": "person@example.test"
+      },
+      "changedBy": {
+        "displayName": "Another Person"
+      },
+      "changedDate": "2026-09-13T10:30:00-03:00",
+      "retrievedAt": "2026-09-15T10:29:00-03:00",
+      "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/10",
+      "status": "Complete",
+      "stepCount": 1,
+      "suite": {
+        "planId": 40,
+        "suiteId": 50,
+        "planName": "Plan",
+        "suiteName": "Suite",
+        "suitePath": [
+          "Root",
+          "Suite"
+        ],
+        "project": "\u00C9quipe / Web?#",
+        "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+        "planWebUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40",
+        "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40\u0026suiteId=50"
+      },
+      "rows": [
+        {
+          "number": "1",
+          "sequence": 1,
+          "kind": "Action",
+          "action": "Enter @user",
+          "expectedResult": "",
+          "isExpanded": false,
+          "sourceWorkItemId": 10,
+          "sourceRev": 3,
+          "sourceStepId": 11,
+          "depth": 0,
+          "sharedStepPath": []
+        }
+      ],
+      "sharedSteps": [],
+      "parameters": {
+        "source": "Shared",
+        "names": [
+          "user",
+          "r\u00E9sultat"
+        ],
+        "rows": [
+          {
+            "r\u00E9sultat": "\u00AB\u202FL\u2019\u00E9t\u00E9\u00A0: 1\u202F234\u00A0!\u202F\u00BB \uD83D\uDE00 e\u0301 \u65E5\u672C\u8A9E \u003Cscript\u003E \u0026 \u0022quoted\u0022\nnext",
+            "user": "alice"
+          }
+        ],
+        "sharedParameterSets": [
+          {
+            "id": 60,
+            "title": "Shared values",
+            "rev": 2,
+            "project": "Param\u00E8tres / A",
+            "webUrl": "https://ado.example.test/tfs/Collection%20A/Param%C3%A8tres%20%2F%20A/_workitems/edit/60"
+          }
+        ]
+      },
+      "diagnosticsSummary": {
+        "errorCount": 0,
+        "warningCount": 0,
+        "informationCount": 0
+      },
+      "diagnostics": []
+    }
+  ]
+}

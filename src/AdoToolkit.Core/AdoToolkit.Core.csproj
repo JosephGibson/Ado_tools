@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <DebugType>embedded</DebugType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Reporting/Assets/report-base.css" />
+    <EmbeddedResource Include="Reporting/Assets/test-failures.css" />
+    <EmbeddedResource Include="Reporting/Assets/test-failures.js" />
+    <EmbeddedResource Include="Reporting/Assets/testcase-report.css" />
+    <EmbeddedResource Include="Reporting/Assets/testcase-document.css" />
+    <EmbeddedResource Include="Reporting/Assets/adotoolkit-mark.svg" />
+    <InternalsVisibleTo Include="AdoToolkit.Core.Tests" />
+  </ItemGroup>
+</Project>

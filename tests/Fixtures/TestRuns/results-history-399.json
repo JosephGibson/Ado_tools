@@ -1,0 +1,11 @@
+{
+  "count": 1,
+  "value": [
+    {
+      "id": 311,
+      "outcome": "Failed",
+      "automatedTestName": "Contoso.Web.Tests.CartTests.AddsItem",
+      "automatedTestStorage": "Contoso.Web.Tests.dll"
+    }
+  ]
+}

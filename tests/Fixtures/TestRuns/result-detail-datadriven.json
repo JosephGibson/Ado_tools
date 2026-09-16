@@ -1,0 +1,77 @@
+{
+  "id": 31,
+  "outcome": "Failed",
+  "resultGroupType": "DataDriven",
+  "automatedTestName": "Contoso.Web.Tests.DataTests.Rows",
+  "automatedTestStorage": "Contoso.Web.Tests.dll",
+  "testCaseTitle": "Data rows",
+  "startedDate": "2026-09-14T10:04:00Z",
+  "errorMessage": "One or more rows failed.",
+  "computerName": "AGENT-03",
+  "subResults": [
+    {
+      "id": 41,
+      "sequenceId": 1,
+      "displayName": "Row 1",
+      "outcome": "Passed",
+      "durationInMs": 1200.5
+    },
+    {
+      "id": 42,
+      "sequenceId": 2,
+      "displayName": "Row 2",
+      "outcome": "Failed",
+      "errorMessage": "Row 2 failed.",
+      "stackTrace": "at Contoso.Web.Tests.DataTests.Rows(Int32 value)",
+      "durationInMs": 1200.5,
+      "subResults": [
+        {
+          "id": 43,
+          "sequenceId": 1,
+          "displayName": "Nested row",
+          "outcome": "Failed",
+          "errorMessage": "Nested failure.",
+          "durationInMs": 1200.5
+        }
+      ]
+    }
+  ],
+  "iterationDetails": [
+    {
+      "id": 1,
+      "outcome": "Passed",
+      "parameters": [
+        {
+          "parameterName": "value",
+          "value": "1"
+        }
+      ],
+      "actionResults": [
+        {
+          "actionPath": "00000001",
+          "stepIdentifier": "2",
+          "outcome": "Passed"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "outcome": "Failed",
+      "errorMessage": "Row 2 failed.",
+      "parameters": [
+        {
+          "parameterName": "value",
+          "value": "2"
+        }
+      ],
+      "actionResults": [
+        {
+          "actionPath": "00000002",
+          "stepIdentifier": "3",
+          "outcome": "Failed",
+          "errorMessage": "Step failed."
+        }
+      ]
+    }
+  ]
+}

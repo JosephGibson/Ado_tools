@@ -1,0 +1,7 @@
+<script>alert('x')</script> </script> <img src=x onerror="alert(1)">
+" autofocus onfocus="alert(2)" ' onclick='alert(3)' & < >
+../CON AUX NUL ..\COM1.exe attachment" onload="x.html
+   at Demo.Hostile<List<int>>.Run(String x) in C:\agent\<script>.cs:line 9
+https://repo.example.test/path?q=%22&x=%3Cscript%3E).
+javascript:alert(1) data:text/html,<script>x</script> file:///C:/agent/test.txt
+« L’été : 1 234 ! » 😀 é 日本語

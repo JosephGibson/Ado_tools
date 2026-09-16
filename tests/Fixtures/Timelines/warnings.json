@@ -1,0 +1,59 @@
+{
+  "records": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "parentId": null,
+      "type": "Stage",
+      "name": "Build",
+      "order": 1,
+      "state": "completed",
+      "result": "succeededWithIssues",
+      "attempt": 1,
+      "identifier": "record-1",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 0,
+      "warningCount": 1
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "parentId": "00000000-0000-0000-0000-000000000001",
+      "type": "Job",
+      "name": "Compile",
+      "order": 1,
+      "state": "completed",
+      "result": "succeededWithIssues",
+      "attempt": 1,
+      "identifier": "record-2",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 0,
+      "warningCount": 1
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000003",
+      "parentId": "00000000-0000-0000-0000-000000000002",
+      "type": "Task",
+      "name": "Analyze",
+      "order": 1,
+      "state": "completed",
+      "result": "succeededWithIssues",
+      "attempt": 1,
+      "identifier": "record-3",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 0,
+      "warningCount": 1,
+      "log": {
+        "id": 11
+      },
+      "issues": [
+        {
+          "type": "warning",
+          "category": "General",
+          "message": "Synthetic analysis warning."
+        }
+      ]
+    }
+  ]
+}

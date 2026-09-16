@@ -1,0 +1,12 @@
+{
+  "value": [
+    {
+      "workItem": { "id": 1202, "name": "Réinitialiser le mot de passe", "workItemFields": [] },
+      "order": 3,
+      "pointAssignments": [],
+      "testPlan": { "id": 812, "name": "Tâches de régression" },
+      "testSuite": { "id": 814, "name": "Connexion" }
+    }
+  ],
+  "count": 1
+}

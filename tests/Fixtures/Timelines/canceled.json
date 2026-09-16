@@ -1,0 +1,67 @@
+{
+  "records": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "parentId": null,
+      "type": "Stage",
+      "name": "Deploy",
+      "order": 1,
+      "state": "completed",
+      "result": "canceled",
+      "attempt": 1,
+      "identifier": "record-1",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "parentId": "00000000-0000-0000-0000-000000000001",
+      "type": "Job",
+      "name": "Waiting",
+      "order": 1,
+      "state": "completed",
+      "result": "canceled",
+      "attempt": 1,
+      "identifier": "record-2",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000003",
+      "parentId": "00000000-0000-0000-0000-000000000001",
+      "type": "Task",
+      "name": "Skipped",
+      "order": 2,
+      "state": "completed",
+      "result": "skipped",
+      "attempt": 1,
+      "identifier": "record-3",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000004",
+      "parentId": "00000000-0000-0000-0000-000000000001",
+      "type": "Task",
+      "name": "Failed first",
+      "order": 3,
+      "state": "completed",
+      "result": "failed",
+      "attempt": 1,
+      "identifier": "record-4",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 1,
+      "warningCount": 0,
+      "log": {
+        "id": 11
+      }
+    }
+  ]
+}

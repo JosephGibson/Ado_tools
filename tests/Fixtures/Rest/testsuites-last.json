@@ -1,0 +1,29 @@
+{
+  "value": [
+    {
+      "id": 816,
+      "name": "Écran d’accueil",
+      "suiteType": "staticTestSuite",
+      "parentSuite": { "id": 814, "name": "Connexion" },
+      "plan": { "id": 812, "name": "Tâches de régression" },
+      "hasChildren": false
+    },
+    {
+      "id": 817,
+      "name": "Carte refusée",
+      "suiteType": "dynamicTestSuite",
+      "parentSuite": { "id": 815, "name": "Paiement" },
+      "plan": { "id": 812, "name": "Tâches de régression" },
+      "hasChildren": false
+    },
+    {
+      "id": 818,
+      "name": "Mot de passe oublié",
+      "suiteType": "staticTestSuite",
+      "parentSuite": { "id": 814, "name": "Connexion" },
+      "plan": { "id": 812, "name": "Tâches de régression" },
+      "hasChildren": false
+    }
+  ],
+  "count": 3
+}

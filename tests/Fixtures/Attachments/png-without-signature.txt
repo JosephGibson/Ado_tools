@@ -1,0 +1,1 @@
+Synthetic text served for an attachment named with a .png extension; it has no PNG signature.

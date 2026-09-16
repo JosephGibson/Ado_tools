@@ -1,0 +1,37 @@
+{
+  "id": 21,
+  "outcome": "Passed",
+  "resultGroupType": "Rerun",
+  "automatedTestName": "Contoso.Web.Tests.RetryTests.FlakyOnce",
+  "automatedTestStorage": "Contoso.Web.Tests.dll",
+  "testCaseTitle": "Flaky once",
+  "startedDate": "2026-09-14T10:01:00Z",
+  "completedDate": "2026-09-14T10:01:03Z",
+  "durationInMs": 3000.0,
+  "computerName": "AGENT-01",
+  "url": "https://ado.example.test/Collection/_apis/test/Runs/201/results/21",
+  "testRun": {
+    "id": 201,
+    "name": "Web tests"
+  },
+  "subResults": [
+    {
+      "id": 1,
+      "sequenceId": 1,
+      "displayName": "Attempt 1",
+      "outcome": "Failed",
+      "errorMessage": "Assert.AreEqual failed. Expected:<1>. Actual:<2>.",
+      "stackTrace": "at Contoso.Web.Tests.RetryTests.FlakyOnce() in C:\\src\\RetryTests.cs:line 42",
+      "startedDate": "2026-09-14T10:01:00Z",
+      "durationInMs": 1200.5
+    },
+    {
+      "id": 2,
+      "sequenceId": 2,
+      "displayName": "Attempt 2",
+      "outcome": "Passed",
+      "startedDate": "2026-09-14T10:01:02Z",
+      "durationInMs": 1200.5
+    }
+  ]
+}

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr-CA" data-case-count="1">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">
+<meta name="generator" content="AdoToolkit 2.1.0-test">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cas de test Azure DevOps</title>
+<style>
+:root {
+  color-scheme: dark;
+  --canvas: #111214; --surface: #191b1f; --raised: #22252a; --border: #363a40;
+  --text: #eceef0; --muted: #a8abb1; --accent: #c0cbd6; --expected: #202328;
+  --warning-bg: #2b261e; --warning-text: #dec79f;
+  --mono: "Cascadia Mono", Consolas, "SFMono-Regular", ui-monospace, monospace;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 15px; line-height: 1.6; color: var(--text); background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+}
+* { box-sizing: border-box; }
+body { max-width: 1240px; margin: 0 auto; padding: 24px 32px 64px; }
+::selection { background: #454b54; color: #fff; }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; border-radius: 3px; }
+[id] { scroll-margin-top: 88px; }
+h1, h2, h3, h4, p { margin-top: 0; }
+h1 { font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.3; letter-spacing: -.025em; font-weight: 600; margin: 12px 0 24px; overflow-wrap: anywhere; }
+h1 a { color: var(--text); text-decoration-color: var(--border); }
+h1 a:hover { color: var(--accent); }
+h2 { font-size: 1.15rem; line-height: 1.4; letter-spacing: -.01em; font-weight: 600; }
+h3, h4 { font-size: .875rem; line-height: 1.5; font-weight: 600; }
+code, .technical, .outline-number { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .875em; }
+.report-nav { position: sticky; top: 12px; z-index: 10; display: flex; gap: 4px; width: fit-content; max-width: 100%; padding: 5px; margin: 0 0 20px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); overflow-x: auto; }
+.report-nav a { flex: 0 0 auto; display: block; padding: 7px 13px; color: var(--muted); font-size: .85rem; font-weight: 600; text-decoration: none; border-radius: 6px; }
+.report-nav a:hover, .report-nav a:focus-visible { color: var(--text); background: #2c3036; }
+.report-nav a:focus-visible { outline-offset: -2px; }
+.skip-link { position: absolute; top: -100px; left: 24px; z-index: 20; padding: 12px 20px; background: var(--raised); }
+.skip-link:focus { top: 12px; }
+header, .parameters, .diagnostics { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 24px; margin-bottom: 24px; box-shadow: none; }
+header { border-top: 1px solid #50565e; background: linear-gradient(160deg, #23262b 0, var(--surface) 180px); }
+.header-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-mark { flex: 0 0 40px; color: #d2d7dc; background: #ffffff03; border-radius: 7px; }
+.brand-text { min-width: 0; }
+.wordmark { margin: 0 0 2px; font-size: .95rem; line-height: 1.35; font-weight: 600; letter-spacing: -.015em; }
+.brand .eyebrow { font-size: .72rem; letter-spacing: .015em; line-height: 1.45; }
+header h1 { margin-top: 22px; }
+.eyebrow { margin: 0; color: var(--muted); font-size: .78rem; font-weight: 600; letter-spacing: .035em; }
+.status-badge { flex-shrink: 0; display: inline-flex; align-items: center; gap: 7px; padding: 3px 10px; border: 1px solid #454b52; border-radius: 4px; color: #c7cbd0; background: #262a2f; font-size: .78rem; font-weight: 600; }
+.status-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.status-badge.partial { color: var(--warning-text); border-color: #6d5e45; background: var(--warning-bg); }
+dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 24px; margin: 0; border-top: 1px solid var(--border); }
+.metadata-field { min-width: 0; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.metadata-wide { grid-column: 1 / -1; }
+dt { color: var(--muted); font-size: .75rem; font-weight: 500; margin-bottom: 3px; }
+dd { margin: 0; font-size: .9rem; overflow-wrap: anywhere; }
+dd.technical { font-size: .82rem; }
+.section-heading { display: flex; align-items: baseline; gap: 10px; margin: 28px 0 12px; }
+.section-heading::after { content: ""; flex: 1; align-self: center; margin-left: 6px; border-top: 1px solid var(--border); }
+.count { font-family: var(--mono); font-size: .8rem; font-weight: 500; padding: 1px 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); }
+.step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin: 12px 0; overflow: hidden; break-inside: avoid; }
+.step-number { display: flex; align-items: center; gap: 10px; margin: 0; padding: 10px 18px; background: var(--raised); border-bottom: 1px solid var(--border); color: var(--muted); font-size: .8rem; }
+.outline-number { color: var(--text); font-size: .9rem; font-weight: 600; }
+.step-number .outline-number { min-width: 2.1rem; padding: 1px 7px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 3px; }
+.step-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.action, .expected { padding: 18px; overflow-wrap: anywhere; }
+.action h4, .expected h4 { color: var(--muted); margin: 0 0 10px; font-size: .75rem; letter-spacing: .025em; }
+.expected { background: var(--expected); border-left: 1px solid var(--border); }
+.expected h4 { color: #c7cbd0; }
+.shared-banner { padding: 13px 18px; background: var(--raised); border-left: 2px solid #727880; }
+.shared-banner h3 { margin: 0; font-size: .9rem; font-weight: 600; }
+.shared-banner .outline-number { margin-right: 8px; }
+.shared-group { margin-left: 16px; padding-left: 16px; border-left: 1px solid #4b5058; }
+.warning { background: var(--warning-bg); border-left-color: #ac9167; }
+.warning, .warning a, .warning .outline-number { color: var(--warning-text); }
+.warning p { margin: 8px 0 0; font-size: .875rem; }
+.parameters h2, .diagnostics h2 { margin-bottom: 16px; }
+.parameters p { font-size: .875rem; margin-bottom: 12px; }
+.table-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 4px; }
+table { width: 100%; min-width: 480px; border-collapse: collapse; }
+th, td { text-align: left; vertical-align: top; padding: 11px 14px; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+th { background: var(--raised); color: var(--muted); font-family: var(--mono); font-size: .8rem; font-weight: 600; }
+td { font-size: .875rem; }
+th + th, td + td { border-left: 1px solid var(--border); }
+tbody tr:nth-child(even) { background: #ffffff03; }
+tbody tr:hover { background: #ffffff06; }
+tbody tr:last-child td { border-bottom: 0; }
+.diagnostics { margin-top: 24px; }
+.diagnostics ul { margin: 0; padding: 0; list-style: none; }
+.diagnostics li { padding: 12px 0; border-top: 1px solid var(--border); overflow-wrap: anywhere; font-size: .875rem; }
+.diagnostics code { display: inline-block; padding: 1px 6px; border-radius: 4px; background: var(--raised); color: var(--text); }
+@media (max-width: 900px) { dl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) {
+  body { padding: 12px 12px 36px; }
+  header, .parameters, .diagnostics { padding: 18px; border-radius: 6px; }
+  .report-nav { top: 8px; margin-bottom: 14px; width: 100%; }
+  .report-nav a { padding: 7px 10px; }
+  .step-columns { grid-template-columns: minmax(0, 1fr); }
+  .expected { border-left: 0; border-top: 1px solid var(--border); }
+  .shared-group { margin-left: 6px; padding-left: 8px; }
+  .action, .expected { padding: 16px; }
+  dl { column-gap: 16px; }
+}
+@media (max-width: 420px) {
+  dl { grid-template-columns: minmax(0, 1fr); }
+  .header-top { align-items: flex-start; }
+  .brand { gap: 9px; }
+  .brand-mark { width: 32px; height: 32px; flex-basis: 32px; }
+}
+@media print {
+  :root { color-scheme: light; --canvas: #fff; --surface: #fff; --raised: #f2f4f6; --border: #aab2bd; --text: #111; --muted: #404853; --accent: #193b60; --expected: #f5f7f8; --warning-bg: #fff; --warning-text: #493400; font-size: 10pt; }
+  body { max-width: none; padding: 0; background: white; }
+  .report-nav, .skip-link { display: none; }
+  header, .parameters, .diagnostics, .step-card { box-shadow: none; border-radius: 0; }
+  header { padding: 16px; background: white; }
+  .brand-mark { color: #333; background: none; }
+  dl { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .step-columns { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .expected { border-top: 0; border-left: 1px solid var(--border); }
+  .step-card, .shared-banner, tr { break-inside: avoid; }
+  h2, h3, .shared-banner { break-after: avoid; }
+  a, h1 a, .expected h4, .status-badge { color: #111; }
+  .status-badge { background: white; border-color: var(--border); }
+  .table-scroll { overflow: visible; } table { min-width: 0; table-layout: fixed; }
+  th { display: table-cell; } thead { display: table-header-group; }
+}
+@media (forced-colors: active) {
+  .status-badge, .step-card, .report-nav, .table-scroll { border: 1px solid CanvasText; }
+  a:focus-visible { outline-color: Highlight; }
+}
+</style>
+</head>
+<body>
+<article class="test-case">
+<a class="skip-link" href="#report-1-steps">Étapes</a>
+<nav class="report-nav" aria-label="Sections du rapport">
+<a href="#report-1-overview">Vue d’ensemble</a>
+<a href="#report-1-steps">Étapes</a>
+</nav>
+<header id="report-1-overview">
+<div class="header-top"><div class="brand"><svg xmlns="http://www.w3.org/2000/svg" class="brand-mark" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+  <rect x="1" y="1" width="38" height="38" rx="7" fill="none" stroke="currentColor" stroke-opacity=".3" />
+  <path d="M10 29 20 10 30 29M14 23h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" stroke-linejoin="round" />
+  <path d="M29 32h3v-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-opacity=".55" />
+</svg>
+<div class="brand-text"><p class="wordmark">AdoToolkit</p><p class="eyebrow">Cas de test Azure DevOps</p></div></div><span class="status-badge">Complet</span></div>
+<h1><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/10">Synthetic case &lt;title&gt;</a></h1>
+<dl>
+<div class="metadata-field"><dt>ID</dt><dd class="technical">10</dd></div>
+<div class="metadata-field"><dt>Révision</dt><dd class="technical">3</dd></div>
+<div class="metadata-field"><dt>Type d’élément de travail</dt><dd>Cas personnalisé</dd></div>
+<div class="metadata-field"><dt>État</dt><dd>Ready</dd></div>
+<div class="metadata-field"><dt>Dernière modification</dt><dd class="technical">dimanche 13 septembre 2026 10:30 -03:00</dd></div>
+<div class="metadata-field metadata-wide"><dt>Serveur</dt><dd class="technical">https://ado.example.test/</dd></div>
+<div class="metadata-field metadata-wide"><dt>Collection</dt><dd class="technical">https://ado.example.test/tfs/Collection%20A/</dd></div>
+<div class="metadata-field"><dt>Projet</dt><dd>Équipe / Web?#</dd></div>
+<div class="metadata-field"><dt>Généré le</dt><dd class="technical">mardi 15 septembre 2026 10:30 -03:00</dd></div>
+<div class="metadata-field"><dt>Version de la boîte à outils</dt><dd class="technical">2.1.0-test</dd></div>
+<div class="metadata-field"><dt>Nombre d’étapes</dt><dd class="technical">1</dd></div>
+<div class="metadata-field"><dt>État</dt><dd>Complet</dd></div>
+</dl>
+</header>
+<h2 class="section-heading" id="report-1-steps">Étapes <span class="count">1</span></h2>
+<section class="steps" data-step-count="1">
+<div class="step-card">
+<h3 class="step-number"><span class="outline-number">1</span> Étape</h3>
+<div class="step-columns">
+<div class="action"><h4>Action</h4>Enter @user</div>
+<div class="expected"><h4>Résultat attendu</h4></div>
+</div>
+</div>
+</section>
+</article>
+</body>
+</html>

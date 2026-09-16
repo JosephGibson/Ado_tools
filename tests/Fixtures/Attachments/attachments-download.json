@@ -1,0 +1,102 @@
+{
+  "count": 14,
+  "value": [
+    {
+      "id": 6001,
+      "fileName": "Capture d’écran.PNG",
+      "size": 94,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 1: valid PNG"
+    },
+    {
+      "id": 6002,
+      "fileName": "unsigned.png",
+      "size": 94,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 1: .png without the PNG signature"
+    },
+    {
+      "id": 6003,
+      "fileName": "details.json",
+      "size": 189,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 2: valid JSON"
+    },
+    {
+      "id": 6004,
+      "fileName": "broken.json",
+      "size": 45,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 2: malformed JSON"
+    },
+    {
+      "id": 6005,
+      "fileName": "large.json",
+      "size": 1200,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 2: above maximumInlineJsonBytes (generated)"
+    },
+    {
+      "id": 6006,
+      "fileName": "deep.json",
+      "size": 131,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 2: depth 65 (generated)"
+    },
+    {
+      "id": 6007,
+      "fileName": "output.htm",
+      "size": 313,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 3: HTML containing script"
+    },
+    {
+      "id": 6008,
+      "fileName": "trace.dat",
+      "size": 84,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 4: unknown extension"
+    },
+    {
+      "id": 6009,
+      "fileName": "noextension",
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 4: no extension and no declared size"
+    },
+    {
+      "id": 6010,
+      "fileName": "oversize.png",
+      "size": 9999999,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 5: declared size above maximumAttachmentBytes"
+    },
+    {
+      "id": 6011,
+      "fileName": "understated.bin",
+      "size": 10,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 5: understated size exceeded while streaming (generated)"
+    },
+    {
+      "id": 6012,
+      "fileName": "failing.txt",
+      "size": 20,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 7: download fails after retries"
+    },
+    {
+      "id": 6013,
+      "fileName": "partial.txt",
+      "size": 84,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 7: retry after a partial body"
+    },
+    {
+      "id": 6014,
+      "fileName": "sub-result.png",
+      "size": 94,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Attachments 8: sub-result attachment"
+    }
+  ]
+}

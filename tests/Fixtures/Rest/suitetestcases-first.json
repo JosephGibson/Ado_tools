@@ -1,0 +1,19 @@
+{
+  "value": [
+    {
+      "workItem": { "id": 1203, "name": "Ouvrir une session", "workItemFields": [] },
+      "order": 1,
+      "pointAssignments": [],
+      "testPlan": { "id": 812, "name": "Tâches de régression" },
+      "testSuite": { "id": 814, "name": "Connexion" }
+    },
+    {
+      "workItem": { "id": 1201, "name": "Fermer la session", "workItemFields": [] },
+      "order": 2,
+      "pointAssignments": [],
+      "testPlan": { "id": 812, "name": "Tâches de régression" },
+      "testSuite": { "id": 814, "name": "Connexion" }
+    }
+  ],
+  "count": 2
+}

@@ -1,0 +1,17 @@
+{
+  "count": 1,
+  "value": [
+    {
+      "id": 1010,
+      "rev": 7,
+      "fields": {
+        "System.Id": 1010,
+        "System.Rev": 7,
+        "System.Title": "Vérifier le panier",
+        "System.State": "Design",
+        "System.WorkItemType": "Test Case"
+      },
+      "url": "https://ado.example.test/Collection/_apis/wit/workItems/1010"
+    }
+  ]
+}

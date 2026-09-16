@@ -1,0 +1,62 @@
+{
+  "count": 2,
+  "value": [
+    {
+      "id": 201,
+      "name": "Web tests",
+      "state": "Completed",
+      "isAutomated": true,
+      "startedDate": "2026-09-14T10:00:00Z",
+      "completedDate": "2026-09-14T10:05:00Z",
+      "url": "https://ado.example.test/Collection/_apis/test/Runs/201",
+      "build": {
+        "id": 401,
+        "name": "20260915.1"
+      },
+      "totalTests": 3,
+      "runStatistics": [
+        {
+          "state": "Completed",
+          "outcome": "Failed",
+          "count": 1
+        },
+        {
+          "state": "Completed",
+          "outcome": "Passed",
+          "count": 1
+        },
+        {
+          "state": "Completed",
+          "outcome": "NotExecuted",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": 202,
+      "name": "Order tests",
+      "state": "Completed",
+      "isAutomated": true,
+      "startedDate": "2026-09-14T10:10:00Z",
+      "completedDate": "2026-09-14T10:14:00Z",
+      "url": "https://ado.example.test/Collection/_apis/test/Runs/202",
+      "build": {
+        "id": 401,
+        "name": "20260915.1"
+      },
+      "totalTests": 2,
+      "runStatistics": [
+        {
+          "state": "Completed",
+          "outcome": "Failed",
+          "count": 1
+        },
+        {
+          "state": "Completed",
+          "outcome": "Passed",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

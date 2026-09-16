@@ -1,0 +1,50 @@
+{
+  "value": [
+    {
+      "id": 1,
+      "rev": 3,
+      "fields": {
+        "System.WorkItemType": "Task",
+        "System.Title": "Écrire le guide",
+        "System.State": "Active",
+        "System.TeamProject": "Équipe / Web",
+        "System.AreaPath": "Équipe\\Docs",
+        "System.IterationPath": "Équipe\\Sprint 1",
+        "System.ChangedDate": "2026-09-15T10:20:30-03:00",
+        "Custom.Integer": 42,
+        "Custom.Double": 2.5,
+        "Custom.Boolean": true,
+        "Custom.Null": null,
+        "Custom.DateText": "2026-09-15T10:20:30Z",
+        "Custom.IdentityText": "Sample <sample@example.test>",
+        "System.AssignedTo": {
+          "id": "opaque:sample",
+          "displayName": "Zoé Exemple",
+          "uniqueName": "sample@example.test"
+        },
+        "Custom.Nested": {
+          "values": [
+            1,
+            true,
+            null,
+            {
+              "text": "<script>untrusted</script>",
+              "date": "2026-01-01"
+            }
+          ]
+        }
+      },
+      "url": "https://untrusted.example.test/wrong",
+      "relations": [
+        {
+          "rel": "System.LinkTypes.Related",
+          "url": "https://ado.example.test/Collection/_apis/wit/workItems/2",
+          "attributes": {
+            "name": "Related",
+            "isLocked": false
+          }
+        }
+      ]
+    }
+  ]
+}

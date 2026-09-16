@@ -1,0 +1,36 @@
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="OperationFailed" xml:space="preserve"><value>L’opération a échoué.</value></data>
+  <data name="InvalidCollectionUrl" xml:space="preserve"><value>Indiquez une URL de collection HTTP ou HTTPS absolue, sans informations utilisateur, paramètres de requête, fragment ni segments d’API ou d’interface.</value></data>
+  <data name="ServicesUnsupported" xml:space="preserve"><value>Azure DevOps Services n’est pas pris en charge. Indiquez une URL de collection Azure DevOps Server.</value></data>
+  <data name="PlainHttp" xml:space="preserve"><value>Cette collection utilise HTTP. Les échanges d’authentification Windows ne sont pas protégés par TLS.</value></data>
+  <data name="InvalidConfiguration" xml:space="preserve"><value>La configuration n’est pas valide : {0}</value></data>
+  <data name="UnknownConfiguration" xml:space="preserve"><value>Propriété de configuration inconnue conservée : {0}</value></data>
+  <data name="NewerConfiguration" xml:space="preserve"><value>Le schéma de configuration {0} est plus récent que le schéma 1 pris en charge. Les modifications sont refusées.</value></data>
+  <data name="FileOutput" xml:space="preserve"><value>Impossible d’écrire le fichier : {0}</value></data>
+  <data name="UnsupportedCulture" xml:space="preserve"><value>La culture {0} n’est pas prise en charge ; l’anglais sera utilisé.</value></data>
+  <data name="MissingProfile" xml:space="preserve"><value>Le profil {0} est introuvable.</value></data>
+  <data name="NoConnection" xml:space="preserve"><value>Connectez-vous avec Connect-Ado ou indiquez une connexion.</value></data>
+  <data name="NoTarget" xml:space="preserve"><value>Indiquez une URL de collection ou un profil configuré.</value></data>
+  <data name="ConnectionMismatch" xml:space="preserve"><value>L’objet d’entrée appartient à une autre collection.</value></data>
+  <data name="Authentication" xml:space="preserve"><value>L’authentification a échoué. Vérifiez l’identité Windows, l’URL de collection et la configuration du proxy ou de Negotiate.</value></data>
+  <data name="Authorization" xml:space="preserve"><value>L’accès a été refusé. Vérifiez les autorisations de la collection et du projet.</value></data>
+  <data name="NotFound" xml:space="preserve"><value>La ressource demandée est introuvable.</value></data>
+  <data name="Request" xml:space="preserve"><value>Le serveur a rejeté la requête.</value></data>
+  <data name="RegistryMismatch" xml:space="preserve"><value>Vérifiez le registre des points de terminaison et la version d’API demandée.</value></data>
+  <data name="Redirect" xml:space="preserve"><value>Une redirection a été bloquée. Destination : {0}</value></data>
+  <data name="Throttled" xml:space="preserve"><value>Le serveur limite les requêtes. Réessayez plus tard.</value></data>
+  <data name="Server" xml:space="preserve"><value>Le serveur n’a pas pu traiter la requête.</value></data>
+  <data name="Timeout" xml:space="preserve"><value>L’opération a dépassé le délai imparti.</value></data>
+  <data name="ResponseFormat" xml:space="preserve"><value>Le format de la réponse du serveur n’est pas valide.</value></data>
+  <data name="PagingGuard" xml:space="preserve"><value>La pagination n’a pas progressé ou a dépassé la limite de pages.</value></data>
+  <data name="Retry" xml:space="preserve"><value>Nouvelle tentative pour {0} ; tentative {1}, motif {2}.</value></data>
+  <data name="RequestLog" xml:space="preserve"><value>{0} {1} {2} {3} ms tentative={4}</value></data>
+  <data name="PageLog" xml:space="preserve"><value>{0} : page {1}, éléments {2}.</value></data>
+  <data name="ConnectionHint" xml:space="preserve"><value>L’appel des projets a échoué. Vérifiez que l’URL indiquée correspond à une collection plutôt qu’à un projet.</value></data>
+  <data name="SetProfile" xml:space="preserve"><value>Enregistrer le profil</value></data>
+  <data name="RemoveProfile" xml:space="preserve"><value>Supprimer le profil</value></data>
+  <data name="Connect" xml:space="preserve"><value>Connexion à la collection établie.</value></data>
+  <data name="Disconnect" xml:space="preserve"><value>Déconnexion de la collection effectuée.</value></data>
+</root>

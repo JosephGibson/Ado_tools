@@ -1,0 +1,38 @@
+{
+  "id": 23,
+  "outcome": "Failed",
+  "resultGroupType": "Rerun",
+  "automatedTestName": "Contoso.Web.Tests.RetryTests.AlwaysFails",
+  "automatedTestStorage": "Contoso.Web.Tests.dll",
+  "testCaseTitle": "Always fails",
+  "startedDate": "2026-09-14T10:03:00Z",
+  "computerName": "AGENT-02",
+  "failureType": "Regression",
+  "resolutionState": "NeedsInvestigation",
+  "subResults": [
+    {
+      "id": 7,
+      "sequenceId": 1,
+      "displayName": "Attempt 1",
+      "outcome": "Failed",
+      "errorMessage": "Failure one",
+      "durationInMs": 1200.5
+    },
+    {
+      "id": 8,
+      "sequenceId": 2,
+      "displayName": "Attempt 2",
+      "outcome": "Failed",
+      "errorMessage": "Failure two",
+      "durationInMs": 1200.5
+    },
+    {
+      "id": 9,
+      "sequenceId": 3,
+      "displayName": "Attempt 3",
+      "outcome": "Failed",
+      "errorMessage": "Failure three",
+      "durationInMs": 1200.5
+    }
+  ]
+}

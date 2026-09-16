@@ -1,0 +1,30 @@
+{
+  "value": [
+    {
+      "id": 3,
+      "rev": 3,
+      "fields": {
+        "System.WorkItemType": "Task",
+        "System.Title": "Écrire le guide",
+        "System.State": "Active",
+        "System.TeamProject": "Équipe / Web",
+        "System.AreaPath": "Équipe\\Docs",
+        "System.IterationPath": "Équipe\\Sprint 1",
+        "System.ChangedDate": "2026-09-15T10:20:30-03:00"
+      }
+    },
+    {
+      "id": 1,
+      "rev": 3,
+      "fields": {
+        "System.WorkItemType": "Task",
+        "System.Title": "Écrire le guide",
+        "System.State": "Active",
+        "System.TeamProject": "Équipe / Web",
+        "System.AreaPath": "Équipe\\Docs",
+        "System.IterationPath": "Équipe\\Sprint 1",
+        "System.ChangedDate": "2026-09-15T10:20:30-03:00"
+      }
+    }
+  ]
+}

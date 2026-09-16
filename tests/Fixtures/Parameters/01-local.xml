@@ -1,0 +1,1 @@
+<NewDataSet xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:schema id="NewDataSet"><xs:element name="ignored"/></xs:schema><Table1><user>Alice</user><password>synthetic-one</password></Table1><Table1><user>Bob</user><password/></Table1></NewDataSet>

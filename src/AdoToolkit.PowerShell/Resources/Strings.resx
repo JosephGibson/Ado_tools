@@ -1,0 +1,36 @@
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="OperationFailed" xml:space="preserve"><value>The operation failed.</value></data>
+  <data name="InvalidCollectionUrl" xml:space="preserve"><value>Specify an absolute HTTP or HTTPS collection URL without user information, a query, a fragment, or API and UI path segments.</value></data>
+  <data name="ServicesUnsupported" xml:space="preserve"><value>Azure DevOps Services is not supported. Specify an Azure DevOps Server collection URL.</value></data>
+  <data name="PlainHttp" xml:space="preserve"><value>This collection uses HTTP. Windows authentication exchanges are not protected by TLS.</value></data>
+  <data name="InvalidConfiguration" xml:space="preserve"><value>The configuration is invalid: {0}</value></data>
+  <data name="UnknownConfiguration" xml:space="preserve"><value>Unknown configuration property retained: {0}</value></data>
+  <data name="NewerConfiguration" xml:space="preserve"><value>Configuration schema {0} is newer than supported schema 1. Changes are refused.</value></data>
+  <data name="FileOutput" xml:space="preserve"><value>Cannot write the file: {0}</value></data>
+  <data name="UnsupportedCulture" xml:space="preserve"><value>Culture {0} is not supported; English will be used.</value></data>
+  <data name="MissingProfile" xml:space="preserve"><value>Profile {0} was not found.</value></data>
+  <data name="NoConnection" xml:space="preserve"><value>Connect with Connect-Ado or supply a connection.</value></data>
+  <data name="NoTarget" xml:space="preserve"><value>Specify a collection URL or a configured profile.</value></data>
+  <data name="ConnectionMismatch" xml:space="preserve"><value>The input belongs to a different collection.</value></data>
+  <data name="Authentication" xml:space="preserve"><value>Authentication failed. Check the Windows identity, collection URL, and proxy or Negotiate configuration.</value></data>
+  <data name="Authorization" xml:space="preserve"><value>Access was denied. Check collection and project permissions.</value></data>
+  <data name="NotFound" xml:space="preserve"><value>The requested resource was not found.</value></data>
+  <data name="Request" xml:space="preserve"><value>The server rejected the request.</value></data>
+  <data name="RegistryMismatch" xml:space="preserve"><value>Check the endpoint registry and requested API version.</value></data>
+  <data name="Redirect" xml:space="preserve"><value>A redirect was blocked. Target: {0}</value></data>
+  <data name="Throttled" xml:space="preserve"><value>The server is throttling requests. Try again later.</value></data>
+  <data name="Server" xml:space="preserve"><value>The server could not complete the request.</value></data>
+  <data name="Timeout" xml:space="preserve"><value>The operation exceeded its time limit.</value></data>
+  <data name="ResponseFormat" xml:space="preserve"><value>The server response has an invalid format.</value></data>
+  <data name="PagingGuard" xml:space="preserve"><value>Paging did not advance or exceeded the page limit.</value></data>
+  <data name="Retry" xml:space="preserve"><value>Retrying {0}; attempt {1}, reason {2}.</value></data>
+  <data name="RequestLog" xml:space="preserve"><value>{0} {1} {2} {3} ms attempt={4}</value></data>
+  <data name="PageLog" xml:space="preserve"><value>{0}: page {1}, items {2}.</value></data>
+  <data name="ConnectionHint" xml:space="preserve"><value>The projects call failed. Check whether the supplied URL is a collection URL rather than a project URL.</value></data>
+  <data name="SetProfile" xml:space="preserve"><value>Save profile</value></data>
+  <data name="RemoveProfile" xml:space="preserve"><value>Remove profile</value></data>
+  <data name="Connect" xml:space="preserve"><value>Connected to the collection.</value></data>
+  <data name="Disconnect" xml:space="preserve"><value>Disconnected from the collection.</value></data>
+</root>

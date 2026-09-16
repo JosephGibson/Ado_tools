@@ -1,0 +1,240 @@
+---
+document type: cmdlet
+external help file: AdoToolkit.PowerShell.dll-Help.xml
+HelpUri: ''
+Locale: en-US
+Module Name: AdoToolkit
+ms.date: 09-15-2026
+PlatyPS schema version: 2024-05-01
+title: Set-AdoProfile
+---
+
+# Set-AdoProfile
+
+## SYNOPSIS
+
+Creates or updates a local connection profile.
+
+## SYNTAX
+
+### Default (Default)
+
+```
+Set-AdoProfile [-Name] <string> [-CollectionUrl <string>] [-DefaultProject <string>]
+ [-Authentication <string>] [-RequestTimeoutSeconds <int>] [-DefaultProfile] [-WhatIf] [-Confirm]
+```
+
+## ALIASES
+
+No aliases.
+
+## DESCRIPTION
+
+Writes the profile atomically and preserves unspecified values, unrelated options, and unknown configuration fields. CollectionUrl is required for a new profile. DefaultProfile selects this profile as the default. WhatIf performs no write. A newer configuration schema is read-only. The profile stores no password or token.
+
+## EXAMPLES
+
+### Example 1
+
+```powershell
+Set-AdoProfile -Name work -CollectionUrl 'https://ado.example.test/Collection' -DefaultProject 'Équipe Web' -DefaultProfile
+```
+
+Creates or updates a local connection profile.
+
+## PARAMETERS
+
+### -Authentication
+
+Authentication mode. The only supported value is WindowsIntegrated.
+
+```yaml
+Type: System.String
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -CollectionUrl
+
+Absolute Azure DevOps Server collection URL. Matching quotes and trailing slashes are removed. HTTPS is recommended; HTTP emits a warning.
+
+```yaml
+Type: System.String
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -Confirm
+
+Prompts you for confirmation before running the cmdlet.
+
+```yaml
+Type: System.Management.Automation.SwitchParameter
+DefaultValue: ''
+SupportsWildcards: false
+Aliases:
+- cf
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -DefaultProfile
+
+Selects this profile as the default. Omit to preserve the current default selection.
+
+```yaml
+Type: System.Management.Automation.SwitchParameter
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -DefaultProject
+
+Default project name to save in the profile.
+
+```yaml
+Type: System.String
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -Name
+
+Profile name. Get-AdoProfile accepts case-insensitive wildcard patterns; writes use the literal name.
+
+```yaml
+Type: System.String
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: (All)
+  Position: 0
+  IsRequired: true
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -RequestTimeoutSeconds
+
+Request timeout in seconds, from 1 to 86400 (one day). Defaults to 100 for a new profile.
+
+```yaml
+Type: System.Int32
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -WhatIf
+
+Runs the command in a mode that only reports what would happen without performing the actions.
+
+```yaml
+Type: System.Management.Automation.SwitchParameter
+DefaultValue: ''
+SupportsWildcards: false
+Aliases:
+- wi
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### CommonParameters
+
+This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable,
+-InformationAction, -InformationVariable, -OutBuffer, -OutVariable, -PipelineVariable,
+-ProgressAction, -Verbose, -WarningAction, and -WarningVariable. For more information, see
+[about_CommonParameters](https://go.microsoft.com/fwlink/?LinkID=113216).
+
+## INPUTS
+
+## OUTPUTS
+
+### AdoToolkit.Core.Configuration.AdoProfile
+
+Object returned by the command.
+
+## NOTES
+
+Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020.
+
+## RELATED LINKS
+
+[Connect-Ado](Connect-Ado.md)
+[Get-AdoProject](Get-AdoProject.md)
+

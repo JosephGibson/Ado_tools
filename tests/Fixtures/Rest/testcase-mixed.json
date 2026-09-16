@@ -1,0 +1,39 @@
+{
+  "value": [
+    {
+      "id": 1,
+      "rev": 3,
+      "fields": {
+        "System.Title": "Synthetic 1",
+        "System.WorkItemType": "Cas personnalisé",
+        "System.TeamProject": "Équipe / Web",
+        "System.State": "Ready",
+        "System.ChangedDate": "2026-09-15T12:00:00Z",
+        "Microsoft.VSTS.TCM.Steps": "<steps><compref id=\"109\" ref=\"99\" /><step id=\"2\" type=\"ActionStep\"><parameterizedString>Continue</parameterizedString><parameterizedString /></step></steps>"
+      }
+    },
+    {
+      "id": 2,
+      "rev": 3,
+      "fields": {
+        "System.Title": "Synthetic 2",
+        "System.WorkItemType": "Task",
+        "System.TeamProject": "Équipe / Web",
+        "System.State": "Ready",
+        "System.ChangedDate": "2026-09-15T12:00:00Z"
+      }
+    },
+    {
+      "id": 3,
+      "rev": 3,
+      "fields": {
+        "System.Title": "Synthetic 3",
+        "System.WorkItemType": "Cas personnalisé",
+        "System.TeamProject": "Équipe / Web",
+        "System.State": "Ready",
+        "System.ChangedDate": "2026-09-15T12:00:00Z",
+        "Microsoft.VSTS.TCM.Steps": "<steps><step id=\"1\" type=\"ActionStep\"><parameterizedString>Open @user</parameterizedString><parameterizedString /></step></steps>"
+      }
+    }
+  ]
+}

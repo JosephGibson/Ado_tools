@@ -1,0 +1,16 @@
+{
+  "value": [
+    {
+      "id": 42,
+      "name": "Tâches",
+      "path": "\\Main",
+      "revision": 3,
+      "queueStatus": "enabled",
+      "_links": {
+        "web": {
+          "href": "https://untrusted.example.test/ignored"
+        }
+      }
+    }
+  ]
+}

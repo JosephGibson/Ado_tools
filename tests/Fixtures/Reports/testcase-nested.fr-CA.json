@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "generator": {
+    "name": "AdoToolkit",
+    "version": "2.1.0-test"
+  },
+  "generatedAt": "2026-09-15T10:30:00-03:00",
+  "culture": "fr-CA",
+  "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+  "project": "\u00C9quipe / Web?#",
+  "source": "TestCase",
+  "cases": [
+    {
+      "id": 10,
+      "rev": 3,
+      "title": "Synthetic case \u003Ctitle\u003E",
+      "workItemType": "Cas personnalis\u00E9",
+      "state": "Ready",
+      "serverUrl": "https://ado.example.test/",
+      "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+      "project": "\u00C9quipe / Web?#",
+      "changedDate": "2026-09-13T10:30:00-03:00",
+      "retrievedAt": "2026-09-15T10:29:00-03:00",
+      "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/10",
+      "status": "Complete",
+      "stepCount": 2,
+      "rows": [
+        {
+          "number": "1",
+          "sequence": 1,
+          "kind": "Action",
+          "action": "Enter @user",
+          "expectedResult": "",
+          "isExpanded": false,
+          "sourceWorkItemId": 10,
+          "sourceRev": 3,
+          "sourceStepId": 11,
+          "depth": 0,
+          "sharedStepPath": []
+        },
+        {
+          "number": "2",
+          "sequence": 2,
+          "kind": "SharedStep",
+          "action": "",
+          "expectedResult": "",
+          "sharedStep": {
+            "id": 20,
+            "title": "Shared \u003Ctitle\u003E",
+            "rev": 4,
+            "project": "Autre / \u00E9quipe",
+            "webUrl": "https://ado.example.test/tfs/Collection%20A/Autre%20%2F%20%C3%A9quipe/_workitems/edit/20",
+            "referenceCount": 1
+          },
+          "isExpanded": true,
+          "sourceWorkItemId": 10,
+          "sourceRev": 3,
+          "depth": 0,
+          "sharedStepPath": []
+        },
+        {
+          "number": "2.1",
+          "sequence": 3,
+          "kind": "SharedStep",
+          "action": "",
+          "expectedResult": "",
+          "sharedStep": {
+            "id": 30,
+            "title": "Nested",
+            "rev": 2,
+            "project": "\u00C9quipe / Web?#",
+            "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/30",
+            "referenceCount": 1
+          },
+          "isExpanded": true,
+          "sourceWorkItemId": 20,
+          "sourceRev": 4,
+          "depth": 1,
+          "sharedStepPath": [
+            {
+              "id": 20,
+              "title": "Shared \u003Ctitle\u003E",
+              "rev": 4,
+              "project": "Autre / \u00E9quipe",
+              "webUrl": "https://ado.example.test/tfs/Collection%20A/Autre%20%2F%20%C3%A9quipe/_workitems/edit/20",
+              "referenceCount": 1
+            }
+          ]
+        },
+        {
+          "number": "2.1.1",
+          "sequence": 4,
+          "kind": "Validate",
+          "action": "Confirm",
+          "expectedResult": "Visible",
+          "isExpanded": false,
+          "sourceWorkItemId": 30,
+          "sourceRev": 2,
+          "sourceStepId": 21,
+          "depth": 2,
+          "sharedStepPath": [
+            {
+              "id": 20,
+              "title": "Shared \u003Ctitle\u003E",
+              "rev": 4,
+              "project": "Autre / \u00E9quipe",
+              "webUrl": "https://ado.example.test/tfs/Collection%20A/Autre%20%2F%20%C3%A9quipe/_workitems/edit/20",
+              "referenceCount": 1
+            },
+            {
+              "id": 30,
+              "title": "Nested",
+              "rev": 2,
+              "project": "\u00C9quipe / Web?#",
+              "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/30",
+              "referenceCount": 1
+            }
+          ]
+        }
+      ],
+      "sharedSteps": [
+        {
+          "id": 20,
+          "title": "Shared \u003Ctitle\u003E",
+          "rev": 4,
+          "project": "Autre / \u00E9quipe",
+          "webUrl": "https://ado.example.test/tfs/Collection%20A/Autre%20%2F%20%C3%A9quipe/_workitems/edit/20",
+          "referenceCount": 1
+        },
+        {
+          "id": 30,
+          "title": "Nested",
+          "rev": 2,
+          "project": "\u00C9quipe / Web?#",
+          "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/30",
+          "referenceCount": 1
+        }
+      ],
+      "parameters": {
+        "source": "None",
+        "names": [],
+        "rows": [],
+        "sharedParameterSets": []
+      },
+      "diagnosticsSummary": {
+        "errorCount": 0,
+        "warningCount": 0,
+        "informationCount": 0
+      },
+      "diagnostics": []
+    }
+  ]
+}

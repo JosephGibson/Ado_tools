@@ -1,0 +1,53 @@
+{
+  "count": 2,
+  "value": [
+    {
+      "id": 302,
+      "name": "Web tests (attempt 2)",
+      "state": "Completed",
+      "isAutomated": true,
+      "startedDate": "2026-09-14T11:00:00Z",
+      "completedDate": "2026-09-14T11:00:00Z",
+      "pipelineReference": {
+        "pipelineId": 401,
+        "pipelineAttempt": 2
+      },
+      "totalTests": 2,
+      "runStatistics": [
+        {
+          "state": "Completed",
+          "outcome": "Passed",
+          "count": 2
+        }
+      ],
+      "build": {
+        "id": 401,
+        "name": "20260915.1"
+      }
+    },
+    {
+      "id": 301,
+      "name": "Web tests",
+      "state": "Completed",
+      "isAutomated": true,
+      "startedDate": "2026-09-14T10:00:00Z",
+      "completedDate": "2026-09-14T10:00:00Z",
+      "pipelineReference": {
+        "pipelineId": 401,
+        "pipelineAttempt": 1
+      },
+      "totalTests": 2,
+      "runStatistics": [
+        {
+          "state": "Completed",
+          "outcome": "Failed",
+          "count": 2
+        }
+      ],
+      "build": {
+        "id": 401,
+        "name": "20260915.1"
+      }
+    }
+  ]
+}

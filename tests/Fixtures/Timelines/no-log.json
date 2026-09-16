@@ -1,0 +1,41 @@
+{
+  "records": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "parentId": null,
+      "type": "Stage",
+      "name": "Build",
+      "order": 1,
+      "state": "completed",
+      "result": "failed",
+      "attempt": 1,
+      "identifier": "record-1",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 1,
+      "warningCount": 0
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "parentId": "00000000-0000-0000-0000-000000000001",
+      "type": "Job",
+      "name": "Agent allocation",
+      "order": 1,
+      "state": "completed",
+      "result": "failed",
+      "attempt": 1,
+      "identifier": "record-2",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 1,
+      "warningCount": 0,
+      "issues": [
+        {
+          "type": "error",
+          "category": "General",
+          "message": "Synthetic agent unavailable."
+        }
+      ]
+    }
+  ]
+}

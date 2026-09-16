@@ -1,0 +1,512 @@
+{
+  "schemaVersion": 1,
+  "generator": {
+    "name": "AdoToolkit",
+    "version": "2.1.0-test"
+  },
+  "generatedAt": "2026-09-15T10:30:00-03:00",
+  "culture": "fr-CA",
+  "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+  "project": "\u00C9quipe / Web?#",
+  "source": "TestSuite",
+  "totals": {
+    "caseCount": 4,
+    "complete": 3,
+    "partial": 1
+  },
+  "cases": [
+    {
+      "id": 10,
+      "rev": 3,
+      "title": "Synthetic case 10 \u003Ctitle\u003E",
+      "workItemType": "Cas personnalis\u00E9",
+      "state": "Ready",
+      "serverUrl": "https://ado.example.test/",
+      "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+      "project": "\u00C9quipe / Web?#",
+      "changedDate": "2026-09-13T10:30:00-03:00",
+      "retrievedAt": "2026-09-15T10:29:00-03:00",
+      "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/10",
+      "status": "Complete",
+      "stepCount": 2,
+      "suite": {
+        "planId": 40,
+        "suiteId": 51,
+        "planName": "Plan \u00AB \u00C9t\u00E9 \u00BB",
+        "suiteName": "Connexion",
+        "suitePath": [
+          "Racine",
+          "Connexion"
+        ],
+        "project": "\u00C9quipe / Web?#",
+        "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+        "planWebUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40",
+        "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40\u0026suiteId=51"
+      },
+      "rows": [
+        {
+          "number": "1",
+          "sequence": 1,
+          "kind": "Action",
+          "action": "Enter @user",
+          "expectedResult": "",
+          "isExpanded": false,
+          "sourceWorkItemId": 10,
+          "sourceRev": 3,
+          "sourceStepId": 11,
+          "depth": 0,
+          "sharedStepPath": []
+        },
+        {
+          "number": "2",
+          "sequence": 2,
+          "kind": "SharedStep",
+          "action": "",
+          "expectedResult": "",
+          "sharedStep": {
+            "id": 20,
+            "title": "Shared \u003Ctitle\u003E",
+            "rev": 4,
+            "project": "Autre / \u00E9quipe",
+            "webUrl": "https://ado.example.test/tfs/Collection%20A/Autre%20%2F%20%C3%A9quipe/_workitems/edit/20",
+            "referenceCount": 1
+          },
+          "isExpanded": true,
+          "sourceWorkItemId": 10,
+          "sourceRev": 3,
+          "depth": 0,
+          "sharedStepPath": []
+        },
+        {
+          "number": "2.1",
+          "sequence": 3,
+          "kind": "SharedStep",
+          "action": "",
+          "expectedResult": "",
+          "sharedStep": {
+            "id": 30,
+            "title": "Nested",
+            "rev": 2,
+            "project": "\u00C9quipe / Web?#",
+            "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/30",
+            "referenceCount": 1
+          },
+          "isExpanded": true,
+          "sourceWorkItemId": 20,
+          "sourceRev": 4,
+          "depth": 1,
+          "sharedStepPath": [
+            {
+              "id": 20,
+              "title": "Shared \u003Ctitle\u003E",
+              "rev": 4,
+              "project": "Autre / \u00E9quipe",
+              "webUrl": "https://ado.example.test/tfs/Collection%20A/Autre%20%2F%20%C3%A9quipe/_workitems/edit/20",
+              "referenceCount": 1
+            }
+          ]
+        },
+        {
+          "number": "2.1.1",
+          "sequence": 4,
+          "kind": "Validate",
+          "action": "Confirm",
+          "expectedResult": "Visible",
+          "isExpanded": false,
+          "sourceWorkItemId": 30,
+          "sourceRev": 2,
+          "sourceStepId": 21,
+          "depth": 2,
+          "sharedStepPath": [
+            {
+              "id": 20,
+              "title": "Shared \u003Ctitle\u003E",
+              "rev": 4,
+              "project": "Autre / \u00E9quipe",
+              "webUrl": "https://ado.example.test/tfs/Collection%20A/Autre%20%2F%20%C3%A9quipe/_workitems/edit/20",
+              "referenceCount": 1
+            },
+            {
+              "id": 30,
+              "title": "Nested",
+              "rev": 2,
+              "project": "\u00C9quipe / Web?#",
+              "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/30",
+              "referenceCount": 1
+            }
+          ]
+        }
+      ],
+      "sharedSteps": [
+        {
+          "id": 20,
+          "title": "Shared \u003Ctitle\u003E",
+          "rev": 4,
+          "project": "Autre / \u00E9quipe",
+          "webUrl": "https://ado.example.test/tfs/Collection%20A/Autre%20%2F%20%C3%A9quipe/_workitems/edit/20",
+          "referenceCount": 1
+        },
+        {
+          "id": 30,
+          "title": "Nested",
+          "rev": 2,
+          "project": "\u00C9quipe / Web?#",
+          "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/30",
+          "referenceCount": 1
+        }
+      ],
+      "parameters": {
+        "source": "None",
+        "names": [],
+        "rows": [],
+        "sharedParameterSets": []
+      },
+      "diagnosticsSummary": {
+        "errorCount": 0,
+        "warningCount": 0,
+        "informationCount": 0
+      },
+      "diagnostics": []
+    },
+    {
+      "id": 11,
+      "rev": 3,
+      "title": "Synthetic case 11 \u003Ctitle\u003E",
+      "workItemType": "Cas personnalis\u00E9",
+      "state": "Ready",
+      "serverUrl": "https://ado.example.test/",
+      "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+      "project": "\u00C9quipe / Web?#",
+      "changedDate": "2026-09-13T10:30:00-03:00",
+      "retrievedAt": "2026-09-15T10:29:00-03:00",
+      "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/11",
+      "status": "Complete",
+      "stepCount": 1,
+      "suite": {
+        "planId": 40,
+        "suiteId": 51,
+        "planName": "Plan \u00AB \u00C9t\u00E9 \u00BB",
+        "suiteName": "Connexion",
+        "suitePath": [
+          "Racine",
+          "Connexion"
+        ],
+        "project": "\u00C9quipe / Web?#",
+        "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+        "planWebUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40",
+        "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40\u0026suiteId=51"
+      },
+      "rows": [
+        {
+          "number": "1",
+          "sequence": 1,
+          "kind": "Action",
+          "action": "Enter @user",
+          "expectedResult": "",
+          "isExpanded": false,
+          "sourceWorkItemId": 10,
+          "sourceRev": 3,
+          "sourceStepId": 11,
+          "depth": 0,
+          "sharedStepPath": []
+        }
+      ],
+      "sharedSteps": [],
+      "parameters": {
+        "source": "None",
+        "names": [],
+        "rows": [],
+        "sharedParameterSets": []
+      },
+      "diagnosticsSummary": {
+        "errorCount": 0,
+        "warningCount": 0,
+        "informationCount": 0
+      },
+      "diagnostics": []
+    },
+    {
+      "id": 10,
+      "rev": 3,
+      "title": "Synthetic case 10 \u003Ctitle\u003E",
+      "workItemType": "Cas personnalis\u00E9",
+      "state": "Ready",
+      "serverUrl": "https://ado.example.test/",
+      "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+      "project": "\u00C9quipe / Web?#",
+      "changedDate": "2026-09-13T10:30:00-03:00",
+      "retrievedAt": "2026-09-15T10:29:00-03:00",
+      "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/10",
+      "status": "Complete",
+      "stepCount": 2,
+      "suite": {
+        "planId": 40,
+        "suiteId": 52,
+        "planName": "Plan \u00AB \u00C9t\u00E9 \u00BB",
+        "suiteName": "Paiement \u003Cb\u003E",
+        "suitePath": [
+          "Racine",
+          "Paiement \u003Cb\u003E"
+        ],
+        "project": "\u00C9quipe / Web?#",
+        "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+        "planWebUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40",
+        "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40\u0026suiteId=52"
+      },
+      "rows": [
+        {
+          "number": "1",
+          "sequence": 1,
+          "kind": "Action",
+          "action": "Enter @user",
+          "expectedResult": "",
+          "isExpanded": false,
+          "sourceWorkItemId": 10,
+          "sourceRev": 3,
+          "sourceStepId": 11,
+          "depth": 0,
+          "sharedStepPath": []
+        },
+        {
+          "number": "2",
+          "sequence": 2,
+          "kind": "SharedStep",
+          "action": "",
+          "expectedResult": "",
+          "sharedStep": {
+            "id": 20,
+            "title": "Shared \u003Ctitle\u003E",
+            "rev": 4,
+            "project": "Autre / \u00E9quipe",
+            "webUrl": "https://ado.example.test/tfs/Collection%20A/Autre%20%2F%20%C3%A9quipe/_workitems/edit/20",
+            "referenceCount": 1
+          },
+          "isExpanded": true,
+          "sourceWorkItemId": 10,
+          "sourceRev": 3,
+          "depth": 0,
+          "sharedStepPath": []
+        },
+        {
+          "number": "2.1",
+          "sequence": 3,
+          "kind": "SharedStep",
+          "action": "",
+          "expectedResult": "",
+          "sharedStep": {
+            "id": 30,
+            "title": "Nested",
+            "rev": 2,
+            "project": "\u00C9quipe / Web?#",
+            "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/30",
+            "referenceCount": 1
+          },
+          "isExpanded": true,
+          "sourceWorkItemId": 20,
+          "sourceRev": 4,
+          "depth": 1,
+          "sharedStepPath": [
+            {
+              "id": 20,
+              "title": "Shared \u003Ctitle\u003E",
+              "rev": 4,
+              "project": "Autre / \u00E9quipe",
+              "webUrl": "https://ado.example.test/tfs/Collection%20A/Autre%20%2F%20%C3%A9quipe/_workitems/edit/20",
+              "referenceCount": 1
+            }
+          ]
+        },
+        {
+          "number": "2.1.1",
+          "sequence": 4,
+          "kind": "Validate",
+          "action": "Confirm",
+          "expectedResult": "Visible",
+          "isExpanded": false,
+          "sourceWorkItemId": 30,
+          "sourceRev": 2,
+          "sourceStepId": 21,
+          "depth": 2,
+          "sharedStepPath": [
+            {
+              "id": 20,
+              "title": "Shared \u003Ctitle\u003E",
+              "rev": 4,
+              "project": "Autre / \u00E9quipe",
+              "webUrl": "https://ado.example.test/tfs/Collection%20A/Autre%20%2F%20%C3%A9quipe/_workitems/edit/20",
+              "referenceCount": 1
+            },
+            {
+              "id": 30,
+              "title": "Nested",
+              "rev": 2,
+              "project": "\u00C9quipe / Web?#",
+              "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/30",
+              "referenceCount": 1
+            }
+          ]
+        }
+      ],
+      "sharedSteps": [
+        {
+          "id": 20,
+          "title": "Shared \u003Ctitle\u003E",
+          "rev": 4,
+          "project": "Autre / \u00E9quipe",
+          "webUrl": "https://ado.example.test/tfs/Collection%20A/Autre%20%2F%20%C3%A9quipe/_workitems/edit/20",
+          "referenceCount": 1
+        },
+        {
+          "id": 30,
+          "title": "Nested",
+          "rev": 2,
+          "project": "\u00C9quipe / Web?#",
+          "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/30",
+          "referenceCount": 1
+        }
+      ],
+      "parameters": {
+        "source": "None",
+        "names": [],
+        "rows": [],
+        "sharedParameterSets": []
+      },
+      "diagnosticsSummary": {
+        "errorCount": 0,
+        "warningCount": 0,
+        "informationCount": 0
+      },
+      "diagnostics": []
+    },
+    {
+      "id": 12,
+      "rev": 3,
+      "title": "Synthetic case 12 \u003Ctitle\u003E",
+      "workItemType": "Cas personnalis\u00E9",
+      "state": "Ready",
+      "serverUrl": "https://ado.example.test/",
+      "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+      "project": "\u00C9quipe / Web?#",
+      "changedDate": "2026-09-13T10:30:00-03:00",
+      "retrievedAt": "2026-09-15T10:29:00-03:00",
+      "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/12",
+      "status": "Partial",
+      "stepCount": 1,
+      "suite": {
+        "planId": 40,
+        "suiteId": 52,
+        "planName": "Plan \u00AB \u00C9t\u00E9 \u00BB",
+        "suiteName": "Paiement \u003Cb\u003E",
+        "suitePath": [
+          "Racine",
+          "Paiement \u003Cb\u003E"
+        ],
+        "project": "\u00C9quipe / Web?#",
+        "collectionUrl": "https://ado.example.test/tfs/Collection%20A/",
+        "planWebUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40",
+        "webUrl": "https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40\u0026suiteId=52"
+      },
+      "rows": [
+        {
+          "number": "1",
+          "sequence": 1,
+          "kind": "Action",
+          "action": "Enter @user",
+          "expectedResult": "",
+          "isExpanded": false,
+          "sourceWorkItemId": 10,
+          "sourceRev": 3,
+          "sourceStepId": 11,
+          "depth": 0,
+          "sharedStepPath": []
+        },
+        {
+          "number": "2",
+          "sequence": 2,
+          "kind": "SharedStep",
+          "action": "",
+          "expectedResult": "",
+          "sharedStep": {
+            "id": 99,
+            "referenceCount": 1
+          },
+          "isExpanded": false,
+          "sourceWorkItemId": 10,
+          "sourceRev": 3,
+          "depth": 0,
+          "diagnosticCode": "UnresolvedSharedStep",
+          "diagnosticMessage": "Les \u00E9tapes partag\u00E9es r\u00E9f\u00E9renc\u00E9es sont introuvables ou inaccessibles.",
+          "sharedStepPath": []
+        },
+        {
+          "number": "3",
+          "sequence": 3,
+          "kind": "Truncated",
+          "action": "",
+          "expectedResult": "",
+          "isExpanded": false,
+          "sourceWorkItemId": 10,
+          "sourceRev": 3,
+          "depth": 0,
+          "diagnosticCode": "ExpansionLimitExceeded",
+          "diagnosticMessage": "La limite du nombre d\u2019\u00E9tapes d\u00E9velopp\u00E9es a \u00E9t\u00E9 d\u00E9pass\u00E9e; le d\u00E9veloppement a \u00E9t\u00E9 arr\u00EAt\u00E9.",
+          "sharedStepPath": []
+        }
+      ],
+      "sharedSteps": [
+        {
+          "id": 99,
+          "referenceCount": 1
+        }
+      ],
+      "parameters": {
+        "source": "None",
+        "names": [],
+        "rows": [],
+        "sharedParameterSets": []
+      },
+      "diagnosticsSummary": {
+        "errorCount": 3,
+        "warningCount": 0,
+        "informationCount": 0
+      },
+      "diagnostics": [
+        {
+          "code": "UnresolvedSharedStep",
+          "severity": "Error",
+          "arguments": [],
+          "message": "Les \u00E9tapes partag\u00E9es r\u00E9f\u00E9renc\u00E9es sont introuvables ou inaccessibles.",
+          "workItemId": 10,
+          "stepNumber": "2",
+          "referenceChain": [
+            10,
+            99
+          ]
+        },
+        {
+          "code": "ExpansionLimitExceeded",
+          "severity": "Error",
+          "arguments": [],
+          "message": "La limite du nombre d\u2019\u00E9tapes d\u00E9velopp\u00E9es a \u00E9t\u00E9 d\u00E9pass\u00E9e; le d\u00E9veloppement a \u00E9t\u00E9 arr\u00EAt\u00E9.",
+          "workItemId": 10,
+          "stepNumber": "3",
+          "referenceChain": [
+            10,
+            99
+          ]
+        },
+        {
+          "code": "MalformedStepsXml",
+          "severity": "Error",
+          "arguments": [
+            "7",
+            "19"
+          ],
+          "message": "Le XML des \u00E9tapes est invalide \u00E0 la ligne 7, position 19.",
+          "workItemId": 99,
+          "referenceChain": []
+        }
+      ]
+    }
+  ]
+}

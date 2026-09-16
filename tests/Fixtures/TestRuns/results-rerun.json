@@ -1,0 +1,35 @@
+{
+  "count": 3,
+  "value": [
+    {
+      "id": 21,
+      "outcome": "Passed",
+      "automatedTestName": "Contoso.Web.Tests.RetryTests.FlakyOnce",
+      "automatedTestStorage": "Contoso.Web.Tests.dll",
+      "testCaseTitle": "Flaky once",
+      "resultGroupType": "Rerun",
+      "startedDate": "2026-09-14T10:01:00Z",
+      "url": "https://ado.example.test/Collection/_apis/test/Runs/201/results/21"
+    },
+    {
+      "id": 22,
+      "outcome": "Passed",
+      "automatedTestName": "Contoso.Web.Tests.RetryTests.FlakyTwice",
+      "automatedTestStorage": "Contoso.Web.Tests.dll",
+      "testCaseTitle": "Flaky twice",
+      "resultGroupType": "Rerun",
+      "startedDate": "2026-09-14T10:01:00Z",
+      "url": "https://ado.example.test/Collection/_apis/test/Runs/201/results/22"
+    },
+    {
+      "id": 23,
+      "outcome": "Failed",
+      "automatedTestName": "Contoso.Web.Tests.RetryTests.AlwaysFails",
+      "automatedTestStorage": "Contoso.Web.Tests.dll",
+      "testCaseTitle": "Always fails",
+      "resultGroupType": "Rerun",
+      "startedDate": "2026-09-14T10:01:00Z",
+      "url": "https://ado.example.test/Collection/_apis/test/Runs/201/results/23"
+    }
+  ]
+}

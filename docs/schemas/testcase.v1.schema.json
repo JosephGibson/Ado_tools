@@ -1,0 +1,537 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AdoToolkit Test Case report v1",
+  "description": "One document containing one or more cases. Optional metadata is omitted when absent; source strings appear only when requested. source is TestCase for one case; for several cases it is TestSuite (every case from a suite), Query (none from a suite) or Mixed, and totals is present. Additions in this version are optional, so earlier v1 documents remain valid.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "generator": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "AdoToolkit"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "culture": {
+      "type": "string",
+      "pattern": "^(en|fr)(-|$)"
+    },
+    "collectionUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "project": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "totals": {
+      "$ref": "#/$defs/totals"
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/testCase"
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "generator",
+    "generatedAt",
+    "culture",
+    "collectionUrl",
+    "project",
+    "source",
+    "cases"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "totals": {
+      "type": "object",
+      "properties": {
+        "caseCount": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "complete": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "partial": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "caseCount",
+        "complete",
+        "partial"
+      ],
+      "additionalProperties": false
+    },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "uniqueName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "displayName"
+      ],
+      "additionalProperties": false
+    },
+    "sharedStep": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string"
+        },
+        "rev": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "project": {
+          "type": "string"
+        },
+        "webUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "referenceCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id",
+        "referenceCount"
+      ],
+      "additionalProperties": false
+    },
+    "sharedParameter": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string"
+        },
+        "rev": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "project": {
+          "type": "string"
+        },
+        "webUrl": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "suite": {
+      "type": "object",
+      "properties": {
+        "planId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "suiteId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "planName": {
+          "type": "string"
+        },
+        "suiteName": {
+          "type": "string"
+        },
+        "suitePath": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "project": {
+          "type": "string"
+        },
+        "collectionUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "planWebUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "webUrl": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "planId",
+        "suiteId",
+        "planName",
+        "suiteName",
+        "suitePath",
+        "project",
+        "collectionUrl"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Local",
+            "Shared"
+          ]
+        },
+        "names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "sharedParameterSets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sharedParameter"
+          }
+        }
+      },
+      "required": [
+        "source",
+        "names",
+        "rows",
+        "sharedParameterSets"
+      ],
+      "additionalProperties": false
+    },
+    "diagnostic": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "Info",
+            "Warning",
+            "Error"
+          ]
+        },
+        "arguments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "message": {
+          "type": "string"
+        },
+        "workItemId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stepNumber": {
+          "type": "string"
+        },
+        "referenceChain": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "arguments",
+        "message",
+        "referenceChain"
+      ],
+      "additionalProperties": false
+    },
+    "row": {
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*(\\.[1-9][0-9]*)*$"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "Action",
+            "Validate",
+            "SharedStep",
+            "Truncated"
+          ]
+        },
+        "action": {
+          "type": "string"
+        },
+        "expectedResult": {
+          "type": "string"
+        },
+        "actionSource": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expectedResultSource": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sharedStep": {
+          "$ref": "#/$defs/sharedStep"
+        },
+        "isExpanded": {
+          "type": "boolean"
+        },
+        "sourceWorkItemId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sourceRev": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sourceStepId": {
+          "type": "integer"
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "diagnosticCode": {
+          "type": "string"
+        },
+        "diagnosticMessage": {
+          "type": "string"
+        },
+        "sharedStepPath": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sharedStep"
+          }
+        }
+      },
+      "required": [
+        "number",
+        "sequence",
+        "kind",
+        "action",
+        "expectedResult",
+        "isExpanded",
+        "sourceWorkItemId",
+        "sourceRev",
+        "depth",
+        "sharedStepPath"
+      ],
+      "additionalProperties": false
+    },
+    "testCase": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "rev": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string"
+        },
+        "workItemType": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "serverUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "collectionUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "project": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "integer"
+        },
+        "automationStatus": {
+          "type": "string"
+        },
+        "areaPath": {
+          "type": "string"
+        },
+        "iterationPath": {
+          "type": "string"
+        },
+        "assignedTo": {
+          "$ref": "#/$defs/identity"
+        },
+        "changedBy": {
+          "$ref": "#/$defs/identity"
+        },
+        "changedDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "retrievedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "webUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Complete",
+            "Partial"
+          ]
+        },
+        "stepCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "suite": {
+          "$ref": "#/$defs/suite"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/row"
+          }
+        },
+        "sharedSteps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sharedStep"
+          }
+        },
+        "parameters": {
+          "$ref": "#/$defs/parameters"
+        },
+        "diagnosticsSummary": {
+          "type": "object",
+          "properties": {
+            "errorCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "warningCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "informationCount": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "errorCount",
+            "warningCount",
+            "informationCount"
+          ],
+          "additionalProperties": false
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/diagnostic"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "rev",
+        "title",
+        "workItemType",
+        "state",
+        "serverUrl",
+        "collectionUrl",
+        "project",
+        "changedDate",
+        "retrievedAt",
+        "webUrl",
+        "status",
+        "stepCount",
+        "rows",
+        "sharedSteps",
+        "parameters",
+        "diagnosticsSummary",
+        "diagnostics"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(/**/.env)",
+      "Read(/**/.env.*)",
+      "Read(/**/secret/**)",
+      "Read(/**/secrets/**)",
+      "Read(/**/id_rsa*)",
+      "Read(/**/id_ed25519*)",
+      "Read(/**/*.pem)",
+      "Read(/**/*.pfx)",
+      "Read(/**/*.p12)",
+      "Read(/**/*.key)",
+      "Read(/**/*credentials*)",
+      "Read(/**/*.local.*)",
+      "Read(/**/.npmrc)",
+      "Read(/**/.pypirc)",
+      "Read(/**/.netrc)",
+      "Edit(/**/.env)",
+      "Edit(/**/.env.*)",
+      "Edit(/**/secret/**)",
+      "Edit(/**/secrets/**)",
+      "Edit(/**/id_rsa*)",
+      "Edit(/**/id_ed25519*)",
+      "Edit(/**/*.pem)",
+      "Edit(/**/*.pfx)",
+      "Edit(/**/*.p12)",
+      "Edit(/**/*.key)",
+      "Edit(/**/*credentials*)",
+      "Edit(/**/*.local.*)",
+      "Edit(/**/.npmrc)",
+      "Edit(/**/.pypirc)",
+      "Edit(/**/.netrc)"
+    ],
+    "allow": [
+      "PowerShell(pwsh -NoProfile -File .\\tools\\dev.ps1 context *)",
+      "PowerShell(pwsh -NoProfile -File .\\tools\\dev.ps1 inspect)",
+      "PowerShell(pwsh -NoProfile -File .\\tools\\dev.ps1 find *)",
+      "PowerShell(pwsh -NoProfile -File .\\tools\\dev.ps1 deps *)",
+      "PowerShell(pwsh -NoProfile -File .\\tools\\dev.ps1 diagnose)",
+      "PowerShell(pwsh -NoProfile -File .\\tools\\dev.ps1 verify *)",
+      "PowerShell(pwsh -NoProfile -File .\\tools\\dev.ps1 bootstrap)",
+      "Bash(pwsh -NoProfile -File ./tools/dev.ps1 context *)",
+      "Bash(pwsh -NoProfile -File ./tools/dev.ps1 inspect)",
+      "Bash(pwsh -NoProfile -File ./tools/dev.ps1 find *)",
+      "Bash(pwsh -NoProfile -File ./tools/dev.ps1 deps *)",
+      "Bash(pwsh -NoProfile -File ./tools/dev.ps1 diagnose)",
+      "Bash(pwsh -NoProfile -File ./tools/dev.ps1 verify *)",
+      "Bash(pwsh -NoProfile -File ./tools/dev.ps1 bootstrap)",
+      "PowerShell(pwsh -NoProfile -File .\\tools\\dev.ps1 plan *)",
+      "Bash(pwsh -NoProfile -File ./tools/dev.ps1 plan *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh.exe",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "${CLAUDE_PROJECT_DIR}/tools/guard-git.ps1"
+            ],
+            "timeout": 15,
+            "statusMessage": "Checking git guard"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh.exe",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "${CLAUDE_PROJECT_DIR}/tools/validate-edit.ps1"
+            ],
+            "timeout": 30,
+            "statusMessage": "Validating edited file"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "records": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "parentId": null,
+      "type": "Stage",
+      "name": "Build",
+      "order": 1,
+      "state": "completed",
+      "result": "failed",
+      "attempt": 1,
+      "identifier": "record-1",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 1,
+      "warningCount": 0
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "parentId": "00000000-0000-0000-0000-000000000001",
+      "type": "Job",
+      "name": "Old job",
+      "order": 1,
+      "state": "completed",
+      "result": "failed",
+      "attempt": 1,
+      "identifier": "job",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 1,
+      "warningCount": 0
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000003",
+      "parentId": "00000000-0000-0000-0000-000000000002",
+      "type": "Task",
+      "name": "Stale task",
+      "order": 1,
+      "state": "completed",
+      "result": "failed",
+      "attempt": 1,
+      "identifier": "stale-only",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 1,
+      "warningCount": 0,
+      "log": {
+        "id": 11
+      }
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000004",
+      "parentId": "00000000-0000-0000-0000-000000000001",
+      "type": "Job",
+      "name": "Retry job",
+      "order": 2,
+      "state": "completed",
+      "result": "failed",
+      "attempt": 2,
+      "identifier": "job",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 1,
+      "warningCount": 0,
+      "previousAttempts": [
+        {
+          "attempt": 1,
+          "timelineId": "00000000-0000-0000-0000-000000000090",
+          "recordId": "00000000-0000-0000-0000-000000000002"
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000005",
+      "parentId": "00000000-0000-0000-0000-000000000004",
+      "type": "Task",
+      "name": "Retry task",
+      "order": 1,
+      "state": "completed",
+      "result": "failed",
+      "attempt": 2,
+      "identifier": "task",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 1,
+      "warningCount": 0,
+      "log": {
+        "id": 12
+      }
+    }
+  ]
+}

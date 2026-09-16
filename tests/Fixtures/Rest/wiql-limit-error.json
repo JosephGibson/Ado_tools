@@ -1,0 +1,9 @@
+{
+  "$id": "1",
+  "innerException": null,
+  "message": "VS402337: The number of work items returned exceeds the size limit of 20000. Change the query to return fewer items.",
+  "typeName": "Synthetic.WorkItemTrackingQueryResultSizeLimitExceededException, Synthetic",
+  "typeKey": "WorkItemTrackingQueryResultSizeLimitExceededException",
+  "errorCode": 0,
+  "eventId": 3000
+}

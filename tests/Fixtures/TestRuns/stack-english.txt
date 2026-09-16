@@ -1,0 +1,15 @@
+System.InvalidOperationException: Synthetic failure <script>alert("x")</script>
+ ---> System.ArgumentException: Expected a List<int>
+   at System.ThrowHelper.ThrowArgumentException()
+   --- End of inner exception stack trace ---
+   at Demo.Tests.CartTests.<AddsItem>d__4.MoveNext() in C:\agent\src\CartTests.cs:line 42
+--- End of stack trace from previous location ---
+   at Demo.GenericTests<System.Collections.Generic.List<int>>.Verify<T>(List<int> values, String name) in C:\agent\src\GenericTests.cs:line 7
+   at NUnit.Framework.Assert.That(Object actual)
+   at Xunit.Assert.Equal<T>(T expected, T actual)
+   at Microsoft.VisualStudio.TestPlatform.Runner.Run()
+   at Microsoft.Extensions.Hosting.Host.StartAsync()
+   at Demo.Tests.NoPath.Run()
+Repository: https://repo.example.test/src/Cart.cs?path=a&version=42).
+Balanced: https://repo.example.test/Func(a)[b].
+Unrecognized <List<int>> text; javascript:alert(1)

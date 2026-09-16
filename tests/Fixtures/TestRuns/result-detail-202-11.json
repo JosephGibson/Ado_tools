@@ -1,0 +1,14 @@
+{
+  "id": 11,
+  "outcome": "Failed",
+  "automatedTestName": "Contoso.Orders.Tests.OrderTests.Totals",
+  "automatedTestStorage": "Contoso.Orders.Tests.dll",
+  "testCaseTitle": "Computes order totals",
+  "startedDate": "2026-09-14T10:11:00Z",
+  "errorMessage": "Expected total 19,99 but found 19.99.",
+  "computerName": "AGENT-02",
+  "testCase": {
+    "id": "1011"
+  },
+  "durationInMs": 500.0
+}

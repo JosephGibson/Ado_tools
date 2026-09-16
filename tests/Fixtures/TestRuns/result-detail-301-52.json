@@ -1,0 +1,25 @@
+{
+  "id": 52,
+  "outcome": "Failed",
+  "resultGroupType": "Rerun",
+  "automatedTestName": "Contoso.Web.Tests.RetryTests.Combined",
+  "automatedTestStorage": "Contoso.Web.Tests.dll",
+  "testCaseTitle": "Combined sources",
+  "startedDate": "2026-09-14T10:02:00Z",
+  "subResults": [
+    {
+      "id": 71,
+      "sequenceId": 1,
+      "displayName": "Attempt 1",
+      "outcome": "Failed",
+      "errorMessage": "Rerun 1 failed."
+    },
+    {
+      "id": 72,
+      "sequenceId": 2,
+      "displayName": "Attempt 2",
+      "outcome": "Failed",
+      "errorMessage": "Rerun 2 failed."
+    }
+  ]
+}

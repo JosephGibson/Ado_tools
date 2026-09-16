@@ -1,0 +1,28 @@
+{
+  "value": [
+    {
+      "id": 813,
+      "name": "Tâches de régression",
+      "suiteType": "staticTestSuite",
+      "plan": { "id": 812, "name": "Tâches de régression" },
+      "hasChildren": true
+    },
+    {
+      "id": 814,
+      "name": "Connexion",
+      "suiteType": "staticTestSuite",
+      "parentSuite": { "id": 813, "name": "Tâches de régression" },
+      "plan": { "id": 812, "name": "Tâches de régression" },
+      "hasChildren": true
+    },
+    {
+      "id": 815,
+      "name": "Paiement",
+      "suiteType": "requirementTestSuite",
+      "parentSuite": { "id": 813, "name": "Tâches de régression" },
+      "plan": { "id": 812, "name": "Tâches de régression" },
+      "hasChildren": true
+    }
+  ],
+  "count": 3
+}

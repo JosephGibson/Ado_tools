@@ -1,0 +1,54 @@
+{
+  "count": 7,
+  "value": [
+    {
+      "id": 7001,
+      "fileName": "../../outside.png",
+      "size": 90,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Test results 16: traversal"
+    },
+    {
+      "id": 7002,
+      "fileName": "CON.json",
+      "size": 90,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Test results 16: reserved device name"
+    },
+    {
+      "id": 7003,
+      "fileName": "</script><script>alert('fixture-only')</script>.html",
+      "size": 90,
+      "attachmentType": "<img src=x onerror=fixture()>",
+      "comment": "Test results 16: closing script tag"
+    },
+    {
+      "id": 7004,
+      "fileName": "a\"b'c <b>.bin",
+      "size": 90,
+      "attachmentType": "GeneralAttachment",
+      "comment": "\" onmouseover=\"fixture()"
+    },
+    {
+      "id": 7005,
+      "fileName": "C:\\Windows\\System32\\drivers\\etc\\hosts.png",
+      "size": 90,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Test results 16: absolute path"
+    },
+    {
+      "id": 7006,
+      "fileName": "\\\\server.example.test\\share\\x.json",
+      "size": 90,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Test results 16: UNC path"
+    },
+    {
+      "id": 7007,
+      "fileName": "name:stream.png. ",
+      "size": 90,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Test results 16: stream and trailing dot"
+    }
+  ]
+}

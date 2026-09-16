@@ -1,0 +1,21 @@
+{
+  "count": 1,
+  "value": [
+    {
+      "id": 271,
+      "name": "Web tests",
+      "state": "Completed",
+      "isAutomated": true,
+      "startedDate": "2026-09-14T09:00:00Z",
+      "completedDate": "2026-09-14T09:05:00Z",
+      "totalTests": 1,
+      "runStatistics": [
+        {
+          "state": "Completed",
+          "outcome": "Failed",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}

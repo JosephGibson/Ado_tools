@@ -1,0 +1,18 @@
+{
+  "value": [
+    {
+      "id": 43,
+      "name": "Tache",
+      "path": "\\Other",
+      "revision": 1,
+      "queueStatus": "paused"
+    },
+    {
+      "id": 44,
+      "name": "Tâches",
+      "path": "\\Other",
+      "revision": 2,
+      "queueStatus": "enabled"
+    }
+  ]
+}

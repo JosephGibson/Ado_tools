@@ -1,0 +1,44 @@
+# Personal, machine-local overrides — keep out of version control.
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Never track local credentials or service configuration.
+.env
+.env.*
+!.env.example
+secrets/
+secret/
+*.pem
+*.pfx
+*.p12
+*.key
+id_rsa*
+id_ed25519*
+.npmrc
+.pypirc
+.netrc
+
+# Local run output and stray tool logs.
+*.log
+
+# Build output and editor state.
+bin/
+obj/
+target/
+dist/
+build/
+artifacts/
+coverage/
+TestResults/
+node_modules/
+__pycache__/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.cache/
+.next/
+.nuxt/
+venv/
+.vs/
+*.user

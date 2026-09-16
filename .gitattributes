@@ -1,0 +1,13 @@
+# Normalise every text file to LF in the repository.
+* text=auto eol=lf
+
+# Windows script hosts require CRLF; PowerShell does not, so it stays LF above.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary fixtures are stored byte for byte.
+*.png binary
+
+# Keep dependency changes reviewable even when hosting UIs mark lockfiles generated.
+*.lock linguist-generated
+package-lock.json linguist-generated

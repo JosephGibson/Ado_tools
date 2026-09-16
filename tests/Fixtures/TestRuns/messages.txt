@@ -1,0 +1,10 @@
+System.InvalidOperationException: "Synthetic" failure
+Assert.AreEqual failed. Expected:<1>. Actual:<2>.
+Expected: "ready"
+  But was: "waiting"
+Assert.Equal() Failure: Values differ
+Expected: 1.25
+Actual: -2.5e+3
+Attendu : <1,25>. Réel : <2,50>. Obtenu : 'texte'. Mais était : "autre".
+Mais a été : 12
+See https://repo.example.test/a?x=1&y=2, then javascript:alert(1).

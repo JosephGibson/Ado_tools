@@ -1,0 +1,38 @@
+{
+  "id": 22,
+  "outcome": "Passed",
+  "resultGroupType": "Rerun",
+  "automatedTestName": "Contoso.Web.Tests.RetryTests.FlakyTwice",
+  "automatedTestStorage": "Contoso.Web.Tests.dll",
+  "testCaseTitle": "Flaky twice",
+  "startedDate": "2026-09-14T10:02:00Z",
+  "computerName": "AGENT-01",
+  "subResults": [
+    {
+      "id": 6,
+      "sequenceId": 3,
+      "displayName": "Attempt 3",
+      "outcome": "Passed",
+      "startedDate": "2026-09-14T10:02:04Z",
+      "durationInMs": 1200.5
+    },
+    {
+      "id": 4,
+      "sequenceId": 1,
+      "displayName": "Attempt 1",
+      "outcome": "Failed",
+      "errorMessage": "First failure",
+      "startedDate": "2026-09-14T10:02:00Z",
+      "durationInMs": 1200.5
+    },
+    {
+      "id": 5,
+      "sequenceId": 2,
+      "displayName": "Attempt 2",
+      "outcome": "Failed",
+      "errorMessage": "Second failure",
+      "startedDate": "2026-09-14T10:02:02Z",
+      "durationInMs": 1200.5
+    }
+  ]
+}

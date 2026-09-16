@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <DebugType>embedded</DebugType>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <AllowedReferenceRelatedFileExtensions>.xml</AllowedReferenceRelatedFileExtensions>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../AdoToolkit.Core/AdoToolkit.Core.csproj" />
+    <PackageReference Include="System.Management.Automation"
+                      PrivateAssets="all" ExcludeAssets="runtime" IncludeAssets="compile" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="AdoToolkit.psd1;AdoToolkit.Format.ps1xml"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

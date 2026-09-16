@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AdoToolkit.Core/AdoToolkit.Core.csproj" />
+    <Project Path="src/AdoToolkit.PowerShell/AdoToolkit.PowerShell.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AdoToolkit.Core.Tests/AdoToolkit.Core.Tests.csproj" />
+  </Folder>
+</Solution>

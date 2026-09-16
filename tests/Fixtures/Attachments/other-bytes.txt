@@ -1,0 +1,1 @@
+Synthetic trace bytes for an unknown extension and for a name without an extension.

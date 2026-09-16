@@ -1,0 +1,10 @@
+System.InvalidOperationException: Échec synthétique « été ! »
+ ---> System.ArgumentException: Argument incorrect
+   à System.ThrowHelper.ThrowArgumentException()
+   --- Fin de la trace de la pile d'exception interne ---
+   à Démo.Tests.Panier.<Ajouter>d__4.MoveNext() dans C:\agent\src\Panier.cs:ligne 42
+--- Fin de la trace de la pile à partir de l'emplacement précédent ---
+   à Démo.Générique<List<int>>.Vérifier<T>(List<int> valeurs)
+--- Fin de la trace de la pile d’exception interne ---
+--- Fin de la trace de la pile à partir de l’emplacement précédent ---
+Dépôt : https://repo.example.test/src/Panier.cs?nom=été&ligne=42].

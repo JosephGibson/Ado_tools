@@ -1,0 +1,9 @@
+{
+  "name": "Étapes communes",
+  "referenceName": "Microsoft.SharedStepCategory",
+  "workItemTypes": [
+    {
+      "name": "Étapes communes"
+    }
+  ]
+}

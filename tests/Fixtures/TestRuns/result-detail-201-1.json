@@ -1,0 +1,71 @@
+{
+  "id": 1,
+  "outcome": "Failed",
+  "automatedTestName": "Contoso.Web.Tests.CartTests.AddsItem",
+  "automatedTestStorage": "Contoso.Web.Tests.dll",
+  "testCaseTitle": "Adds an item to the cart",
+  "startedDate": "2026-09-14T10:01:00Z",
+  "completedDate": "2026-09-14T10:01:02Z",
+  "durationInMs": 2150.5,
+  "computerName": "AGENT-01",
+  "errorMessage": "Assert.AreEqual failed. Expected:<1>. Actual:<2>.",
+  "stackTrace": "at Contoso.Web.Tests.CartTests.AddsItem() in C:\\src\\CartTests.cs:line 42",
+  "failureType": "Regression",
+  "resolutionState": "NeedsInvestigation",
+  "comment": "Reviewed by the on-call.",
+  "priority": 2,
+  "owner": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "displayName": "Équipe Web",
+    "uniqueName": "equipe.web@contoso.test"
+  },
+  "runBy": {
+    "id": "22222222-2222-2222-2222-222222222222",
+    "displayName": "Build Service",
+    "uniqueName": "build.service@contoso.test"
+  },
+  "testRun": {
+    "id": 201,
+    "name": "Web tests"
+  },
+  "failingSince": {
+    "id": 399,
+    "name": "20260913.2"
+  },
+  "testCase": {
+    "id": "1010"
+  },
+  "associatedBugs": [
+    {
+      "id": 2001
+    },
+    {
+      "id": 2002
+    },
+    {
+      "id": 2001
+    }
+  ],
+  "customFields": [
+    {
+      "fieldName": "Suite de tests",
+      "value": "Panier"
+    },
+    {
+      "fieldName": "Retries",
+      "value": 3
+    }
+  ],
+  "url": "https://ado.example.test/Collection/_apis/test/Runs/201/results/1",
+  "unknownScalar": "kept verbatim",
+  "unknownCount": 42,
+  "unknownFlag": true,
+  "unknownObject": {
+    "nested": "skipped"
+  },
+  "unknownArray": [
+    1,
+    2,
+    3
+  ]
+}

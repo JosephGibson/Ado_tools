@@ -1,0 +1,12 @@
+global using System;
+global using System.Collections.Generic;
+global using System.Globalization;
+global using System.Linq;
+global using System.Threading;
+global using System.Threading.Tasks;
+global using System.Management.Automation;
+global using AdoToolkit.Core.Configuration;
+global using AdoToolkit.Core.Connections;
+global using AdoToolkit.Core.Diagnostics;
+global using AdoToolkit.Core.Resources;
+global using AdoToolkit.Commands.Infrastructure;

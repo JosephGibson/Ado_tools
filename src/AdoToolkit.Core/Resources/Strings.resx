@@ -1,0 +1,233 @@
+<root>
+  <data name="BuildLogIdRange" xml:space="preserve"><value>The log ID must be an integer from 1 to 2147483647, or null for a failure without a log.</value></data>
+  <data name="BuildLogTailUnknown" xml:space="preserve"><value>Build {0}, log {1}: the line count is unknown; downloading the full log.</value></data>
+  <data name="BuildLogNotAvailable" xml:space="preserve"><value>Build {0}: this failure has no log to download.</value></data>
+  <data name="BuildLogDirectoryRequired" xml:space="preserve"><value>Specify an existing directory for the build log: {0}</value></data>
+  <data name="SaveBuildLog" xml:space="preserve"><value>Save build log</value></data>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="OperationFailed" xml:space="preserve"><value>The operation failed.</value></data>
+  <data name="InvalidCollectionUrl" xml:space="preserve"><value>Specify an absolute HTTP or HTTPS collection URL without user information, a query, a fragment, or API and UI path segments.</value></data>
+  <data name="ServicesUnsupported" xml:space="preserve"><value>Azure DevOps Services is not supported. Specify an Azure DevOps Server collection URL.</value></data>
+  <data name="PlainHttp" xml:space="preserve"><value>This collection uses HTTP. Windows authentication exchanges are not protected by TLS.</value></data>
+  <data name="InvalidConfiguration" xml:space="preserve"><value>The configuration is invalid: {0}</value></data>
+  <data name="UnknownConfiguration" xml:space="preserve"><value>Unknown configuration property retained: {0}</value></data>
+  <data name="NewerConfiguration" xml:space="preserve"><value>Configuration schema {0} is newer than supported schema 1. Changes are refused.</value></data>
+  <data name="FileOutput" xml:space="preserve"><value>Cannot write the file: {0}</value></data>
+  <data name="UnsupportedCulture" xml:space="preserve"><value>Culture {0} is not supported; English will be used.</value></data>
+  <data name="MissingProfile" xml:space="preserve"><value>Profile {0} was not found.</value></data>
+  <data name="NoConnection" xml:space="preserve"><value>Connect with Connect-Ado or supply a connection.</value></data>
+  <data name="NoTarget" xml:space="preserve"><value>Specify a collection URL or a configured profile.</value></data>
+  <data name="ConnectionMismatch" xml:space="preserve"><value>The input belongs to a different collection.</value></data>
+  <data name="Authentication" xml:space="preserve"><value>Authentication failed. Check the Windows identity, collection URL, and proxy or Negotiate configuration.</value></data>
+  <data name="Authorization" xml:space="preserve"><value>Access was denied. Check collection and project permissions.</value></data>
+  <data name="NotFound" xml:space="preserve"><value>The requested resource was not found.</value></data>
+  <data name="Request" xml:space="preserve"><value>The server rejected the request.</value></data>
+  <data name="RegistryMismatch" xml:space="preserve"><value>Check the endpoint registry and requested API version.</value></data>
+  <data name="Redirect" xml:space="preserve"><value>A redirect was blocked. Target: {0}</value></data>
+  <data name="Throttled" xml:space="preserve"><value>The server is throttling requests. Try again later.</value></data>
+  <data name="Server" xml:space="preserve"><value>The server could not complete the request.</value></data>
+  <data name="Timeout" xml:space="preserve"><value>The operation exceeded its time limit.</value></data>
+  <data name="ResponseFormat" xml:space="preserve"><value>The server response has an invalid format.</value></data>
+  <data name="PagingGuard" xml:space="preserve"><value>Paging did not advance or exceeded the page limit.</value></data>
+  <data name="Retry" xml:space="preserve"><value>Retrying {0}; attempt {1}, reason {2}.</value></data>
+  <data name="RequestLog" xml:space="preserve"><value>{0} {1} {2} {3} ms attempt={4}</value></data>
+  <data name="PageLog" xml:space="preserve"><value>{0}: page {1}, items {2}.</value></data>
+  <data name="ConnectionHint" xml:space="preserve"><value>The projects call failed. Check whether the supplied URL is a collection URL rather than a project URL.</value></data>
+  <data name="SetProfile" xml:space="preserve"><value>Save profile</value></data>
+  <data name="RemoveProfile" xml:space="preserve"><value>Remove profile</value></data>
+  <data name="Connect" xml:space="preserve"><value>Connected to the collection.</value></data>
+  <data name="Disconnect" xml:space="preserve"><value>Disconnected from the collection.</value></data>
+  <data name="WorkItemNotFound" xml:space="preserve"><value>Work item {0} was not found or is inaccessible.</value></data>
+  <data name="FieldRelationsConflict" xml:space="preserve"><value>Field selection and relation expansion cannot be combined in this toolkit.</value></data>
+  <data name="ProjectRequired" xml:space="preserve"><value>Specify a project with -Project or connect with a default project.</value></data>
+  <data name="TestPlanNotFound" xml:space="preserve"><value>Test plan {0} was not found or is inaccessible.</value></data>
+  <data name="TestSuiteNotFound" xml:space="preserve"><value>Test suite {0} was not found in test plan {1}.</value></data>
+  <data name="WiqlNotFlat" xml:space="preserve"><value>Only flat work item queries are supported; link and tree queries are not.</value></data>
+  <data name="WiqlResultLimit" xml:space="preserve"><value>The query returned {0} or more work items, so the result may be incomplete.</value></data>
+  <data name="WiqlLimitHint" xml:space="preserve"><value>Narrow the query, or use -Top to request an intentionally limited result.</value></data>
+  <data name="NotAStepContainer" xml:space="preserve"><value>The work item is not a test step container.</value></data>
+  <data name="EmptySteps" xml:space="preserve"><value>The work item has no test steps.</value></data>
+  <data name="MalformedStepsXml" xml:space="preserve"><value>Steps XML is invalid at line {0}, position {1}.</value></data>
+  <data name="UnknownStepElement" xml:space="preserve"><value>An unsupported step element or extra value was skipped.</value></data>
+  <data name="UnknownStepType" xml:space="preserve"><value>The step type is unknown; its kind was inferred from the expected result.</value></data>
+  <data name="UnexpectedComprefChildren" xml:space="preserve"><value>Child elements of a shared step reference were ignored.</value></data>
+  <data name="InvalidSharedStepReference" xml:space="preserve"><value>The shared step reference must have a positive integer ref attribute.</value></data>
+  <data name="UnresolvedSharedStep" xml:space="preserve"><value>The referenced shared steps are missing or inaccessible.</value></data>
+  <data name="SharedStepHasNoSteps" xml:space="preserve"><value>The referenced work item has no test steps.</value></data>
+  <data name="CircularSharedStepReference" xml:space="preserve"><value>A circular shared step reference prevented expansion.</value></data>
+  <data name="MaximumDepthExceeded" xml:space="preserve"><value>The shared step nesting depth exceeded the configured maximum.</value></data>
+  <data name="ExpansionLimitExceeded" xml:space="preserve"><value>The expanded step limit was exceeded; expansion stopped.</value></data>
+  <data name="ResolutionLimitExceeded" xml:space="preserve"><value>The work item resolution limit was reached; some references remain unresolved.</value></data>
+  <data name="NestedEncodingDecoded" xml:space="preserve"><value>Nested encoding required more than one text conversion pass.</value></data>
+  <data name="MalformedParameterData" xml:space="preserve"><value>Parameter data has an invalid XML or JSON format.</value></data>
+  <data name="UnresolvedSharedParameter" xml:space="preserve"><value>A referenced shared parameter set is missing or inaccessible.</value></data>
+  <data name="RichTextImage" xml:space="preserve"><value>[image]</value></data>
+  <data name="RichTextImageAlt" xml:space="preserve"><value>[image: {0}]</value></data>
+  <data name="PartialTestCase" xml:space="preserve"><value>Test case {0} is partial: {1} error(s), {2} warning(s), {3} information diagnostic(s).</value></data>
+  <data name="ReportTestCase" xml:space="preserve"><value>Test Case</value></data>
+  <data name="ReportSharedSteps" xml:space="preserve"><value>Shared Steps</value></data>
+  <data name="ReportSharedParameters" xml:space="preserve"><value>Shared Parameters</value></data>
+  <data name="ReportStep" xml:space="preserve"><value>Step</value></data>
+  <data name="ReportAction" xml:space="preserve"><value>Action</value></data>
+  <data name="ReportExpectedResult" xml:space="preserve"><value>Expected Result</value></data>
+  <data name="ReportParameters" xml:space="preserve"><value>Parameters</value></data>
+  <data name="ReportTestPlan" xml:space="preserve"><value>Test Plan</value></data>
+  <data name="ReportTestSuite" xml:space="preserve"><value>Test Suite</value></data>
+  <data name="ReportState" xml:space="preserve"><value>State</value></data>
+  <data name="ReportAssignedTo" xml:space="preserve"><value>Assigned To</value></data>
+  <data name="ReportPriority" xml:space="preserve"><value>Priority</value></data>
+  <data name="ReportAreaPath" xml:space="preserve"><value>Area Path</value></data>
+  <data name="ReportIterationPath" xml:space="preserve"><value>Iteration Path</value></data>
+  <data name="ReportGeneratedAt" xml:space="preserve"><value>Generated on</value></data>
+  <data name="ReportServer" xml:space="preserve"><value>Server</value></data>
+  <data name="ReportCollection" xml:space="preserve"><value>Collection</value></data>
+  <data name="ReportProject" xml:space="preserve"><value>Project</value></data>
+  <data name="ReportTitle" xml:space="preserve"><value>Title</value></data>
+  <data name="ReportId" xml:space="preserve"><value>ID</value></data>
+  <data name="ReportRevision" xml:space="preserve"><value>Revision</value></data>
+  <data name="ReportWorkItemType" xml:space="preserve"><value>Work item type</value></data>
+  <data name="ReportAutomationStatus" xml:space="preserve"><value>Automation status</value></data>
+  <data name="ReportChangedDate" xml:space="preserve"><value>Last changed</value></data>
+  <data name="ReportChangedBy" xml:space="preserve"><value>Changed by</value></data>
+  <data name="ReportStatus" xml:space="preserve"><value>Status</value></data>
+  <data name="ReportStepCount" xml:space="preserve"><value>Step count</value></data>
+  <data name="ReportDiagnostics" xml:space="preserve"><value>Diagnostics</value></data>
+  <data name="ReportComplete" xml:space="preserve"><value>Complete</value></data>
+  <data name="ReportPartial" xml:space="preserve"><value>Partial</value></data>
+  <data name="ReportToolkitVersion" xml:space="preserve"><value>Toolkit version</value></data>
+  <data name="DownloadsUnavailable" xml:space="preserve"><value>The Downloads known folder could not be resolved.</value></data>
+  <data name="InvalidReportOutput" xml:space="preserve"><value>The report output is empty or invalid.</value></data>
+  <data name="ReportHeading" xml:space="preserve"><value>Azure DevOps Test Case</value></data>
+  <data name="IncludeSourceJsonOnly" xml:space="preserve"><value>IncludeSource requires the JSON report format.</value></data>
+  <data name="NoTestCasesToExport" xml:space="preserve"><value>No test cases were received; no report was written.</value></data>
+  <data name="ExportReport" xml:space="preserve"><value>Export Test Case report</value></data>
+  <data name="FileSystemPathRequired" xml:space="preserve"><value>The report path must use the FileSystem provider.</value></data>
+  <data name="ReportOverview" xml:space="preserve"><value>Overview</value></data>
+  <data name="ReportSteps" xml:space="preserve"><value>Steps</value></data>
+  <data name="ReportNavigation" xml:space="preserve"><value>Report sections</value></data>
+  <data name="ReportBrand" xml:space="preserve"><value>AdoToolkit</value></data>
+  <data name="ReportDocumentHeading" xml:space="preserve"><value>Azure DevOps Test Case Report</value></data>
+  <data name="ReportContents" xml:space="preserve"><value>Contents</value></data>
+  <data name="ReportSource" xml:space="preserve"><value>Source</value></data>
+  <data name="ReportQuerySource" xml:space="preserve"><value>WIQL query or ID list</value></data>
+  <data name="ReportCaseCount" xml:space="preserve"><value>Test cases</value></data>
+  <data name="ProgressActivity" xml:space="preserve"><value>Retrieving test cases</value></data>
+  <data name="ProgressEnumeration" xml:space="preserve"><value>Reading suite memberships: {0} of {1} suites</value></data>
+  <data name="ProgressFetch" xml:space="preserve"><value>Retrieving work items: {0} batch(es)</value></data>
+  <data name="ProgressExpansion" xml:space="preserve"><value>Expanding test cases: {0} of {1}</value></data>
+  <data name="ProgressCompleted" xml:space="preserve"><value>Retrieved {0} test case(s).</value></data>
+  <data name="InputNotTestCase" xml:space="preserve"><value>Input {0} is a test plan or suite, so its Id is not a test case ID. Pipe AdoTestSuite objects from Get-AdoTestSuite.</value></data>
+  <data name="BuildDefinitionMatches" xml:space="preserve"><value>The definition name matched {0} definitions. Use -Definition &lt;id&gt;.</value></data>
+  <data name="BuildDefinitionNotFound" xml:space="preserve"><value>Build definition {0} was not found.</value></data>
+  <data name="BuildNotFound" xml:space="preserve"><value>Build {0} was not found.</value></data>
+  <data name="InvalidBuildDefinition" xml:space="preserve"><value>Definition must be a positive integer ID or a non-empty exact name.</value></data>
+  <data name="NoTestRuns" xml:space="preserve"><value>Build {0} has no test runs.</value></data>
+  <data name="TestRunInProgress" xml:space="preserve"><value>Build {0} or one of its test runs is not complete; results may change.</value></data>
+  <data name="FailureLimitExceeded" xml:space="preserve"><value>{0} failing test identities exceed the maximum of {1}; the remaining identities are counted but not detailed.</value></data>
+  <data name="UngroupedTestResult" xml:space="preserve"><value>Result {0} in run {1} has no automated test name, so its attempts cannot be grouped.</value></data>
+  <data name="InvalidTestCaseReference" xml:space="preserve"><value>Result {0} in run {1} has a Test Case reference that is not a positive integer.</value></data>
+  <data name="UnresolvedTestCase" xml:space="preserve"><value>Test Case {0} is missing or inaccessible; its ID link is kept.</value></data>
+  <data name="HistoryUnavailable" xml:space="preserve"><value>Build {0} could not be read; its history bar and cells show as unavailable.</value></data>
+  <data name="HistoryLimitExceeded" xml:space="preserve"><value>The maximum of {0} history request(s) was reached; older history entries are unavailable.</value></data>
+  <data name="ProgressTestFailureActivity" xml:space="preserve"><value>Retrieving failed tests</value></data>
+  <data name="ProgressTestRuns" xml:space="preserve"><value>Reading test runs: {0} run(s)</value></data>
+  <data name="ProgressTestResults" xml:space="preserve"><value>Listing test results: {0} of {1} run(s)</value></data>
+  <data name="ProgressTestDetail" xml:space="preserve"><value>Reading failure details: {0} of {1} result(s)</value></data>
+  <data name="ProgressAttachments" xml:space="preserve"><value>Reading attachment lists: {0} of {1} result(s)</value></data>
+  <data name="ProgressTestCaseLinks" xml:space="preserve"><value>Resolving Test Case links: {0} batch(es)</value></data>
+  <data name="ProgressHistory" xml:space="preserve"><value>Reading run history: {0} of {1} build(s)</value></data>
+  <data name="ProgressTestFailureCompleted" xml:space="preserve"><value>Retrieved {0} failed or flaky test(s).</value></data>
+  <data name="PartialTestFailureSet" xml:space="preserve"><value>Build {0}: the failed-test result is partial ({1} error(s), {2} warning(s), {3} information item(s)).</value></data>
+  <data name="TestTextTruncated" xml:space="preserve"><value>The message or stack trace exceeds the display limit; only its beginning is shown.</value></data>
+  <data name="TestReportPassed" xml:space="preserve"><value>Passed</value></data>
+  <data name="TestReportFailed" xml:space="preserve"><value>Failed</value></data>
+  <data name="TestReportFlaky" xml:space="preserve"><value>Flaky</value></data>
+  <data name="TestReportOther" xml:space="preserve"><value>Other</value></data>
+  <data name="TestReportNotRun" xml:space="preserve"><value>Not run</value></data>
+  <data name="TestReportUnavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="TestReportAvailable" xml:space="preserve"><value>Available</value></data>
+  <data name="TestReportThisRun" xml:space="preserve"><value>This run</value></data>
+  <data name="TestReportOpenAdo" xml:space="preserve"><value>Open in Azure DevOps</value></data>
+  <data name="TestReportHistory" xml:space="preserve"><value>Run history</value></data>
+  <data name="TestReportHistoryData" xml:space="preserve"><value>History data</value></data>
+  <data name="TestReportHistoryTitle" xml:space="preserve"><value>Build {0}; branch {1}; finished {2}; ✓ Passed: {3}; ✕ Failed: {4}; ≈ Flaky: {5}; – Other: {6}; {7}; {8}</value></data>
+  <data name="TestReportBuild" xml:space="preserve"><value>Build</value></data>
+  <data name="TestReportBranch" xml:space="preserve"><value>Branch</value></data>
+  <data name="TestReportFinished" xml:space="preserve"><value>Finished</value></data>
+  <data name="TestReportAttempts" xml:space="preserve"><value>Attempts</value></data>
+  <data name="TestReportAttemptOf" xml:space="preserve"><value>Attempt {0} of {1}</value></data>
+  <data name="TestReportStackTrace" xml:space="preserve"><value>Stack trace (.NET)</value></data>
+  <data name="TestReportErrorMessage" xml:space="preserve"><value>Error message</value></data>
+  <data name="TestReportJson" xml:space="preserve"><value>JSON</value></data>
+  <data name="TestReportHeading" xml:space="preserve"><value>Failed test report</value></data>
+  <data name="TestReportIndex" xml:space="preserve"><value>Failure index</value></data>
+  <data name="TestReportAttachments" xml:space="preserve"><value>Attachments</value></data>
+  <data name="TestReportFilter" xml:space="preserve"><value>Filter tests</value></data>
+  <data name="TestReportHasAttachments" xml:space="preserve"><value>Has attachments</value></data>
+  <data name="TestReportExpandAll" xml:space="preserve"><value>Expand all</value></data>
+  <data name="TestReportCollapseAll" xml:space="preserve"><value>Collapse all</value></data>
+  <data name="TestReportCopy" xml:space="preserve"><value>Copy</value></data>
+  <data name="TestReportCopied" xml:space="preserve"><value>Copied</value></data>
+  <data name="TestReportSelectCopy" xml:space="preserve"><value>Text selected; use your copy shortcut.</value></data>
+  <data name="TestReportWrap" xml:space="preserve"><value>Wrap lines</value></data>
+  <data name="TestReportFramework" xml:space="preserve"><value>Hide framework frames</value></data>
+  <data name="TestReportClose" xml:space="preserve"><value>Close</value></data>
+  <data name="TestReportImage" xml:space="preserve"><value>Attachment image</value></data>
+  <data name="TestReportDuration" xml:space="preserve"><value>Duration</value></data>
+  <data name="TestReportSeconds" xml:space="preserve"><value>{0:N3} s</value></data>
+  <data name="TestReportStarted" xml:space="preserve"><value>Started</value></data>
+  <data name="TestReportMachine" xml:space="preserve"><value>Machine</value></data>
+  <data name="TestReportRun" xml:space="preserve"><value>Test run</value></data>
+  <data name="TestReportResult" xml:space="preserve"><value>Test result</value></data>
+  <data name="TestReportRunBy" xml:space="preserve"><value>Run by</value></data>
+  <data name="TestReportFailureType" xml:space="preserve"><value>Failure type</value></data>
+  <data name="TestReportResolution" xml:space="preserve"><value>Resolution state</value></data>
+  <data name="TestReportFailingSince" xml:space="preserve"><value>Failing since</value></data>
+  <data name="TestReportComment" xml:space="preserve"><value>Comment</value></data>
+  <data name="TestReportBugs" xml:space="preserve"><value>Associated bugs</value></data>
+  <data name="TestReportOwner" xml:space="preserve"><value>Owner</value></data>
+  <data name="TestReportSubResults" xml:space="preserve"><value>Sub-results</value></data>
+  <data name="TestReportIterations" xml:space="preserve"><value>Iterations</value></data>
+  <data name="TestReportCustomFields" xml:space="preserve"><value>Custom fields</value></data>
+  <data name="TestReportAdditionalFields" xml:space="preserve"><value>Additional fields</value></data>
+  <data name="TestReportSource" xml:space="preserve"><value>Attempt source</value></data>
+  <data name="TestReportSingle" xml:space="preserve"><value>Single result</value></data>
+  <data name="TestReportRerun" xml:space="preserve"><value>In-task rerun</value></data>
+  <data name="TestReportRunAttempt" xml:space="preserve"><value>Run re-attempt</value></data>
+  <data name="TestReportOutcome" xml:space="preserve"><value>Outcome</value></data>
+  <data name="TestReportGroupType" xml:space="preserve"><value>Result group type</value></data>
+  <data name="TestReportSequence" xml:space="preserve"><value>Sequence</value></data>
+  <data name="TestReportActionPath" xml:space="preserve"><value>Action path</value></data>
+  <data name="TestReportStepIdentifier" xml:space="preserve"><value>Step identifier</value></data>
+  <data name="TestReportBytes" xml:space="preserve"><value>{0:N0} bytes</value></data>
+  <data name="TestReportAttachmentType" xml:space="preserve"><value>Attachment type</value></data>
+  <data name="TestReportCommit" xml:space="preserve"><value>Commit</value></data>
+  <data name="TestReportStorage" xml:space="preserve"><value>Test assembly</value></data>
+  <data name="TestReportFullName" xml:space="preserve"><value>Full test name</value></data>
+  <data name="TestReportNoFailures" xml:space="preserve"><value>No failed or flaky tests to report.</value></data>
+  <data name="TestReportNoMatches" xml:space="preserve"><value>No tests match these filters.</value></data>
+  <data name="TestReportNavigationHint" xml:space="preserve"><value>/ Filter · j/k Next/previous test · o Toggle attempt</value></data>
+  <data name="TestReportInfo" xml:space="preserve"><value>Information</value></data>
+  <data name="TestReportWarning" xml:space="preserve"><value>Warning</value></data>
+  <data name="TestReportError" xml:space="preserve"><value>Error</value></data>
+  <data name="TestReportFilterCount" xml:space="preserve"><value>{0} of {1} tests</value></data>
+  <data name="AttachmentTooLarge" xml:space="preserve"><value>Attachment {0} of test result {2} in run {1} is larger than the {3}-byte limit; it is listed and linked to Azure DevOps but not downloaded.</value></data>
+  <data name="AttachmentBudgetExceeded" xml:space="preserve"><value>The total attachment budget of {0} bytes was reached at attachment {1}; the remaining attachments are listed but not downloaded.</value></data>
+  <data name="AttachmentDownloadFailed" xml:space="preserve"><value>Attachment {0} of test result {2} in run {1} could not be downloaded; it is listed without a local file.</value></data>
+  <data name="AttachmentContentMismatch" xml:space="preserve"><value>Attachment {0} of test result {2} in run {1} does not contain valid {3} content; it is linked as a .bin file and not previewed.</value></data>
+  <data name="TestReportLocalCopy" xml:space="preserve"><value>Local copy</value></data>
+  <data name="TestReportTestOutputHtml" xml:space="preserve"><value>Test output HTML (local file)</value></data>
+  <data name="TestReportNotDownloadedTooLarge" xml:space="preserve"><value>Not downloaded: larger than the size limit.</value></data>
+  <data name="TestReportNotDownloadedBudget" xml:space="preserve"><value>Not downloaded: the total attachment budget was reached.</value></data>
+  <data name="TestReportDownloadFailed" xml:space="preserve"><value>Download failed; the original remains in Azure DevOps.</value></data>
+  <data name="TestReportContentMismatch" xml:space="preserve"><value>The content does not match the file type; saved as .bin and not previewed.</value></data>
+  <data name="TestReportImageOf" xml:space="preserve"><value>Attachment image: {0}</value></data>
+  <data name="ExportTestFailureReport" xml:space="preserve"><value>Export failed-test report</value></data>
+  <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Export failed-test report and download attachments to {0}</value></data>
+  <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Downloading attachments: {0} of {1}</value></data>
+  <data name="TestFailureReportPathInvalid" xml:space="preserve"><value>The path must be an existing directory or an .html file: {0}</value></data>
+  <data name="TestFailureReportSingleFile" xml:space="preserve"><value>The path names one file, so only the first failed-test set is exported; use a directory for build {0}.</value></data>
+  <data name="AttachmentFolderSkipped" xml:space="preserve"><value>Skipped {0}: it is a link (reparse point), so it is never followed or deleted.</value></data>
+  <data name="AttachmentFolderNotDeleted" xml:space="preserve"><value>Could not delete the earlier attachment folder {0}; delete it manually.</value></data>
+</root>

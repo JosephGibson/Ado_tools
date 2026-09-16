@@ -1,0 +1,66 @@
+[
+  {
+    "value": [
+      {
+        "id": 1,
+        "rev": 3,
+        "fields": {
+          "System.Title": "Synthetic 1",
+          "System.WorkItemType": "Cas personnalisé",
+          "System.TeamProject": "Équipe / Web",
+          "System.State": "Ready",
+          "System.ChangedDate": "2026-09-15T12:00:00Z",
+          "Microsoft.VSTS.TCM.Steps": "<steps><compref id=\"12\" ref=\"2\" /></steps>"
+        }
+      }
+    ]
+  },
+  {
+    "value": [
+      {
+        "id": 2,
+        "rev": 3,
+        "fields": {
+          "System.Title": "Synthetic 2",
+          "System.WorkItemType": "Cas personnalisé",
+          "System.TeamProject": "Équipe / Web",
+          "System.State": "Ready",
+          "System.ChangedDate": "2026-09-15T12:00:00Z",
+          "Microsoft.VSTS.TCM.Steps": "<steps><compref id=\"13\" ref=\"3\" /></steps>"
+        }
+      }
+    ]
+  },
+  {
+    "value": [
+      {
+        "id": 3,
+        "rev": 3,
+        "fields": {
+          "System.Title": "Synthetic 3",
+          "System.WorkItemType": "Cas personnalisé",
+          "System.TeamProject": "Équipe / Web",
+          "System.State": "Ready",
+          "System.ChangedDate": "2026-09-15T12:00:00Z",
+          "Microsoft.VSTS.TCM.Steps": "<steps><compref id=\"14\" ref=\"4\" /></steps>"
+        }
+      }
+    ]
+  },
+  {
+    "value": [
+      {
+        "id": 4,
+        "rev": 3,
+        "fields": {
+          "System.Title": "Synthetic 4",
+          "System.WorkItemType": "Cas personnalisé",
+          "System.TeamProject": "Équipe / Web",
+          "System.State": "Ready",
+          "System.ChangedDate": "2026-09-15T12:00:00Z",
+          "Microsoft.VSTS.TCM.Steps": "<steps><step id=\"1\" type=\"ActionStep\"><parameterizedString>Open @user</parameterizedString><parameterizedString /></step></steps>"
+        }
+      }
+    ]
+  }
+]

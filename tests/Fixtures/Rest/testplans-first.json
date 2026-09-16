@@ -1,0 +1,19 @@
+{
+  "value": [
+    {
+      "id": 812,
+      "name": "Tâches de régression",
+      "rootSuite": { "id": 813, "name": "Tâches de régression" },
+      "state": "Active",
+      "project": { "id": "11111111-1111-1111-1111-111111111111", "name": "Équipe Web" },
+      "_links": { "web": { "href": "https://untrusted.example.test/ignored" } }
+    },
+    {
+      "id": 820,
+      "name": "Tache simple",
+      "rootSuite": { "id": 821, "name": "Tache simple" },
+      "state": "Active"
+    }
+  ],
+  "count": 2
+}

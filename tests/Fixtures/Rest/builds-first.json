@@ -1,0 +1,35 @@
+{
+  "value": [
+    {
+      "id": 401,
+      "buildNumber": "20260915.1",
+      "definition": {
+        "id": 42,
+        "name": "Tâches"
+      },
+      "sourceBranch": "refs/heads/main",
+      "sourceVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "repository": {
+        "type": "TfsGit",
+        "id": "00000000-0000-0000-0000-000000000100"
+      },
+      "status": "completed",
+      "result": "failed",
+      "reason": "manual",
+      "requestedFor": {
+        "id": "00000000-0000-0000-0000-000000000101",
+        "displayName": "Synthetic User",
+        "uniqueName": "user@example.test"
+      },
+      "queueTime": "2026-09-15T09:59:00+02:00",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "uri": "vstfs:///Build/Build/401",
+      "_links": {
+        "web": {
+          "href": "https://untrusted.example.test/ignored"
+        }
+      }
+    }
+  ]
+}

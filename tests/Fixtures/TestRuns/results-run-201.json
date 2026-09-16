@@ -1,0 +1,35 @@
+{
+  "count": 3,
+  "value": [
+    {
+      "id": 1,
+      "outcome": "Failed",
+      "automatedTestName": "Contoso.Web.Tests.CartTests.AddsItem",
+      "automatedTestStorage": "Contoso.Web.Tests.dll",
+      "testCaseTitle": "Adds an item to the cart",
+      "startedDate": "2026-09-14T10:01:00Z",
+      "testCase": {
+        "id": "1010"
+      },
+      "url": "https://ado.example.test/Collection/_apis/test/Runs/201/results/1"
+    },
+    {
+      "id": 2,
+      "outcome": "Passed",
+      "automatedTestName": "Contoso.Web.Tests.CartTests.RemovesItem",
+      "automatedTestStorage": "Contoso.Web.Tests.dll",
+      "testCaseTitle": "Removes an item from the cart",
+      "startedDate": "2026-09-14T10:01:00Z",
+      "url": "https://ado.example.test/Collection/_apis/test/Runs/201/results/2"
+    },
+    {
+      "id": 3,
+      "outcome": "NotExecuted",
+      "automatedTestName": "Contoso.Web.Tests.CartTests.SkippedItem",
+      "automatedTestStorage": "Contoso.Web.Tests.dll",
+      "testCaseTitle": "Skipped item",
+      "startedDate": "2026-09-14T10:01:00Z",
+      "url": "https://ado.example.test/Collection/_apis/test/Runs/201/results/3"
+    }
+  ]
+}

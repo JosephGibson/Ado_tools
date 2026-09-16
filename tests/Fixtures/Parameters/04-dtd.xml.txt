@@ -1,0 +1,1 @@
+<!DOCTYPE NewDataSet [<!ENTITY external SYSTEM "https://external.example.test/entity">]><NewDataSet><Table1><user>&external;</user></Table1></NewDataSet>

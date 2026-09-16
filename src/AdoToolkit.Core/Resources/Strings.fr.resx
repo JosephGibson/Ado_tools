@@ -1,0 +1,233 @@
+<root>
+  <data name="BuildLogIdRange" xml:space="preserve"><value>L’identifiant du journal doit être un entier de 1 à 2147483647, ou une valeur nulle pour un échec sans journal.</value></data>
+  <data name="BuildLogTailUnknown" xml:space="preserve"><value>Build {0}, journal {1} : le nombre de lignes est inconnu; téléchargement du journal complet.</value></data>
+  <data name="BuildLogNotAvailable" xml:space="preserve"><value>Build {0} : cet échec ne possède aucun journal à télécharger.</value></data>
+  <data name="BuildLogDirectoryRequired" xml:space="preserve"><value>Indiquez un dossier existant pour le journal du build : {0}</value></data>
+  <data name="SaveBuildLog" xml:space="preserve"><value>Enregistrer le journal du build</value></data>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <data name="OperationFailed" xml:space="preserve"><value>L’opération a échoué.</value></data>
+  <data name="InvalidCollectionUrl" xml:space="preserve"><value>Indiquez une URL de collection HTTP ou HTTPS absolue, sans informations utilisateur, paramètres de requête, fragment ni segments d’API ou d’interface.</value></data>
+  <data name="ServicesUnsupported" xml:space="preserve"><value>Azure DevOps Services n’est pas pris en charge. Indiquez une URL de collection Azure DevOps Server.</value></data>
+  <data name="PlainHttp" xml:space="preserve"><value>Cette collection utilise HTTP. Les échanges d’authentification Windows ne sont pas protégés par TLS.</value></data>
+  <data name="InvalidConfiguration" xml:space="preserve"><value>La configuration n’est pas valide : {0}</value></data>
+  <data name="UnknownConfiguration" xml:space="preserve"><value>Propriété de configuration inconnue conservée : {0}</value></data>
+  <data name="NewerConfiguration" xml:space="preserve"><value>Le schéma de configuration {0} est plus récent que le schéma 1 pris en charge. Les modifications sont refusées.</value></data>
+  <data name="FileOutput" xml:space="preserve"><value>Impossible d’écrire le fichier : {0}</value></data>
+  <data name="UnsupportedCulture" xml:space="preserve"><value>La culture {0} n’est pas prise en charge ; l’anglais sera utilisé.</value></data>
+  <data name="MissingProfile" xml:space="preserve"><value>Le profil {0} est introuvable.</value></data>
+  <data name="NoConnection" xml:space="preserve"><value>Connectez-vous avec Connect-Ado ou indiquez une connexion.</value></data>
+  <data name="NoTarget" xml:space="preserve"><value>Indiquez une URL de collection ou un profil configuré.</value></data>
+  <data name="ConnectionMismatch" xml:space="preserve"><value>L’objet d’entrée appartient à une autre collection.</value></data>
+  <data name="Authentication" xml:space="preserve"><value>L’authentification a échoué. Vérifiez l’identité Windows, l’URL de collection et la configuration du proxy ou de Negotiate.</value></data>
+  <data name="Authorization" xml:space="preserve"><value>L’accès a été refusé. Vérifiez les autorisations de la collection et du projet.</value></data>
+  <data name="NotFound" xml:space="preserve"><value>La ressource demandée est introuvable.</value></data>
+  <data name="Request" xml:space="preserve"><value>Le serveur a rejeté la requête.</value></data>
+  <data name="RegistryMismatch" xml:space="preserve"><value>Vérifiez le registre des points de terminaison et la version d’API demandée.</value></data>
+  <data name="Redirect" xml:space="preserve"><value>Une redirection a été bloquée. Destination : {0}</value></data>
+  <data name="Throttled" xml:space="preserve"><value>Le serveur limite les requêtes. Réessayez plus tard.</value></data>
+  <data name="Server" xml:space="preserve"><value>Le serveur n’a pas pu traiter la requête.</value></data>
+  <data name="Timeout" xml:space="preserve"><value>L’opération a dépassé le délai imparti.</value></data>
+  <data name="ResponseFormat" xml:space="preserve"><value>Le format de la réponse du serveur n’est pas valide.</value></data>
+  <data name="PagingGuard" xml:space="preserve"><value>La pagination n’a pas progressé ou a dépassé la limite de pages.</value></data>
+  <data name="Retry" xml:space="preserve"><value>Nouvelle tentative pour {0} ; tentative {1}, motif {2}.</value></data>
+  <data name="RequestLog" xml:space="preserve"><value>{0} {1} {2} {3} ms tentative={4}</value></data>
+  <data name="PageLog" xml:space="preserve"><value>{0} : page {1}, éléments {2}.</value></data>
+  <data name="ConnectionHint" xml:space="preserve"><value>L’appel des projets a échoué. Vérifiez que l’URL indiquée correspond à une collection plutôt qu’à un projet.</value></data>
+  <data name="SetProfile" xml:space="preserve"><value>Enregistrer le profil</value></data>
+  <data name="RemoveProfile" xml:space="preserve"><value>Supprimer le profil</value></data>
+  <data name="Connect" xml:space="preserve"><value>Connexion à la collection établie.</value></data>
+  <data name="Disconnect" xml:space="preserve"><value>Déconnexion de la collection effectuée.</value></data>
+  <data name="WorkItemNotFound" xml:space="preserve"><value>L’élément de travail {0} est introuvable ou inaccessible.</value></data>
+  <data name="FieldRelationsConflict" xml:space="preserve"><value>La sélection de champs et le développement des relations ne peuvent pas être combinés dans cette boîte à outils.</value></data>
+  <data name="ProjectRequired" xml:space="preserve"><value>Indiquez un projet avec -Project ou connectez-vous avec un projet par défaut.</value></data>
+  <data name="TestPlanNotFound" xml:space="preserve"><value>Le plan de test {0} est introuvable ou inaccessible.</value></data>
+  <data name="TestSuiteNotFound" xml:space="preserve"><value>La suite de tests {0} est introuvable dans le plan de test {1}.</value></data>
+  <data name="WiqlNotFlat" xml:space="preserve"><value>Seules les requêtes plates d’éléments de travail sont prises en charge ; les requêtes de liens et d’arborescence ne le sont pas.</value></data>
+  <data name="WiqlResultLimit" xml:space="preserve"><value>La requête a retourné {0} éléments de travail ou plus ; le résultat pourrait donc être incomplet.</value></data>
+  <data name="WiqlLimitHint" xml:space="preserve"><value>Restreignez la requête ou utilisez -Top pour demander un résultat volontairement limité.</value></data>
+  <data name="NotAStepContainer" xml:space="preserve"><value>L’élément de travail ne contient pas d’étapes de test.</value></data>
+  <data name="EmptySteps" xml:space="preserve"><value>L’élément de travail ne comporte aucune étape de test.</value></data>
+  <data name="MalformedStepsXml" xml:space="preserve"><value>Le XML des étapes est invalide à la ligne {0}, position {1}.</value></data>
+  <data name="UnknownStepElement" xml:space="preserve"><value>Un élément d’étape non pris en charge ou une valeur supplémentaire a été ignoré.</value></data>
+  <data name="UnknownStepType" xml:space="preserve"><value>Le type d’étape est inconnu; il a été déduit du résultat attendu.</value></data>
+  <data name="UnexpectedComprefChildren" xml:space="preserve"><value>Les éléments enfants d’une référence à des étapes partagées ont été ignorés.</value></data>
+  <data name="InvalidSharedStepReference" xml:space="preserve"><value>L’attribut ref de la référence à des étapes partagées doit être un entier positif.</value></data>
+  <data name="UnresolvedSharedStep" xml:space="preserve"><value>Les étapes partagées référencées sont introuvables ou inaccessibles.</value></data>
+  <data name="SharedStepHasNoSteps" xml:space="preserve"><value>L’élément de travail référencé ne comporte aucune étape de test.</value></data>
+  <data name="CircularSharedStepReference" xml:space="preserve"><value>Une référence circulaire à des étapes partagées a empêché le développement.</value></data>
+  <data name="MaximumDepthExceeded" xml:space="preserve"><value>La profondeur d’imbrication des étapes partagées dépasse le maximum configuré.</value></data>
+  <data name="ExpansionLimitExceeded" xml:space="preserve"><value>La limite du nombre d’étapes développées a été dépassée; le développement a été arrêté.</value></data>
+  <data name="ResolutionLimitExceeded" xml:space="preserve"><value>La limite de résolution des éléments de travail a été atteinte; certaines références restent non résolues.</value></data>
+  <data name="NestedEncodingDecoded" xml:space="preserve"><value>L’encodage imbriqué a nécessité plusieurs passes de conversion du texte.</value></data>
+  <data name="MalformedParameterData" xml:space="preserve"><value>Le format XML ou JSON des données de paramètres est invalide.</value></data>
+  <data name="UnresolvedSharedParameter" xml:space="preserve"><value>Un jeu de paramètres partagés référencé est introuvable ou inaccessible.</value></data>
+  <data name="RichTextImage" xml:space="preserve"><value>[image]</value></data>
+  <data name="RichTextImageAlt" xml:space="preserve"><value>[image : {0}]</value></data>
+  <data name="PartialTestCase" xml:space="preserve"><value>Le cas de test {0} est partiel : {1} erreur(s), {2} avertissement(s), {3} diagnostic(s) d’information.</value></data>
+  <data name="ReportTestCase" xml:space="preserve"><value>Cas de test</value></data>
+  <data name="ReportSharedSteps" xml:space="preserve"><value>Étapes partagées</value></data>
+  <data name="ReportSharedParameters" xml:space="preserve"><value>Paramètres partagés</value></data>
+  <data name="ReportStep" xml:space="preserve"><value>Étape</value></data>
+  <data name="ReportAction" xml:space="preserve"><value>Action</value></data>
+  <data name="ReportExpectedResult" xml:space="preserve"><value>Résultat attendu</value></data>
+  <data name="ReportParameters" xml:space="preserve"><value>Paramètres</value></data>
+  <data name="ReportTestPlan" xml:space="preserve"><value>Plan de test</value></data>
+  <data name="ReportTestSuite" xml:space="preserve"><value>Suite de tests</value></data>
+  <data name="ReportState" xml:space="preserve"><value>État</value></data>
+  <data name="ReportAssignedTo" xml:space="preserve"><value>Assigné à</value></data>
+  <data name="ReportPriority" xml:space="preserve"><value>Priorité</value></data>
+  <data name="ReportAreaPath" xml:space="preserve"><value>Chemin de zone</value></data>
+  <data name="ReportIterationPath" xml:space="preserve"><value>Chemin d’itération</value></data>
+  <data name="ReportGeneratedAt" xml:space="preserve"><value>Généré le</value></data>
+  <data name="ReportServer" xml:space="preserve"><value>Serveur</value></data>
+  <data name="ReportCollection" xml:space="preserve"><value>Collection</value></data>
+  <data name="ReportProject" xml:space="preserve"><value>Projet</value></data>
+  <data name="ReportTitle" xml:space="preserve"><value>Titre</value></data>
+  <data name="ReportId" xml:space="preserve"><value>ID</value></data>
+  <data name="ReportRevision" xml:space="preserve"><value>Révision</value></data>
+  <data name="ReportWorkItemType" xml:space="preserve"><value>Type d’élément de travail</value></data>
+  <data name="ReportAutomationStatus" xml:space="preserve"><value>État d’automatisation</value></data>
+  <data name="ReportChangedDate" xml:space="preserve"><value>Dernière modification</value></data>
+  <data name="ReportChangedBy" xml:space="preserve"><value>Modifié par</value></data>
+  <data name="ReportStatus" xml:space="preserve"><value>État</value></data>
+  <data name="ReportStepCount" xml:space="preserve"><value>Nombre d’étapes</value></data>
+  <data name="ReportDiagnostics" xml:space="preserve"><value>Diagnostics</value></data>
+  <data name="ReportComplete" xml:space="preserve"><value>Complet</value></data>
+  <data name="ReportPartial" xml:space="preserve"><value>Partiel</value></data>
+  <data name="ReportToolkitVersion" xml:space="preserve"><value>Version de la boîte à outils</value></data>
+  <data name="DownloadsUnavailable" xml:space="preserve"><value>Impossible de déterminer le dossier Téléchargements.</value></data>
+  <data name="InvalidReportOutput" xml:space="preserve"><value>Le rapport produit est vide ou invalide.</value></data>
+  <data name="ReportHeading" xml:space="preserve"><value>Cas de test Azure DevOps</value></data>
+  <data name="IncludeSourceJsonOnly" xml:space="preserve"><value>IncludeSource nécessite le format de rapport JSON.</value></data>
+  <data name="NoTestCasesToExport" xml:space="preserve"><value>Aucun cas de test n’a été reçu ; aucun rapport n’a été écrit.</value></data>
+  <data name="ExportReport" xml:space="preserve"><value>Exporter le rapport du cas de test</value></data>
+  <data name="FileSystemPathRequired" xml:space="preserve"><value>Le chemin du rapport doit utiliser le fournisseur FileSystem.</value></data>
+  <data name="ReportOverview" xml:space="preserve"><value>Vue d’ensemble</value></data>
+  <data name="ReportSteps" xml:space="preserve"><value>Étapes</value></data>
+  <data name="ReportNavigation" xml:space="preserve"><value>Sections du rapport</value></data>
+  <data name="ReportBrand" xml:space="preserve"><value>AdoToolkit</value></data>
+  <data name="ReportDocumentHeading" xml:space="preserve"><value>Rapport de cas de test Azure DevOps</value></data>
+  <data name="ReportContents" xml:space="preserve"><value>Table des matières</value></data>
+  <data name="ReportSource" xml:space="preserve"><value>Source</value></data>
+  <data name="ReportQuerySource" xml:space="preserve"><value>Requête WIQL ou liste d’ID</value></data>
+  <data name="ReportCaseCount" xml:space="preserve"><value>Cas de test</value></data>
+  <data name="ProgressActivity" xml:space="preserve"><value>Récupération des cas de test</value></data>
+  <data name="ProgressEnumeration" xml:space="preserve"><value>Lecture des cas des suites : {0} suite(s) sur {1}</value></data>
+  <data name="ProgressFetch" xml:space="preserve"><value>Récupération des éléments de travail : {0} lot(s)</value></data>
+  <data name="ProgressExpansion" xml:space="preserve"><value>Développement des cas de test : {0} sur {1}</value></data>
+  <data name="ProgressCompleted" xml:space="preserve"><value>{0} cas de test récupéré(s).</value></data>
+  <data name="InputNotTestCase" xml:space="preserve"><value>L’entrée {0} est un plan ou une suite de tests ; son Id n’est donc pas un ID de cas de test. Transmettez des objets AdoTestSuite obtenus avec Get-AdoTestSuite.</value></data>
+  <data name="BuildDefinitionMatches" xml:space="preserve"><value>Le nom correspond à {0} définitions. Utilisez -Definition &lt;id&gt;.</value></data>
+  <data name="BuildDefinitionNotFound" xml:space="preserve"><value>La définition de build {0} est introuvable.</value></data>
+  <data name="BuildNotFound" xml:space="preserve"><value>Le build {0} est introuvable.</value></data>
+  <data name="InvalidBuildDefinition" xml:space="preserve"><value>Definition doit être un identifiant entier positif ou un nom exact non vide.</value></data>
+  <data name="NoTestRuns" xml:space="preserve"><value>La build {0} n’a aucune série de tests.</value></data>
+  <data name="TestRunInProgress" xml:space="preserve"><value>La build {0} ou l’une de ses séries de tests n’est pas terminée; les résultats peuvent changer.</value></data>
+  <data name="FailureLimitExceeded" xml:space="preserve"><value>{0} identités de tests en échec dépassent le maximum de {1}; les identités restantes sont comptées, sans détail.</value></data>
+  <data name="UngroupedTestResult" xml:space="preserve"><value>Le résultat {0} de la série {1} n’a pas de nom de test automatisé; ses tentatives ne peuvent pas être regroupées.</value></data>
+  <data name="InvalidTestCaseReference" xml:space="preserve"><value>Le résultat {0} de la série {1} a une référence de cas de test qui n’est pas un entier positif.</value></data>
+  <data name="UnresolvedTestCase" xml:space="preserve"><value>Le cas de test {0} est introuvable ou inaccessible; le lien vers son ID est conservé.</value></data>
+  <data name="HistoryUnavailable" xml:space="preserve"><value>La build {0} n’a pas pu être lue; sa barre et ses cellules d’historique sont indisponibles.</value></data>
+  <data name="HistoryLimitExceeded" xml:space="preserve"><value>Le maximum de {0} requête(s) d’historique est atteint; les entrées d’historique plus anciennes sont indisponibles.</value></data>
+  <data name="ProgressTestFailureActivity" xml:space="preserve"><value>Récupération des tests en échec</value></data>
+  <data name="ProgressTestRuns" xml:space="preserve"><value>Lecture des séries de tests : {0} série(s)</value></data>
+  <data name="ProgressTestResults" xml:space="preserve"><value>Liste des résultats de tests : {0} de {1} série(s)</value></data>
+  <data name="ProgressTestDetail" xml:space="preserve"><value>Lecture des détails des échecs : {0} de {1} résultat(s)</value></data>
+  <data name="ProgressAttachments" xml:space="preserve"><value>Lecture des listes de pièces jointes : {0} de {1} résultat(s)</value></data>
+  <data name="ProgressTestCaseLinks" xml:space="preserve"><value>Résolution des liens de cas de test : {0} lot(s)</value></data>
+  <data name="ProgressHistory" xml:space="preserve"><value>Lecture de l’historique des exécutions : {0} de {1} build(s)</value></data>
+  <data name="ProgressTestFailureCompleted" xml:space="preserve"><value>{0} test(s) en échec ou instable(s) récupéré(s).</value></data>
+  <data name="PartialTestFailureSet" xml:space="preserve"><value>Build {0} : le résultat des tests en échec est partiel ({1} erreur(s), {2} avertissement(s), {3} information(s)).</value></data>
+  <data name="TestTextTruncated" xml:space="preserve"><value>Le message ou l’arborescence des appels de procédure dépasse la limite d’affichage; seul le début est affiché.</value></data>
+  <data name="TestReportPassed" xml:space="preserve"><value>Réussi</value></data>
+  <data name="TestReportFailed" xml:space="preserve"><value>Échec</value></data>
+  <data name="TestReportFlaky" xml:space="preserve"><value>Instable</value></data>
+  <data name="TestReportOther" xml:space="preserve"><value>Autre</value></data>
+  <data name="TestReportNotRun" xml:space="preserve"><value>Non exécuté</value></data>
+  <data name="TestReportUnavailable" xml:space="preserve"><value>Indisponible</value></data>
+  <data name="TestReportAvailable" xml:space="preserve"><value>Disponible</value></data>
+  <data name="TestReportThisRun" xml:space="preserve"><value>Cette exécution</value></data>
+  <data name="TestReportOpenAdo" xml:space="preserve"><value>Ouvrir dans Azure DevOps</value></data>
+  <data name="TestReportHistory" xml:space="preserve"><value>Historique des exécutions</value></data>
+  <data name="TestReportHistoryData" xml:space="preserve"><value>Données de l’historique</value></data>
+  <data name="TestReportHistoryTitle" xml:space="preserve"><value>Build {0}; branche {1}; fin {2}; ✓ Réussi : {3}; ✕ Échec : {4}; ≈ Instable : {5}; – Autre : {6}; {7}; {8}</value></data>
+  <data name="TestReportBuild" xml:space="preserve"><value>Build</value></data>
+  <data name="TestReportBranch" xml:space="preserve"><value>Branche</value></data>
+  <data name="TestReportFinished" xml:space="preserve"><value>Fin</value></data>
+  <data name="TestReportAttempts" xml:space="preserve"><value>Tentatives</value></data>
+  <data name="TestReportAttemptOf" xml:space="preserve"><value>Tentative {0} sur {1}</value></data>
+  <data name="TestReportStackTrace" xml:space="preserve"><value>Arborescence des appels de procédure (.NET)</value></data>
+  <data name="TestReportErrorMessage" xml:space="preserve"><value>Message d’erreur</value></data>
+  <data name="TestReportJson" xml:space="preserve"><value>JSON</value></data>
+  <data name="TestReportHeading" xml:space="preserve"><value>Rapport des tests en échec</value></data>
+  <data name="TestReportIndex" xml:space="preserve"><value>Index des échecs</value></data>
+  <data name="TestReportAttachments" xml:space="preserve"><value>Pièces jointes</value></data>
+  <data name="TestReportFilter" xml:space="preserve"><value>Filtrer les tests</value></data>
+  <data name="TestReportHasAttachments" xml:space="preserve"><value>Avec pièces jointes</value></data>
+  <data name="TestReportExpandAll" xml:space="preserve"><value>Tout développer</value></data>
+  <data name="TestReportCollapseAll" xml:space="preserve"><value>Tout réduire</value></data>
+  <data name="TestReportCopy" xml:space="preserve"><value>Copier</value></data>
+  <data name="TestReportCopied" xml:space="preserve"><value>Copié</value></data>
+  <data name="TestReportSelectCopy" xml:space="preserve"><value>Texte sélectionné ; utilisez votre raccourci de copie.</value></data>
+  <data name="TestReportWrap" xml:space="preserve"><value>Retour automatique à la ligne</value></data>
+  <data name="TestReportFramework" xml:space="preserve"><value>Masquer les appels du framework</value></data>
+  <data name="TestReportClose" xml:space="preserve"><value>Fermer</value></data>
+  <data name="TestReportImage" xml:space="preserve"><value>Image jointe</value></data>
+  <data name="TestReportDuration" xml:space="preserve"><value>Durée</value></data>
+  <data name="TestReportSeconds" xml:space="preserve"><value>{0:N3} s</value></data>
+  <data name="TestReportStarted" xml:space="preserve"><value>Début</value></data>
+  <data name="TestReportMachine" xml:space="preserve"><value>Machine</value></data>
+  <data name="TestReportRun" xml:space="preserve"><value>Exécution de tests</value></data>
+  <data name="TestReportResult" xml:space="preserve"><value>Résultat du test</value></data>
+  <data name="TestReportRunBy" xml:space="preserve"><value>Exécuté par</value></data>
+  <data name="TestReportFailureType" xml:space="preserve"><value>Type d’échec</value></data>
+  <data name="TestReportResolution" xml:space="preserve"><value>État de résolution</value></data>
+  <data name="TestReportFailingSince" xml:space="preserve"><value>En échec depuis</value></data>
+  <data name="TestReportComment" xml:space="preserve"><value>Commentaire</value></data>
+  <data name="TestReportBugs" xml:space="preserve"><value>Bogues associés</value></data>
+  <data name="TestReportOwner" xml:space="preserve"><value>Responsable</value></data>
+  <data name="TestReportSubResults" xml:space="preserve"><value>Sous-résultats</value></data>
+  <data name="TestReportIterations" xml:space="preserve"><value>Itérations</value></data>
+  <data name="TestReportCustomFields" xml:space="preserve"><value>Champs personnalisés</value></data>
+  <data name="TestReportAdditionalFields" xml:space="preserve"><value>Champs supplémentaires</value></data>
+  <data name="TestReportSource" xml:space="preserve"><value>Source de la tentative</value></data>
+  <data name="TestReportSingle" xml:space="preserve"><value>Résultat unique</value></data>
+  <data name="TestReportRerun" xml:space="preserve"><value>Réexécution dans la tâche</value></data>
+  <data name="TestReportRunAttempt" xml:space="preserve"><value>Nouvelle tentative d’exécution</value></data>
+  <data name="TestReportOutcome" xml:space="preserve"><value>Résultat</value></data>
+  <data name="TestReportGroupType" xml:space="preserve"><value>Type de groupe de résultats</value></data>
+  <data name="TestReportSequence" xml:space="preserve"><value>Séquence</value></data>
+  <data name="TestReportActionPath" xml:space="preserve"><value>Chemin de l’action</value></data>
+  <data name="TestReportStepIdentifier" xml:space="preserve"><value>Identifiant d’étape</value></data>
+  <data name="TestReportBytes" xml:space="preserve"><value>{0:N0} octets</value></data>
+  <data name="TestReportAttachmentType" xml:space="preserve"><value>Type de pièce jointe</value></data>
+  <data name="TestReportCommit" xml:space="preserve"><value>Commit</value></data>
+  <data name="TestReportStorage" xml:space="preserve"><value>Assembly de tests</value></data>
+  <data name="TestReportFullName" xml:space="preserve"><value>Nom complet du test</value></data>
+  <data name="TestReportNoFailures" xml:space="preserve"><value>Aucun test en échec ou instable à signaler.</value></data>
+  <data name="TestReportNoMatches" xml:space="preserve"><value>Aucun test ne correspond à ces filtres.</value></data>
+  <data name="TestReportNavigationHint" xml:space="preserve"><value>/ Filtre · j/k Test suivant/précédent · o Ouvrir/fermer la tentative</value></data>
+  <data name="TestReportInfo" xml:space="preserve"><value>Information</value></data>
+  <data name="TestReportWarning" xml:space="preserve"><value>Avertissement</value></data>
+  <data name="TestReportError" xml:space="preserve"><value>Erreur</value></data>
+  <data name="TestReportFilterCount" xml:space="preserve"><value>{0} tests sur {1}</value></data>
+  <data name="AttachmentTooLarge" xml:space="preserve"><value>La pièce jointe {0} du résultat de test {2} de l’exécution {1} dépasse la limite de {3} octets; elle est répertoriée avec un lien vers Azure DevOps, mais n’est pas téléchargée.</value></data>
+  <data name="AttachmentBudgetExceeded" xml:space="preserve"><value>Le budget total de {0} octets pour les pièces jointes est atteint à la pièce jointe {1}; les pièces jointes restantes sont répertoriées, mais pas téléchargées.</value></data>
+  <data name="AttachmentDownloadFailed" xml:space="preserve"><value>La pièce jointe {0} du résultat de test {2} de l’exécution {1} n’a pas pu être téléchargée; elle est répertoriée sans fichier local.</value></data>
+  <data name="AttachmentContentMismatch" xml:space="preserve"><value>La pièce jointe {0} du résultat de test {2} de l’exécution {1} ne contient pas de contenu {3} valide; elle est liée en tant que fichier .bin, sans aperçu.</value></data>
+  <data name="TestReportLocalCopy" xml:space="preserve"><value>Copie locale</value></data>
+  <data name="TestReportTestOutputHtml" xml:space="preserve"><value>HTML produit par le test (fichier local)</value></data>
+  <data name="TestReportNotDownloadedTooLarge" xml:space="preserve"><value>Non téléchargée : taille supérieure à la limite.</value></data>
+  <data name="TestReportNotDownloadedBudget" xml:space="preserve"><value>Non téléchargée : le budget total des pièces jointes est atteint.</value></data>
+  <data name="TestReportDownloadFailed" xml:space="preserve"><value>Échec du téléchargement; l’original reste dans Azure DevOps.</value></data>
+  <data name="TestReportContentMismatch" xml:space="preserve"><value>Le contenu ne correspond pas au type de fichier; enregistré en .bin, sans aperçu.</value></data>
+  <data name="TestReportImageOf" xml:space="preserve"><value>Image jointe : {0}</value></data>
+  <data name="ExportTestFailureReport" xml:space="preserve"><value>Exporter le rapport des tests en échec</value></data>
+  <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Exporter le rapport des tests en échec et télécharger les pièces jointes dans {0}</value></data>
+  <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Téléchargement des pièces jointes : {0} de {1}</value></data>
+  <data name="TestFailureReportPathInvalid" xml:space="preserve"><value>Le chemin doit désigner un répertoire existant ou un fichier .html : {0}</value></data>
+  <data name="TestFailureReportSingleFile" xml:space="preserve"><value>Le chemin désigne un seul fichier; seul le premier ensemble de tests en échec est exporté. Utilisez un répertoire pour la build {0}.</value></data>
+  <data name="AttachmentFolderSkipped" xml:space="preserve"><value>{0} est ignoré : c’est un lien (point d’analyse), qui n’est jamais suivi ni supprimé.</value></data>
+  <data name="AttachmentFolderNotDeleted" xml:space="preserve"><value>Impossible de supprimer l’ancien dossier de pièces jointes {0}; supprimez-le manuellement.</value></data>
+</root>

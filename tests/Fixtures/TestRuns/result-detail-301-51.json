@@ -1,0 +1,11 @@
+{
+  "id": 51,
+  "outcome": "Failed",
+  "automatedTestName": "Contoso.Web.Tests.RetryTests.JobRetry",
+  "automatedTestStorage": "Contoso.Web.Tests.dll",
+  "testCaseTitle": "Retried by the job",
+  "errorMessage": "Job attempt 1 failed.",
+  "computerName": "AGENT-01",
+  "startedDate": "2026-09-14T10:01:00Z",
+  "durationInMs": 900.0
+}

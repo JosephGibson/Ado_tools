@@ -1,0 +1,19 @@
+{
+  "count": 2,
+  "value": [
+    {
+      "id": 81,
+      "outcome": "Failed",
+      "testCaseTitle": "Manual smoke test",
+      "startedDate": "2026-09-14T10:01:00Z"
+    },
+    {
+      "id": 82,
+      "outcome": "Failed",
+      "automatedTestName": "",
+      "automatedTestStorage": "Contoso.Web.Tests.dll",
+      "testCaseTitle": "Empty automated name",
+      "startedDate": "2026-09-14T10:02:00Z"
+    }
+  ]
+}

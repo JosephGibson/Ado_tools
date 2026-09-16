@@ -1,0 +1,9 @@
+{
+  "id": 82,
+  "outcome": "Failed",
+  "automatedTestName": "",
+  "automatedTestStorage": "Contoso.Web.Tests.dll",
+  "testCaseTitle": "Empty automated name",
+  "errorMessage": "Empty name failure.",
+  "startedDate": "2026-09-14T10:02:00Z"
+}

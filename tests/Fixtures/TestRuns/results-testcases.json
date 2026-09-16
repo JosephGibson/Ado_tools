@@ -1,0 +1,35 @@
+{
+  "count": 3,
+  "value": [
+    {
+      "id": 101,
+      "outcome": "Failed",
+      "automatedTestName": "Contoso.Web.Tests.LinkTests.Valid",
+      "automatedTestStorage": "Contoso.Web.Tests.dll",
+      "testCaseTitle": "Valid reference",
+      "testCase": {
+        "id": "1010"
+      }
+    },
+    {
+      "id": 102,
+      "outcome": "Failed",
+      "automatedTestName": "Contoso.Web.Tests.LinkTests.Missing",
+      "automatedTestStorage": "Contoso.Web.Tests.dll",
+      "testCaseTitle": "Missing reference",
+      "testCase": {
+        "id": "1011"
+      }
+    },
+    {
+      "id": 103,
+      "outcome": "Failed",
+      "automatedTestName": "Contoso.Web.Tests.LinkTests.Invalid",
+      "automatedTestStorage": "Contoso.Web.Tests.dll",
+      "testCaseTitle": "Invalid reference",
+      "testCase": {
+        "id": "TC-1012"
+      }
+    }
+  ]
+}

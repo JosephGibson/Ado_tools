@@ -1,0 +1,9 @@
+{
+  "name": "Cas personnalisés",
+  "referenceName": "Microsoft.TestCaseCategory",
+  "workItemTypes": [
+    {
+      "name": "Cas personnalisé"
+    }
+  ]
+}

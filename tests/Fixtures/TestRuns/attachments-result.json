@@ -1,0 +1,36 @@
+{
+  "count": 5,
+  "value": [
+    {
+      "id": 5001,
+      "fileName": "screenshot.PNG",
+      "size": 2048,
+      "attachmentType": "GeneralAttachment",
+      "comment": "Capture d’écran"
+    },
+    {
+      "id": 5002,
+      "fileName": "payload.json",
+      "size": 128,
+      "attachmentType": "GeneralAttachment"
+    },
+    {
+      "id": 5003,
+      "fileName": "report.htm",
+      "size": 512,
+      "attachmentType": "GeneralAttachment"
+    },
+    {
+      "id": 5004,
+      "fileName": "trace.dat",
+      "size": 64,
+      "attachmentType": "GeneralAttachment"
+    },
+    {
+      "id": 5005,
+      "fileName": "noextension",
+      "size": 32,
+      "attachmentType": "GeneralAttachment"
+    }
+  ]
+}

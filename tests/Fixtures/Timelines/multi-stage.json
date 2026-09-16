@@ -1,0 +1,142 @@
+{
+  "records": [
+    {
+      "id": "00000000-0000-0000-0000-000000000005",
+      "parentId": "00000000-0000-0000-0000-000000000004",
+      "type": "Task",
+      "name": "Compile",
+      "order": 1,
+      "state": "completed",
+      "result": "succeeded",
+      "attempt": 1,
+      "identifier": "record-5",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000008",
+      "parentId": "00000000-0000-0000-0000-000000000007",
+      "type": "Task",
+      "name": "Publish",
+      "order": 2,
+      "state": "completed",
+      "result": "failed",
+      "attempt": 1,
+      "identifier": "record-8",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 1,
+      "warningCount": 0,
+      "log": {
+        "id": 12
+      },
+      "issues": [
+        {
+          "type": "error",
+          "category": "General",
+          "message": "Synthetic publish error."
+        },
+        {
+          "type": "warning",
+          "category": "General",
+          "message": "Synthetic warning."
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "parentId": null,
+      "type": "Stage",
+      "name": "Build",
+      "order": 1,
+      "state": "completed",
+      "result": "succeeded",
+      "attempt": 1,
+      "identifier": "record-1",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000004",
+      "parentId": "00000000-0000-0000-0000-000000000002",
+      "type": "Job",
+      "name": "Compile job",
+      "order": 1,
+      "state": "completed",
+      "result": "succeeded",
+      "attempt": 1,
+      "identifier": "record-4",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "parentId": "00000000-0000-0000-0000-000000000001",
+      "type": "Phase",
+      "name": "Compile phase",
+      "order": 1,
+      "state": "completed",
+      "result": "succeeded",
+      "attempt": 1,
+      "identifier": "record-2",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 0,
+      "warningCount": 0
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000006",
+      "parentId": null,
+      "type": "Stage",
+      "name": "Deploy",
+      "order": 2,
+      "state": "completed",
+      "result": "failed",
+      "attempt": 1,
+      "identifier": "record-6",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 1,
+      "warningCount": 0
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000007",
+      "parentId": "00000000-0000-0000-0000-000000000006",
+      "type": "Job",
+      "name": "Release",
+      "order": 1,
+      "state": "completed",
+      "result": "failed",
+      "attempt": 1,
+      "identifier": "record-7",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 1,
+      "warningCount": 0
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000009",
+      "parentId": "00000000-0000-0000-0000-000000000007",
+      "type": "Task",
+      "name": "Prepare",
+      "order": 1,
+      "state": "completed",
+      "result": "failed",
+      "attempt": 1,
+      "identifier": "record-9",
+      "startTime": "2026-09-15T10:00:00+02:00",
+      "finishTime": "2026-09-15T10:01:00+02:00",
+      "errorCount": 1,
+      "warningCount": 0,
+      "log": {
+        "id": 11
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": 401,
+  "buildNumber": "20260915.1",
+  "definition": {
+    "id": 42,
+    "name": "Tâches"
+  },
+  "sourceBranch": "refs/heads/main",
+  "sourceVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "completed",
+  "result": "failed",
+  "finishTime": "2026-09-15T10:00:00Z",
+  "queueTime": "2026-09-15T10:00:00Z",
+  "uri": "vstfs:///Build/Build/401",
+  "url": "https://ado.example.test/Collection/_apis/build/Builds/401"
+}

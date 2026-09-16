@@ -1,0 +1,1 @@
+<!DOCTYPE steps [<!ENTITY external SYSTEM "https://external.example.test/entity">]><steps><step id="2" type="ActionStep"><parameterizedString isformatted="true">safe</parameterizedString><parameterizedString isformatted="true"></parameterizedString></step><step><parameterizedString>&external;</parameterizedString></step></steps>

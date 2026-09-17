@@ -4,6 +4,9 @@ Find out why a build failed, save the relevant logs, and produce an interactive
 report of its failed and flaky tests. The examples assume that you are
 [connected](getting-started.md#connect).
 
+If you already have a build ID, [Export a report from a build ID](build-report.md) is
+the shortest path to the HTML report.
+
 ## Find builds
 
 ```powershell

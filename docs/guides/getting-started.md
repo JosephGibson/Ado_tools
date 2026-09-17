@@ -143,6 +143,7 @@ The collection URL ends with the project name. Connect with: Connect-Ado -Collec
 - [Work items and WIQL](work-items.md)
 - [Test Case reports and bulk export](test-case-reports.md)
 - [Pipeline failure triage](pipeline-triage.md)
+- [Export a report from a build ID](build-report.md)
 
 Full help: [Connect-Ado](../commands/en-US/Connect-Ado.md),
 [Set-AdoProfile](../commands/en-US/Set-AdoProfile.md),

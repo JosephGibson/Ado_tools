@@ -93,6 +93,7 @@ Profiles, connections and the other options are described in
 | Installation, profiles and connecting | [Getting started](docs/guides/getting-started.md) |
 | Work items and WIQL queries | [Work items and WIQL](docs/guides/work-items.md) |
 | Test Case reports and bulk export | [Test Case reports](docs/guides/test-case-reports.md) |
+| A failed-test report from one build ID | [Export a report from a build ID](docs/guides/build-report.md) |
 | Build failures, logs and failed-test reports | [Pipeline failure triage](docs/guides/pipeline-triage.md) |
 | Configuration file, defaults and limits | [Configuration](docs/guides/configuration.md) |
 | Full cmdlet help (also available with `Get-Help <cmdlet> -Full`) | [English](docs/commands/en-US/) · [French](docs/commands/fr-CA/) |

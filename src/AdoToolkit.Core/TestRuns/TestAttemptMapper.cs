@@ -79,7 +79,7 @@ internal static class TestAttemptMapper
             .ToArray();
 
     private static TimeSpan? Duration(double? milliseconds) =>
-        milliseconds is double value && value >= 0 && !double.IsNaN(value) && !double.IsInfinity(value)
+        milliseconds is double value && value >= 0 && double.IsFinite(value) && value <= TimeSpan.MaxValue.TotalMilliseconds
             ? TimeSpan.FromMilliseconds(value) : null;
 
     private static ReadOnlyCollection<int> Bugs(TestResultDto result) => Array.AsReadOnly((result.AssociatedBugs ?? [])

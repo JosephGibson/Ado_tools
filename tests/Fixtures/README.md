@@ -284,3 +284,13 @@ are generated inside the tests; limits are configured small so no generated inpu
 
 Golden files: the eight `Reports/testfailures-*.html` files changed only by the seven new CSS
 rules for local attachments (their attachments are never downloaded, so their markup is unchanged).
+
+### Session 5.4 review regressions
+
+All inputs below are generated synthetic data inside the named tests.
+
+| Source | Coverage | Verification item |
+| --- | --- | --- |
+| `TestRuns/TestFailureRetrievalTests.cs` under Core tests | Three levels of sub-results with attachments on the second and third levels; listing once per sub-result and assignment to the owning attempt | V-23 |
+| `TestRuns/RunHistoryTests.cs` under Core tests | Two piped builds with identical definition, branch and timestamp; each current build appears exactly once in its own history window | V-25 |
+| `TestRuns/TestAttemptMapperTests.cs` under Core tests | Out-of-range, negative and non-finite optional durations in parent results, nested results and rerun attempts | V-21 |

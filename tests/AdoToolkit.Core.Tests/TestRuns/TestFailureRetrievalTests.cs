@@ -9,6 +9,40 @@ public sealed class TestFailureRetrievalTests
 {
     private static readonly TestFailureQuery NoHistory = new() { HistoryCount = 1 };
 
+    [Fact]
+    public async Task NestedSubResultAttachmentsStayWithTheirOwningAttempt()
+    {
+        TestRunFixture fixture = new TestRunFixture()
+            .RouteBody("""{"count":1,"value":[{"id":201,"name":"Synthetic run","state":"Completed"}]}""",
+                "/test/runs", "%24skip=0&")
+            .RouteBody("""{"count":1,"value":[{"id":1,"outcome":"Failed","automatedTestName":"Synthetic.Rows"}]}""",
+                "/Runs/201/results", "%24skip=0&")
+            .RouteBody("""
+                {"id":1,"outcome":"Failed","automatedTestName":"Synthetic.Rows","subResults":[
+                  {"id":10,"outcome":"Failed","subResults":[
+                    {"id":11,"outcome":"Failed","subResults":[{"id":12,"outcome":"Failed"}]}]}]}
+                """, "/Runs/201/results/1?")
+            .RouteBody("""{"count":1,"value":[{"id":51,"fileName":"nested.png","size":123}]}""",
+                "/attachments", "testSubResultId=11&")
+            .RouteBody("""{"count":1,"value":[{"id":52,"fileName":"deep.json","size":234}]}""",
+                "/attachments", "testSubResultId=12&")
+            .Route("attachments-empty.json", "/attachments");
+        using FakeHttpMessageHandler handler = fixture.Handler();
+        using HttpClient client = new(handler);
+        AdoBuildTestFailureSet set = await TestRunFixture.Service(client).GetAsync(TestRunFixture.Build(), NoHistory,
+            CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
+
+        AdoTestAttempt attempt = Assert.Single(Assert.Single(set.Failures).Attempts);
+        Assert.Equal([11, 12], attempt.Attachments.Select(attachment => attachment.SubResultId));
+        Assert.Equal([51, 52], attempt.Attachments.Select(attachment => attachment.Id));
+        Assert.All(attempt.Attachments, attachment =>
+        {
+            Assert.Equal(201, attachment.RunId);
+            Assert.Equal(1, attachment.ResultId);
+        });
+        Assert.Equal(4, handler.Requests.Count(request => request.Uri.AbsolutePath.EndsWith("/attachments", StringComparison.Ordinal)));
+    }
+
     // Test results fixture 1.
     [Fact]
     public async Task BuildWithoutTestRunsReportsNoTestRunsAndStaysComplete()

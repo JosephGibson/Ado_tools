@@ -122,7 +122,10 @@ internal sealed class RunHistoryService
             parameters["maxTime"] = maxTime.Value.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture);
         if (scope == AdoTestHistoryScope.SameBranch && !string.IsNullOrEmpty(current.SourceBranch))
             parameters["branchName"] = current.SourceBranch;
-        string key = string.Join('|', [current.TeamProject, .. parameters.OrderBy(static pair => pair.Key, StringComparer.Ordinal)
+        // Cached windows exclude the current build. Equal finish/queue times can occur across
+        // piped builds, so the current ID is part of that derived window's identity too.
+        string key = string.Join('|', [current.TeamProject, current.Id.ToString(CultureInfo.InvariantCulture),
+            .. parameters.OrderBy(static pair => pair.Key, StringComparer.Ordinal)
             .Select(static pair => pair.Key + "=" + pair.Value), historyCount.ToString(CultureInfo.InvariantCulture)]);
         if (cache.TryGetWindow(key, out IReadOnlyList<HistoryBuild> cached)) return cached;
         IReadOnlyList<BuildDto> values = await pipeline.GetPagesAsync(EndpointRegistry.BuildsList,

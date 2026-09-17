@@ -1,109 +1,118 @@
-# Developer tooling reference
+# Developer tooling
 
-Read this when configuring or extending the template. Daily agents start with
-`dev.ps1 context` and need not load this reference.
+`tools/dev.ps1` is the single entry point for repository discovery, validation and
+prerequisite checks. It requires PowerShell 7.6.5 or later. Run it from the
+repository root:
 
-## Commands and output
+```powershell
+pwsh -NoProfile -File .\tools\dev.ps1 <command>
+```
 
-Use `pwsh -NoProfile -File .\tools\dev.ps1 <command>`. Run from the repository root;
-the script resolves its repository from its own location.
+For daily orientation, `context` is enough. Read this reference when you change
+the tooling or the product gate.
+
+## Commands
 
 | Command | Behavior |
 | --- | --- |
-| `context [-Path <target>]` | Bounded orientation; target adds applicable root/nested instruction paths without reading their bodies |
-| `find -Query <literal> [-Limit 20]` | Case-insensitive paths first, then content; matching line numbers, 1 MiB content limit, `LimitReached` indicates the result budget filled |
-| `inspect` | Full detected manifests, entry points, directories and instruction paths |
-| `deps [-Limit 20]` | Declared npm, NuGet and requirements.txt dependencies; other manifests listed without inventing a dependency graph |
-| `plan` | Preview stage names, executable arguments, working directories and dependencies; executes no checks |
-| `verify` | Complete applicable gate, with status, concise findings and per-stage duration |
-| `verify -Stage <name>` | Selected stage plus prerequisites; pass of the selected checks still exits 2 |
-| `verify -SkipTests` | Inner loop only; always incomplete |
-| `diagnose` | Local tool availability and supported versions |
-| `bootstrap [-Install]` | Preview prerequisites; explicit install adds supported missing tools |
-| `init -ProjectName <name> -Description <purpose>` | Update marked README/AGENTS identity blocks; preflight both, escape Markdown, atomic replacement per file, rollback on a caught write error |
+| `context [-Path <target>]` | Compact orientation. With a target, it also lists the instruction files that apply to that path |
+| `find -Query <literal> [-Limit 20]` | Case-insensitive search of paths, then content, with matching line numbers. `LimitReached` means the result budget filled |
+| `inspect` | Detected manifests, entry points, directories and instruction files |
+| `deps [-Limit 20]` | Declared NuGet, npm and `requirements.txt` dependencies. Other manifests are only listed |
+| `plan` | The stages `verify` would run, with executables, arguments and dependencies. Runs nothing |
+| `verify` | The full gate, with status, concise findings and per-stage duration |
+| `verify -Stage <name>` | The selected stages and their prerequisites. The result is always incomplete |
+| `verify -SkipTests` | All checks except tests. The result is always incomplete |
+| `diagnose` | Availability and versions of local tools |
+| `bootstrap [-Install]` | Lists missing prerequisites. `-Install` installs the supported ones |
+| `init -ProjectName <name> -Description <text>` | Replaces the `project:start`/`project:end` block in `README.md` and `AGENTS.md`. Each file is replaced atomically, and a failed write is rolled back |
 
-Exit codes are 0 for `ok/pass`, 1 for `fail`, 2 for `unavailable/incomplete`.
-`-Format Object` returns objects when invoked with `&` inside PowerShell; a separate
-`pwsh -File` process uses JSON. Arrays remain arrays even with zero or one element.
-For several stages inside PowerShell use `& ./tools/dev.ps1 verify -Stage @('configuration','tooling-layout')`.
+The CLI prints one compact JSON document. Exit codes are `0` for ok or pass, `1` for
+failure, and `2` for unavailable or incomplete. Inside PowerShell,
+`& .\tools\dev.ps1 <command> -Format Object` returns objects instead. Arrays stay
+arrays even with zero or one element. To select several stages, pass an array:
+`& .\tools\dev.ps1 verify -Stage @('configuration', 'tooling-layout')`.
 
-Discovery uses ripgrep when present and pruned filesystem traversal otherwise.
-Both use the template's explicit exclusions, not machine-specific ignore settings.
-Hidden shared configuration is discoverable; dependency/build directories, links,
-secret paths and personal configuration are excluded. File listings can include
-binary or large assets; content search skips binary content and files over 1 MiB.
-`find` is a locator, not a full-text export. No persistent index/cache is maintained.
+Discovery uses ripgrep when it is installed and a pruned file walk otherwise. Both
+use the same exclusion list, which is defined in `dev.ps1`, and ignore
+machine-specific ignore settings. Dependency and build output, links, secret paths
+and personal configuration are excluded. Shared hidden configuration is included.
+Content search skips binary files and files over 1 MiB. `find` returns locations,
+not full text, and nothing is indexed or cached.
 
-## Validation coverage
+## Verification
 
-| Detected input | Checks |
+| Stage | Checks |
 | --- | --- |
-| PowerShell | Parser plus PSScriptAnalyzer; only `*.Tests.ps1` files invoke Pester 5.x |
-| JSON / XML / .NET project XML | Parsing; XML DTDs and external resolution disabled |
-| Claude configuration | Hook objects, helper locations and local instruction imports; hooks stay under `tools/` |
-| .NET projects | Each project builds with `--no-restore`; explicit test projects run after their successful build with `--no-build --no-restore` |
-| Node package.json | Existing lint/build/test scripts, from each package directory, using its nearest declared package manager or lockfile; missing tests are incomplete |
-| Python / Rust / Go / Java | Detected and reported incomplete until a project-owned check defines its environment and checks |
+| `powershell-lint` | Parses every PowerShell file and runs PSScriptAnalyzer |
+| `powershell-test` | Runs the tooling tests (`tools/tests/*.Tests.ps1`) with Pester 5.x |
+| `configuration` | Parses JSON, XML and MSBuild files with DTDs and external resolution disabled |
+| `tooling-layout` | Validates Claude hook settings, requires hook scripts to be under `tools/`, and checks instruction imports |
+| `project-check` | Runs the product gate in `tools/check.ps1` |
 
-Recognized source under `src/` with no matching manifest also reports incomplete.
+Prerequisites must already be installed and packages restored. Verification never
+installs anything. External stages run with `CI=true`, `NO_COLOR=1` and Corepack
+network access disabled. Each one has a five-minute timeout, and on timeout its
+process tree is stopped. Only the last 120 output lines are kept, each truncated to
+2,000 characters. Results come from exit codes and structured outcomes, never from
+console text.
 
-.NET test inference recognizes explicit `IsTestProject=true`, Microsoft.NET.Test.Sdk
-and TUnit references. Conditional MSBuild properties, custom test runners, linked
-projects and solution orchestration belong in a project check.
-Node workspace scripts may aggregate other packages; use a project check to avoid
-duplicate work or choose a workspace order. Package manager declarations take
-precedence over lockfiles; conflicting lockfiles without a declaration are incomplete.
+### Product gate
 
-All dependencies must already be installed/restored. External stages run with
-`CI=true`, `NO_COLOR=1`, and Corepack network bootstrapping disabled. This does not
-sandbox arbitrary project scripts: their author must ensure they terminate and mock
-live services. Each external stage has a five-minute timeout, terminates its process
-tree on timeout, and retains at most the last 120 output lines, capped at 2,000
-characters each, before summarizing. Internal stages return structured findings.
+Because `tools/check.ps1` exists, it replaces the .NET build and test stages that
+`dev.ps1` would otherwise infer. The other stages still run. The gate:
 
-## Owning product checks
+1. Exits `2` if the .NET SDK, restored package assets, Pester 5.x or PlatyPS 1.x is
+   missing.
+2. Builds `AdoToolkit.slnx` in the Release configuration without restoring.
+3. Runs the Core tests twice, with `ADOTOOLKIT_TEST_CULTURE` set to `en-US` and then
+   `fr-CA`. Each run writes TRX results to a new folder under `artifacts/verify/`,
+   and `tools/lib/test-results.ps1` checks their counters. Skipped or undiscovered
+   tests and missing counters exit `2`, even when the test runner succeeded.
+4. Stages the package with `Publish-AdoToolkitPackage.ps1 -NoBuild` and checks
+   every published file against an allowlist.
+5. Runs the product Pester tests (`tests/AdoToolkit.PowerShell.Tests/*.Pester.ps1`)
+   against the staged module in a child process. A run with no tests, or with
+   skipped or unrun tests, exits `2`.
 
-Add `tools/check.ps1` when the built-in product plan is insufficient. It **replaces
-inferred product checks**; PowerShell/configuration/tooling checks still run.
-The script accepts `[switch] $SkipTests`, runs from the repository root in a clean
-PowerShell child, emits concise diagnostic lines, and exits 0/1/2 as above.
-Never call `dev.ps1 verify` from it: that would recurse.
+With `-SkipTests`, the gate builds and stages the package only.
 
-Use explicit executable argument arrays and preserve exit codes immediately.
-For example, a prepared Python project could run its environment's
-`./.venv/Scripts/python.exe -m pytest`, returning 1 on test failure and 2 when
-the interpreter or pytest is missing. Ruff checks belong here too. Prepare the
-environment in a separate, authorized setup step. Cargo checks can use
-`--offline --locked`; Go projects should explicitly configure an offline module
-cache and local toolchain. The template does not guess those environments.
+### Changing checks
 
-For a reusable new adapter, add its stage construction in
-`tools/lib/validation.ps1` and fixture-based tests in `tools/tests/`.
-A stage has `Name`, `Executable`, `Arguments`, optional `WorkingDirectory`,
-`DependsOn`, and `TimeoutSeconds` (1–3600). In-process stages return
-`Failures`, `Summary`, `Warnings` and optionally `Unavailable`.
-The default gate decides success from exit codes or structured state, never from
-a reassuring line in console output.
+- Put product checks in `tools/check.ps1`. Call executables with explicit argument
+  arrays, check their exit codes immediately, and exit `0`, `1` or `2`. Print short
+  diagnostic lines. Never call `dev.ps1 verify` from the gate, because that
+  recurses.
+- Add a reusable built-in stage in `tools/lib/validation.ps1`, with fixture-based
+  tests in `tools/tests/`. An external stage has `Name`, `Executable`, `Arguments`,
+  and optionally `WorkingDirectory`, `DependsOn` and `TimeoutSeconds` (1–3600). An
+  in-process stage returns `Failures`, `Summary`, `Warnings` and optionally
+  `Unavailable`.
+- Without a product gate, `dev.ps1` builds and tests .NET projects and runs existing
+  `package.json` scripts. Python, Rust, Go and Java are detected but reported as
+  incomplete until `tools/check.ps1` covers them.
 
-## Prerequisites and useful tools
+## Prerequisites
 
-| Tool | Value and integration | Installation (explicit user action) |
+Install tools only as an explicit, authorized step.
+
+| Tool | Used for | Installation |
 | --- | --- | --- |
-| PowerShell 7.6.5+ | Runs the developer CLI and Claude hooks | `winget install --id Microsoft.PowerShell --exact --source winget` |
-| ripgrep | Fast shared discovery and targeted searches; fallback works without it | `winget install --id BurntSushi.ripgrep.MSVC --exact --source winget` |
-| Pester 5.x | Tooling regression tests; required for the full gate | `Install-Module Pester -MinimumVersion 5.0 -MaximumVersion 5.999.999 -Scope CurrentUser -Repository PSGallery` |
-| PSScriptAnalyzer | PowerShell correctness checks; required for the full gate | `Install-Module PSScriptAnalyzer -Scope CurrentUser -Repository PSGallery` |
-| .NET SDK | Detected .NET projects; install the SDK selected by the product's global.json | Use the matching SDK installer from [Microsoft](https://dotnet.microsoft.com/download/dotnet); restore separately before verification |
-| Ruff (Python only) | Fast lint/format checks through the product gate | `uv tool install ruff` when uv is already part of the chosen stack |
-| ast-grep (optional) | Structural navigation/refactors when text search is insufficient; diagnosed only | `cargo install ast-grep --locked` when Rust is already installed |
+| PowerShell 7.6.5+ | `dev.ps1` and agent hooks | `winget install --id Microsoft.PowerShell --exact --source winget` |
+| .NET SDK | Build and tests; the version is selected by `global.json` | [Microsoft installer](https://dotnet.microsoft.com/download/dotnet), then `dotnet restore AdoToolkit.slnx --locked-mode` |
+| Pester 5.x | Tooling and product tests | `Install-Module Pester -MinimumVersion 5.0 -MaximumVersion 5.999.999 -Scope CurrentUser -Repository PSGallery` |
+| PSScriptAnalyzer | PowerShell lint | `Install-Module PSScriptAnalyzer -Scope CurrentUser -Repository PSGallery` |
+| PlatyPS 1.x | Compiled help in the product gate and packaging | `Install-Module Microsoft.PowerShell.PlatyPS -MinimumVersion 1.0 -MaximumVersion 1.999.999 -Scope CurrentUser -Repository PSGallery` |
+| ripgrep (recommended) | Faster discovery | `winget install --id BurntSushi.ripgrep.MSVC --exact --source winget` |
+| ast-grep (optional) | Structural search; `diagnose` only reports it | `cargo install ast-grep --locked` |
 
-`bootstrap -Install` can install ripgrep, Pester and PSScriptAnalyzer. It does not
-install optional tools or select a product SDK. Pester is deliberately constrained
-to 5.x because the adapter uses its result contract; upgrade it with regression tests.
-No additional installation is needed when `diagnose` finds all required tools.
+`bootstrap -Install` installs only ripgrep, Pester and PSScriptAnalyzer. Pester is
+limited to 5.x because the tooling depends on its result format. Upgrading it
+requires regression tests.
 
-Claude configuration uses documented executable-plus-argument hooks. The post-edit
-hook parses supported file types **after** the edit and reports problems; it does
-not reject or revert the write. File permissions and the Git guard reduce mistakes
-but do not constrain every possible subprocess. Configure the agent's actual sandbox
-for stronger enforcement. Codex uses its own permissions.
+## Agent hooks
+
+`.claude/settings.json` runs `tools/guard-git.ps1` before shell commands and
+`tools/validate-edit.ps1` after file edits. The edit hook runs after the file is
+written: it reports problems but cannot undo the change. Hooks and file permissions
+reduce mistakes, but they are not a sandbox. Codex uses its own permissions.

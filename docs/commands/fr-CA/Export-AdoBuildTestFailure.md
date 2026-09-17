@@ -29,7 +29,36 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Produit, pour chaque AdoBuildTestFailureSet reçu de Get-AdoBuildTestFailure, un rapport HTML sombre dans la culture du rapport : le graphique et le tableau de l’historique des exécutions, un index, une fiche par test en échec ou instable avec chaque tentative, les messages et les arborescences des appels de procédure mis en évidence, les liens vers les cas de test et les diagnostics. Le rapport est complet lorsque les scripts sont bloqués; un petit script statique, autorisé uniquement par une stratégie de sécurité du contenu fondée sur des hachages, ajoute le filtrage, la navigation au clavier et la copie. Sauf avec SkipAttachments, les pièces jointes des résultats de chaque tentative signalée sont téléchargées dans l’ordre du rapport, dans un dossier nommé <nom de base du rapport>.files-<horodatage UTC> à côté du rapport, avec uniquement des noms de fichiers générés par la boîte à outils, r<exécution>-<résultat>[-s<sous-résultat>]-a<pièce jointe>.<ext>; les noms distants sont affichés, jamais utilisés dans un chemin. Après vérification du contenu, les fichiers PNG deviennent des vignettes et les fichiers JSON sous la limite d’affichage sont montrés mis en évidence; un contenu non conforme est enregistré en .bin, lié, et jamais prévisualisé. Les pièces jointes HTML sont liées comme sortie du test et s’ouvrent hors de la stratégie du rapport. Les fichiers au-delà de maximumAttachmentBytes, le budget total maximumTotalAttachmentBytes et les téléchargements en échec produisent des avertissements; ces pièces jointes sont répertoriées avec leur nom Azure DevOps, leur taille et un lien vers le résultat. Le rapport et son dossier sont validés dans un ordre fixe : téléchargement dans un dossier temporaire, rendu et validation d’un rapport temporaire, renommage du dossier, puis remplacement du rapport; les anciens dossiers de génération du même rapport sont supprimés en dernier, les liens ne sont jamais suivis, et un échec à n’importe quelle étape laisse le rapport précédent et son dossier inchangés. Une build d’historique illisible n’interrompt pas l’exportation.
+Produit, pour chaque `AdoBuildTestFailureSet` reçu de `Get-AdoBuildTestFailure`, un
+rapport HTML sombre dans la culture du rapport : graphique et tableau de
+l’historique, index, fiche par test en échec ou instable avec chaque tentative,
+messages et arborescences des appels de procédure mis en évidence, liens vers les
+cas de test et diagnostics. Le rapport est complet lorsque les scripts sont bloqués.
+Un petit script statique, autorisé par une stratégie de sécurité du contenu fondée
+sur des hachages, ajoute le filtrage, la navigation au clavier et la copie.
+
+Sauf avec `-SkipAttachments`, les pièces jointes de chaque résultat signalé et de
+ses sous-résultats sont téléchargées dans l’ordre du rapport, dans un dossier nommé
+`<nom de base du rapport>.files-<horodatage UTC>` à côté du rapport. Les fichiers
+locaux utilisent les noms `r<exécution>-<résultat>[-s<sous-résultat>]-a<pièce jointe>.<ext>`.
+Les noms distants sont affichés et ne deviennent jamais des chemins.
+
+Après vérification du contenu, les PNG deviennent des vignettes et les JSON sous
+la limite d’affichage sont mis en évidence. Un contenu non conforme est enregistré
+en `.bin` et lié sans aperçu. Les pièces jointes HTML sont liées comme sortie du
+test et s’ouvrent hors de la stratégie du rapport. Les limites de taille
+(`maximumAttachmentBytes`, `maximumTotalAttachmentBytes`) et les téléchargements
+en échec produisent des avertissements; les pièces jointes concernées conservent
+leur nom Azure DevOps, leur taille et le lien vers le résultat. Les erreurs
+d’authentification ou d’autorisation et l’annulation interrompent l’exportation.
+Une build d’historique illisible ne l’interrompt pas.
+
+L’enregistrement suit cet ordre : téléchargement dans un dossier temporaire,
+rendu et validation d’un rapport temporaire, renommage du dossier, puis remplacement
+du rapport. Un échec avant le remplacement laisse le rapport précédent et son
+dossier inchangés. Les anciens dossiers de génération du même rapport sont supprimés
+après le remplacement; un échec du nettoyage produit un avertissement et le nouveau
+rapport reste enregistré. Les points d’analyse sont ignorés et ne sont jamais suivis.
 
 ## EXAMPLES
 
@@ -41,7 +70,8 @@ Get-AdoBuild -Definition 'Main Build' -Branch main -Latest -Result Failed |
     Export-AdoBuildTestFailure -Culture fr-CA -Path .\triage -Open
 ```
 
-Écrit .\triage\Build-<id>-TestFailures.html en français avec son dossier de pièces jointes, puis ouvre le rapport.
+Écrit `.\triage\Build-<id>-TestFailures.html` en français avec son dossier de pièces
+jointes, puis ouvre le rapport. Le dossier `triage` doit déjà exister.
 
 ### Exemple 2
 
@@ -49,7 +79,9 @@ Get-AdoBuild -Definition 'Main Build' -Branch main -Latest -Result Failed |
 Get-AdoBuildTestFailure -BuildId 401 | Export-AdoBuildTestFailure -Path .\build-401.html -SkipAttachments -WhatIf
 ```
 
-Nomme le rapport qui serait écrit, sans requête ni fichier.
+Récupère l’ensemble des tests en échec, puis nomme le rapport qui serait écrit.
+L’exportation ne télécharge aucune pièce jointe et n’écrit aucun fichier;
+`Get-AdoBuildTestFailure`, en amont, récupère toujours les données d’Azure DevOps.
 
 ## PARAMETERS
 

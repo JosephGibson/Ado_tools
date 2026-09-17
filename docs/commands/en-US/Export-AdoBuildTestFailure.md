@@ -29,7 +29,33 @@ No aliases.
 
 ## DESCRIPTION
 
-Renders each AdoBuildTestFailureSet from Get-AdoBuildTestFailure as one dark HTML report in the report culture: the run history chart and table, an index, one card per failed or flaky test with every attempt, highlighted messages and stack traces, Test Case links, and diagnostics. The report is complete with scripts blocked; a small static script, allowed only by a hash-based Content Security Policy, adds filtering, keyboard navigation and copy. Unless SkipAttachments is used, the result attachments of every reported attempt are downloaded in report order into a folder named <report base name>.files-<UTC stamp> beside the report, with toolkit-generated file names r<run>-<result>[-s<sub-result>]-a<attachment>.<ext> only; remote file names are shown, never used in paths. PNG files become thumbnails and JSON files up to the inline limit are shown highlighted, after their content is checked; a failed check saves the file as .bin, links it, and never previews it. HTML attachments are linked as test output and open outside the report's policy. Files above maximumAttachmentBytes, the total maximumTotalAttachmentBytes budget, and failed downloads become warnings and are listed with their Azure DevOps name, size and a link to the result. The report and its folder are committed in a fixed order: download into a temporary folder, render and validate a temporary report, rename the folder, then replace the report; earlier generation folders of the same report are removed last, links are never followed, and a failure at any step leaves the previous report and its folder unchanged. A history build that cannot be read does not stop the export.
+Renders each `AdoBuildTestFailureSet` from `Get-AdoBuildTestFailure` as one dark HTML
+report in the report culture: the run history chart and table, an index, one card per
+failed or flaky test with every attempt, highlighted messages and stack traces, Test
+Case links, and diagnostics. The report is complete with scripts blocked; a small
+static script, allowed by a hash-based Content Security Policy, adds filtering,
+keyboard navigation and copy.
+
+Unless `-SkipAttachments` is used, attachments of every reported result and its
+sub-results are downloaded in report order into a folder named
+`<report base name>.files-<UTC stamp>` beside the report. Local files use toolkit
+names: `r<run>-<result>[-s<sub-result>]-a<attachment>.<ext>`. Remote names are display
+text and never become paths.
+
+PNG files become thumbnails and JSON files up to the inline limit are highlighted,
+after their content is checked. A failed check saves the file as `.bin` and links it
+without a preview. HTML attachments are linked as test output and open outside the
+report's policy. Size limits (`maximumAttachmentBytes`, `maximumTotalAttachmentBytes`)
+and failed downloads produce warnings; affected attachments retain their Azure DevOps
+name, size and result link. Authentication, authorization and cancellation stop the
+export. An unreadable history build does not stop it.
+
+The report and its folder are committed in this order: download into a temporary
+folder, render and validate a temporary report, rename the folder, then replace the
+report. A failure before replacement leaves the previous report and folder unchanged.
+Old generation folders of the same report are removed after replacement; cleanup
+failures produce warnings and the new report stays committed. Reparse points are
+skipped and never followed.
 
 ## EXAMPLES
 
@@ -41,7 +67,8 @@ Get-AdoBuild -Definition 'Main Build' -Branch main -Latest -Result Failed |
     Export-AdoBuildTestFailure -Culture fr-CA -Path .\triage -Open
 ```
 
-Writes .\triage\Build-<id>-TestFailures.html in French with its attachment folder, then opens the report.
+Writes `.\triage\Build-<id>-TestFailures.html` in French with its attachment folder,
+then opens the report. The `triage` directory must already exist.
 
 ### Example 2
 
@@ -49,7 +76,9 @@ Writes .\triage\Build-<id>-TestFailures.html in French with its attachment folde
 Get-AdoBuildTestFailure -BuildId 401 | Export-AdoBuildTestFailure -Path .\build-401.html -SkipAttachments -WhatIf
 ```
 
-Names the report that would be written, without requests or files.
+Retrieves the failure set, then names the report that would be written. The export
+makes no attachment-content requests and writes no files; the upstream
+`Get-AdoBuildTestFailure` still retrieves data from Azure DevOps.
 
 ## PARAMETERS
 

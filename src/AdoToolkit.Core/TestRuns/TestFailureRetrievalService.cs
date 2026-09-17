@@ -212,21 +212,16 @@ public sealed class TestFailureRetrievalService
                     .Where(attempt => attempt.RunId == runId && attempt.ResultId == resultId).ToArray();
                 collected.AddRange(await runs.GetAttachmentsAsync(project, runId, resultId, null, culture, cancellationToken)
                     .ConfigureAwait(false));
-                foreach (AdoTestAttempt attempt in owners.Where(static attempt => attempt.SubResultId.HasValue))
-                    collected.AddRange(await runs.GetAttachmentsAsync(project, runId, resultId, attempt.SubResultId, culture, cancellationToken)
+                foreach (int subId in owners.SelectMany(AttachmentSubResultIds).Distinct())
+                    collected.AddRange(await runs.GetAttachmentsAsync(project, runId, resultId, subId, culture, cancellationToken)
                         .ConfigureAwait(false));
-                foreach (AdoTestAttempt attempt in owners)
-                    foreach (AdoTestSubResult sub in attempt.SubResults)
-                        collected.AddRange(await runs.GetAttachmentsAsync(project, runId, resultId, sub.Id, culture, cancellationToken)
-                            .ConfigureAwait(false));
                 progress.Progress(new AdoProgress { Phase = AdoProgressPhase.Attachments, Completed = ++completed, Total = total });
             }
             if (collected.Count == 0) continue;
             for (int index = 0; index < item.Attempts.Count; index++)
             {
                 AdoTestAttempt attempt = item.Attempts[index];
-                HashSet<int> owned = [.. attempt.SubResults.Select(static sub => sub.Id)];
-                if (attempt.SubResultId.HasValue) owned.Add(attempt.SubResultId.Value);
+                HashSet<int> owned = [.. AttachmentSubResultIds(attempt)];
                 bool first = item.Attempts.FindIndex(candidate =>
                     candidate.RunId == attempt.RunId && candidate.ResultId == attempt.ResultId) == index;
                 List<AdoTestAttachment> mine = collected
@@ -234,39 +229,27 @@ public sealed class TestFailureRetrievalService
                         && (attachment.SubResultId.HasValue ? owned.Contains(attachment.SubResultId.Value) : first))
                     .ToList();
                 if (mine.Count == 0) continue;
-                item.Attempts[index] = Replace(attempt, mine.AsReadOnly());
+                item.Attempts[index] = attempt.WithAttachments(mine.AsReadOnly());
             }
         }
     }
 
-    private static AdoTestAttempt Replace(AdoTestAttempt attempt, IReadOnlyList<AdoTestAttachment> attachments) => new()
+    private static IEnumerable<int> AttachmentSubResultIds(AdoTestAttempt attempt)
     {
-        Number = attempt.Number,
-        Source = attempt.Source,
-        RunId = attempt.RunId,
-        ResultId = attempt.ResultId,
-        SubResultId = attempt.SubResultId,
-        Outcome = attempt.Outcome,
-        OutcomeClass = attempt.OutcomeClass,
-        ErrorMessage = attempt.ErrorMessage,
-        StackTrace = attempt.StackTrace,
-        StartedDate = attempt.StartedDate,
-        CompletedDate = attempt.CompletedDate,
-        Duration = attempt.Duration,
-        ComputerName = attempt.ComputerName,
-        RunBy = attempt.RunBy,
-        FailureType = attempt.FailureType,
-        ResolutionState = attempt.ResolutionState,
-        Comment = attempt.Comment,
-        FailingSinceBuildId = attempt.FailingSinceBuildId,
-        AssociatedBugIds = attempt.AssociatedBugIds,
-        SubResults = attempt.SubResults,
-        Iterations = attempt.Iterations,
-        CustomFields = attempt.CustomFields,
-        AdditionalFields = attempt.AdditionalFields,
-        Attachments = attachments,
-        WebUrl = attempt.WebUrl,
-    };
+        if (attempt.SubResultId is int id) yield return id;
+        foreach (int subId in DescendantIds(attempt.SubResults)) yield return subId;
+    }
+
+    // The mapper has already bounded this tree to three levels. Use the same traversal for
+    // listing and assigning attachments so nested data rows retain their owning attempt.
+    private static IEnumerable<int> DescendantIds(IReadOnlyList<AdoTestSubResult> values)
+    {
+        foreach (AdoTestSubResult value in values)
+        {
+            yield return value.Id;
+            foreach (int id in DescendantIds(value.SubResults)) yield return id;
+        }
+    }
 
     private async Task<IReadOnlyDictionary<int, AdoTestCaseLink>> ResolveLinksAsync(List<DetailedIdentity> detailed,
         string project, CultureInfo culture, List<AdoDiagnostic> diagnostics, CancellationToken cancellationToken)

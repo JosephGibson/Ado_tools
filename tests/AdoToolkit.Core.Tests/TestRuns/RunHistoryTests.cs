@@ -119,6 +119,29 @@ public sealed class RunHistoryTests
     }
 
     [Fact]
+    public async Task PipedBuildsWithTheSameTimestampEachAppearOnlyOnceInTheirOwnWindow()
+    {
+        // Both builds use the same definition, branch and finish time. The first cached
+        // window must not be reused after its current build was excluded from the listing.
+        TestRunFixture fixture = new TestRunFixture()
+            .RouteBody("""{"count":2,"value":[{"id":401,"buildNumber":"first"},{"id":400,"buildNumber":"second"}]}""",
+                "/_apis/build/builds")
+            .Route("runs-empty.json", "/test/runs");
+        using FakeHttpMessageHandler handler = fixture.Handler();
+        using HttpClient client = new(handler);
+        TestFailureRetrievalService service = TestRunFixture.Service(client);
+        TestFailureQuery query = new() { HistoryCount = 2 };
+        AdoBuildTestFailureSet first = await service.GetAsync(TestRunFixture.Build(id: 401), query,
+            CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
+        AdoBuildTestFailureSet second = await service.GetAsync(TestRunFixture.Build(id: 400), query,
+            CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
+
+        Assert.Equal([400, 401], first.History.Select(summary => summary.BuildId));
+        Assert.Equal([401, 400], second.History.Select(summary => summary.BuildId));
+        Assert.Single(second.History, summary => summary.IsCurrent);
+    }
+
+    [Fact]
     public async Task HistoryListingsAreCachedForTheInvocationAcrossPipedBuilds()
     {
         TestRunFixture fixture = History();

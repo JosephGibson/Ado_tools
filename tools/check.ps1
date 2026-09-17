@@ -72,6 +72,7 @@ try {
         if ($buildExit -ne 0) { exit 1 }
 
         if (-not $SkipTests) {
+            . (Join-Path $PSScriptRoot 'lib/test-results.ps1')
             $previousCulture = $env:ADOTOOLKIT_TEST_CULTURE
             $previousGolden = $env:ADOTOOLKIT_UPDATE_GOLDEN
             try {
@@ -79,10 +80,22 @@ try {
                 foreach ($culture in @('en-US', 'fr-CA')) {
                     $env:ADOTOOLKIT_TEST_CULTURE = $culture
                     Write-Output "Core tests: $culture"
-                    $testArguments = @('test', 'AdoToolkit.slnx', '--configuration', 'Release', '--no-build', '--no-restore', '--nologo')
+                    # A successful runner exit alone can hide skipped or undiscovered tests.
+                    # Use a fresh folder so previous successful results cannot satisfy this run.
+                    $results = Resolve-RepositoryPath ('artifacts/verify/core-' + [guid]::NewGuid().ToString('N'))
+                    [void] [System.IO.Directory]::CreateDirectory($results)
+                    $testArguments = @('test', 'AdoToolkit.slnx', '--configuration', 'Release', '--no-build', '--no-restore', '--nologo',
+                        '--logger', 'trx', '--results-directory', $results)
                     & $dotnet.Source @testArguments
                     $testExit = $LASTEXITCODE
                     if ($testExit -ne 0) { exit 1 }
+                    $reports = @(Get-ChildItem -LiteralPath $results -File -Filter '*.trx')
+                    if ($reports.Count -eq 0) { Write-Output 'Core test result report missing.'; exit 2 }
+                    foreach ($report in $reports) {
+                        $outcome = Get-AdoTestOutcome -Document (Read-ProjectXml -Path $report.FullName)
+                        Write-Output $outcome.Summary
+                        if ($outcome.ExitCode -ne 0) { exit $outcome.ExitCode }
+                    }
                 }
             }
             finally {

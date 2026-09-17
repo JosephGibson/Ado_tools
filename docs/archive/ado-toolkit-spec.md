@@ -27,6 +27,14 @@
 
 ### 0.2 Revision history
 
+#### 2026-09-16 — Session 5.4 release review
+
+- Document the existing 1–86400 second profile timeout validation in §4.1 and §6.6.
+- Record automated Edge evidence in V-27. Manual Edge/Chrome acceptance and work-policy
+  confirmation remain open; no CSP or acceptance criterion changes.
+- Session 5.4 review fixes and verification are recorded in
+  [the release evidence](plans/slice-5-session-5.4-evidence.md).
+
 #### 2026-09-15 — Owner-requested Test Case report UI refinement
 
 - The owner requested a dark-mode UI pass during session 2.2. Q-21 now selects
@@ -521,6 +529,10 @@ Server 2020 language-pack labels. That final UI comparison remains [Verify V-16]
 }
 ```
 
+Profile `requestTimeoutSeconds` accepts whole seconds from 1 through 86400 inclusive;
+the default is 100. Invalid values are rejected when loading or saving configuration
+and by `Set-AdoProfile`. Download timeouts are separate (§6.6).
+
 ### 4.2 Collection URL normalization
 
 Applied once, when a profile is saved or `Connect-Ado` runs. The result is an absolute `Uri`
@@ -682,7 +694,7 @@ The single-item `GET _apis/wit/workitems/{id}` is not needed: batch covers one I
 
 - `HttpClient.Timeout` is infinite. Each request gets a linked `CancellationTokenSource` for its
   timeout class.
-- Metadata and Query: 100 s by default (profile `requestTimeoutSeconds`).
+- Metadata and Query: 100 s by default (profile `requestTimeoutSeconds`, 1–86400 s).
 - Download: 10 min total and 60 s of inactivity.
 - Timeouts raise `AdoTimeoutException`, which is distinct from user cancellation.
 - The per-operation budget includes attempts, response-body consumption, and retry delays.
@@ -2599,7 +2611,7 @@ until the owner overrides them.
 | V-24 | `automatedTestStorage` + `automatedTestName` identify the same C# test across builds and across runs within a build | Live check across two builds. Offline 5.1 (2026-09-16): identity is `automatedTestStorage` compared ordinally ignoring case plus `automatedTestName` compared ordinally, and history cells match identities across builds through that key alone. A result with no automated name is its own identity keyed by run and result ID and has no history cells. Cross-build stability remains unconfirmed; the live script compares the identity sets of two builds of one definition | S5 |
 | V-25 | BuildGet route and fields (`uri`, `definition`, `buildNumber`, `sourceBranch`, `sourceVersion`, `repository.type`/`id`, `result`, `status`, `finishTime`, `queueTime`); BuildsList history parameters `definitions`, `branchName`, `maxTime`, `statusFilter`, `queryOrder=finishTimeDescending` | Server 6.0 docs, then live check. Offline 5.1 (2026-09-16): BuildGet is registered at `6.0` and used when no `AdoBuild` is piped, mapping the same fields as BuildsList. The build `uri` filters test runs, and `vstfs:///Build/Build/<id>` is composed when it is absent, with a test for each path. The history window sends `definitions`, `statusFilter=completed`, `queryOrder=finishTimeDescending`, `maxTime` from the current finish or queue time formatted with the invariant culture, and `branchName` for `SameBranch` only. Route, fields and parameter behavior remain assumptions | S5 |
 | V-26 | Server 2020 web routes: build test results view with run and result selection (`{c}/{p}/_build/results?buildId=…&view=ms.vss-test-web.build-test-results-tab&runId=…&resultId=…`), test run (`{c}/{p}/_testManagement/runs?_a=runCharts&runId=…`), definition (`{c}/{p}/_build?definitionId=…`), commit (`{c}/{p}/_git/{repositoryId}/commit/{sha}`) | Offline 5.3 (2026-09-16): synthetic exact-route tests cover encoded project/IDs, Git/GUID/40-hex commit guards, Test Case/bug links and rejection of response URLs. [5.3 evidence](plans/slice-5-session-5.3-evidence.md). Live confirmation by opening generated links against Server 2020 remains pending | S5 |
-| V-27 | Browser behavior for a report opened from `file://` in Edge and Chrome: meta CSP hash-allowed inline scripts run; `img-src 'self'` loads sibling PNGs (else record the replacement); `<dialog>`, `<details>`, inline SVG `<title>`; links to local HTML files open; Clipboard API availability | Local offline spike at home, then confirm under work browser policy (Q-28) | S5 |
+| V-27 | Browser behavior for a report opened from `file://` in Edge and Chrome: meta CSP hash-allowed inline scripts run; `img-src 'self'` loads sibling PNGs (else record the replacement); `<dialog>`, `<details>`, inline SVG `<title>`; links to local HTML files open; Clipboard API availability | 2026-09-16: isolated headless Edge 153.0.4234.32 passed 18 checks across en-US/fr-CA synthetic reports opened from `file://`: filtering, sibling PNGs with the specified CSP, dialog/Esc, details, SVG title markup, local HTML navigation, forced clipboard selection fallback, and complete content with script execution disabled. No runtime exceptions. Manual hover/clipboard observations and both-browser acceptance are pending; Chrome was not found in standard install locations. Work-policy confirmation remains open. [Evidence](plans/slice-5-session-5.4-evidence.md#browser-check-s5-9--v-27) | S5 |
 | V-28 | Whether `testresults`-area, result-summary, or test-history query endpoints exist on Server 2020 and could replace per-build listings for history | Server 6.0 docs; optional live check. Not blocking | — |
 | V-29 | Language and format of stack traces and assertion messages produced on the build agents (English or French .NET runtime text; runner-specific message forms) | Describe synthetically from a real run at work; rewrite fixtures (§19.2). Offline 5.2 (2026-09-16): synthetic English/French frames, inner-exception/rethrow separators, async/generic methods, framework markers, MSTest/NUnit/xUnit/French assertion text, repository URL boundaries, hostile text and generated 2 MiB truncation are covered. Pure lexer round-trip includes all TestRuns/Attachments text and decoded JSON strings; unknown content stays plain. Runtime language and exact runner wording remain unconfirmed | S5 |
 

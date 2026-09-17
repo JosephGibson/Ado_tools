@@ -57,10 +57,33 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if ($PSVersionTable.PSVersion -lt [semver] '7.6.5') { throw "PowerShell 7.6.5 or later is required; found $($PSVersionTable.PSVersion)." }
-          Set-PSResourceRepository -Name PSGallery -Trusted
-          Install-PSResource -Name Pester -Version '5.9.1' -Scope CurrentUser -Quiet
-          Install-PSResource -Name PSScriptAnalyzer -Version '1.25.0' -Scope CurrentUser -Quiet
-          Install-PSResource -Name Microsoft.PowerShell.PlatyPS -Version '1.0.3' -Scope CurrentUser -Quiet
+          # PSResourceGet reads its repository store while binding parameters, so on a profile that
+          # has never used it the store must exist first. Creating the folder is enough for the
+          # store to be written; the rest is best effort because -TrustRepository is what matters.
+          $store = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PSResourceGet'
+          if (-not (Test-Path -LiteralPath $store)) { [void] (New-Item -ItemType Directory -Path $store -Force) }
+          $gallery = try { Get-PSResourceRepository -Name PSGallery -ErrorAction SilentlyContinue } catch { $null }
+          if (-not $gallery) { try { Register-PSResourceRepository -PSGallery -Trusted } catch { Write-Host "PSGallery registration: $($_.Exception.Message)" } }
+          # Bracketed versions are exact. A bare version is a minimum, which would allow Pester 6.x,
+          # and the verify gate requires Pester 5.x.
+          $modules = @{ 'Pester' = '[5.9.1]'; 'PSScriptAnalyzer' = '[1.25.0]'; 'Microsoft.PowerShell.PlatyPS' = '[1.0.3]' }
+          foreach ($module in $modules.GetEnumerator()) {
+            $exact = $module.Value.Trim('[', ']')
+            try { Install-PSResource -Name $module.Key -Version $module.Value -Scope CurrentUser -TrustRepository -Quiet }
+            catch {
+              Write-Host "Install-PSResource failed for $($module.Key): $($_.Exception.Message)"
+              Install-Module -Name $module.Key -RequiredVersion $exact -Scope CurrentUser -Repository PSGallery -Force -AllowClobber
+            }
+          }
+          # @() is required: -Name silently matches nothing when handed a hashtable KeyCollection.
+          $installed = Get-Module -ListAvailable -Name @($modules.Keys) | Sort-Object Name, Version
+          $installed | Select-Object Name, Version | Format-Table -AutoSize | Out-String | Write-Host
+          foreach ($name in $modules.Keys) {
+            $wanted = [version] $modules[$name].Trim('[', ']')
+            if (-not ($installed | Where-Object { $_.Name -eq $name -and $_.Version -eq $wanted })) {
+              throw "$name $wanted is not available after installation."
+            }
+          }
 
       - name: Check the tag against the module version
         id: version
@@ -125,5 +148,6 @@ jobs:
           $notesFile = Join-Path $env:RUNNER_TEMP 'release-notes.md'
           $notes | Set-Content -LiteralPath $notesFile -Encoding utf8
           $assets = @($zip, "$zip.sha256", 'Install-AdoToolkit.ps1') | ForEach-Object { Join-Path $release $_ }
-          gh release create $env:GITHUB_REF_NAME @assets --title "AdoToolkit $env:VERSION" --notes-file $notesFile --generate-notes --verify-tag
+          # Only --notes-file: combining it with --generate-notes is not documented behaviour.
+          gh release create $env:GITHUB_REF_NAME @assets --title "AdoToolkit $env:VERSION" --notes-file $notesFile --verify-tag
           if ($LASTEXITCODE -ne 0) { throw 'Creating the release failed.' }

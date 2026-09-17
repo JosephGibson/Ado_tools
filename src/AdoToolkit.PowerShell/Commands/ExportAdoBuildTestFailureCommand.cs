@@ -18,6 +18,7 @@ public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposabl
     private AdoConfiguration? configuration;
     private string? resolvedPath;
     private bool pathIsFile;
+    private bool createDirectory;
     private int received;
     private int downloadTotal;
 
@@ -40,8 +41,12 @@ public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposabl
         if (!string.Equals(provider.Name, "FileSystem", StringComparison.OrdinalIgnoreCase))
             ThrowTerminatingError(new ErrorRecord(new ArgumentException(Messages.Get(AdoMessage.FileSystemPathRequired, MessageCulture)),
                 "FileSystemPathRequired", ErrorCategory.InvalidArgument, Path));
-        pathIsFile = !Directory.Exists(resolvedPath);
-        if (pathIsFile && !resolvedPath.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
+        // An existing directory or an .html name keeps its meaning. Any other path without an
+        // extension is a directory created at export time; a trailing separator forces that.
+        bool isDirectory = Directory.Exists(resolvedPath);
+        pathIsFile = !isDirectory && resolvedPath.EndsWith(".html", StringComparison.OrdinalIgnoreCase);
+        createDirectory = !isDirectory && !pathIsFile;
+        if (createDirectory && (File.Exists(resolvedPath) || System.IO.Path.HasExtension(resolvedPath)))
             ThrowTerminatingError(new ErrorRecord(new ArgumentException(Messages.Get(AdoMessage.TestFailureReportPathInvalid, MessageCulture, resolvedPath)),
                 "TestFailureReportPathInvalid", ErrorCategory.InvalidArgument, Path));
     }
@@ -65,7 +70,7 @@ public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposabl
         TestFailureExportPlan plan = exporter.Prepare(set, new TestFailureExportOptions
         {
             Culture = Culture, ConfiguredCulture = configuration.Reporting.Culture, SessionCulture = MessageCulture,
-            Path = resolvedPath, NoClobber = NoClobber, SkipAttachments = SkipAttachments, Open = Open,
+            Path = resolvedPath, CreateDirectory = createDirectory, NoClobber = NoClobber, SkipAttachments = SkipAttachments, Open = Open,
             GeneratedAt = DateTimeOffset.Now,
             ToolkitVersion = typeof(ExportAdoBuildTestFailureCommand).Assembly.GetName().Version!.ToString(),
         });

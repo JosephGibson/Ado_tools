@@ -88,12 +88,12 @@ public sealed class RunHistoryTests
         using FakeHttpMessageHandler handler = fixture.Handler();
         using HttpClient client = new(handler);
         AdoBuildTestFailureSet set = await TestRunFixture.Service(client).GetAsync(TestRunFixture.Build(),
-            new TestFailureQuery { HistoryCount = 4, MaximumHistoryRequests = 3 }, CultureInfo.InvariantCulture,
+            new TestFailureQuery { HistoryCount = 4, MaximumHistoryRequests = 5 }, CultureInfo.InvariantCulture,
             TestContext.Current.CancellationToken);
         // The newest earlier build is read; the budget then stops the older ones.
         Assert.Equal([false, false, true, true], set.History.Select(static summary => summary.IsAvailable));
         AdoDiagnostic diagnostic = Assert.Single(set.Diagnostics, item => item.Code == DiagnosticCodes.HistoryLimitExceeded);
-        Assert.Equal(["3"], diagnostic.Arguments);
+        Assert.Equal(["5"], diagnostic.Arguments);
         AdoTestFailure cart = Assert.Single(set.Failures, failure => failure.ShortName == "AddsItem");
         Assert.Equal([AdoTestHistoryOutcome.Unavailable, AdoTestHistoryOutcome.Unavailable,
             AdoTestHistoryOutcome.Passed, AdoTestHistoryOutcome.Failed], cart.History.Select(static cell => cell.Outcome));

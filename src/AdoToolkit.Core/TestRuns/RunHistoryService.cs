@@ -42,10 +42,17 @@ internal sealed class RunHistoryService
         }, true, currentData);
         if (historyCount <= 1) return Array.AsReadOnly(new[] { currentEntry });
         int budgetStart = counter.Count;
+        using IDisposable budget = counter.Limit(maximumRequests);
         IReadOnlyList<HistoryBuild> window;
         try
         {
             window = await GetWindowAsync(current, historyCount, scope, culture, cancellationToken).ConfigureAwait(false);
+        }
+        catch (RequestBudgetExceededException)
+        {
+            diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.HistoryLimitExceeded, culture,
+                arguments: [maximumRequests.ToString(CultureInfo.InvariantCulture)]));
+            return Array.AsReadOnly(new[] { currentEntry });
         }
         catch (Exception error) when (IsRecoverable(error, cancellationToken))
         {
@@ -85,9 +92,21 @@ internal sealed class RunHistoryService
                 continue;
             }
             HistoryBuildData data;
+            bool exhausted = false;
             try
             {
                 data = await ReadBuildAsync(build, current.TeamProject, culture, cancellationToken).ConfigureAwait(false);
+            }
+            catch (RequestBudgetExceededException)
+            {
+                if (!limitReported)
+                {
+                    diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.HistoryLimitExceeded, culture,
+                        arguments: [maximumRequests.ToString(CultureInfo.InvariantCulture)]));
+                    limitReported = true;
+                }
+                exhausted = true;
+                data = HistoryBuildData.Unavailable;
             }
             catch (Exception error) when (IsRecoverable(error, cancellationToken))
             {
@@ -95,7 +114,7 @@ internal sealed class RunHistoryService
                     arguments: [build.Id.ToString(CultureInfo.InvariantCulture)]));
                 data = HistoryBuildData.Unavailable;
             }
-            cache.AddBuild(build.Id, data);
+            if (!exhausted) cache.AddBuild(build.Id, data);
             earlier.Add(new HistoryEntry(build, false, data));
         }
         earlier.Reverse();

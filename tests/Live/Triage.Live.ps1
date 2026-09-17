@@ -8,7 +8,7 @@ $VerbosePreference = 'SilentlyContinue'
 $DebugPreference = 'SilentlyContinue'
 $InformationPreference = 'SilentlyContinue'
 
-# Opt-in, signed installed module only. Keep response bodies and ranges in memory.
+# Opt-in, installed module only (signed or unsigned). Keep response bodies and ranges in memory.
 # Never print work values or exception messages and never invoke Save-AdoBuildLog here.
 $checkStates = [System.Collections.Generic.List[string]]::new()
 function Write-AdoLiveResult {
@@ -67,14 +67,8 @@ function Get-AdoTriageLine {
 
 try {
     . (Join-Path $PSScriptRoot '../../tools/package/Package.Common.ps1')
-    $installedRoot = Resolve-AdoPackagePath -Path (Get-AdoModuleRoot)
-    $candidate = Get-Module -ListAvailable -Name AdoToolkit | Select-Object -First 1
-    if ($null -eq $candidate) { throw 'INSTALLED_MODULE_REQUIRED' }
-    $package = Resolve-AdoPackagePath -Path $candidate.ModuleBase -Root $installedRoot
-    $signature = Get-AuthenticodeSignature -LiteralPath (Join-Path $package 'AdoToolkit.psd1')
-    if ($signature.Status -ne 'Valid' -or $null -eq $signature.SignerCertificate) { throw 'SIGNATURE_INVALID' }
-    Assert-AdoPackageSignature -PackagePath $package -ExpectedThumbprint $signature.SignerCertificate.Thumbprint
-    Import-Module -Name (Join-Path $package 'AdoToolkit.psd1') -Force
+    # The newest installed release; a signed release must verify throughout, an unsigned one is accepted.
+    $null = Import-AdoInstalledModule
     $connection = Connect-Ado -Profile $env:ADOTOOLKIT_LIVE_PROFILE
     if ([string]::IsNullOrWhiteSpace($connection.DefaultProject)) {
         foreach ($item in @('V-11', 'V-14')) { Write-AdoLiveResult "INCONCLUSIVE $item PROFILE_DEFAULT_PROJECT_REQUIRED" }
@@ -124,11 +118,11 @@ try {
         $response = Invoke-AdoTriageRequest -Uri ($buildBase + '/logs?api-version=6.0')
         if ([string] $response.Headers['Content-Type'] -notmatch 'application/json') { throw 'LOG_LIST_NOT_JSON' }
         $logs = @((($response.Content | ConvertFrom-Json).value))
-        $usable = @($logs | Where-Object { $null -ne $_.PSObject.Properties['lineCount'] -and [int] $_.lineCount -ge 3 })
+        $usable = @($logs | Where-Object { $null -ne $_.PSObject.Properties['lineCount'] -and [long] $_.lineCount -ge 3 })
         if ($usable.Count -eq 0) { Write-AdoLiveResult 'INCONCLUSIVE V-14 NONEMPTY_LOG_WITH_LINECOUNT_REQUIRED' }
         else {
             $log = $usable[0]
-            $count = [int] $log.lineCount
+            $count = [long] $log.lineCount
             $rangeBase = $buildBase + '/logs/' + ([int] $log.id).ToString([cultureinfo]::InvariantCulture)
             # Independent zero-based inclusive probe: first line, then the final two and final one.
             $first = @(Get-AdoTriageLine -Text (Invoke-AdoTriageRequest -Uri ($rangeBase + '?api-version=6.0&startLine=0&endLine=0') -Accept 'text/plain').Content)

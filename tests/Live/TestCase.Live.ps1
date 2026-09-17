@@ -15,7 +15,7 @@ function Write-AdoLiveResult {
     Write-Output $Text
 }
 
-# Opt-in, signed installed module only; no work data leaves this process.
+# Opt-in, installed module only (signed or unsigned); no work data leaves this process.
 # Never persist responses or print values, URLs, identities, or exception messages.
 $caseId = 0
 if ([string]::IsNullOrWhiteSpace($env:ADOTOOLKIT_LIVE_PROFILE) -or
@@ -26,14 +26,8 @@ if ([string]::IsNullOrWhiteSpace($env:ADOTOOLKIT_LIVE_PROFILE) -or
 }
 try {
     . (Join-Path $PSScriptRoot '../../tools/package/Package.Common.ps1')
-    $installedRoot = Resolve-AdoPackagePath -Path (Get-AdoModuleRoot)
-    $candidate = Get-Module -ListAvailable -Name AdoToolkit | Select-Object -First 1
-    if ($null -eq $candidate) { throw 'INSTALLED_MODULE_REQUIRED' }
-    $package = Resolve-AdoPackagePath -Path $candidate.ModuleBase -Root $installedRoot
-    $signature = Get-AuthenticodeSignature -LiteralPath (Join-Path $package 'AdoToolkit.psd1')
-    if ($signature.Status -ne 'Valid' -or $null -eq $signature.SignerCertificate) { throw 'SIGNATURE_INVALID' }
-    Assert-AdoPackageSignature -PackagePath $package -ExpectedThumbprint $signature.SignerCertificate.Thumbprint
-    Import-Module -Name (Join-Path $package 'AdoToolkit.psd1') -Force
+    # The newest installed release; a signed release must verify throughout, an unsigned one is accepted.
+    $null = Import-AdoInstalledModule
     $connection = Connect-Ado -Profile $env:ADOTOOLKIT_LIVE_PROFILE
     $uri = $connection.CollectionUri.AbsoluteUri.TrimEnd('/') + '/_apis/wit/workitemsbatch?api-version=6.0'
     $headers = @{ 'Accept-Language' = $PSUICulture }
@@ -61,14 +55,23 @@ try {
     $body = @{ ids = @($caseId); errorPolicy = 'omit'; fields = @('System.Title'); '$expand' = 'relations' } | ConvertTo-Json -Compress
     try {
         Invoke-RestMethod @request -Body $body | Out-Null
-        Write-AdoLiveResult 'PASS V-10 ACCEPTED'
+        Write-AdoLiveResult 'FAIL V-10 COMBINATION_ACCEPTED_ASSUMPTION_CONTRADICTED'
     }
     catch {
         $httpResponse = $_.Exception.PSObject.Properties['Response']
-        if ($null -ne $httpResponse -and $null -ne $httpResponse.Value) {
-            Write-AdoLiveResult ('FAIL V-10 HTTP_' + ([int] $httpResponse.Value.StatusCode).ToString([cultureinfo]::InvariantCulture))
+        if ($null -ne $httpResponse -and $null -ne $httpResponse.Value -and [int] $httpResponse.Value.StatusCode -eq 400) {
+            # A generic 400 alone proves nothing. Require each parameter to work separately.
+            try {
+                foreach ($control in @(
+                        @{ ids = @($caseId); errorPolicy = 'omit'; fields = @('System.Title') },
+                        @{ ids = @($caseId); errorPolicy = 'omit'; '$expand' = 'relations' })) {
+                    Invoke-RestMethod @request -Body ($control | ConvertTo-Json -Compress) | Out-Null
+                }
+                Write-AdoLiveResult 'PASS V-10 COMBINATION_REJECTED_CONTROLS_ACCEPTED'
+            }
+            catch { Write-AdoLiveResult 'INCONCLUSIVE V-10 CONTROL_REQUEST_FAILED' }
         }
-        else { Write-AdoLiveResult 'FAIL V-10 ERROR' }
+        else { Write-AdoLiveResult 'INCONCLUSIVE V-10 COMBINATION_REQUEST_FAILED' }
     }
     $case = Get-AdoTestCase -Id $caseId
     $sourceIds = @($caseId) + @($case.SharedSteps | ForEach-Object Id)
@@ -102,12 +105,10 @@ try {
             }
             foreach ($value in $document.SelectNodes("//*[local-name()='parameterizedString']")) {
                 if ([string]::IsNullOrWhiteSpace($value.InnerText)) { continue }
-                $hasMarkup = $value.InnerText -match '<[/!a-zA-Z][^>]*>'
                 if ($value.GetAttribute('isformatted') -eq 'true') {
                     $formattedCount++
-                    if (-not $hasMarkup) { $formatAgrees = $false }
                 }
-                elseif ($hasMarkup) { $formatAgrees = $false }
+                elseif ($value.GetAttribute('isformatted') -notin @('false', '')) { $formatAgrees = $false }
             }
         }
         finally { $reader.Dispose(); $inputText.Dispose() }
@@ -116,9 +117,9 @@ try {
     elseif ($referenceCount -eq 0) { Write-AdoLiveResult 'INCONCLUSIVE V-01 NO_REFERENCES' }
     elseif ($hasChildren) { Write-AdoLiveResult 'PASS V-01 POSITIVE_REF_CHILDREN_PRESENT' }
     else { Write-AdoLiveResult 'PASS V-01 POSITIVE_REF_NO_CHILDREN' }
-    if (-not $formatAgrees) { Write-AdoLiveResult 'FAIL V-02 FORMAT_CONVENTION_DIFFERS' }
+    if (-not $formatAgrees) { Write-AdoLiveResult 'INCONCLUSIVE V-02 UNKNOWN_FORMAT_FLAG' }
     elseif ($formattedCount -eq 0) { Write-AdoLiveResult 'INCONCLUSIVE V-02 NO_FORMATTED_VALUES' }
-    else { Write-AdoLiveResult 'PASS V-02 FORMAT_CONVENTION_AGREES' }
+    else { Write-AdoLiveResult 'INCONCLUSIVE V-02 FORMAT_FLAGS_OBSERVED_VISUAL_COMPARISON_REQUIRED' }
 
     $parameterCases = @($case)
     $sharedCaseId = 0

@@ -1,5 +1,7 @@
+#Requires -Version 7.6
+#Requires -PSEdition Core
 [CmdletBinding()]
-param([switch] $NoBuild, [string] $OutputRoot)
+param([switch] $NoBuild, [switch] $NoRestore, [string] $OutputRoot)
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
@@ -12,13 +14,33 @@ $project = Join-Path $repository 'src/AdoToolkit.PowerShell/AdoToolkit.PowerShel
 $staging = $null
 $helpStaging = $null
 try {
+    # Report every missing prerequisite at once, before anything is built or staged.
+    $missing = [System.Collections.Generic.List[string]]::new()
+    $dotnet = Get-Command -Name dotnet -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $dotnet) { $missing.Add('the .NET SDK (dotnet was not found on PATH)') }
+    else {
+        Push-Location -LiteralPath $repository
+        try { $null = & $dotnet.Source --version 2>&1; $sdkExit = $LASTEXITCODE }
+        finally { Pop-Location }
+        if ($sdkExit -ne 0) { $missing.Add('the .NET SDK version that global.json requests') }
+    }
+    if (@(Get-Module -ListAvailable -Name Microsoft.PowerShell.PlatyPS | Where-Object { $_.Version.Major -eq 1 }).Count -eq 0) {
+        $missing.Add('the Microsoft.PowerShell.PlatyPS 1.x module for PowerShell 7')
+    }
+    if ($missing.Count -gt 0) { throw ('Packaging requires ' + ($missing -join '; ') + '. See docs/tooling.md.') }
     Import-Module Microsoft.PowerShell.PlatyPS -MinimumVersion 1.0 -MaximumVersion 1.999.999 -ErrorAction Stop
     $arguments = @('msbuild', $project, '-getProperty:Version', '-nologo')
-    $version = (& dotnet @arguments | Out-String).Trim()
+    $version = (& $dotnet.Source @arguments | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or $version -notmatch '^\d+\.\d+\.\d+$') { throw 'MSBuild did not return a supported module version.' }
     if (-not $NoBuild) {
+        # Restore is part of a standalone package build; the verify gate passes -NoBuild and never restores.
+        if (-not $NoRestore) {
+            $arguments = @('restore', $project, '--locked-mode', '--nologo')
+            & $dotnet.Source @arguments
+            if ($LASTEXITCODE -ne 0) { throw 'Package restore failed. Check access to nuget.org; the repository nuget.config uses no other source.' }
+        }
         $arguments = @('build', $project, '--configuration', 'Release', '--no-restore', '--nologo')
-        & dotnet @arguments
+        & $dotnet.Source @arguments
         if ($LASTEXITCODE -ne 0) { throw 'Package build failed.' }
     }
     $parent = Resolve-AdoPackagePath -Path (Join-Path $root 'AdoToolkit') -Root $repository
@@ -28,7 +50,7 @@ try {
     $helpStaging = Resolve-AdoPackagePath -Path (Join-Path $parent ('.help-' + [guid]::NewGuid().ToString('N'))) -Root $repository
     [void] [System.IO.Directory]::CreateDirectory($staging)
     $arguments = @('publish', $project, '--configuration', 'Release', '--no-build', '--no-restore', '--nologo', '--output', $staging)
-    & dotnet @arguments
+    & $dotnet.Source @arguments
     if ($LASTEXITCODE -ne 0) { throw 'Package publish failed.' }
     $manifest = Join-Path $staging 'AdoToolkit.psd1'
     $temporary = Join-Path $staging ([guid]::NewGuid().ToString('N') + '.psd1')

@@ -55,10 +55,7 @@ public sealed class GetAdoBuildCommand : AdoCmdletBase
         else
         {
             project = ResolveProject(Project, connection);
-            object? value = Definition is PSObject wrapped ? wrapped.BaseObject : Definition;
-            if (value is int number && number > 0) id = number;
-            else if (value is string text && !string.IsNullOrWhiteSpace(text)) name = text;
-            else throw new AdoRequestException(Messages.Get(AdoMessage.InvalidBuildDefinition, MessageCulture));
+            (id, name) = ResolveDefinition(Definition);
         }
         BuildQuery query = new() { DefinitionId = id, DefinitionName = name, Branch = Branch, Latest = Latest, Status = Status, Result = Result, Top = Top };
         using ClientLease lease = SessionStateRegistry.Current.Acquire(connection);

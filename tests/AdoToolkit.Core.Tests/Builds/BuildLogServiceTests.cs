@@ -21,7 +21,7 @@ public sealed class BuildLogServiceTests
     [InlineData(int.MaxValue, 1, int.MaxValue - 1, int.MaxValue - 1)]
     [InlineData(int.MaxValue, int.MaxValue, 0, int.MaxValue - 1)]
     public void TailUsesZeroBasedInclusiveBounds(int count, int tail, int start, int end) =>
-        Assert.Equal((start, end), BuildLogService.TailRange(count, tail));
+        Assert.Equal(((long)start, (long)end), BuildLogService.TailRange(count, tail));
 
     [Fact]
     public void EmptyRangeAndInvalidArguments()

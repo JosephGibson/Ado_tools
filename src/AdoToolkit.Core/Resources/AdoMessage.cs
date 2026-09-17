@@ -202,4 +202,9 @@ public enum AdoMessage
     TestFailureReportSingleFile,
     AttachmentFolderSkipped,
     AttachmentFolderNotDeleted,
+    ResponseFormatOperation,
+    ResponseFormatPath,
+    ConnectionProjectHint,
+    AutoConnectProfile,
+    NoLatestBuild,
 }

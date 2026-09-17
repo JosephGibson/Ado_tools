@@ -34,8 +34,14 @@ Describe 'Project command surface' -Tag 'S0-3' {
         finally { Stop-FakeAdoServer -Server $server }
     }
 
-    It 'fails without a session connection' {
-        Disconnect-Ado
-        { Get-AdoProject -ErrorAction Stop } | Should -Throw -ErrorId 'AdoConfiguration,AdoToolkit.GetAdoProjectCommand'
+    It 'fails without a session connection or default profile' {
+        $previousConfig = $env:ADOTOOLKIT_CONFIG_PATH
+        # A default profile would connect implicitly, so point at a configuration that does not exist.
+        $env:ADOTOOLKIT_CONFIG_PATH = Join-Path $TestDrive ([guid]::NewGuid().ToString('N') + '/config.json')
+        try {
+            Disconnect-Ado
+            { Get-AdoProject -ErrorAction Stop } | Should -Throw -ErrorId 'AdoConfiguration,AdoToolkit.GetAdoProjectCommand'
+        }
+        finally { $env:ADOTOOLKIT_CONFIG_PATH = $previousConfig }
     }
 }

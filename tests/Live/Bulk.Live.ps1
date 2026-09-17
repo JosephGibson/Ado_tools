@@ -15,7 +15,7 @@ function Write-AdoLiveResult {
     Write-Output $Text
 }
 
-# Opt-in, signed installed module only; no work data leaves this process and nothing is written.
+# Opt-in, installed module only (signed or unsigned); no work data leaves this process and nothing is written.
 # Never persist responses or print values, names, URLs, identities, tokens, or exception messages.
 $planId = 0
 $suiteId = 0
@@ -47,35 +47,32 @@ function Get-AdoLivePageSummary {
     $tokens = 0
     $items = [System.Collections.Generic.List[object]]::new()
     $token = $null
+    $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    $complete = $false
     while ($pages -lt 50) {
         $query = 'api-version=' + [uri]::EscapeDataString($ApiVersion)
         if ($null -ne $token) { $query = 'continuationToken=' + [uri]::EscapeDataString($token) + '&' + $query }
         $response = Invoke-AdoLiveRequest -Uri ($BaseUri + '?' + $query) -Method Get
         $pages++
         if ([int] $response.StatusCode -ne 200) {
-            return [pscustomobject]@{ Status = [int] $response.StatusCode; Pages = $pages; Tokens = $tokens; Items = @() }
+            return [pscustomobject]@{ Status = [int] $response.StatusCode; Pages = $pages; Tokens = $tokens; Items = @(); Complete = $false }
         }
         $data = $response.Content | ConvertFrom-Json
         if ($null -eq $data -or $null -eq $data.PSObject.Properties['value']) { throw 'INVALID_RESPONSE' }
         foreach ($entry in @($data.value)) { $items.Add($entry) }
         $values = @($response.Headers['x-ms-continuationtoken'])
         $token = if ($values.Count -gt 0 -and -not [string]::IsNullOrEmpty([string] $values[0])) { [string] $values[0] } else { $null }
-        if ($null -eq $token) { break }
+        if ($null -eq $token) { $complete = $true; break }
         $tokens++
+        if (-not $seen.Add($token)) { break }
     }
-    [pscustomobject]@{ Status = 200; Pages = $pages; Tokens = $tokens; Items = $items.ToArray() }
+    [pscustomobject]@{ Status = 200; Pages = $pages; Tokens = $tokens; Items = $items.ToArray(); Complete = $complete }
 }
 
 try {
     . (Join-Path $PSScriptRoot '../../tools/package/Package.Common.ps1')
-    $installedRoot = Resolve-AdoPackagePath -Path (Get-AdoModuleRoot)
-    $candidate = Get-Module -ListAvailable -Name AdoToolkit | Select-Object -First 1
-    if ($null -eq $candidate) { throw 'INSTALLED_MODULE_REQUIRED' }
-    $package = Resolve-AdoPackagePath -Path $candidate.ModuleBase -Root $installedRoot
-    $signature = Get-AuthenticodeSignature -LiteralPath (Join-Path $package 'AdoToolkit.psd1')
-    if ($signature.Status -ne 'Valid' -or $null -eq $signature.SignerCertificate) { throw 'SIGNATURE_INVALID' }
-    Assert-AdoPackageSignature -PackagePath $package -ExpectedThumbprint $signature.SignerCertificate.Thumbprint
-    Import-Module -Name (Join-Path $package 'AdoToolkit.psd1') -Force
+    # The newest installed release; a signed release must verify throughout, an unsigned one is accepted.
+    $null = Import-AdoInstalledModule
     $connection = Connect-Ado -Profile $env:ADOTOOLKIT_LIVE_PROFILE
     if ([string]::IsNullOrWhiteSpace($connection.DefaultProject)) {
         foreach ($item in @('V-04', 'V-06')) { Write-AdoLiveResult "INCONCLUSIVE $item PROFILE_DEFAULT_PROJECT_REQUIRED" }
@@ -95,6 +92,9 @@ try {
         $statuses = @($plans.Status, $suites.Status, $cases.Status)
         if (@($statuses | Where-Object { $_ -ne 200 }).Count -gt 0) {
             Write-AdoLiveResult ('FAIL V-04 PREVIEW_ROUTE_HTTP_' + (($statuses | ForEach-Object { $_.ToString([cultureinfo]::InvariantCulture) }) -join '_') + '_' + $gaNote)
+        }
+        elseif (-not $plans.Complete -or -not $suites.Complete -or -not $cases.Complete) {
+            Write-AdoLiveResult 'INCONCLUSIVE V-04 PAGING_LIMIT_OR_REPEATED_TOKEN'
         }
         else {
             $shapeAgrees = $true

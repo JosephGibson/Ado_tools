@@ -15,18 +15,15 @@ if ([string]::IsNullOrWhiteSpace($env:ADOTOOLKIT_LIVE_PROFILE)) {
 }
 try {
     . (Join-Path $PSScriptRoot '../../tools/package/Package.Common.ps1')
-    $installedRoot = Resolve-AdoPackagePath -Path (Get-AdoModuleRoot)
-    $candidate = Get-Module -ListAvailable -Name AdoToolkit | Select-Object -First 1
-    if ($null -eq $candidate) { Write-Output 'FAIL S0-9 INSTALLED_MODULE_REQUIRED'; exit 1 }
-    $package = Resolve-AdoPackagePath -Path $candidate.ModuleBase -Root $installedRoot
-    $signature = Get-AuthenticodeSignature -LiteralPath (Join-Path $package 'AdoToolkit.psd1')
-    if ($signature.Status -ne 'Valid' -or $null -eq $signature.SignerCertificate) {
-        Write-Output 'FAIL S0-9 SIGNATURE_INVALID'
+    # Releases ship unsigned with a checksum; a signed release must still verify throughout.
+    try { $installed = Import-AdoInstalledModule }
+    catch {
+        $reason = if ($_.Exception.Message -in @('INSTALLED_MODULE_REQUIRED', 'SIGNATURE_INVALID')) { $_.Exception.Message } else { 'INSTALLED_MODULE_INVALID' }
+        Write-Output ('FAIL S0-9 ' + $reason)
         exit 1
     }
-    Assert-AdoPackageSignature -PackagePath $package -ExpectedThumbprint $signature.SignerCertificate.Thumbprint
-    Write-Output 'PASS S0-9 SIGNATURE_VALID'
-    Import-Module -Name (Join-Path $package 'AdoToolkit.psd1') -Force
+    if ($installed.Signed) { Write-Output 'PASS S0-9 SIGNATURE_VALID' }
+    else { Write-Output 'PASS S0-9 UNSIGNED_RELEASE_INSTALLED' }
     Connect-Ado -Profile $env:ADOTOOLKIT_LIVE_PROFILE | Out-Null
     $result = Test-AdoConnection -ErrorAction Stop
     if (-not $result.Success) { Write-Output 'FAIL S0-9 CONNECTION_FAILED'; exit 1 }

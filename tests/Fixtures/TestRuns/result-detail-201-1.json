@@ -25,25 +25,28 @@
     "uniqueName": "build.service@contoso.test"
   },
   "testRun": {
-    "id": 201,
+    "id": "201",
     "name": "Web tests"
   },
   "failingSince": {
-    "id": 399,
-    "name": "20260913.2"
+    "date": "2026-09-13T08:00:00Z",
+    "build": {
+      "id": 399,
+      "number": "20260913.2"
+    }
   },
   "testCase": {
     "id": "1010"
   },
   "associatedBugs": [
     {
-      "id": 2001
+      "id": "2001"
     },
     {
-      "id": 2002
+      "id": "2002"
     },
     {
-      "id": 2001
+      "id": "2001"
     }
   ],
   "customFields": [

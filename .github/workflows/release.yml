@@ -1,0 +1,129 @@
+# Builds, verifies and publishes an AdoToolkit release when a v<major>.<minor>.<patch> tag is
+# pushed. The tag must match VersionPrefix in Directory.Build.props. Assets: the module zip, its
+# SHA-256 checksum file and the standalone installer. Releases are unsigned; the checksum protects
+# the download. End users need only Windows and PowerShell 7.6.
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    env:
+      DOTNET_NOLOGO: '1'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      POWERSHELL_TELEMETRY_OPTOUT: '1'
+      POWERSHELL_VERSION: '7.6.6'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Install PowerShell ${{ env.POWERSHELL_VERSION }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = "https://github.com/PowerShell/PowerShell/releases/download/v$env:POWERSHELL_VERSION"
+          $name = "PowerShell-$env:POWERSHELL_VERSION-win-x64.zip"
+          $zip = Join-Path $env:RUNNER_TEMP $name
+          $hashes = Join-Path $env:RUNNER_TEMP 'powershell-hashes.sha256'
+          Invoke-WebRequest -Uri "$base/$name" -OutFile $zip
+          Invoke-WebRequest -Uri "$base/hashes.sha256" -OutFile $hashes
+          $line = Get-Content -LiteralPath $hashes | Where-Object { $_ -match ([regex]::Escape($name) + '\s*$') } | Select-Object -First 1
+          $expected = if ($line) { ($line.Trim() -split '\s+')[0] } else { '' }
+          if ($expected -notmatch '^[A-Fa-f0-9]{64}$' -or $expected -ne (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash) {
+            throw 'The PowerShell download does not match its published hash.'
+          }
+          $target = Join-Path $env:RUNNER_TEMP 'pwsh'
+          Expand-Archive -LiteralPath $zip -DestinationPath $target
+          $target | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install build and test modules
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($PSVersionTable.PSVersion -lt [semver] '7.6.5') { throw "PowerShell 7.6.5 or later is required; found $($PSVersionTable.PSVersion)." }
+          Set-PSResourceRepository -Name PSGallery -Trusted
+          Install-PSResource -Name Pester -Version '5.9.1' -Scope CurrentUser -Quiet
+          Install-PSResource -Name PSScriptAnalyzer -Version '1.25.0' -Scope CurrentUser -Quiet
+          Install-PSResource -Name Microsoft.PowerShell.PlatyPS -Version '1.0.3' -Scope CurrentUser -Quiet
+
+      - name: Check the tag against the module version
+        id: version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (dotnet msbuild src/AdoToolkit.PowerShell/AdoToolkit.PowerShell.csproj -getProperty:Version -nologo | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0 -or $version -notmatch '^\d+\.\d+\.\d+$') { throw 'MSBuild did not return a module version.' }
+          if ("v$version" -cne $env:GITHUB_REF_NAME) { throw "Tag $env:GITHUB_REF_NAME does not match VersionPrefix $version." }
+          "value=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore AdoToolkit.slnx --locked-mode
+
+      - name: Verify
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File ./tools/dev.ps1 verify
+          if ($LASTEXITCODE -ne 0) { throw "verify exited with $LASTEXITCODE." }
+
+      - name: Package the verified build
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File ./tools/package/Publish-AdoToolkitPackage.ps1 -NoBuild
+          if ($LASTEXITCODE -ne 0) { throw 'Packaging failed.' }
+          pwsh -NoProfile -File ./tools/package/New-AdoToolkitRelease.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Release assets failed.' }
+
+      - name: Publish the GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $release = Join-Path $env:GITHUB_WORKSPACE 'artifacts/release'
+          $zip = "AdoToolkit-$env:VERSION.zip"
+          $hash = ((Get-Content -LiteralPath (Join-Path $release "$zip.sha256") -TotalCount 1).Trim() -split '\s+')[0]
+          $fence = '```'
+          $notes = @(
+            '## Install'
+            ''
+            'Requires Windows and PowerShell 7.6 (`pwsh`). No administrator rights, .NET SDK or other modules are needed.'
+            ''
+            "1. Download ``$zip``, ``$zip.sha256`` and ``Install-AdoToolkit.ps1`` into one folder."
+            '2. Close any PowerShell window that has AdoToolkit loaded.'
+            '3. In PowerShell 7, from that folder, run:'
+            ''
+            "   ${fence}powershell"
+            '   Unblock-File .\Install-AdoToolkit.ps1'
+            "   .\Install-AdoToolkit.ps1 -Path .\$zip"
+            "   $fence"
+            ''
+            '4. Open a new PowerShell window and run `Import-Module AdoToolkit`.'
+            ''
+            "SHA-256 of ``$zip``: ``$hash``"
+            ''
+            'This release is not code-signed. The installer checks the zip against its SHA-256 checksum before installing.'
+            ''
+          )
+          $notesFile = Join-Path $env:RUNNER_TEMP 'release-notes.md'
+          $notes | Set-Content -LiteralPath $notesFile -Encoding utf8
+          $assets = @($zip, "$zip.sha256", 'Install-AdoToolkit.ps1') | ForEach-Object { Join-Path $release $_ }
+          gh release create $env:GITHUB_REF_NAME @assets --title "AdoToolkit $env:VERSION" --notes-file $notesFile --generate-notes --verify-tag
+          if ($LASTEXITCODE -ne 0) { throw 'Creating the release failed.' }

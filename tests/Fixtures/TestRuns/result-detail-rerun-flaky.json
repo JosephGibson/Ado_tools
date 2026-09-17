@@ -11,7 +11,7 @@
   "computerName": "AGENT-01",
   "url": "https://ado.example.test/Collection/_apis/test/Runs/201/results/21",
   "testRun": {
-    "id": 201,
+    "id": "201",
     "name": "Web tests"
   },
   "subResults": [

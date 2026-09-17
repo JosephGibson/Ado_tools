@@ -12,6 +12,31 @@ BeforeAll {
 Describe 'Build discovery and timeline triage' -Tag 'S4-1', 'S4-2' {
     AfterEach { Disconnect-Ado }
 
+    It 'F04 carries the piped build project and honors an explicit override' -TestCases @(
+        @{ ExplicitProject = $false; RouteProject = '%C3%89quipe%20Web' },
+        @{ ExplicitProject = $true; RouteProject = 'Override' }
+    ) {
+        param($ExplicitProject, $RouteProject)
+        $server = Start-FakeAdoServer -Responses @(
+            @{ Body = Get-BuildFixture 'Rest/builds-first.json' },
+            @{ Body = Get-BuildFixture 'Timelines/multi-stage.json' },
+            @{ Body = Get-BuildFixture 'Rest/build-logs.json' },
+            @{ Body = Get-BuildFixture 'Rest/build-logs.json' },
+            @{ Body = 'synthetic log' }
+        )
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Wrong' -WarningAction SilentlyContinue | Out-Null
+            $failures = @(Get-AdoBuild -Project 'Équipe Web' -Definition 42 | Get-AdoBuildFailure)
+            $options = if ($ExplicitProject) { @{ Project = 'Override' } } else { @{} }
+            $file = $failures[0] | Save-AdoBuildLog -Path $TestDrive @options
+            $file | Should -BeOfType ([IO.FileInfo])
+            $requests = $server.Requests.ToArray()
+            $requests[3].Line | Should -Be "GET /Collection/$RouteProject/_apis/build/builds/401/logs?api-version=6.0 HTTP/1.1"
+            $requests[4].Line | Should -Be "GET /Collection/$RouteProject/_apis/build/builds/401/logs/11?api-version=6.0 HTTP/1.1"
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
     It 'binds definitions to builds to failures by value and fetches logs once' {
         $server = Start-FakeAdoServer -Responses @(
             @{ Body = Get-BuildFixture 'Rest/build-definitions-first.json' },

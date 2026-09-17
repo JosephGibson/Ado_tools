@@ -31,13 +31,20 @@ Get-AdoBuildTestFailure -InputObject <AdoBuild> [-HistoryCount <int>] [-HistoryS
     [-Connection <AdoConnection>]
 ```
 
+### ByDefinition
+
+```
+Get-AdoBuildTestFailure -Definition <Object> [-Branch <string>] [-Result <BuildResult>] [-HistoryCount <int>]
+    [-HistoryScope <AdoTestHistoryScope>] [-Project <string>] [-Connection <AdoConnection>]
+```
+
 ## ALIASES
 
 No aliases.
 
 ## DESCRIPTION
 
-Emits one AdoBuildTestFailureSet per input build. Retrieval runs in two passes. The first lists every test result of every run of the build, groups results into test identities by automated test storage and name, and classifies each identity. The second reads full details only for identities with a failing attempt, in report order, so every attempt, message, stack trace and attachment listing is available. A test is reported when any attempt failed: an identity whose last attempt passed is Flaky, otherwise Failed, and every attempt is kept, including passing ones. In-task rerun groups, job or stage re-attempts and single results are all treated as attempt sources; data-driven and other non-rerun groups are nested inside their attempt instead. Test Case references are resolved in one batch. Run history adds the current build plus earlier builds of the same definition, with summary counts and one cell per reported identity; history problems never fail the report. Tests that only passed or did not run are counted in the summary and history but never detailed. Attachment metadata is listed here; bytes are downloaded only by Export-AdoBuildTestFailure. Status is Partial when an error diagnostic exists, for example when more identities failed than the configured maximum.
+Emits one AdoBuildTestFailureSet per input build. Retrieval runs in two passes. The first lists every test result of every run of the build, groups results into test identities by automated test storage and name, and classifies each identity. The second reads full details only for identities with a failing attempt, in report order, so every attempt, message, stack trace and attachment listing is available. A test is reported when any attempt failed: an identity whose last attempt passed is Flaky, otherwise Failed, and every attempt is kept, including passing ones. In-task rerun groups, job or stage re-attempts and single results are all treated as attempt sources; data-driven and other non-rerun groups are nested inside their attempt instead. Test Case references are resolved in one batch. Run history adds the current build plus earlier builds of the same definition, with summary counts and one cell per reported identity; history problems never fail the report. Tests that only passed or did not run are counted in the summary and history but never detailed. Attachment metadata is listed here; bytes are downloaded only by Export-AdoBuildTestFailure. Status is Partial when an error diagnostic exists, for example when more identities failed than the configured maximum. With -Definition, the latest completed build of the definition is selected, as Get-AdoBuild -Latest does, optionally filtered by branch and result.
 
 ## EXAMPLES
 
@@ -56,6 +63,15 @@ Gathers the failed and flaky tests of the latest failed build with fifteen runs 
 ```
 
 Selects the flaky tests of one build for scripting.
+
+### Example 3
+
+```powershell
+Get-AdoBuildTestFailure -Definition 'Main Build' -Branch main -Result Failed |
+    Export-AdoBuildTestFailure -Path .\reports\nightly -Open
+```
+
+Gathers the failed tests of the latest failed build on main, writes the report into a new folder and opens it.
 
 ## PARAMETERS
 
@@ -94,6 +110,69 @@ ParameterSets:
   Position: Named
   IsRequired: true
   ValueFromPipeline: true
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -Definition
+
+Positive integer ID or exact build definition name. The latest completed build of that definition is used. A numeric string is a name; use an integer for an ID.
+
+```yaml
+Type: System.Object
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: ByDefinition
+  Position: Named
+  IsRequired: true
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -Branch
+
+Branch name or fully qualified refs/ path that limits the latest-build selection. For example, main becomes refs/heads/main.
+
+```yaml
+Type: System.String
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: ByDefinition
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -Result
+
+Optional result filter for the latest-build selection: None, Succeeded, PartiallySucceeded, Failed, or Canceled.
+
+```yaml
+Type: System.Nullable`1[AdoToolkit.Core.Builds.BuildResult]
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: ByDefinition
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
   ValueFromPipelineByPropertyName: false
   ValueFromRemainingArguments: false
 DontShow: false
@@ -156,6 +235,12 @@ SupportsWildcards: false
 Aliases: []
 ParameterSets:
 - Name: ByBuildId
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+- Name: ByDefinition
   Position: Named
   IsRequired: false
   ValueFromPipeline: false

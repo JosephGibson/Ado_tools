@@ -10,7 +10,7 @@
       "completedDate": "2026-09-14T10:05:00Z",
       "url": "https://ado.example.test/Collection/_apis/test/Runs/201",
       "build": {
-        "id": 401,
+        "id": "401",
         "name": "20260915.1"
       },
       "totalTests": 3,
@@ -41,7 +41,7 @@
       "completedDate": "2026-09-14T10:14:00Z",
       "url": "https://ado.example.test/Collection/_apis/test/Runs/202",
       "build": {
-        "id": 401,
+        "id": "401",
         "name": "20260915.1"
       },
       "totalTests": 2,

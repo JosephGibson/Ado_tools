@@ -10,7 +10,7 @@
       "completedDate": "2026-09-14T11:00:00Z",
       "pipelineReference": {
         "pipelineId": 401,
-        "pipelineAttempt": 2
+        "jobReference": { "attempt": 2 }
       },
       "totalTests": 2,
       "runStatistics": [
@@ -21,7 +21,7 @@
         }
       ],
       "build": {
-        "id": 401,
+        "id": "401",
         "name": "20260915.1"
       }
     },
@@ -34,7 +34,7 @@
       "completedDate": "2026-09-14T10:00:00Z",
       "pipelineReference": {
         "pipelineId": 401,
-        "pipelineAttempt": 1
+        "jobReference": { "attempt": 1 }
       },
       "totalTests": 2,
       "runStatistics": [
@@ -45,7 +45,7 @@
         }
       ],
       "build": {
-        "id": 401,
+        "id": "401",
         "name": "20260915.1"
       }
     }

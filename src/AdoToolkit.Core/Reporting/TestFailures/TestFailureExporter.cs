@@ -32,7 +32,10 @@ public sealed class TestFailureExporter
             Culture = options.Culture, ConfiguredCulture = options.ConfiguredCulture, SessionCulture = options.SessionCulture,
             GeneratedAt = options.GeneratedAt, ToolkitVersion = options.ToolkitVersion,
         });
-        string path = ReportFileNames.Resolve(options.Path, ReportFileNames.TestFailures(set.Build.Id), options.SessionCulture, downloads);
+        string name = ReportFileNames.TestFailures(set.Build.Id);
+        string path = options.CreateDirectory && options.Path is not null && !Directory.Exists(options.Path)
+            ? Path.GetFullPath(Path.Combine(options.Path, name))
+            : ReportFileNames.Resolve(options.Path, name, options.SessionCulture, downloads);
         if (!path.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
             throw new AdoFileOutputException(Messages.Get(AdoMessage.TestFailureReportPathInvalid, options.SessionCulture, path));
         GenerationFolderPlan plan = commit.Plan(path, options.GeneratedAt, options.NoClobber, options.SessionCulture);
@@ -49,6 +52,14 @@ public sealed class TestFailureExporter
         CultureInfo culture = plan.Options.SessionCulture;
         TestFailureReportModel model = plan.Model;
         IReadOnlyList<AdoDiagnostic> diagnostics = [];
+        if (plan.Options.CreateDirectory)
+        {
+            try { Directory.CreateDirectory(plan.Commit.Directory); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                throw new AdoFileOutputException(Messages.Get(AdoMessage.FileOutput, culture, plan.Commit.Directory), error);
+            }
+        }
         GenerationCommitResult result = await commit.CommitAsync(plan.Commit, plan.Options.NoClobber, plan.DownloadsAttachments,
             async (folder, token) =>
             {

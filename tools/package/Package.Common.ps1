@@ -1,9 +1,20 @@
 # Shared package boundaries; callers enable strict mode and terminating errors.
+
+# Symbolic links and junctions are never traversed. Cloud-file placeholders, such as a
+# OneDrive-redirected Documents folder, are reparse points without a link target and are allowed.
+function Test-AdoPackageLink {
+    param([Parameter(Mandatory = $true)][System.IO.FileSystemInfo] $Item)
+    return [bool] ($Item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -and $null -ne $Item.LinkTarget
+}
+
 function Resolve-AdoPackagePath {
     param([Parameter(Mandatory = $true)][string] $Path, [string] $Root)
-    $full = [System.IO.Path]::GetFullPath($Path)
+    $provider = $null
+    $drive = $null
+    $full = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path, [ref] $provider, [ref] $drive)
+    if ($provider.Name -ne 'FileSystem') { throw 'Package paths must use the FileSystem provider.' }
     if ($Root) {
-        $base = [System.IO.Path]::GetFullPath($Root).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
+        $base = (Resolve-AdoPackagePath -Path $Root).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
         if (-not $full.StartsWith($base + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
             throw 'Package path escapes its permitted root.'
         }
@@ -11,7 +22,7 @@ function Resolve-AdoPackagePath {
     $ancestor = $full
     while ($ancestor) {
         if (Test-Path -LiteralPath $ancestor) {
-            if ((Get-Item -LiteralPath $ancestor -Force).Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+            if (Test-AdoPackageLink -Item (Get-Item -LiteralPath $ancestor -Force)) {
                 throw 'Package paths must not traverse links.'
             }
         }
@@ -28,7 +39,7 @@ function Get-AdoPackageFile {
     $pending.Enqueue($root)
     while ($pending.Count -gt 0) {
         foreach ($item in Get-ChildItem -LiteralPath $pending.Dequeue() -Force) {
-            if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { throw 'Package contains a link.' }
+            if (Test-AdoPackageLink -Item $item) { throw 'Package contains a link.' }
             if ($item.PSIsContainer) { $pending.Enqueue($item.FullName) }
             else { $item }
         }
@@ -129,7 +140,11 @@ function Move-AdoPackageDirectory {
         }
     }
     finally {
-        if ($hasBackup) { Remove-AdoPackageDirectory -Path $backup -Root $Root }
+        # Another PowerShell process may still hold the replaced assemblies; the new copy stays installed.
+        if ($hasBackup) {
+            try { Remove-AdoPackageDirectory -Path $backup -Root $Root }
+            catch { Write-Warning "The previous copy is still in use and was left at $backup; delete it after closing PowerShell." }
+        }
     }
 }
 
@@ -137,4 +152,133 @@ function Get-AdoModuleRoot {
     $documents = [Environment]::GetFolderPath([Environment+SpecialFolder]::MyDocuments)
     if ([string]::IsNullOrWhiteSpace($documents)) { throw 'Documents known folder is unavailable.' }
     return Join-Path $documents 'PowerShell/Modules/AdoToolkit'
+}
+
+# Zips a validated package as AdoToolkit/<version>/... and writes a sha256sum-style checksum file.
+# All assets are staged beside their targets and validated before any target is replaced.
+# File systems do not offer multi-file atomic replacement; backups restore the previous set
+# on a failed commit. A process crash may leave backups for manual recovery.
+function Publish-AdoReleaseFiles {
+    param([Parameter(Mandatory = $true)][object[]] $Files, [Parameter(Mandatory = $true)][string] $Root)
+    $backups = [System.Collections.Generic.List[object]]::new()
+    $installed = [System.Collections.Generic.List[string]]::new()
+    foreach ($file in $Files) {
+        $null = Resolve-AdoPackagePath -Path $file.Source -Root $Root
+        $null = Resolve-AdoPackagePath -Path $file.Target -Root $Root
+    }
+    try {
+        foreach ($file in $Files) {
+            if (Test-Path -LiteralPath $file.Target) {
+                $backup = $file.Target + '.previous-' + [guid]::NewGuid().ToString('N')
+                [IO.File]::Move($file.Target, $backup)
+                $backups.Add(@{ Source = $backup; Target = $file.Target })
+            }
+        }
+        foreach ($file in $Files) {
+            [IO.File]::Move($file.Source, $file.Target)
+            $installed.Add($file.Target)
+        }
+    }
+    catch {
+        foreach ($target in $installed) { [IO.File]::Delete($target) }
+        # Leave a backup in place if recovery itself fails; never discard the only old copy.
+        foreach ($backup in $backups) { [IO.File]::Move($backup.Source, $backup.Target) }
+        throw
+    }
+    foreach ($backup in $backups) { [IO.File]::Delete($backup.Source) }
+}
+
+function New-AdoReleaseArchive {
+    param([Parameter(Mandatory = $true)][string] $PackagePath, [Parameter(Mandatory = $true)][string] $OutputRoot,
+        [string] $InstallerPath)
+    Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.ZipFile
+    $package = Resolve-AdoPackagePath -Path $PackagePath
+    $version = Assert-AdoPackage -PackagePath $package
+    $output = Resolve-AdoPackagePath -Path $OutputRoot
+    [void] [System.IO.Directory]::CreateDirectory($output)
+    $name = "AdoToolkit-$version.zip"
+    $archive = Join-Path $output $name
+    $checksum = $archive + '.sha256'
+    $random = [guid]::NewGuid().ToString('N')
+    $temporaryArchive = Join-Path $output ".$name.$random.tmp"
+    $temporaryChecksum = Join-Path $output ".$name.sha256.$random.tmp"
+    $temporaryInstaller = Join-Path $output ".Install-AdoToolkit.ps1.$random.tmp"
+    try {
+        $files = @(Get-AdoPackageFile -PackagePath $package | ForEach-Object {
+                [pscustomobject]@{
+                    File = $_
+                    Entry = "AdoToolkit/$version/" + [System.IO.Path]::GetRelativePath($package, $_.FullName).Replace('\', '/')
+                }
+            } | Sort-Object -Property Entry)
+        $stream = [System.IO.File]::Open($temporaryArchive, [System.IO.FileMode]::CreateNew)
+        try {
+            $zip = [System.IO.Compression.ZipArchive]::new($stream, [System.IO.Compression.ZipArchiveMode]::Create)
+            try {
+                foreach ($item in $files) {
+                    $entry = $zip.CreateEntry($item.Entry, [System.IO.Compression.CompressionLevel]::Optimal)
+                    $entry.LastWriteTime = $item.File.LastWriteTime
+                    $target = $entry.Open()
+                    try {
+                        $source = [System.IO.File]::OpenRead($item.File.FullName)
+                        try { $source.CopyTo($target) }
+                        finally { $source.Dispose() }
+                    }
+                    finally { $target.Dispose() }
+                }
+            }
+            finally { $zip.Dispose() }
+        }
+        finally { $stream.Dispose() }
+        $check = [System.IO.Compression.ZipFile]::OpenRead($temporaryArchive)
+        try {
+            $actual = @($check.Entries | ForEach-Object { $_.FullName + '|' + $_.Length })
+            $expected = @($files | ForEach-Object { $_.Entry + '|' + $_.File.Length })
+            if (@(Compare-Object -ReferenceObject $expected -DifferenceObject $actual -CaseSensitive).Count -ne 0) {
+                throw 'Release archive differs from the package.'
+            }
+        }
+        finally { $check.Dispose() }
+        $hash = (Get-FileHash -LiteralPath $temporaryArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+        [System.IO.File]::WriteAllText($temporaryChecksum, "$hash  $name`n", [System.Text.UTF8Encoding]::new($false))
+        $assets = @(
+            @{ Source = $temporaryArchive; Target = $archive },
+            @{ Source = $temporaryChecksum; Target = $checksum }
+        )
+        if ($InstallerPath) {
+            [IO.File]::Copy((Resolve-AdoPackagePath -Path $InstallerPath), $temporaryInstaller)
+            $tokens = $null
+            $errors = $null
+            [void] [System.Management.Automation.Language.Parser]::ParseFile($temporaryInstaller, [ref] $tokens, [ref] $errors)
+            if (@($errors).Count -gt 0) { throw 'The installer script does not parse.' }
+            $assets += @{ Source = $temporaryInstaller; Target = (Join-Path $output 'Install-AdoToolkit.ps1') }
+        }
+        Publish-AdoReleaseFiles -Files $assets -Root $output
+        return [pscustomobject]@{ Version = $version; Archive = $archive; Checksum = $checksum; Sha256 = $hash }
+    }
+    finally {
+        foreach ($temporary in @($temporaryArchive, $temporaryChecksum, $temporaryInstaller)) {
+            if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
+        }
+    }
+}
+
+# Live checks load the newest release installed for the current user. A signed release must be
+# signed throughout by one certificate; an unsigned release is accepted and reported as unsigned.
+function Import-AdoInstalledModule {
+    $root = Resolve-AdoPackagePath -Path (Get-AdoModuleRoot)
+    $prefix = $root.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+    $candidate = Get-Module -ListAvailable -Name AdoToolkit |
+        Where-Object { $_.ModuleBase.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase) } |
+        Sort-Object -Property Version -Descending | Select-Object -First 1
+    if ($null -eq $candidate) { throw 'INSTALLED_MODULE_REQUIRED' }
+    $package = Resolve-AdoPackagePath -Path $candidate.ModuleBase -Root $root
+    $null = Assert-AdoPackage -PackagePath $package
+    $signature = Get-AuthenticodeSignature -LiteralPath (Join-Path $package 'AdoToolkit.psd1')
+    $signed = $signature.Status -ne 'NotSigned'
+    if ($signed) {
+        if ($signature.Status -ne 'Valid' -or $null -eq $signature.SignerCertificate) { throw 'SIGNATURE_INVALID' }
+        Assert-AdoPackageSignature -PackagePath $package -ExpectedThumbprint $signature.SignerCertificate.Thumbprint
+    }
+    Import-Module -Name (Join-Path $package 'AdoToolkit.psd1') -Force -Global
+    return [pscustomobject]@{ Path = $package; Version = [string] $candidate.Version; Signed = $signed }
 }

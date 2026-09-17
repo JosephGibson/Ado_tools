@@ -58,7 +58,7 @@ public sealed class BuildService
         {
             try
             {
-                byte[] body = await response.Content.ReadAsByteArrayAsync(token).ConfigureAwait(false);
+                string body = await ResponseJson.ReadAsync(response, token).ConfigureAwait(false);
                 return JsonSerializer.Deserialize(body, AdoJsonContext.Default.BuildDto) ?? throw new JsonException();
             }
             catch (JsonException error)

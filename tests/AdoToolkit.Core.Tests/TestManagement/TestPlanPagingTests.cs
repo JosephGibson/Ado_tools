@@ -90,7 +90,7 @@ public sealed class TestPlanPagingTests
     [InlineData("{\"value\":[{\"id\":1,\"name\":\"P\",\"rootSuite\":{\"id\":2}},{\"id\":1,\"name\":\"Q\",\"rootSuite\":{\"id\":3}}]}")]
     [InlineData("{\"value\":[null]}")]
     [InlineData("{}")]
-    [InlineData("{\"value\":[{\"id\":\"1\",\"name\":\"P\",\"rootSuite\":{\"id\":2}}]}")]
+    [InlineData("{\"value\":[{\"id\":\"one\",\"name\":\"P\",\"rootSuite\":{\"id\":2}}]}")]
     public async Task InvalidPlanShapesAreFormatErrors(string body)
     {
         using FakeHttpMessageHandler handler = new();
@@ -100,6 +100,19 @@ public sealed class TestPlanPagingTests
             .GetPlansAsync(Project, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
         Assert.Equal("TestPlansList", error.Operation);
         Assert.Single(handler.Requests);
+    }
+
+    // Server 2020 may encode numeric IDs as strings; numeric text reads as the number.
+    [Fact]
+    public async Task NumericStringPlanIdsAreAccepted()
+    {
+        using FakeHttpMessageHandler handler = new();
+        handler.Enqueue(FakeHttpMessageHandler.Response("{\"value\":[{\"id\":\"1\",\"name\":\"P\",\"rootSuite\":{\"id\":\"2\"}}]}"));
+        using HttpClient client = new(handler);
+        AdoTestPlan plan = Assert.Single(await new TestPlanService(client, Connection)
+            .GetPlansAsync(Project, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
+        Assert.Equal(1, plan.Id);
+        Assert.Equal(2, plan.RootSuiteId);
     }
 
     [Fact]

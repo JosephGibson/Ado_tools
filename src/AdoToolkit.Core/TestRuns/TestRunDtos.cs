@@ -17,14 +17,28 @@ internal sealed class TestRunDto
     public DateTimeOffset? StartedDate { get; init; }
     public DateTimeOffset? CompletedDate { get; init; }
     public int? TotalTests { get; init; }
+    // Run-level aggregates that Server 2020 returns when runStatistics is absent. They are the
+    // server's categories, not result outcomes: unanalyzed counts failed results not yet analyzed.
+    public int? PassedTests { get; init; }
+    public int? NotApplicableTests { get; init; }
+    public int? UnanalyzedTests { get; init; }
+    public int? IncompleteTests { get; init; }
     public NamedReferenceDto? Build { get; init; }
-    // Read and ignored: links are rebuilt from the connection and numeric IDs (§18 item 6).
+    // Ignored before parsing: links are rebuilt from the connection and numeric IDs (§18 item 6).
+    [JsonIgnore]
     public Uri? Url { get; init; }
     public PipelineReferenceDto? PipelineReference { get; init; }
     public List<RunStatisticDto>? RunStatistics { get; init; }
 }
 
-internal sealed class PipelineReferenceDto { public int? PipelineAttempt { get; init; } }
+internal sealed class PipelineReferenceDto
+{
+    public PipelineAttemptReferenceDto? StageReference { get; init; }
+    public PipelineAttemptReferenceDto? PhaseReference { get; init; }
+    public PipelineAttemptReferenceDto? JobReference { get; init; }
+}
+
+internal sealed class PipelineAttemptReferenceDto { public int? Attempt { get; init; } }
 
 internal sealed class RunStatisticDto
 {
@@ -55,9 +69,10 @@ internal sealed class TestResultDto
     public IdentityDto? Owner { get; init; }
     public IdentityDto? RunBy { get; init; }
     public NamedReferenceDto? TestRun { get; init; }
-    // Read and ignored, so an untrusted response URL never reaches AdditionalFields.
+    // Ignored before parsing; also excluded from extension data.
+    [JsonIgnore]
     public Uri? Url { get; init; }
-    public NamedReferenceDto? FailingSince { get; init; }
+    public FailingSinceDto? FailingSince { get; init; }
     // testCase.id arrives as a string [Verify V-21]; a non-integer is a diagnostic, never a parse failure.
     public TestCaseReferenceDto? TestCase { get; init; }
     public List<AssociatedBugDto>? AssociatedBugs { get; init; }
@@ -69,7 +84,16 @@ internal sealed class TestResultDto
     public Dictionary<string, JsonElement>? Extra { get; set; }
 }
 
-internal sealed class TestCaseReferenceDto { public string? Id { get; init; } }
+internal sealed class TestCaseReferenceDto
+{
+    [JsonConverter(typeof(ReferenceIdConverter))]
+    public string? Id { get; init; }
+}
+
+// failingSince is { build: BuildReference, date, release }; only the build ID is used.
+internal sealed class FailingSinceDto { public BuildReferenceDto? Build { get; init; } }
+
+internal sealed class BuildReferenceDto { public int Id { get; init; } }
 
 internal sealed class AssociatedBugDto { public int Id { get; init; } }
 

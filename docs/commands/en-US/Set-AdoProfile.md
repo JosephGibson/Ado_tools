@@ -30,7 +30,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Writes the profile atomically and preserves unspecified values, unrelated options, and unknown configuration fields. CollectionUrl is required for a new profile. DefaultProfile selects this profile as the default. WhatIf performs no write. A newer configuration schema is read-only. The profile stores no password or token.
+Writes the profile atomically and preserves unspecified values, unrelated options, and unknown configuration fields. CollectionUrl is required for a new profile. DefaultProfile selects this profile as the default, which Connect-Ado uses without arguments and other commands use when no connection exists. WhatIf performs no write. A newer configuration schema is read-only. The profile stores no password or token.
 
 ## EXAMPLES
 

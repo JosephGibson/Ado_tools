@@ -47,7 +47,7 @@ public sealed class GetAdoTestPlanCommand : AdoCmdletBase
         {
             AdoNotFoundException error = new(Messages.Get(AdoMessage.TestPlanNotFound, MessageCulture, Id.Value.ToString(CultureInfo.InvariantCulture)))
             { Operation = "TestPlansList", Project = project };
-            ErrorRecord record = ErrorRecordFactory.Create(error);
+            ErrorRecord record = ErrorRecordFactory.Create(error, MessageCulture);
             WriteError(new ErrorRecord(error, record.FullyQualifiedErrorId, record.CategoryInfo.Category, Id.Value) { ErrorDetails = record.ErrorDetails });
         }
     });

@@ -29,7 +29,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Appelle l’API des projets en version 6.0 et retourne le succès, la durée, la version d’API demandée et des conseils. Connection remplace la connexion active et accepte une entrée de pipeline. Les échecs d’authentification, d’autorisation et de configuration sont bloquants. Les autres échecs produisent une erreur et un résultat d’échec ; ErrorAction Stop interrompt la commande. Un échec peut suggérer une URL de projet sans affirmer qu’elle en est la cause.
+Appelle l’API des projets en version 6.0 et retourne le succès, la durée, la version d’API demandée et des conseils. Connection remplace la connexion active et accepte une entrée de pipeline. Les échecs d’authentification, d’autorisation et de configuration sont bloquants. Les autres échecs produisent une erreur et un résultat d’échec ; ErrorAction Stop interrompt la commande. Un échec peut suggérer une URL de projet sans affirmer qu’elle en est la cause. Lorsque la ressource est introuvable et que l’URL se termine par le nom d’un projet de la collection parente, le résultat indique la commande Connect-Ado exacte à utiliser; cette vérification envoie une requête de projets de plus à l’URL parente.
 
 ## EXAMPLES
 

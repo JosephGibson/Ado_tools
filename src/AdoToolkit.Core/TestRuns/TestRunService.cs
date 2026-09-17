@@ -81,8 +81,14 @@ public sealed class TestRunService
                 IsAutomated = value.IsAutomated,
                 StartedDate = value.StartedDate?.ToUniversalTime(),
                 CompletedDate = value.CompletedDate?.ToUniversalTime(),
-                PipelineAttempt = value.PipelineReference?.PipelineAttempt,
-                TotalTests = value.TotalTests,
+                PipelineAttempt = value.PipelineReference?.JobReference?.Attempt,
+                StageAttempt = value.PipelineReference?.StageReference?.Attempt,
+                PhaseAttempt = value.PipelineReference?.PhaseReference?.Attempt,
+                TotalTests = Count(value.TotalTests),
+                PassedTests = Count(value.PassedTests),
+                NotApplicableTests = Count(value.NotApplicableTests),
+                UnanalyzedTests = Count(value.UnanalyzedTests),
+                IncompleteTests = Count(value.IncompleteTests),
                 OutcomeCounts = new ReadOnlyDictionary<string, int>(counts),
                 WebUrl = AdoWebLinks.TestRun(connection.CollectionUri, project, value.Id),
                 TeamProject = project,
@@ -124,7 +130,7 @@ public sealed class TestRunService
             {
                 try
                 {
-                    byte[] body = await response.Content.ReadAsByteArrayAsync(token).ConfigureAwait(false);
+                    string body = await ResponseJson.ReadAsync(response, token).ConfigureAwait(false);
                     TestResultDto result = JsonSerializer.Deserialize(body, AdoJsonContext.Default.TestResultDto)
                         ?? throw new JsonException();
                     return result.Id == resultId ? result : throw new JsonException();
@@ -173,6 +179,9 @@ public sealed class TestRunService
         }
         return result.AsReadOnly();
     }
+
+    // Aggregates are informational; a negative value is treated as absent rather than failing the run.
+    private static int? Count(int? value) => value < 0 ? null : value;
 
     private static AdoResponseFormatException FormatError(CultureInfo culture, string operation) =>
         new(Messages.Get(AdoMessage.ResponseFormat, culture)) { Operation = operation };

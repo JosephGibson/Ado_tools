@@ -126,7 +126,7 @@ HelpMessage: ''
 
 ### -Path
 
-Existing FileSystem directory, or an .html file when exactly one set arrives; each later set then gets a per-input error. The default name is Build-<id>-TestFailures.html and the default directory is the Downloads known folder. Wildcards are not expanded.
+FileSystem directory, or an .html file when exactly one set arrives; each later set then gets a per-input error. A directory that does not exist yet is created when the report is written, never with -WhatIf; a path with another file extension is rejected, and a trailing separator always means a directory. The default name is Build-<id>-TestFailures.html and the default directory is the Downloads known folder. Wildcards are not expanded.
 
 ```yaml
 Type: System.String

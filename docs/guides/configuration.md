@@ -65,7 +65,7 @@ Where a cmdlet parameter exists, it overrides the setting for that call.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `defaultProfile` | none | Profile used by `Connect-Ado` without `-Profile` or `-CollectionUrl`; set with `Set-AdoProfile -DefaultProfile` |
+| `defaultProfile` | none | Profile used by `Connect-Ado` without `-Profile` or `-CollectionUrl`, and by any command that runs before a connection exists; set with `Set-AdoProfile -DefaultProfile` |
 | `profiles.<name>.collectionUrl` | required | Azure DevOps Server collection URL |
 | `profiles.<name>.defaultProject` | none | Project used when `-Project` is omitted; `Connect-Ado -Project` overrides it |
 | `profiles.<name>.authentication` | `WindowsIntegrated` | The only supported value |

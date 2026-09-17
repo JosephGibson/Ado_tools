@@ -2,9 +2,12 @@ namespace AdoToolkit.Core.TestRuns;
 
 internal static class AttemptGrouper
 {
-    // Runs order by pipeline attempt when exposed, else started date, then run ID (§15.10).
+    // Parent retries reset child attempt counters; compare stage, phase, then job attempts.
+    // Missing references retain the date/ID fallback (§15.10).
     internal static IReadOnlyList<AdoTestRun> OrderRuns(IEnumerable<AdoTestRun> runs) => runs
-        .OrderBy(static run => run.PipelineAttempt ?? 0)
+        .OrderBy(static run => run.StageAttempt ?? 0)
+        .ThenBy(static run => run.PhaseAttempt ?? 0)
+        .ThenBy(static run => run.PipelineAttempt ?? 0)
         .ThenBy(static run => run.StartedDate ?? DateTimeOffset.MinValue)
         .ThenBy(static run => run.Id)
         .ToArray();

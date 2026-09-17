@@ -50,7 +50,7 @@ public sealed class TimelineService
         IReadOnlyList<BuildLogDto> logs = await pipeline.GetPagesAsync(EndpointRegistry.BuildLogsList, AdoJsonContext.Default.BuildLogPageDto,
             static page => page.Value, static item => item.Id.ToString(CultureInfo.InvariantCulture), culture, cancellationToken,
             Routes(build.TeamProject, build.Id)).ConfigureAwait(false);
-        Dictionary<int, int?> counts = [];
+        Dictionary<int, long?> counts = [];
         foreach (BuildLogDto item in logs)
         {
             if (item.Id < 1 || item.LineCount < 0 || !counts.TryAdd(item.Id, item.LineCount))

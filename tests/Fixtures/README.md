@@ -187,9 +187,9 @@ generated in tests from the 3.1 testplan fixtures and `Steps/01-direct.xml`; not
 ## Slice 5, session 5.1 — test-area retrieval
 
 All files are hand-written synthetic data from spec §15.9–§15.13 and the §19.3 "Test results"
-fixture numbers. No server or documentation request was made. **Every Test-area route, version,
-parameter and field below is an assumption pending V-19 to V-25**, including `pipelineReference.
-pipelineAttempt`, `runStatistics`, `resultGroupType = Rerun`, `testCase.id` as a string, and the
+fixture numbers. These originally unverified fixtures have since received the corrections recorded
+in the 0.1.1 and audit sections below. **Live confirmation remains pending for V-19 to V-25**,
+including retry behavior, optional `runStatistics`, `resultGroupType = Rerun`, `testCase.id` as a string, and the
 `6.0-preview.1` attachment routes. Folder names use `TestRuns/`, never `TestResults/` (DD-024).
 Hosts are `.test` and every name, identity and ID is fictional. Paging, over-limit and hostile
 inputs are generated inside the tests.
@@ -201,7 +201,7 @@ inputs are generated inside the tests.
 | `TestRuns/result-detail-201-1.json` | Every §15.11 attempt field in one detailed result: message, trace, duration, computer, owner, runBy, failure type, resolution state, comment, priority, `failingSince`, associated bugs (one repeated), custom fields, plus unknown scalar, object and array fields and an untrusted response `url` | **[V-21] assumed** detail field names; response URLs are read and dropped; only unknown scalars reach `AdditionalFields` | [V-21] |
 | `TestRuns/result-detail-202-11.json` | A second detailed failure with French decimal text in its message | **[V-21] assumed**; French message forms remain V-29 | [V-21] |
 | `TestRuns/results-rerun.json`, `result-detail-rerun-flaky.json`, `result-detail-rerun-flaky3.json`, `result-detail-rerun-failed.json` | Test results 3: in-task rerun groups fail→pass, fail→fail→pass (listed out of sequence order) and fail→fail→fail | **[V-22] assumed** `resultGroupType = Rerun` with `sequenceId` sub-results as attempts | [V-22] |
-| `TestRuns/runs-reattempt.json`, `results-run-301.json`, `results-run-302.json`, `result-detail-301-51.json`, `result-detail-302-61.json` | Test results 4: a job re-attempt as a second run of the same build; attempt 2 is listed first to prove ordering by `pipelineAttempt` | **[V-19], [V-22] assumed** pipeline attempt reference on the run | [V-19], [V-22] |
+| `TestRuns/runs-reattempt.json`, `results-run-301.json`, `results-run-302.json`, `result-detail-301-51.json`, `result-detail-302-61.json` | Test results 4: a job re-attempt as a second run of the same build; attempt 2 is listed first to prove ordering by `pipelineReference.jobReference.attempt` | Corrected 2026-09-17 from Microsoft's REST 6.0 `PipelineReference`/`JobReference` schemas; Server 2020 retry behavior still needs live confirmation | [V-19], [V-22] |
 | `TestRuns/result-detail-301-52.json`, `result-detail-302-62.json` | Test results 5: both attempt sources combined for one identity — a rerun group in run 301 and a single result in run 302 | **[V-22] assumed**; ordering is run first, then sub-result | [V-22] |
 | `TestRuns/result-detail-datadriven.json` | Test results 6: `DataDriven` sub-results (one nested a level deeper) and two `iterationDetails` with parameters and action results, none of which are attempts | **[V-21], [V-22] assumed** sub-result and iteration shapes | [V-21], [V-22] |
 | `TestRuns/results-ungrouped.json`, `result-detail-ungrouped-81.json`, `result-detail-ungrouped-82.json` | Test results 7: a result with no automated name and one with an empty automated name | Spec §15.10: own identity keyed by run and result ID, one attempt, no history cells | [V-20] |
@@ -294,3 +294,37 @@ All inputs below are generated synthetic data inside the named tests.
 | `TestRuns/TestFailureRetrievalTests.cs` under Core tests | Three levels of sub-results with attachments on the second and third levels; listing once per sub-result and assignment to the owning attempt | V-23 |
 | `TestRuns/RunHistoryTests.cs` under Core tests | Two piped builds with identical definition, branch and timestamp; each current build appears exactly once in its own history window | V-25 |
 | `TestRuns/TestAttemptMapperTests.cs` under Core tests | Out-of-range, negative and non-finite optional durations in parent results, nested results and rerun attempts | V-21 |
+
+## Version 0.1.1: Server 2020 wire shapes
+
+The first work run (2026-09-17) found that Server 2020 sends reference IDs as numeric JSON
+strings (`build.id` on runs, `testRun.id` on results), and run totals instead of
+`runStatistics`. These shapes are hand-written synthetic data; no response was copied. Only
+field names and JSON value kinds were reported.
+
+| Fixture or source | Represents | Source or assumption | V-item |
+| --- | --- | --- | --- |
+| `TestRuns/runs-server2020.json` | Two runs with a string `build.id` and the totals `totalTests`, `passedTests`, `notApplicableTests`, `unanalyzedTests` and `incompleteTests`, without `runStatistics` | Observed shape; synthetic IDs, names and counts | [V-19] |
+| `TestRuns/runs-two.json`, `runs-in-progress.json`, `runs-reattempt.json` | `build.id` is now a numeric string | Observed shape | [V-19] |
+| `TestRuns/result-detail-201-1.json`, `result-detail-rerun-flaky.json` | `testRun.id` and `associatedBugs[].id` are numeric strings; `failingSince` is `{ date, build: { id, number } }` | Observed `testRun.id`; `associatedBugs` and `failingSince` follow the REST 6.0 reference shapes | [V-21] |
+| `../AdoToolkit.Core.Tests/TestRuns/ServerWireShapeTests.cs` | Number and numeric-string reference IDs; non-numeric IDs still fail with the operation and JSON path; run totals kept in server terms; `failingSince` shapes | Inline synthetic bodies | [V-19]–[V-21] |
+| `../AdoToolkit.Core.Tests/Connections/CollectionSuggestionTests.cs` | A project URL given as the collection URL, a parent without that project, a failing parent and single-segment URLs | Inline synthetic project pages | V-14 |
+| `../AdoToolkit.PowerShell.Tests/Usability.Pester.ps1` | Default-profile connection, the project-URL suggestion with a quoted name, format errors with operation and path, `-Definition` selection, and report folder creation | Loopback fake server and the fixtures above | [V-19]–[V-21] |
+| `tests/Live/Smoke.Live.ps1`, `tests/Live/Shape.Live.ps1` | Opt-in work checks. The first runs the cmdlets end to end. The second prints JSON property paths and value kinds, never values, so fixtures can follow the server | Printed output only; nothing persists | V-19–V-25 |
+
+## Approved Server 2020 audit regressions (2026-09-17)
+
+All bodies, encodings, names, IDs and files below are synthetic and generated inside
+these tests. No work response was copied. The public schema source for nesting and
+64-bit counts is Microsoft's [REST 6.0 specifications](https://github.com/MicrosoftDocs/vsts-rest-api-specs/tree/master/specification).
+
+| Fixture or source | Represents | Source or assumption | V-item |
+| --- | --- | --- | --- |
+| `../AdoToolkit.Core.Tests/TestRuns/WireAuditRegressionTests.cs`, F01 | Nested stage/phase/job attempts, parent-counter resets, reverse clocks, number/string attempts | REST 6.0 PipelineReference; defensive ordering cases | V-19, V-22 |
+| Same source, F02 | Number/string log counts above Int32, Int64 maximum, invariant tail queries | REST 6.0 BuildLog.lineCount is int64 | V-14 |
+| Same source, F03 | French UTF-8 BOM, UTF-16 LE/BE, Latin-1, invalid charset/bytes, encoded error and WIQL cap bodies | HTTP encoding variations; existing bounded error/status policy | V-06, V-07, V-18 |
+| Same source, F05 | History budget exhausted within run paging, window continuation and HTTP 429 retries | Spec §15.12 counts every HTTP attempt | V-19, V-20, V-25 |
+| Same source, F06–F08 | Malformed ignored URLs, missing/null custom values, numeric/string/null/fraction/oversized Test Case references | Defensive compatibility; numeric Test Case IDs are not claimed as live observations | V-19, V-21 |
+| `../AdoToolkit.PowerShell.Tests/Builds.Pester.ps1`, F04 | Existing synthetic build/timeline/log fixtures with a different default project; failure-to-log pipeline | Owning-project routing contract | V-14 |
+| `../../tools/tests/Package.Tests.ps1`, F09–F10 | Synthetic packages under paths with spaces; changed payloads, locked checksum/installer, disappeared staging file, PowerShell relative location | Filesystem fault injection; all outputs in TestDrive | — |
+| `../../tools/tests/LiveAudit.Tests.ps1` | Aggregate-only runs, absent/null Test Case links, minimal attachments, unfinished builds, manual history results, lowercase reruns, nested retry attempts, capped/repeated paging, conflicting batch parameters, formatted plain text and literal angle brackets, dynamic customer-like keys, unknown outcomes, large log counts | Offline mocks and isolated validation blocks; never executes a live script, reads a profile or loads an installed module | V-02, V-04, V-10, V-14, V-19–V-25 |

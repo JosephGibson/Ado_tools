@@ -3,7 +3,7 @@ namespace AdoToolkit.Core.Builds;
 public static class BuildFailureDeriver
 {
     public static IReadOnlyList<AdoBuildFailure> Derive(AdoBuild build, IReadOnlyList<AdoTimelineRecord> records,
-        IReadOnlyDictionary<int, int?> lineCounts, bool includeWarnings, CultureInfo culture, CancellationToken cancellationToken)
+        IReadOnlyDictionary<int, long?> lineCounts, bool includeWarnings, CultureInfo culture, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(build);
         ArgumentNullException.ThrowIfNull(records);
@@ -59,6 +59,7 @@ public static class BuildFailureDeriver
                 LogId = record.LogId, LogLineCount = record.LogId is int logId ? lineCounts.GetValueOrDefault(logId) : null,
                 ErrorCount = record.ErrorCount, WarningCount = record.WarningCount, StartTime = record.StartTime,
                 FinishTime = record.FinishTime, Attempt = record.Attempt, CollectionUri = build.CollectionUri,
+                TeamProject = build.TeamProject,
             });
         }
         return failures.AsReadOnly();

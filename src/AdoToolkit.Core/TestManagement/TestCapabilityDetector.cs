@@ -35,7 +35,7 @@ public sealed class TestCapabilityDetector
                     {
                         try
                         {
-                            using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(token).ConfigureAwait(false));
+                            using JsonDocument document = JsonDocument.Parse(await ResponseJson.ReadAsync(response, token).ConfigureAwait(false));
                             JsonElement values = document.RootElement.GetProperty("workItemTypes");
                             return (IReadOnlyList<string>)Array.AsReadOnly(values.EnumerateArray().Select(value =>
                                 value.GetProperty("name").GetString() ?? throw new JsonException()).ToArray());

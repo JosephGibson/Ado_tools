@@ -7,7 +7,10 @@ using AdoToolkit.Core.TestRuns;
 
 namespace AdoToolkit.Core.Http;
 
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true)]
+// Server 2020 sends many numeric fields as JSON strings (reference IDs such as build.id and
+// testRun.id), so every number also reads from numeric text. Non-numeric text still fails.
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true,
+    NumberHandling = JsonNumberHandling.AllowReadingFromString)]
 [JsonSerializable(typeof(ProjectPageDto))]
 [JsonSerializable(typeof(IdentityDto))]
 [JsonSerializable(typeof(WorkItemBatchRequestDto))]

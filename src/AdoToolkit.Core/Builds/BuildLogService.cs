@@ -23,7 +23,7 @@ public sealed class BuildLogService
     }
 
     // V-14 assumption: zero-based, inclusive endpoints. All range arithmetic lives here.
-    internal static (int StartLine, int EndLine)? TailRange(int lineCount, int tail)
+    internal static (long StartLine, long EndLine)? TailRange(long lineCount, int tail)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(lineCount);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(tail);
@@ -48,7 +48,7 @@ public sealed class BuildLogService
         foreach (BuildLogDto item in logs)
             if (item.Id < 1 || item.LineCount < 0 || !ids.Add(item.Id))
                 throw new AdoResponseFormatException(Messages.Get(AdoMessage.ResponseFormat, culture)) { Operation = "BuildLogsList" };
-        int? lineCount = logs.FirstOrDefault(item => item.Id == logId)?.LineCount;
+        long? lineCount = logs.FirstOrDefault(item => item.Id == logId)?.LineCount;
         Dictionary<string, string>? query = null;
         if (tail.HasValue)
         {

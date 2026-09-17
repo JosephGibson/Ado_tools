@@ -25,6 +25,17 @@ public sealed class GetAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
     [ValidateNotNull]
     public AdoBuild? InputObject { get; set; }
 
+    [Parameter(Mandatory = true, ParameterSetName = "ByDefinition")]
+    [ValidateNotNull]
+    public object? Definition { get; set; }
+
+    [Parameter(ParameterSetName = "ByDefinition")]
+    [ValidateNotNullOrEmpty]
+    public string? Branch { get; set; }
+
+    [Parameter(ParameterSetName = "ByDefinition")]
+    public BuildResult? Result { get; set; }
+
     [Parameter]
     [ValidateRange(1, 50)]
     public int? HistoryCount { get; set; }
@@ -33,6 +44,7 @@ public sealed class GetAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
     public AdoTestHistoryScope? HistoryScope { get; set; }
 
     [Parameter(ParameterSetName = "ByBuildId")]
+    [Parameter(ParameterSetName = "ByDefinition")]
     [ArgumentCompleter(typeof(ProjectNameCompleter))]
     [ValidateNotNullOrEmpty]
     public string? Project { get; set; }
@@ -54,12 +66,23 @@ public sealed class GetAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
             MaximumHistoryRequests = options.MaximumHistoryRequests,
         };
         CultureInfo culture = MessageCulture;
+        // ByDefinition selects the latest completed build, as Get-AdoBuild -Latest does.
+        BuildQuery? latest = null;
+        string? definitionText = null;
+        if (ParameterSetName == "ByDefinition")
+        {
+            (int? id, string? name) = ResolveDefinition(Definition);
+            latest = new BuildQuery { DefinitionId = id, DefinitionName = name, Branch = Branch, Result = Result, Latest = true };
+            definitionText = name ?? id!.Value.ToString(CultureInfo.InvariantCulture);
+        }
         lease ??= SessionStateRegistry.Current.Acquire(connection);
         ClientLease active = lease;
         AdoBuildTestFailureSet set = RunWorker(async (log, token) =>
         {
-            AdoBuild build = InputObject ?? await new BuildService(active.Client, connection, log)
-                .GetAsync(project, BuildId, culture, token).ConfigureAwait(false);
+            BuildService builds = new(active.Client, connection, log);
+            AdoBuild build = InputObject ?? (latest is null
+                ? await builds.GetAsync(project, BuildId, culture, token).ConfigureAwait(false)
+                : await LatestAsync(builds, project, latest, definitionText!, culture, token).ConfigureAwait(false));
             return await new TestFailureRetrievalService(active.Client, connection, log, cache)
                 .GetAsync(build, query, culture, token).ConfigureAwait(false);
         });
@@ -85,6 +108,15 @@ public sealed class GetAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
         Enum.GetValues<AdoTestHistoryScope>().FirstOrDefault(
             scope => string.Equals(scope.ToString(), configured, StringComparison.OrdinalIgnoreCase),
             AdoTestHistoryScope.SameBranch);
+
+    private static async Task<AdoBuild> LatestAsync(BuildService builds, string project, BuildQuery query, string definition,
+        CultureInfo culture, CancellationToken token)
+    {
+        IReadOnlyList<AdoBuild> found = await builds.GetBuildsAsync(project, query, culture, token).ConfigureAwait(false);
+        return found.Count > 0 ? found[0]
+            : throw new AdoNotFoundException(Messages.Get(AdoMessage.NoLatestBuild, culture, definition))
+            { Operation = "BuildsList", Project = project };
+    }
 
     private AdoConnection Resolve()
     {

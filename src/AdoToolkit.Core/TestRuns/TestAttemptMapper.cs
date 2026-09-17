@@ -30,7 +30,7 @@ internal static class TestAttemptMapper
             FailureType = result.FailureType,
             ResolutionState = result.ResolutionState,
             Comment = result.Comment,
-            FailingSinceBuildId = result.FailingSince is not null && result.FailingSince.Id > 0 ? result.FailingSince.Id : null,
+            FailingSinceBuildId = FailingSinceBuild(result),
             AssociatedBugIds = Bugs(result),
             // Rerun children are attempts, so only non-attempt groups nest here (§15.10).
             SubResults = SubResults(result.SubResults, 1, cancellationToken),
@@ -62,7 +62,7 @@ internal static class TestAttemptMapper
             FailureType = parent.FailureType,
             ResolutionState = parent.ResolutionState,
             Comment = sub.Comment,
-            FailingSinceBuildId = parent.FailingSince is not null && parent.FailingSince.Id > 0 ? parent.FailingSince.Id : null,
+            FailingSinceBuildId = FailingSinceBuild(parent),
             AssociatedBugIds = Bugs(parent),
             SubResults = SubResults(sub.SubResults, 2, cancellationToken),
             CustomFields = CustomFields(parent),
@@ -81,6 +81,9 @@ internal static class TestAttemptMapper
     private static TimeSpan? Duration(double? milliseconds) =>
         milliseconds is double value && value >= 0 && double.IsFinite(value) && value <= TimeSpan.MaxValue.TotalMilliseconds
             ? TimeSpan.FromMilliseconds(value) : null;
+
+    private static int? FailingSinceBuild(TestResultDto result) =>
+        result.FailingSince?.Build is { Id: > 0 } build ? build.Id : null;
 
     private static ReadOnlyCollection<int> Bugs(TestResultDto result) => Array.AsReadOnly((result.AssociatedBugs ?? [])
         .Where(static bug => bug is not null && bug.Id > 0).Select(static bug => bug.Id).Distinct().ToArray());
@@ -149,7 +152,7 @@ internal static class TestAttemptMapper
     {
         Dictionary<string, object?> fields = new(StringComparer.Ordinal);
         foreach (CustomFieldDto field in result.CustomFields ?? [])
-            if (field is not null && !string.IsNullOrEmpty(field.FieldName))
+            if (field is not null && !string.IsNullOrEmpty(field.FieldName) && field.Value.ValueKind != JsonValueKind.Undefined)
                 fields.TryAdd(field.FieldName, FieldValueMapper.MapValue(field.Value));
         return new ReadOnlyDictionary<string, object?>(fields);
     }

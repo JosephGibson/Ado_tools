@@ -46,7 +46,7 @@ public sealed class WorkItemService
                 {
                     try
                     {
-                        byte[] bytes = await response.Content.ReadAsByteArrayAsync(requestToken).ConfigureAwait(false);
+                        string bytes = await ResponseJson.ReadAsync(response, requestToken).ConfigureAwait(false);
                         return (IReadOnlyList<WorkItemDto>)(JsonSerializer.Deserialize(bytes, AdoJsonContext.Default.WorkItemBatchDto)?.Value
                             ?? throw new JsonException());
                     }

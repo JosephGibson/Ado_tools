@@ -25,7 +25,8 @@ internal static class ErrorTranslator
                 if (read <= 8192)
                     try
                     {
-                        using JsonDocument document = JsonDocument.Parse(buffer.AsMemory(0, read));
+                        using JsonDocument document = JsonDocument.Parse(ResponseJson.Decode(buffer.AsSpan(0, read),
+                            response.Content.Headers.ContentType?.CharSet));
                         if (document.RootElement.ValueKind == JsonValueKind.Object &&
                             document.RootElement.TryGetProperty("message", out JsonElement message) && message.ValueKind == JsonValueKind.String)
                             remote = Sanitize(message.GetString(), 1024);

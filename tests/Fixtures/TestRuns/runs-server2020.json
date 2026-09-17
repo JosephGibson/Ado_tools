@@ -1,0 +1,37 @@
+{
+  "count": 2,
+  "value": [
+    {
+      "id": 201,
+      "name": "Web tests (en)",
+      "build": {
+        "id": "401"
+      },
+      "isAutomated": true,
+      "state": "Completed",
+      "startedDate": "2026-09-14T10:00:00Z",
+      "completedDate": "2026-09-14T10:05:00Z",
+      "totalTests": 5,
+      "passedTests": 2,
+      "notApplicableTests": 1,
+      "unanalyzedTests": 2,
+      "incompleteTests": 0
+    },
+    {
+      "id": 202,
+      "name": "Web tests (fr)",
+      "build": {
+        "id": "401"
+      },
+      "isAutomated": true,
+      "state": "Completed",
+      "startedDate": "2026-09-14T10:10:00Z",
+      "completedDate": "2026-09-14T10:15:00Z",
+      "totalTests": 5,
+      "passedTests": 3,
+      "notApplicableTests": 1,
+      "unanalyzedTests": 1,
+      "incompleteTests": 0
+    }
+  ]
+}

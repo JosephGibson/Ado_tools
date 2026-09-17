@@ -41,7 +41,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Crée une connexion de session à partir d’une URL de collection explicite, d’un profil nommé ou du profil par défaut, dans cet ordre. Utilise votre identité Windows. Cette commande ne contacte pas le serveur ; utilisez Test-AdoConnection pour vérifier l’accès. Project remplace le projet par défaut du profil. Les URL Azure DevOps Services sont refusées.
+Crée une connexion de session à partir d’une URL de collection explicite, d’un profil nommé ou du profil par défaut, dans cet ordre. Utilise votre identité Windows. Cette commande ne contacte pas le serveur ; utilisez Test-AdoConnection pour vérifier l’accès. Project remplace le projet par défaut du profil. Les URL Azure DevOps Services sont refusées. En l’absence de connexion, les autres commandes AdoToolkit se connectent de la même façon avec le profil par défaut, sans contacter le serveur.
 
 ## EXAMPLES
 

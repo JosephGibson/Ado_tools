@@ -35,7 +35,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Filters test runs by the build URI and reads run details, paging through every offset page. Uses the build's own URI when it has one and composes vstfs:///Build/Build/<id> otherwise. With BuildId, retrieves the build first; piped builds already supply that metadata. Runs are emitted in attempt order: pipeline attempt when the run exposes one, then start date, then run ID. Outcome counts come from the run statistics, keyed by the exact outcome name the server reports. Web links are rebuilt from the connection URL and numeric IDs; response URLs are ignored. A foreign collection produces a ConnectionMismatch error for that input.
+Filters test runs by the build URI and reads run details, paging through every offset page. Uses the build's own URI when it has one and composes vstfs:///Build/Build/<id> otherwise. With BuildId, retrieves the build first; piped builds already supply that metadata. Runs are emitted in attempt order: pipeline attempt when the run exposes one, then start date, then run ID. Outcome counts come from the run statistics, keyed by the exact outcome name the server reports, and stay empty when the server sends none. The run totals PassedTests, NotApplicableTests, UnanalyzedTests and IncompleteTests keep the server’s own categories; UnanalyzedTests counts results that did not pass and are not yet analyzed. Web links are rebuilt from the connection URL and numeric IDs; response URLs are ignored. A foreign collection produces a ConnectionMismatch error for that input.
 
 ## EXAMPLES
 

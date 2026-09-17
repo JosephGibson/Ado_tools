@@ -5,8 +5,10 @@ public sealed class TestFailureExportOptions
     public string? Culture { get; init; }
     public string? ConfiguredCulture { get; init; }
     public required CultureInfo SessionCulture { get; init; }
-    // A resolved FileSystem path: an .html file or an existing directory. Null means Downloads.
+    // A resolved FileSystem path: an .html file or a directory. Null means Downloads.
     public string? Path { get; init; }
+    // Path names a directory that may not exist yet; it is created when the export runs, never in Prepare.
+    public bool CreateDirectory { get; init; }
     public bool NoClobber { get; init; }
     public bool SkipAttachments { get; init; }
     public bool Open { get; init; }

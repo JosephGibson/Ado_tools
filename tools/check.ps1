@@ -149,8 +149,11 @@ try {
 
         if (-not $SkipTests) {
             $previousManifest = $env:ADOTOOLKIT_MODULE_MANIFEST
+            $previousConfig = $env:ADOTOOLKIT_CONFIG_PATH
             try {
                 $env:ADOTOOLKIT_MODULE_MANIFEST = $manifest
+                # A developer's default profile would connect implicitly; tests never read real configuration.
+                $env:ADOTOOLKIT_CONFIG_PATH = Resolve-RepositoryPath ('artifacts/verify/config-' + [guid]::NewGuid().ToString('N') + '/config.json')
                 $child = @'
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
@@ -176,7 +179,10 @@ exit 0
                 $pesterExit = $LASTEXITCODE
                 if ($pesterExit -ne 0) { exit $pesterExit }
             }
-            finally { $env:ADOTOOLKIT_MODULE_MANIFEST = $previousManifest }
+            finally {
+                $env:ADOTOOLKIT_MODULE_MANIFEST = $previousManifest
+                $env:ADOTOOLKIT_CONFIG_PATH = $previousConfig
+            }
         }
     }
     finally { Pop-Location }

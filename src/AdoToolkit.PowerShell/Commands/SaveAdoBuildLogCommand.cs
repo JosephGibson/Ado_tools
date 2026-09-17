@@ -21,7 +21,8 @@ public sealed class SaveAdoBuildLogCommand : AdoCmdletBase
     [Parameter] [ValidateRange(1, int.MaxValue)] public int? Tail { get; set; }
     [Parameter] [ValidateNotNullOrEmpty] public string? Path { get; set; }
     [Parameter] public AdoConnection? Connection { get; set; }
-    [Parameter] [ArgumentCompleter(typeof(ProjectNameCompleter))] [ValidateNotNullOrEmpty]
+    [Parameter(ValueFromPipelineByPropertyName = true)] [Alias("TeamProject")]
+    [ArgumentCompleter(typeof(ProjectNameCompleter))] [ValidateNotNullOrEmpty]
     public string? Project { get; set; }
 
     [Parameter(ValueFromPipelineByPropertyName = true, DontShow = true)]

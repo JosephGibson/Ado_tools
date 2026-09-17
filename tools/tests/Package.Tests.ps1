@@ -33,6 +33,73 @@ CmdletsToExport = @('Connect-Ado','Disconnect-Ado','Get-AdoConnection','Test-Ado
 Describe 'Package validation and deployment boundaries' {
     BeforeEach { $package = New-SyntheticPackage -Path (Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))) }
 
+    It 'F09 restores the existing release when its checksum cannot be replaced' {
+        $output = Join-Path $TestDrive 'release with spaces'
+        $release = New-AdoReleaseArchive -PackagePath $package -OutputRoot $output
+        $before = (Get-FileHash -LiteralPath $release.Archive).Hash
+        $checksum = [IO.File]::ReadAllText($release.Checksum)
+        Set-Content -LiteralPath (Join-Path $package 'AdoToolkit.Core.dll') -Value 'changed synthetic assembly'
+        $lock = [IO.File]::Open($release.Checksum, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+        try { { New-AdoReleaseArchive -PackagePath $package -OutputRoot $output } | Should -Throw }
+        finally { $lock.Dispose() }
+        (Get-FileHash -LiteralPath $release.Archive).Hash | Should -Be $before
+        [IO.File]::ReadAllText($release.Checksum) | Should -Be $checksum
+        @(Get-ChildItem -LiteralPath $output -Force).Count | Should -Be 2
+    }
+
+    It 'F10 resolves relative package paths from the PowerShell location' {
+        Push-Location -LiteralPath $TestDrive
+        try {
+            $relative = Split-Path -Leaf $package
+            Resolve-AdoPackagePath -Path $relative -Root $TestDrive | Should -Be $package
+        }
+        finally { Pop-Location }
+    }
+
+    It 'F10 builds all release assets using relative paths after Set-Location' {
+        $repository = Join-Path $TestDrive 'synthetic repository'
+        $scripts = Join-Path $repository 'tools/package'
+        [void] [IO.Directory]::CreateDirectory($scripts)
+        foreach ($name in @('New-AdoToolkitRelease.ps1', 'Package.Common.ps1', 'Install-AdoToolkit.ps1')) {
+            Copy-Item -LiteralPath (Join-Path $packageTools $name) -Destination (Join-Path $scripts $name)
+        }
+        $null = New-SyntheticPackage -Path (Join-Path $repository 'staged package')
+        Push-Location -LiteralPath $repository
+        try { & (Join-Path $scripts 'New-AdoToolkitRelease.ps1') -PackagePath 'staged package' -OutputRoot 'release assets' | Out-Null }
+        finally { Pop-Location }
+        $assets = @(Get-ChildItem -LiteralPath (Join-Path $repository 'release assets') -File | Sort-Object Name)
+        $assets.Name | Should -Be @('AdoToolkit-0.1.0.zip', 'AdoToolkit-0.1.0.zip.sha256', 'Install-AdoToolkit.ps1')
+    }
+
+    It 'F09 validates the installer and rolls back the whole release if it is locked' {
+        $output = Join-Path $TestDrive 'complete release'
+        $installerSource = Join-Path $packageTools 'Install-AdoToolkit.ps1'
+        $release = New-AdoReleaseArchive -PackagePath $package -OutputRoot $output -InstallerPath $installerSource
+        $before = @(Get-ChildItem -LiteralPath $output -File | Sort-Object Name | Get-FileHash | ForEach-Object Hash)
+        Set-Content -LiteralPath (Join-Path $package 'AdoToolkit.Core.dll') -Value 'changed synthetic assembly'
+        $lock = [IO.File]::Open((Join-Path $output 'Install-AdoToolkit.ps1'), [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+        try { { New-AdoReleaseArchive -PackagePath $package -OutputRoot $output -InstallerPath $installerSource } | Should -Throw }
+        finally { $lock.Dispose() }
+        @(Get-ChildItem -LiteralPath $output -File -Force | Sort-Object Name | Get-FileHash | ForEach-Object Hash) | Should -Be $before
+        Test-Path -LiteralPath $release.Archive | Should -BeTrue
+    }
+
+    It 'F09 restores all targets if a staged file disappears during commit' {
+        $output = Join-Path $TestDrive 'rollback'
+        [void] [IO.Directory]::CreateDirectory($output)
+        $first = Join-Path $output 'first'
+        $second = Join-Path $output 'second'
+        $temporary = Join-Path $output 'first.tmp'
+        [IO.File]::WriteAllText($first, 'old first')
+        [IO.File]::WriteAllText($second, 'old second')
+        [IO.File]::WriteAllText($temporary, 'new first')
+        $files = @(@{ Source = $temporary; Target = $first }, @{ Source = (Join-Path $output 'missing.tmp'); Target = $second })
+        { Publish-AdoReleaseFiles -Files $files -Root $output } | Should -Throw
+        [IO.File]::ReadAllText($first) | Should -Be 'old first'
+        [IO.File]::ReadAllText($second) | Should -Be 'old second'
+        @(Get-ChildItem -LiteralPath $output -Force).Count | Should -Be 2
+    }
+
     It 'enumerates the exact package and all six signable files including satellites' {
         Assert-AdoPackage -PackagePath $package | Should -Be '0.1.0'
         @(Get-AdoPackageFile -PackagePath $package).Count | Should -Be 8
@@ -133,5 +200,147 @@ $Probe.Checks++
         Move-AdoPackageDirectory -Staging $stage -Destination $destination -Root $root
         Assert-AdoPackage -PackagePath $destination | Should -Be '0.1.0'
         @(Get-ChildItem -LiteralPath $root -Force).Count | Should -Be 1
+    }
+}
+
+Describe 'Release archive and standalone installer' {
+    BeforeAll {
+        Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.ZipFile
+        $installer = Join-Path $packageTools 'Install-AdoToolkit.ps1'
+        function New-TestZip {
+            param([string] $Path, [string[]] $Entries)
+            $zip = [System.IO.Compression.ZipFile]::Open($Path, [System.IO.Compression.ZipArchiveMode]::Create)
+            try {
+                foreach ($name in $Entries) {
+                    $writer = [System.IO.StreamWriter]::new($zip.CreateEntry($name).Open())
+                    try { $writer.Write('synthetic fixture') }
+                    finally { $writer.Dispose() }
+                }
+            }
+            finally { $zip.Dispose() }
+            return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash
+        }
+        function Get-ListAssignment {
+            param([string] $Path, [string] $Variable)
+            $ast = [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref] $null, [ref] $null)
+            $assignment = $ast.Find({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+                    $node.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+                    $node.Left.VariablePath.UserPath -eq $Variable
+                }, $true)
+            return @($assignment.Right.Expression.SafeGetValue())
+        }
+    }
+    BeforeEach {
+        $work = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+        $package = New-SyntheticPackage -Path (Join-Path $work 'package')
+        $modules = Join-Path $work 'modules'
+    }
+
+    It 'zips the package with a checksum that the installer accepts, then replaces the same version' {
+        $release = New-AdoReleaseArchive -PackagePath $package -OutputRoot (Join-Path $work 'release')
+        $release.Version | Should -Be '0.1.0'
+        [IO.Path]::GetFileName($release.Archive) | Should -Be 'AdoToolkit-0.1.0.zip'
+        [IO.File]::ReadAllText($release.Checksum) | Should -Be ($release.Sha256 + '  AdoToolkit-0.1.0.zip' + "`n")
+        (Get-FileHash -LiteralPath $release.Archive -Algorithm SHA256).Hash | Should -Be $release.Sha256.ToUpperInvariant()
+        $archive = [System.IO.Compression.ZipFile]::OpenRead($release.Archive)
+        try {
+            $archive.Entries.Count | Should -Be 8
+            @($archive.Entries.FullName | Where-Object { $_ -notlike 'AdoToolkit/0.1.0/*' }).Count | Should -Be 0
+        }
+        finally { $archive.Dispose() }
+        @(Get-ChildItem -LiteralPath (Join-Path $work 'release') -Force).Name | Sort-Object | Should -Be @('AdoToolkit-0.1.0.zip', 'AdoToolkit-0.1.0.zip.sha256')
+
+        $result = & $installer -Path $release.Archive -Destination $modules -WarningAction SilentlyContinue
+        $result.Version | Should -Be '0.1.0'
+        $result.Signed | Should -BeFalse
+        $installed = Join-Path (Join-Path $modules 'AdoToolkit') '0.1.0'
+        $result.Path | Should -Be $installed
+        Assert-AdoPackage -PackagePath $installed | Should -Be '0.1.0'
+        Set-Content -LiteralPath (Join-Path $installed 'stale.txt') -Value 'old fixture'
+        # Leftovers of an earlier install whose old copy was still loaded are swept; other folders stay.
+        $leftover = Join-Path (Join-Path $modules 'AdoToolkit') ('0.0.9.previous-' + [guid]::NewGuid().ToString('N'))
+        [void] [IO.Directory]::CreateDirectory((Join-Path $leftover 'fr'))
+        $unrelated = Join-Path (Join-Path $modules 'AdoToolkit') 'notes.previous'
+        [void] [IO.Directory]::CreateDirectory($unrelated)
+        & $installer -Path $release.Archive -Destination $modules -WarningAction SilentlyContinue | Out-Null
+        Test-Path -LiteralPath $leftover | Should -BeFalse
+        Remove-Item -LiteralPath $unrelated
+        Assert-AdoPackage -PackagePath $installed | Should -Be '0.1.0'
+        @(Get-ChildItem -LiteralPath (Join-Path $modules 'AdoToolkit') -Force).Name | Should -Be @('0.1.0')
+    }
+
+    It 'writes nothing with WhatIf' {
+        $release = New-AdoReleaseArchive -PackagePath $package -OutputRoot (Join-Path $work 'release')
+        # A hostless shell captures ShouldProcess messages so verify still emits one JSON document.
+        $shell = [powershell]::Create()
+        try {
+            [void] $shell.AddCommand($installer).AddParameter('Path', $release.Archive).AddParameter('Destination', $modules).AddParameter('WhatIf')
+            @($shell.Invoke()).Count | Should -Be 0
+            $shell.HadErrors | Should -BeFalse
+        }
+        finally { $shell.Dispose() }
+        Test-Path -LiteralPath $modules | Should -BeFalse
+    }
+
+    It 'refuses a zip that does not match its checksum file or hash' {
+        $release = New-AdoReleaseArchive -PackagePath $package -OutputRoot (Join-Path $work 'release')
+        Set-Content -LiteralPath $release.Checksum -Value (('0' * 64) + '  AdoToolkit-0.1.0.zip')
+        { & $installer -Path $release.Archive -Destination $modules } | Should -Throw '*checksum*'
+        { & $installer -Path $release.Archive -Sha256 ('f' * 64) -Destination $modules } | Should -Throw '*checksum*'
+        Set-Content -LiteralPath $release.Checksum -Value ($release.Sha256 + '  AdoToolkit-9.9.9.zip')
+        { & $installer -Path $release.Archive -Destination $modules } | Should -Throw '*describes*'
+        Remove-Item -LiteralPath $release.Checksum
+        { & $installer -Path $release.Archive -Destination $modules } | Should -Throw '*Checksum file not found*'
+        Test-Path -LiteralPath $modules | Should -BeFalse
+    }
+
+    It 'refuses <Case> even when the checksum matches' -TestCases @(
+        @{ Case = 'a traversal entry'; Extra = @('AdoToolkit/0.1.0/../evil.txt') }
+        @{ Case = 'an extra file'; Extra = @('AdoToolkit/0.1.0/extra.dll') }
+        @{ Case = 'a second version'; Extra = @('AdoToolkit/0.1.1/AdoToolkit.psd1') }
+        @{ Case = 'a rooted entry'; Extra = @('/AdoToolkit/0.1.0/evil.txt') }
+        @{ Case = 'a missing file'; Extra = @() }
+    ) {
+        param($Case, $Extra)
+        $entries = @(Get-ListAssignment -Path $installer -Variable 'layout' | ForEach-Object { 'AdoToolkit/0.1.0/' + $_ })
+        if ($Extra.Count -eq 0) { $entries = @($entries | Select-Object -Skip 1) }
+        $zip = Join-Path $work 'AdoToolkit-0.1.0.zip'
+        $hash = New-TestZip -Path $zip -Entries ($entries + $Extra)
+        { & $installer -Path $zip -Sha256 $hash -Destination $modules } | Should -Throw '*release zip*'
+        Test-Path -LiteralPath $modules | Should -BeFalse
+    }
+
+    It 'refuses an unsigned release when a thumbprint is supplied and leaves nothing behind' {
+        $release = New-AdoReleaseArchive -PackagePath $package -OutputRoot (Join-Path $work 'release')
+        Mock Get-AuthenticodeSignature { [pscustomobject]@{ Status = 'NotSigned'; SignerCertificate = $null } }
+        { & $installer -Path $release.Archive -Destination $modules -ExpectedThumbprint $expected } | Should -Throw '*expected certificate*'
+        @(Get-ChildItem -LiteralPath (Join-Path $modules 'AdoToolkit') -Force).Count | Should -Be 0
+        Should -Invoke Get-AuthenticodeSignature -Times 1 -Exactly
+    }
+
+    It 'checks all six signable files against the expected signer' {
+        $release = New-AdoReleaseArchive -PackagePath $package -OutputRoot (Join-Path $work 'release')
+        # A literal: mock bodies resolve variables through the calling script's scopes.
+        Mock Get-AuthenticodeSignature { [pscustomobject]@{ Status = 'Valid'; SignerCertificate = [pscustomobject]@{ Thumbprint = 'a' * 40 } } }
+        (& $installer -Path $release.Archive -Destination $modules -ExpectedThumbprint $expected -WarningAction SilentlyContinue).Signed | Should -BeTrue
+        Should -Invoke Get-AuthenticodeSignature -Times 6 -Exactly
+    }
+
+    It 'keeps the installer layout in step with the package layout' {
+        $common = Join-Path $packageTools 'Package.Common.ps1'
+        Get-ListAssignment -Path $installer -Variable 'layout' | Should -Be (Get-ListAssignment -Path $common -Variable 'required')
+    }
+
+    It 'rejects junctions but not plain directories in package paths' {
+        $real = Join-Path $work 'real'
+        [void] [IO.Directory]::CreateDirectory((Join-Path $real 'inner'))
+        $junction = Join-Path $work 'junction'
+        [void] (New-Item -ItemType Junction -Path $junction -Target $real)
+        Resolve-AdoPackagePath -Path (Join-Path $real 'inner') | Should -Be (Join-Path $real 'inner')
+        { Resolve-AdoPackagePath -Path (Join-Path $junction 'inner') } | Should -Throw '*links*'
+        Test-AdoPackageLink -Item (Get-Item -LiteralPath $junction) | Should -BeTrue
+        Test-AdoPackageLink -Item (Get-Item -LiteralPath $real) | Should -BeFalse
     }
 }

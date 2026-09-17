@@ -58,7 +58,7 @@ public sealed class InvokeAdoWiqlCommand : AdoCmdletBase
             {
                 AdoNotFoundException error = new(Messages.Get(AdoMessage.WorkItemNotFound, MessageCulture, id.ToString(CultureInfo.InvariantCulture)))
                 { Operation = "WorkItemsBatch" };
-                ErrorRecord record = ErrorRecordFactory.Create(error);
+                ErrorRecord record = ErrorRecordFactory.Create(error, MessageCulture);
                 WriteError(new ErrorRecord(error, record.FullyQualifiedErrorId, record.CategoryInfo.Category, id) { ErrorDetails = record.ErrorDetails });
             }
         }

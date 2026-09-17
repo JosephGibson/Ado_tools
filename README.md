@@ -4,7 +4,7 @@
 PowerShell toolkit for Azure DevOps Server 2020: compiled C\# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 <!-- project:end -->
 
-**Version 0.1.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.1.1** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
@@ -12,10 +12,12 @@ DevOps. Its cmdlets return typed objects that you can use in pipelines, and it w
 standalone HTML, Markdown or JSON reports when you need a document. All messages,
 report labels and help are available in English and French.
 
-Version 0.1.0 is feature-complete, and every feature is covered by offline tests.
+Every feature is covered by offline tests. Version 0.1.1 fixes the failed-test report on
+Azure DevOps Server 2020, which sends some IDs as text, and ships as a prebuilt release.
 
 > [!NOTE]
-> Live validation against Azure DevOps Server 2020 is still pending.
+> Live validation against Azure DevOps Server 2020 is in progress. Connections, projects,
+> builds and test runs have been confirmed; the opt-in checks in `tests/Live` cover the rest.
 
 ## Features
 
@@ -32,44 +34,57 @@ Version 0.1.0 is feature-complete, and every feature is covered by offline tests
 
 | To | You need |
 | --- | --- |
-| Use the module | Windows, PowerShell 7.6, and access to an Azure DevOps Server 2020 collection with your Windows account |
-| Build and install it | The .NET 10 SDK selected by [global.json](global.json), PlatyPS 1.x (`Microsoft.PowerShell.PlatyPS`), and a code-signing certificate in `Cert:\CurrentUser\My` |
-| Develop and verify | The .NET SDK and PlatyPS above, plus PowerShell 7.6.5 or later, Pester 5.x and PSScriptAnalyzer; ripgrep is recommended |
+| Use the module | Windows, PowerShell 7.6 (`pwsh`), and access to an Azure DevOps Server 2020 collection with your Windows account. No administrator rights, .NET SDK or other modules |
+| Build it from source | The .NET 10 SDK selected by [global.json](global.json) (a per-user install works) and PlatyPS 1.x (`Microsoft.PowerShell.PlatyPS`) for PowerShell 7 |
+| Develop and verify | The build prerequisites plus PowerShell 7.6.5 or later, Pester 5.x and PSScriptAnalyzer; ripgrep is recommended |
 
 Azure DevOps Services and later Server versions are not supported.
 
 ## Installation
 
-Build AdoToolkit from source on the machine that will use it, then install it as a
-signed package with the scripts in [tools/package/](tools/package/):
+Each [GitHub release](https://github.com/JosephGibson/Ado_tools/releases) contains a
+prebuilt module, so nothing is compiled on your machine:
 
-| Script | Purpose |
+| Asset | Purpose |
 | --- | --- |
-| `Publish-AdoToolkitPackage.ps1` | Builds a Release configuration and stages `artifacts\AdoToolkit\<version>\` with compiled English and French help |
-| `Set-AdoToolkitPackageSignature.ps1` | Authenticode-signs the package's scripts, manifest and assemblies |
-| `Install-AdoToolkitPackage.ps1` | Checks the package and its signatures, then installs it to `Documents\PowerShell\Modules\AdoToolkit\<version>` |
+| `AdoToolkit-<version>.zip` | The module files |
+| `AdoToolkit-<version>.zip.sha256` | The SHA-256 checksum of the zip |
+| `Install-AdoToolkit.ps1` | Checks the zip against the checksum and installs it for the current user |
 
-For the step-by-step commands, see
-[Getting started](docs/guides/getting-started.md#install-the-module).
+Download the three files into one folder, close any PowerShell window that has
+AdoToolkit loaded, and run this in PowerShell 7 from that folder:
+
+```powershell
+Unblock-File .\Install-AdoToolkit.ps1
+.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.1.1.zip
+```
+
+Then open a new PowerShell window and run `Import-Module AdoToolkit`. Releases are not
+code-signed. For other options, such as installing without the script or from a
+source build, see [Getting started](docs/guides/getting-started.md#install-the-module).
 
 ## Quick start
 
 ```powershell
 Import-Module AdoToolkit
-Connect-Ado -CollectionUrl 'https://ado.example.test/DefaultCollection' -Project 'Web'
-Test-AdoConnection
+# Once: save the collection URL (not a project URL) and your usual project.
+Set-AdoProfile -Name work -CollectionUrl 'https://ado.example.test/DefaultCollection' `
+    -DefaultProject 'Web' -DefaultProfile
+Test-AdoConnection        # commands connect with the default profile
 
 # Every Test Case in a suite tree, as one HTML report in Downloads
 Get-AdoTestCase -PlanId 10 -SuiteId 11 -Recurse | Export-AdoTestCase -Open
 
-# The latest failed build on main: failed tasks, then failed and flaky tests
-$failed = Get-AdoBuild -Definition 'Web CI' -Branch main -Latest -Result Failed
-$failed | Get-AdoBuildFailure
-$failed | Get-AdoBuildTestFailure | Export-AdoBuildTestFailure -Open
+# The failed and flaky tests of the latest failed build on main, as an HTML report
+Get-AdoBuildTestFailure -Definition 'Web CI' -Branch main -Result Failed |
+    Export-AdoBuildTestFailure -Path .\reports -Open
+
+# The failed tasks of the same build
+Get-AdoBuild -Definition 'Web CI' -Branch main -Latest -Result Failed | Get-AdoBuildFailure
 ```
 
-To avoid typing the collection URL every time, save a profile as described in
-[Getting started](docs/guides/getting-started.md#save-a-profile).
+Profiles, connections and the other options are described in
+[Getting started](docs/guides/getting-started.md).
 
 ## Documentation
 
@@ -89,7 +104,8 @@ To avoid typing the collection URL every time, save a profile as described in
 ## Build and verify
 
 Restore NuGet packages once, as a separate step. Verification never restores or
-installs anything.
+installs anything. The repository `nuget.config` uses nuget.org only, so package feeds
+and credentials configured on your machine are not involved.
 
 ```powershell
 dotnet restore AdoToolkit.slnx --locked-mode
@@ -101,8 +117,12 @@ all checks pass, `1` when a check fails, and `2` when the run is incomplete, for
 example because a prerequisite is missing. It lints the PowerShell code, runs the
 tooling tests, checks configuration files, builds the solution, and runs the Core
 tests under `en-US` and `fr-CA`. It then stages the package and runs the product
-Pester tests against it. All tests run offline against synthetic data. For details and the other `dev.ps1` commands,
-see [Developer tooling](docs/tooling.md).
+Pester tests against it. All tests run offline against synthetic data.
+
+To build release assets locally, run `tools\package\Publish-AdoToolkitPackage.ps1` and
+then `tools\package\New-AdoToolkitRelease.ps1`. Pushing a `v<version>` tag runs the same
+steps in GitHub Actions and publishes the release. For details and the other `dev.ps1`
+commands, see [Developer tooling](docs/tooling.md#packaging-and-releases).
 
 ## Repository layout
 
@@ -114,6 +134,7 @@ see [Developer tooling](docs/tooling.md).
 | `tests/AdoToolkit.PowerShell.Tests` | Pester tests against the staged module and a loopback fake server |
 | `tests/Fixtures` | Synthetic fixtures, listed in [tests/Fixtures/README.md](tests/Fixtures/README.md) |
 | `tests/Live` | Optional checks against a live server; `verify` never runs them |
-| `tools` | `dev.ps1` developer CLI, product gate, packaging scripts and tooling tests |
+| `tools` | `dev.ps1` developer CLI, product gate, packaging and release scripts, tooling tests |
+| `.github/workflows` | The release workflow |
 | `docs` | Guides, cmdlet help sources, JSON schema, tooling reference and archive |
 | `Directory.Build.props` | Shared build settings and the module version |

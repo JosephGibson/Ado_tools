@@ -39,7 +39,7 @@ public sealed class BuildFailureDeriverTests
             Assert.Equal("refs/heads/main", failure.Branch);
             Assert.Equal(BuildQueryTests.Connection.CollectionUri, failure.CollectionUri);
             Assert.Equal(TimeSpan.Zero, failure.StartTime!.Value.Offset);
-            Assert.Equal(failure.LogId switch { 11 => 1000, 12 => 0, _ => (int?)null }, failure.LogLineCount);
+            Assert.Equal(failure.LogId switch { 11 => 1000, 12 => 0, _ => (long?)null }, failure.LogLineCount);
             Assert.All(failure.ErrorIssues, issue => Assert.Equal("error", issue.Type));
         });
         if (fixture == "multi-stage.json")
@@ -89,7 +89,7 @@ public sealed class BuildFailureDeriverTests
         using HttpClient client = new(handler);
         IReadOnlyList<AdoTimelineRecord> records = await new TimelineService(client, BuildQueryTests.Connection)
             .GetTimelineAsync(BuildQueryTests.Project, 401, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
-        Assert.Empty(BuildFailureDeriver.Derive(Build("succeeded"), records, new Dictionary<int, int?>(), false,
+        Assert.Empty(BuildFailureDeriver.Derive(Build("succeeded"), records, new Dictionary<int, long?>(), false,
             CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
     }
 
@@ -177,11 +177,11 @@ public sealed class BuildFailureDeriverTests
         using HttpClient client = new(handler);
         IReadOnlyList<AdoTimelineRecord> records = await new TimelineService(client, BuildQueryTests.Connection)
             .GetTimelineAsync(BuildQueryTests.Project, 401, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
-        Assert.All(BuildFailureDeriver.Derive(Build("failed"), records, new Dictionary<int, int?>(), false, CultureInfo.InvariantCulture,
+        Assert.All(BuildFailureDeriver.Derive(Build("failed"), records, new Dictionary<int, long?>(), false, CultureInfo.InvariantCulture,
             TestContext.Current.CancellationToken), failure => Assert.Null(failure.LogLineCount));
         using CancellationTokenSource canceled = new();
         canceled.Cancel();
-        Assert.Throws<OperationCanceledException>(() => BuildFailureDeriver.Derive(Build("failed"), records, new Dictionary<int, int?>(), false,
+        Assert.Throws<OperationCanceledException>(() => BuildFailureDeriver.Derive(Build("failed"), records, new Dictionary<int, long?>(), false,
             CultureInfo.InvariantCulture, canceled.Token));
     }
 

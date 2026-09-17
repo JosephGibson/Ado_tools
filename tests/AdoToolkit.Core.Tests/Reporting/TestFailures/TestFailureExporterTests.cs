@@ -146,11 +146,32 @@ public sealed class TestFailureExporterTests
         }
     }
 
+    // A missing destination directory is planned without touching disk, then created by the export.
+    [Fact]
+    public async Task MissingDirectoryIsCreatedOnlyWhenTheExportRuns()
+    {
+        using TestDirectory directory = new();
+        string destination = Path.Combine(directory.Root, "reports", "nightly");
+        (AdoBuildTestFailureSet set, FakeHttpMessageHandler handler, HttpClient client) = await Retrieve();
+        using (handler)
+        using (client)
+        {
+            TestFailureExporter exporter = new(new RecordingLauncher());
+            Assert.Throws<AdoFileOutputException>(() => exporter.Prepare(set, Options(destination, skip: true)));
+            TestFailureExportPlan plan = exporter.Prepare(set, Options(destination, skip: true, createDirectory: true));
+            Assert.Equal(Path.Combine(destination, "Build-401-TestFailures.html"), plan.ReportPath);
+            Assert.False(Directory.Exists(destination));
+            TestFailureExportResult result = await exporter.ExportAsync(plan, null, null, TestContext.Current.CancellationToken);
+            Assert.Equal(plan.ReportPath, result.Report.FullName);
+            Assert.True(result.Report.Exists);
+        }
+    }
+
     private static TestFailureExportOptions Options(string? path, bool skip = false, bool noClobber = false, bool open = false,
-        string culture = "en-US", DateTimeOffset? generated = null) => new()
+        string culture = "en-US", DateTimeOffset? generated = null, bool createDirectory = false) => new()
         {
             Culture = culture, SessionCulture = Session, Path = path, SkipAttachments = skip, NoClobber = noClobber, Open = open,
-            GeneratedAt = generated ?? Generated, ToolkitVersion = "5.4.0-test",
+            GeneratedAt = generated ?? Generated, ToolkitVersion = "5.4.0-test", CreateDirectory = createDirectory,
         };
 
     private static TestFailureReportModel Model(AdoBuildTestFailureSet set) => TestFailureReportModelBuilder.Build(set,

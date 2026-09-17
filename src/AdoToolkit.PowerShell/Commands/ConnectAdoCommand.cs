@@ -36,11 +36,7 @@ public sealed class ConnectAdoCommand : AdoCmdletBase
                 ?? throw new AdoConfigurationException(Messages.Get(AdoMessage.NoTarget, MessageCulture));
             if (!configuration.Profiles.TryGetValue(name, out AdoProfile? profile))
                 throw new AdoConfigurationException(Messages.Get(AdoMessage.MissingProfile, MessageCulture, name));
-            connection = new AdoConnection
-            {
-                CollectionUri = profile.CollectionUri, DefaultProject = Project ?? profile.DefaultProject,
-                Authentication = profile.Authentication, RequestTimeoutSeconds = profile.RequestTimeoutSeconds,
-            };
+            connection = ProfileConnections.Create(profile, Project);
         }
         SessionStateRegistry.Current.Connect(connection);
         WriteVerbose(ShellMessages.Get(AdoMessage.Connect, MessageCulture));

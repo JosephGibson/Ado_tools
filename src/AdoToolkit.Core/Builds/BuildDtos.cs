@@ -58,5 +58,5 @@ internal sealed class BuildLogPageDto { public List<BuildLogDto>? Value { get; i
 internal sealed class BuildLogDto
 {
     public int Id { get; init; }
-    public int? LineCount { get; init; }
+    public long? LineCount { get; init; }
 }

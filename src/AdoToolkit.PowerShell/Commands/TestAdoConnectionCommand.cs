@@ -24,6 +24,14 @@ public sealed class TestAdoConnectionCommand : AdoCmdletBase
         {
             success = false;
             hint = Messages.Get(AdoMessage.ConnectionHint, MessageCulture);
+            if (error is AdoNotFoundException)
+            {
+                CollectionUrlSuggestion? suggestion = RunWorker((log, token) =>
+                    ProjectService.SuggestCollectionAsync(lease.Client, connection, MessageCulture, token, log));
+                if (suggestion is not null)
+                    hint = Messages.Get(AdoMessage.ConnectionProjectHint, MessageCulture,
+                        Quote(suggestion.CollectionUri.AbsoluteUri), Quote(suggestion.Project));
+            }
             Report(error);
         }
         WriteObject(new AdoConnectionTestResult
@@ -32,4 +40,7 @@ public sealed class TestAdoConnectionCommand : AdoCmdletBase
             CollectionUri = connection.CollectionUri, Hint = hint,
         });
     });
+
+    // PowerShell single-quoted literal, so the suggested command can be pasted as shown.
+    private static string Quote(string value) => "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";
 }

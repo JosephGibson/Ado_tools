@@ -71,7 +71,7 @@ internal sealed class AdoHttpPipeline
                 {
                     try
                     {
-                        byte[] body = await response.Content.ReadAsByteArrayAsync(token).ConfigureAwait(false);
+                        string body = await ResponseJson.ReadAsync(response, token).ConfigureAwait(false);
                         TPage data = JsonSerializer.Deserialize(body, jsonType) ?? throw new JsonException();
                         string? next = response.Headers.TryGetValues("x-ms-continuationtoken", out IEnumerable<string>? values) ? values.FirstOrDefault() : null;
                         return (data, next);

@@ -226,8 +226,13 @@
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Export failed-test report</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Export failed-test report and download attachments to {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Downloading attachments: {0} of {1}</value></data>
-  <data name="TestFailureReportPathInvalid" xml:space="preserve"><value>The path must be an existing directory or an .html file: {0}</value></data>
+  <data name="TestFailureReportPathInvalid" xml:space="preserve"><value>The path must be a directory or an .html file: {0}</value></data>
   <data name="TestFailureReportSingleFile" xml:space="preserve"><value>The path names one file, so only the first failed-test set is exported; use a directory for build {0}.</value></data>
   <data name="AttachmentFolderSkipped" xml:space="preserve"><value>Skipped {0}: it is a link (reparse point), so it is never followed or deleted.</value></data>
   <data name="AttachmentFolderNotDeleted" xml:space="preserve"><value>Could not delete the earlier attachment folder {0}; delete it manually.</value></data>
+  <data name="ResponseFormatOperation" xml:space="preserve"><value>{0} Operation: {1}.</value></data>
+  <data name="ResponseFormatPath" xml:space="preserve"><value>{0} Operation: {1}. JSON path: {2}.</value></data>
+  <data name="ConnectionProjectHint" xml:space="preserve"><value>The collection URL ends with the project name. Connect with: Connect-Ado -CollectionUrl {0} -Project {1}</value></data>
+  <data name="AutoConnectProfile" xml:space="preserve"><value>Connected with the default profile {0}.</value></data>
+  <data name="NoLatestBuild" xml:space="preserve"><value>No completed build matches build definition {0}.</value></data>
 </root>

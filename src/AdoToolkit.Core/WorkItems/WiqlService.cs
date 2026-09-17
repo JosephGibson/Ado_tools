@@ -50,7 +50,7 @@ public sealed class WiqlService
                 {
                     try
                     {
-                        byte[] bytes = await message.Content.ReadAsByteArrayAsync(token).ConfigureAwait(false);
+                        string bytes = await ResponseJson.ReadAsync(message, token).ConfigureAwait(false);
                         return JsonSerializer.Deserialize(bytes, AdoJsonContext.Default.WiqlResponseDto) ?? throw new JsonException();
                     }
                     catch (JsonException error) { throw FormatError(culture, error); }

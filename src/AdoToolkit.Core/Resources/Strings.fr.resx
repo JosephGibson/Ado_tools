@@ -226,8 +226,13 @@
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Exporter le rapport des tests en échec</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Exporter le rapport des tests en échec et télécharger les pièces jointes dans {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Téléchargement des pièces jointes : {0} de {1}</value></data>
-  <data name="TestFailureReportPathInvalid" xml:space="preserve"><value>Le chemin doit désigner un répertoire existant ou un fichier .html : {0}</value></data>
+  <data name="TestFailureReportPathInvalid" xml:space="preserve"><value>Le chemin doit désigner un répertoire ou un fichier .html : {0}</value></data>
   <data name="TestFailureReportSingleFile" xml:space="preserve"><value>Le chemin désigne un seul fichier; seul le premier ensemble de tests en échec est exporté. Utilisez un répertoire pour la build {0}.</value></data>
   <data name="AttachmentFolderSkipped" xml:space="preserve"><value>{0} est ignoré : c’est un lien (point d’analyse), qui n’est jamais suivi ni supprimé.</value></data>
   <data name="AttachmentFolderNotDeleted" xml:space="preserve"><value>Impossible de supprimer l’ancien dossier de pièces jointes {0}; supprimez-le manuellement.</value></data>
+  <data name="ResponseFormatOperation" xml:space="preserve"><value>{0} Opération : {1}.</value></data>
+  <data name="ResponseFormatPath" xml:space="preserve"><value>{0} Opération : {1}. Chemin JSON : {2}.</value></data>
+  <data name="ConnectionProjectHint" xml:space="preserve"><value>L’URL de la collection se termine par le nom du projet. Connectez-vous avec : Connect-Ado -CollectionUrl {0} -Project {1}</value></data>
+  <data name="AutoConnectProfile" xml:space="preserve"><value>Connexion établie avec le profil par défaut {0}.</value></data>
+  <data name="NoLatestBuild" xml:space="preserve"><value>Aucun build terminé ne correspond à la définition de build {0}.</value></data>
 </root>

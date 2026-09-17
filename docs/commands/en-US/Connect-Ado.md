@@ -41,7 +41,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Creates a session connection using an explicit collection URL, a named profile, or the default profile, in that order. Uses your Windows identity. This command does not contact the server; use Test-AdoConnection to check access. Project overrides the profile default. Azure DevOps Services URLs are rejected.
+Creates a session connection using an explicit collection URL, a named profile, or the default profile, in that order. Uses your Windows identity. This command does not contact the server; use Test-AdoConnection to check access. Project overrides the profile default. Azure DevOps Services URLs are rejected. When no connection exists, other AdoToolkit commands connect with the default profile in the same way, without contacting the server.
 
 ## EXAMPLES
 

@@ -53,6 +53,21 @@ $set.Failures | Where-Object Classification -eq Flaky | Select-Object ShortName,
 $set | Export-AdoBuildTestFailure -Open
 ```
 
+To report the latest completed build of a definition in one step, name the
+definition instead of piping a build. `-Branch` and `-Result` narrow the choice as
+they do for `Get-AdoBuild -Latest`:
+
+```powershell
+Get-AdoBuildTestFailure -Definition 'Web CI' -Branch main -Result Failed |
+    Export-AdoBuildTestFailure -Path .\reports\nightly -Open
+```
+
+`Get-AdoTestRun` shows each run's `TotalTests`. Azure DevOps Server 2020 also returns
+the run totals `PassedTests`, `NotApplicableTests`, `UnanalyzedTests` and
+`IncompleteTests`. These are the server's own categories, not result outcomes:
+`UnanalyzedTests` counts results that did not pass and have not been analyzed yet.
+`OutcomeCounts` is filled only when the server sends per-outcome statistics.
+
 `Get-AdoBuildTestFailure` reports every test that failed in at least one attempt:
 
 | Classification | Meaning |
@@ -93,7 +108,7 @@ their name, size and a link to the result in Azure DevOps. See
 | Option | Effect |
 | --- | --- |
 | `-SkipAttachments` | Downloads nothing; attachments are only listed |
-| `-Path` | Existing directory, or an `.html` file path when one build is exported |
+| `-Path` | Directory, or an `.html` file path when one build is exported. A missing directory is created when the report is written |
 | `-Culture` | Report language, for example `fr-CA` |
 | `-NoClobber` | Refuses to replace an existing report |
 | `-WhatIf` | Names the report and attachment folder without downloading or writing |
@@ -105,6 +120,18 @@ removed after the replacement.
 
 Reports, logs and attachments can contain server names, test output and other
 internal data. Handle them like any other work data.
+
+### When a response cannot be read
+
+If the server returns data in an unexpected shape, the error names the request and
+the location in the response, for example:
+
+```text
+The server response has an invalid format. Operation: TestResultsList. JSON path: $.value[0].testRun.id.
+```
+
+The location contains only field names and positions, never response values, so
+you can share it when reporting the problem.
 
 Full help: [Get-AdoBuild](../commands/en-US/Get-AdoBuild.md),
 [Get-AdoBuildFailure](../commands/en-US/Get-AdoBuildFailure.md),

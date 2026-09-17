@@ -31,13 +31,20 @@ Get-AdoBuildTestFailure -InputObject <AdoBuild> [-HistoryCount <int>] [-HistoryS
     [-Connection <AdoConnection>]
 ```
 
+### ByDefinition
+
+```
+Get-AdoBuildTestFailure -Definition <Object> [-Branch <string>] [-Result <BuildResult>] [-HistoryCount <int>]
+    [-HistoryScope <AdoTestHistoryScope>] [-Project <string>] [-Connection <AdoConnection>]
+```
+
 ## ALIASES
 
 Aucun alias.
 
 ## DESCRIPTION
 
-Émet un objet AdoBuildTestFailureSet par build reçu. La récupération se fait en deux passes. La première liste tous les résultats de tests de toutes les séries du build, regroupe les résultats en identités de tests d’après le stockage et le nom du test automatisé, puis classe chaque identité. La seconde lit les détails complets uniquement pour les identités ayant une tentative en échec, dans l’ordre du rapport, afin d’obtenir chaque tentative, message, trace de pile et liste de pièces jointes. Un test est signalé dès qu’une tentative a échoué : une identité dont la dernière tentative a réussi est instable (Flaky), sinon en échec (Failed), et toutes les tentatives sont conservées, y compris celles qui ont réussi. Les groupes de réexécution dans la tâche, les nouvelles tentatives de travail ou d’étape et les résultats simples sont tous des sources de tentatives ; les groupes pilotés par les données et les autres groupes qui ne sont pas des réexécutions sont imbriqués dans leur tentative. Les références aux cas de test sont résolues en un seul lot. L’historique des exécutions ajoute le build courant et des builds antérieurs de la même définition, avec des décomptes et une cellule par identité signalée ; un problème d’historique ne fait jamais échouer le rapport. Les tests qui ont seulement réussi ou qui n’ont pas été exécutés sont comptés dans le sommaire et l’historique, sans détail. Les métadonnées des pièces jointes sont lues ici ; leur contenu n’est téléchargé que par Export-AdoBuildTestFailure. Le statut est Partial lorsqu’un diagnostic d’erreur existe, par exemple lorsque le nombre d’identités en échec dépasse le maximum configuré.
+Émet un objet AdoBuildTestFailureSet par build reçu. La récupération se fait en deux passes. La première liste tous les résultats de tests de toutes les séries du build, regroupe les résultats en identités de tests d’après le stockage et le nom du test automatisé, puis classe chaque identité. La seconde lit les détails complets uniquement pour les identités ayant une tentative en échec, dans l’ordre du rapport, afin d’obtenir chaque tentative, message, trace de pile et liste de pièces jointes. Un test est signalé dès qu’une tentative a échoué : une identité dont la dernière tentative a réussi est instable (Flaky), sinon en échec (Failed), et toutes les tentatives sont conservées, y compris celles qui ont réussi. Les groupes de réexécution dans la tâche, les nouvelles tentatives de travail ou d’étape et les résultats simples sont tous des sources de tentatives ; les groupes pilotés par les données et les autres groupes qui ne sont pas des réexécutions sont imbriqués dans leur tentative. Les références aux cas de test sont résolues en un seul lot. L’historique des exécutions ajoute le build courant et des builds antérieurs de la même définition, avec des décomptes et une cellule par identité signalée ; un problème d’historique ne fait jamais échouer le rapport. Les tests qui ont seulement réussi ou qui n’ont pas été exécutés sont comptés dans le sommaire et l’historique, sans détail. Les métadonnées des pièces jointes sont lues ici ; leur contenu n’est téléchargé que par Export-AdoBuildTestFailure. Le statut est Partial lorsqu’un diagnostic d’erreur existe, par exemple lorsque le nombre d’identités en échec dépasse le maximum configuré. Avec -Definition, le dernier build terminé de la définition est choisi, comme avec Get-AdoBuild -Latest, éventuellement filtré par branche et par résultat.
 
 ## EXAMPLES
 
@@ -56,6 +63,15 @@ Rassemble les tests en échec et instables du dernier build échoué, avec quinz
 ```
 
 Sélectionne les tests instables d’un build pour les scripts.
+
+### Exemple 3
+
+```powershell
+Get-AdoBuildTestFailure -Definition 'Main Build' -Branch main -Result Failed |
+    Export-AdoBuildTestFailure -Path .\reports\nightly -Open
+```
+
+Rassemble les tests en échec du dernier build échoué de la branche main et écrit le rapport dans un nouveau dossier, puis l’ouvre.
 
 ## PARAMETERS
 
@@ -94,6 +110,69 @@ ParameterSets:
   Position: Named
   IsRequired: true
   ValueFromPipeline: true
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -Definition
+
+Identifiant entier positif ou nom exact de définition de build. Le dernier build terminé de cette définition est utilisé. Une chaîne numérique est un nom ; utilisez un entier pour un identifiant.
+
+```yaml
+Type: System.Object
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: ByDefinition
+  Position: Named
+  IsRequired: true
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -Branch
+
+Nom de branche ou chemin complet refs/ qui limite le choix du dernier build. Par exemple, main devient refs/heads/main.
+
+```yaml
+Type: System.String
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: ByDefinition
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -Result
+
+Filtre facultatif sur le résultat du dernier build : None, Succeeded, PartiallySucceeded, Failed ou Canceled.
+
+```yaml
+Type: System.Nullable`1[AdoToolkit.Core.Builds.BuildResult]
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: ByDefinition
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
   ValueFromPipelineByPropertyName: false
   ValueFromRemainingArguments: false
 DontShow: false
@@ -156,6 +235,12 @@ SupportsWildcards: false
 Aliases: []
 ParameterSets:
 - Name: ByBuildId
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+- Name: ByDefinition
   Position: Named
   IsRequired: false
   ValueFromPipeline: false

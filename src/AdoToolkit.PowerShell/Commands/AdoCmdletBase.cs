@@ -41,9 +41,29 @@ public abstract class AdoCmdletBase : PSCmdlet
         finally { Volatile.Write(ref active, null); }
     }
 
-    protected AdoConnection ResolveConnection(AdoConnection? supplied) =>
-        supplied ?? SessionStateRegistry.Current.Connection
-        ?? throw new AdoConfigurationException(Messages.Get(AdoMessage.NoConnection, MessageCulture));
+    // Without a supplied or current connection, the configured default profile connects the
+    // runspace as Connect-Ado would. No request is sent; a missing default keeps the error.
+    protected AdoConnection ResolveConnection(AdoConnection? supplied)
+    {
+        AdoConnection? connection = supplied ?? SessionStateRegistry.Current.Connection;
+        if (connection is not null) return connection;
+        AdoConfiguration configuration = new ConfigurationStore().Load(MessageCulture);
+        if (configuration.DefaultProfile is not { } name || !configuration.Profiles.TryGetValue(name, out AdoProfile? profile))
+            throw new AdoConfigurationException(Messages.Get(AdoMessage.NoConnection, MessageCulture));
+        connection = ProfileConnections.Create(profile, null);
+        SessionStateRegistry.Current.Connect(connection);
+        WriteVerbose(Messages.Get(AdoMessage.AutoConnectProfile, MessageCulture, profile.Name));
+        return connection;
+    }
+
+    // -Definition accepts a positive ID or a definition name.
+    private protected (int? Id, string? Name) ResolveDefinition(object? definition)
+    {
+        object? value = definition is PSObject wrapped ? wrapped.BaseObject : definition;
+        if (value is int number && number > 0) return (number, null);
+        if (value is string text && !string.IsNullOrWhiteSpace(text)) return (null, text);
+        throw new AdoRequestException(Messages.Get(AdoMessage.InvalidBuildDefinition, MessageCulture));
+    }
 
     protected string ResolveProject(string? supplied, AdoConnection connection)
     {
@@ -65,7 +85,7 @@ public abstract class AdoCmdletBase : PSCmdlet
     protected void Report(AdoException error)
     {
         ArgumentNullException.ThrowIfNull(error);
-        ErrorRecord record = ErrorRecordFactory.Create(error);
+        ErrorRecord record = ErrorRecordFactory.Create(error, MessageCulture);
         if (ErrorRecordFactory.IsTerminating(error)) ThrowTerminatingError(record);
         else WriteError(record);
     }

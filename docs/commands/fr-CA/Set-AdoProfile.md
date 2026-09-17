@@ -30,7 +30,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Écrit le profil de façon atomique et conserve les valeurs non précisées, les autres options et les champs inconnus. CollectionUrl est obligatoire pour un nouveau profil. DefaultProfile choisit ce profil par défaut. WhatIf n’effectue aucune écriture. Une version de schéma plus récente est en lecture seule. Le profil ne contient ni mot de passe ni jeton.
+Écrit le profil de façon atomique et conserve les valeurs non précisées, les autres options et les champs inconnus. CollectionUrl est obligatoire pour un nouveau profil. DefaultProfile choisit ce profil par défaut, que Connect-Ado utilise sans argument et que les autres commandes utilisent en l’absence de connexion. WhatIf n’effectue aucune écriture. Une version de schéma plus récente est en lecture seule. Le profil ne contient ni mot de passe ni jeton.
 
 ## EXAMPLES
 

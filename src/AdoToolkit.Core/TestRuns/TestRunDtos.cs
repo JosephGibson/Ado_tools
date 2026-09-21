@@ -38,7 +38,15 @@ internal sealed class PipelineReferenceDto
     public PipelineAttemptReferenceDto? JobReference { get; init; }
 }
 
-internal sealed class PipelineAttemptReferenceDto { public int? Attempt { get; init; } }
+// REST 6.0 names each level beside its attempt: stageName, phaseName (a YAML job) and jobName
+// (a matrix or parallel leg, or __default). Server 2020 presence is unverified [Verify V-19].
+internal sealed class PipelineAttemptReferenceDto
+{
+    public int? Attempt { get; init; }
+    public string? StageName { get; init; }
+    public string? PhaseName { get; init; }
+    public string? JobName { get; init; }
+}
 
 internal sealed class RunStatisticDto
 {

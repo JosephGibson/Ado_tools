@@ -147,7 +147,8 @@ prebuilt release avoids the need to build.
 | Script | Purpose |
 | --- | --- |
 | `tools/package/Publish-AdoToolkitPackage.ps1` | Checks prerequisites, restores in locked mode, builds the Release configuration and stages `artifacts/AdoToolkit/<version>/` with compiled English and French help. `-NoBuild` packages the existing build without restoring, as the product gate and the release workflow do; `-NoRestore` skips only the restore |
-| `tools/package/New-AdoToolkitRelease.ps1` | Writes `artifacts/release/AdoToolkit-<version>.zip`, its `.sha256` checksum file (the `sha256sum` format) and a copy of `Install-AdoToolkit.ps1` |
+| `tools/package/New-AdoToolkitRelease.ps1` | Writes the module ZIP, checksum and installer to `artifacts/release/`. With `-PowerShellArchivePath`, `-PowerShellChecksumPath` and `-PowerShellVersion`, also writes `AdoToolkit-<version>-win-x64.zip` and its checksum |
+| `tools/package/Test-AdoToolkitPortable.ps1` | Extracts the finished portable ZIP and runs its actual CMD launcher offline, with empty `PATH` and `PSModulePath`; verifies the module, PowerShell version, architecture and loaded paths |
 | `tools/package/Install-AdoToolkit.ps1` | Standalone end-user installer. Checks the zip against its checksum, requires exactly the module layout in one `AdoToolkit/<version>/` folder, and installs it for the current user. The previous copy of that version is replaced only after the new copy is complete. `-ExpectedThumbprint` also requires valid signatures |
 | `tools/package/Set-AdoToolkitPackageSignature.ps1`, `Install-AdoToolkitPackage.ps1` | Optional signed flow for a staged package when a code-signing certificate is available |
 
@@ -162,24 +163,54 @@ Package validation reads each DLL's assembly identity and version without loadin
 its code. All four DLLs must match the manifest version; `-NoBuild` rejects stale
 binaries and requires a rebuild before packaging.
 
-Release generation stages and validates the archive, checksum and installer before
-replacing any asset. A failed replacement restores the previous set; backups are
-retained if recovery itself fails. This is rollback on failure, not a filesystem
-transaction across three files: a process crash can leave `.previous-*` files for
+Release generation stages and validates all requested archives, checksums and the
+installer before replacing any asset. A failed replacement restores the previous
+set; backups are retained if recovery itself fails. This is rollback on failure,
+not a filesystem transaction: a process crash can leave `.previous-*` files for
 manual recovery. Relative package/output paths follow the PowerShell location,
 including after `Set-Location`, and must stay inside the permitted repository root.
+
+Portable packaging takes an explicitly downloaded, unmodified official Windows x64
+PowerShell ZIP and its published `hashes.sha256`. It never downloads dependencies
+itself. The version must be an exact supported 7.6 patch version, matching the
+filename and release workflow pin. The checksum is checked again before packaging.
+All runtime files, including `LICENSE.txt` and `ThirdPartyNotices.txt`, are retained.
+Unsafe paths, links, duplicate entries and incomplete runtime layouts are rejected.
+The bundle records the module/runtime versions and source archive hash in `bundle.json`.
+
+For a local portable build, first stage the module, then use downloaded inputs:
+
+```powershell
+pwsh -NoProfile -File ./tools/package/New-AdoToolkitRelease.ps1 `
+    -PowerShellArchivePath ./artifacts/runtime-download/PowerShell-7.6.6-win-x64.zip `
+    -PowerShellChecksumPath ./artifacts/runtime-download/hashes.sha256 `
+    -PowerShellVersion 7.6.6
+pwsh -NoProfile -File ./tools/package/Test-AdoToolkitPortable.ps1 `
+    -ArchivePath ./artifacts/release/AdoToolkit-0.3.0-win-x64.zip `
+    -ModuleVersion 0.3.0 -PowerShellVersion 7.6.6
+```
+
+The launcher loads only the adjacent AdoToolkit module and opens the bundled host
+without user profiles. It sets `RemoteSigned` for that process, respects Group
+Policy, and does not persist execution-policy or `PATH` changes. Users unblock the
+downloaded ZIP in Explorer before extraction. New releases carry runtime updates;
+the private runtime does not update itself. Keep the workflow's `POWERSHELL_VERSION`
+pin current and rerun the gate and portable smoke check when updating it.
 
 To publish a release:
 
 1. Set `VersionPrefix` in `Directory.Build.props` and run `verify`.
-2. Push a tag named `v<VersionPrefix>`, for example `v0.2.0`.
+2. Push a tag named `v<VersionPrefix>`, for example `v0.3.0`.
 
 `.github/workflows/release.yml` then runs on a Windows runner. It installs the pinned
 PowerShell 7.6 after checking its published hash, installs Pester, PSScriptAnalyzer
 and PlatyPS, and checks the tag against the module version. It then restores in
 locked mode, runs `verify`, packages the verified build, and creates the GitHub
-release with the three assets and install notes. Releases are unsigned by decision;
-the checksum and the installer's layout check protect the download.
+release with five assets and portable-first install notes. Before publication it
+checks the finished portable ZIP with `Test-AdoToolkitPortable.ps1`; the check uses
+a fresh folder containing spaces and shell metacharacters. AdoToolkit scripts and
+modules are unsigned by decision. Checksums detect download corruption; they are
+not a substitute for code signatures or a trusted release source.
 
 ## Live checks
 

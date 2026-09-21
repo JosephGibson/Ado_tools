@@ -61,7 +61,7 @@ public sealed class TestFailureExporterTests
             Assert.DoesNotContain("data-download-status", html, StringComparison.Ordinal);
             foreach (string name in new[] { "screenshot.PNG", "payload.json", "report.htm", "trace.dat", "noextension" })
                 Assert.Contains(">" + name + " <span role=\"img\"", html, StringComparison.Ordinal);
-            Assert.Contains("<span>2,048 bytes</span>", html, StringComparison.Ordinal);
+            Assert.Contains("<span class=\"attachment-size\">2,048 bytes</span>", html, StringComparison.Ordinal);
         }
     }
 
@@ -87,19 +87,18 @@ public sealed class TestFailureExporterTests
             TestFailureExportResult result = await exporter.ExportAsync(plan, downloader, log, TestContext.Current.CancellationToken);
 
             Assert.Equal(Path.Combine(destination, folderName), result.AttachmentDirectory!.FullName);
-            Assert.Equal(["r201-1-a5001.png", "r201-1-a5002.json", "r201-1-a5003.html", "r201-1-a5004.bin", "r201-1-a5005.bin"],
+            // Only the JSON attachment is requested; PNG, HTML and other kinds stay links to the result.
+            Assert.Equal(["r201-1-a5002.json"],
                 Directory.GetFiles(result.AttachmentDirectory.FullName).Select(p => Path.GetFileName(p)).Order(StringComparer.Ordinal));
             Assert.Equal([result.Report.FullName], launcher.Opened);
             Assert.Empty(result.Diagnostics);
-            Assert.Equal(5, handler.Requests.Count(r => r.Uri.AbsolutePath.Contains("/attachments/", StringComparison.Ordinal)));
+            Assert.Equal(1, handler.Requests.Count(r => r.Uri.AbsolutePath.Contains("/attachments/", StringComparison.Ordinal)));
             string html = File.ReadAllText(result.Report.FullName);
             string prefix = Uri.EscapeDataString(folderName) + "/";
-            Assert.Contains("<a class=\"thumbnail\" data-local-file href=\"" + prefix + "r201-1-a5001.png\"><img data-local-file src=\""
-                + prefix + "r201-1-a5001.png\" loading=\"lazy\" alt=\"Attachment image: screenshot.PNG\"></a>", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("<img", html, StringComparison.Ordinal);
             Assert.Contains("<code class=\"lang-json\">", html, StringComparison.Ordinal);
-            Assert.Contains("href=\"" + prefix + "r201-1-a5003.html\">Test output HTML (local file)</a>", html, StringComparison.Ordinal);
-            Assert.Contains("href=\"" + prefix + "r201-1-a5004.bin\">Local copy</a> <code>r201-1-a5004.bin</code>", html, StringComparison.Ordinal);
-            Assert.Equal(5, html.Split("data-download-status=\"downloaded\"").Length - 1);
+            Assert.Contains("href=\"" + prefix + "r201-1-a5002.json\">Local copy</a> <code>r201-1-a5002.json</code>", html, StringComparison.Ordinal);
+            Assert.Equal(1, html.Split("data-download-status=\"downloaded\"").Length - 1);
             // The committed report validates against the renamed folder too.
             TestFailureReportModel model = TestFailureReportModelBuilder.WithAttachments(Model(set),
                 [.. set.Failures.OrderBy(f => f.ShortName == "Totals" ? 0 : 1).Select((f, i) => Renumber(f, i + 1, folderName))], [],
@@ -184,11 +183,8 @@ public sealed class TestFailureExporterTests
         Ordinal = ordinal, Classification = failure.Classification, TestName = failure.TestName, ShortName = failure.ShortName,
         Storage = failure.Storage, Title = failure.Title, TestCase = failure.TestCase, History = failure.History, Owner = failure.Owner,
         Priority = failure.Priority, CollectionUri = failure.CollectionUri,
-        Attempts = [.. failure.Attempts.Select(a => a.WithAttachments([.. a.Attachments.Select(x => x.WithDownload(AdoTestAttachmentStatus.Downloaded,
-            folderName + "/r201-1-a" + x.Id.ToString(CultureInfo.InvariantCulture) + (x.Kind switch
-            {
-                AdoTestAttachmentKind.Png => ".png", AdoTestAttachmentKind.Json => ".json", AdoTestAttachmentKind.Html => ".html", _ => ".bin",
-            })))]))],
+        Attempts = [.. failure.Attempts.Select(a => a.WithAttachments([.. a.Attachments.Select(x => x.Kind != AdoTestAttachmentKind.Json ? x
+            : x.WithDownload(AdoTestAttachmentStatus.Downloaded, folderName + "/r201-1-a" + x.Id.ToString(CultureInfo.InvariantCulture) + ".json"))]))],
     };
 
     // Test results 2 with attachment content for fixture 201-1 (served before the list route matches).

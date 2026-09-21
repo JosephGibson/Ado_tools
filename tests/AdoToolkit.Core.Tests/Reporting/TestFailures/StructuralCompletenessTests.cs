@@ -12,6 +12,7 @@ public sealed class StructuralCompletenessTests
     [InlineData("flaky", "fr-CA")]
     [InlineData("partial", "fr-CA")]
     [InlineData("hostile", "en-US")]
+    [InlineData("grouped", "fr-CA")]
     public void EveryFailureAttemptAndPresentDetailSurvivesWithScriptsIgnored(string variant, string culture)
     {
         var model = TestFailureReportFixture.Model(variant, culture);
@@ -35,14 +36,20 @@ public sealed class StructuralCompletenessTests
                 int start = card.IndexOf(opening, StringComparison.Ordinal);
                 Assert.True(start >= 0);
                 string tag = card[start..(card.IndexOf('>', start) + 1)];
-                Assert.Equal(attempt.OutcomeClass == AdoTestOutcomeClass.Failure, tag.Contains(" open", StringComparison.Ordinal));
+                // Every attempt starts collapsed, failed or not.
+                Assert.DoesNotContain(" open", tag, StringComparison.Ordinal);
                 int end = card.IndexOf("<details class=\"attempt\"", start + opening.Length, StringComparison.Ordinal);
                 string body = card[start..(end < 0 ? card.Length : end)];
                 string detail = TestFailureMarkup.Text(body);
-                foreach (string? value in new[] { attempt.Outcome, attempt.ErrorMessage, attempt.StackTrace, attempt.ComputerName, attempt.RunBy?.DisplayName,
+                // A plain Passed or Failed is the status badge itself; any other outcome shows beside it.
+                string? outcome = attempt.Outcome is "Passed" or "Failed" ? null : attempt.Outcome;
+                foreach (string? value in new[] { outcome, attempt.ComputerName, attempt.RunBy?.DisplayName,
                     attempt.RunBy?.UniqueName, attempt.FailureType, attempt.ResolutionState, attempt.Comment })
                     if (value is not null) Assert.Contains(value, detail, StringComparison.Ordinal);
-                if (attempt.Duration.HasValue) Assert.Contains(attempt.Duration.Value.TotalSeconds.ToString("N3", model.Culture), detail, StringComparison.Ordinal);
+                // A message or trace repeated from an earlier attempt is referenced instead of repeated.
+                foreach (string? value in new[] { attempt.ErrorMessage, attempt.StackTrace })
+                    if (value is not null) Assert.True(detail.Contains(value, StringComparison.Ordinal) || body.Contains("class=\"same-as\"", StringComparison.Ordinal));
+                if (attempt.Duration.HasValue) Assert.Contains(attempt.Duration.Value.TotalSeconds.ToString("#,0.###", model.Culture), detail, StringComparison.Ordinal);
                 if (attempt.StartedDate.HasValue) Assert.Contains(attempt.StartedDate.Value.ToString("g", model.Culture), detail, StringComparison.Ordinal);
                 if (attempt.CompletedDate.HasValue) Assert.Contains(attempt.CompletedDate.Value.ToString("g", model.Culture), detail, StringComparison.Ordinal);
                 foreach (AdoTestSubResult sub in attempt.SubResults) AssertSubResult(sub, detail);

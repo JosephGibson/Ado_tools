@@ -10,7 +10,9 @@
       "completedDate": "2026-09-14T11:00:00Z",
       "pipelineReference": {
         "pipelineId": 401,
-        "jobReference": { "attempt": 2 }
+        "stageReference": { "attempt": 1, "stageName": "Tests" },
+        "phaseReference": { "attempt": 1, "phaseName": "Web" },
+        "jobReference": { "attempt": 2, "jobName": "__default" }
       },
       "totalTests": 2,
       "runStatistics": [
@@ -34,7 +36,9 @@
       "completedDate": "2026-09-14T10:00:00Z",
       "pipelineReference": {
         "pipelineId": 401,
-        "jobReference": { "attempt": 1 }
+        "stageReference": { "attempt": 1, "stageName": "Tests" },
+        "phaseReference": { "attempt": 1, "phaseName": "Web" },
+        "jobReference": { "attempt": 1, "jobName": "__default" }
       },
       "totalTests": 2,
       "runStatistics": [

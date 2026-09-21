@@ -61,7 +61,7 @@ public static class ReportFileNames
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(resultId);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(attachmentId);
         if (subResultId <= 0) throw new ArgumentOutOfRangeException(nameof(subResultId));
-        if (extension is not (".png" or ".json" or ".html" or ".bin")) throw new ArgumentOutOfRangeException(nameof(extension));
+        if (extension is not (".json" or ".txt" or ".bin")) throw new ArgumentOutOfRangeException(nameof(extension));
         return "r" + runId.ToString(CultureInfo.InvariantCulture) + "-" + resultId.ToString(CultureInfo.InvariantCulture)
             + (subResultId.HasValue ? "-s" + subResultId.Value.ToString(CultureInfo.InvariantCulture) : "")
             + "-a" + attachmentId.ToString(CultureInfo.InvariantCulture) + extension;

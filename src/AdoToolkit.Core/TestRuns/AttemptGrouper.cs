@@ -62,11 +62,26 @@ internal static class AttemptGrouper
         .ThenBy(static group => group.FirstResultId)
         .ToArray();
 
+    // The last name segment with its arguments: a dot inside the argument list does not split, so
+    // Tests.Login("a.b") is Login("a.b").
     internal static string ShortName(string? automatedName, string? title)
     {
         string source = automatedName ?? title ?? "";
-        int separator = source.LastIndexOfAny(['.', '+']);
+        int separator = LastSeparator(source, Arguments(source));
         // Keep the whole text when the last segment would be empty.
         return separator >= 0 && separator < source.Length - 1 ? source[(separator + 1)..] : source;
     }
+
+    // The segment before the short name (the class of a method), or null when there is none.
+    internal static string? ClassName(string? automatedName)
+    {
+        if (automatedName is null) return null;
+        int end = LastSeparator(automatedName, Arguments(automatedName));
+        int start = LastSeparator(automatedName, end) + 1;
+        return end > start ? automatedName[start..end] : null;
+    }
+
+    private static int Arguments(string name) => name.IndexOf('(', StringComparison.Ordinal) is int open and >= 0 ? open : name.Length;
+
+    private static int LastSeparator(string name, int end) => end <= 0 ? -1 : name.LastIndexOfAny(['.', '+'], end - 1);
 }

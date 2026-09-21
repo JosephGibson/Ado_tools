@@ -22,7 +22,18 @@ internal static class OutcomeClassifier
     internal static bool IsNonAttemptGroup(string? resultGroupType) =>
         resultGroupType is not null && NonAttemptGroups.Contains(resultGroupType);
 
-    // §15.10 classification table applied to the deciding (last) attempt.
+    // The deciding outcome takes each pipeline group's last attempt, then the worst of them: a
+    // failure in any group decides Failure, then Other; Pass only when every group ends passing.
+    // With one group this is the last attempt, as §15.10 describes.
+    internal static AdoTestOutcomeClass Deciding(IEnumerable<(string Group, AdoTestOutcomeClass Outcome)> ordered)
+    {
+        Dictionary<string, AdoTestOutcomeClass> last = new(StringComparer.Ordinal);
+        foreach ((string group, AdoTestOutcomeClass outcome) in ordered) last[group] = outcome;
+        if (last.ContainsValue(AdoTestOutcomeClass.Failure)) return AdoTestOutcomeClass.Failure;
+        return last.Count == 0 || last.ContainsValue(AdoTestOutcomeClass.Other) ? AdoTestOutcomeClass.Other : AdoTestOutcomeClass.Pass;
+    }
+
+    // §15.10 classification table applied to the deciding attempt.
     internal static AdoTestFailureClassification Classify(AdoTestOutcomeClass last) =>
         last == AdoTestOutcomeClass.Pass ? AdoTestFailureClassification.Flaky : AdoTestFailureClassification.Failed;
 

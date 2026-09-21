@@ -15,11 +15,20 @@ BeforeAll {
         , [IO.File]::ReadAllBytes((Join-Path $PSScriptRoot "../Fixtures/Attachments/$Name"))
     }
     $script:EmptyPage = '{"count":0,"value":[]}'
+    # The attachment window is measured from now, so the two runs start $AgeHours ago, ten minutes apart.
+    function Get-RecentRunsFixture {
+        param([int] $AgeHours = 2)
+        $start = [DateTimeOffset]::UtcNow.AddHours(-$AgeHours)
+        $format = 'yyyy-MM-ddTHH:mm:ssZ'
+        (Get-TestRunFixture 'runs-two.json').
+            Replace('2026-09-14T10:00:00Z', $start.ToString($format, [cultureinfo]::InvariantCulture)).
+            Replace('2026-09-14T10:10:00Z', $start.AddMinutes(10).ToString($format, [cultureinfo]::InvariantCulture))
+    }
     # One two-run retrieval without history; result 201-1 lists attachments 5001–5005.
     function Get-TwoRunResponses {
-        param([switch] $LatestAttachments)
+        param([switch] $LatestAttachments, [int] $AgeHours = 2)
         @(
-            @{ Body = Get-TestRunFixture 'runs-two.json' },
+            @{ Body = Get-RecentRunsFixture -AgeHours $AgeHours },
             @{ Body = $script:EmptyPage },
             @{ Body = Get-TestRunFixture 'results-run-201.json' },
             @{ Body = $script:EmptyPage },
@@ -32,14 +41,10 @@ BeforeAll {
             @{ Body = Get-TestRunFixture 'workitems-testcases.json' }
         )
     }
-    # Attachment content in report order: 5001 PNG, 5002 JSON, 5003 HTML, 5004 and 5005 other bytes.
+    # Of 5001 PNG, 5002 JSON, 5003 HTML, 5004 and 5005 other bytes, only the JSON is ever requested.
     function Get-ContentResponses {
         @(
-            @{ Bytes = Get-AttachmentBytes 'pattern.png'; ContentType = 'application/octet-stream' },
-            @{ Bytes = Get-AttachmentBytes 'valid.json'; ContentType = 'application/octet-stream' },
-            @{ Bytes = Get-AttachmentBytes 'test-output.html'; ContentType = 'application/octet-stream' },
-            @{ Bytes = Get-AttachmentBytes 'other-bytes.txt'; ContentType = 'application/octet-stream' },
-            @{ Bytes = Get-AttachmentBytes 'other-bytes.txt'; ContentType = 'application/octet-stream' }
+            @{ Bytes = Get-AttachmentBytes 'valid.json'; ContentType = 'application/octet-stream' }
         )
     }
     function Get-OutputEntry {
@@ -102,18 +107,15 @@ Describe 'Failed-test report export' {
             $folder | Should -Match '\\Build-401-TestFailures\.files-\d{8}T\d{9}Z$'
             $folderName = Split-Path -Leaf $folder
             $entries = Get-OutputEntry -Path $outputDirectory
-            $entries | Should -Be (@('Build-401-TestFailures.html', $folderName,
-                "$folderName/r201-1-a5001.png", "$folderName/r201-1-a5002.json", "$folderName/r201-1-a5003.html",
-                "$folderName/r201-1-a5004.bin", "$folderName/r201-1-a5005.bin") | Sort-Object)
-            [IO.File]::ReadAllBytes((Join-Path $folder 'r201-1-a5001.png')) | Should -Be (Get-AttachmentBytes 'pattern.png')
+            $entries | Should -Be (@('Build-401-TestFailures.html', $folderName, "$folderName/r201-1-a5002.json") | Sort-Object)
+            [IO.File]::ReadAllBytes((Join-Path $folder 'r201-1-a5002.json')) | Should -Be (Get-AttachmentBytes 'valid.json')
             $requests = $server.Requests.ToArray()
-            $requests.Count | Should -Be 17
-            $requests[12].Line | Should -Be 'GET /Collection/%C3%89quipe%20Web/_apis/test/Runs/201/Results/1/attachments/5001?api-version=6.0-preview.1 HTTP/1.1'
+            $requests.Count | Should -Be 13
+            $requests[12].Line | Should -Be 'GET /Collection/%C3%89quipe%20Web/_apis/test/Runs/201/Results/1/attachments/5002?api-version=6.0-preview.1 HTTP/1.1'
             $requests[12].Headers['Accept'] | Should -Be 'application/octet-stream'
-            $requests[16].Line | Should -Match '/attachments/5005\?'
             $html = [IO.File]::ReadAllText($file.FullName)
             $html | Should -Match '<html lang="fr-CA"'
-            $html | Should -Match ([regex]::Escape('<img data-local-file src="' + $folderName + '/r201-1-a5001.png" loading="lazy"'))
+            $html | Should -Not -Match '<img'
             $html | Should -Match 'Copie locale'
             $html | Should -Match 'lang-json'
 
@@ -146,8 +148,8 @@ Describe 'Failed-test report export' {
     }
 
     It 'downloads the latest run by default and every run with AllRunAttachments=<AllRuns>' -ForEach @(
-        @{ AllRuns = $false; Downloads = 5 },
-        @{ AllRuns = $true; Downloads = 10 }
+        @{ AllRuns = $false; Downloads = 1 },
+        @{ AllRuns = $true; Downloads = 2 }
     ) {
         $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) +
             (Get-TwoRunResponses -LatestAttachments) + (Get-ContentResponses) + (Get-ContentResponses))
@@ -157,15 +159,17 @@ Describe 'Failed-test report export' {
             $file = $set | Export-AdoBuildTestFailure -Path $outputDirectory -Culture en-US -AllRunAttachments:$AllRuns
             $server.Requests.Count | Should -Be (12 + $Downloads)
             $contentRequests = @($server.Requests.ToArray() | Select-Object -Skip 12)
-            @($contentRequests | Where-Object Line -Match '/Runs/202/').Count | Should -Be 5
-            @($contentRequests | Where-Object Line -Match '/Runs/201/').Count | Should -Be ($Downloads - 5)
+            @($contentRequests | Where-Object Line -Match '/Runs/202/').Count | Should -Be 1
+            @($contentRequests | Where-Object Line -Match '/Runs/201/').Count | Should -Be ($Downloads - 1)
+            # PNG, HTML and other kinds are never requested, whatever the switches.
+            @($contentRequests | Where-Object Line -NotMatch '/attachments/5002\?').Count | Should -Be 0
             @(Get-ChildItem -LiteralPath $file.AttachmentDirectory -File).Count | Should -Be $Downloads
             $html = [IO.File]::ReadAllText($file.FullName)
             $html | Should -Match 'runId=201&amp;resultId=1">screenshot\.PNG'
             $html | Should -Match 'runId=202&amp;resultId=11">screenshot\.PNG'
-            $html | Should -Match '<span>2,048 bytes</span>'
-            $html | Should -Match 'r202-11-a5001.png'
-            $html.Contains('r201-1-a5001.png') | Should -Be $AllRuns
+            $html | Should -Match '<span class="attachment-size">2,048 bytes</span>'
+            $html | Should -Match 'r202-11-a5002.json'
+            $html.Contains('r201-1-a5002.json') | Should -Be $AllRuns
         }
         finally { Stop-FakeAdoServer -Server $server }
     }
@@ -181,6 +185,23 @@ Describe 'Failed-test report export' {
             $server.Requests.Count | Should -Be 12
             Get-OutputEntry -Path $outputDirectory | Should -Be @('Build-401-TestFailures.html')
             [IO.File]::ReadAllText($file.FullName) | Should -Match 'screenshot\.PNG <span role="img"'
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
+    It 'leaves out attachments of runs older than AttachmentWindowDays=<Days>' -ForEach @(
+        @{ Days = 7; Listed = $true },
+        @{ Days = 2; Listed = $false }
+    ) {
+        $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses -AgeHours 72))
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
+            $file = $set | Export-AdoBuildTestFailure -Path $outputDirectory -SkipAttachments -AttachmentWindowDays $Days -IncludeFlaky
+            $html = [IO.File]::ReadAllText($file.FullName)
+            $html.Contains('screenshot.PNG <span role="img"') | Should -Be $Listed
+            $html | Should -Match 'data-attempt-count="1"'
+            { $set | Export-AdoBuildTestFailure -Path $outputDirectory -AttachmentWindowDays 0 } | Should -Throw -ErrorId 'ParameterArgumentValidationError,AdoToolkit.ExportAdoBuildTestFailureCommand'
         }
         finally { Stop-FakeAdoServer -Server $server }
     }

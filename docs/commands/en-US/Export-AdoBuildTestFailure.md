@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-16-2026
+ms.date: 09-21-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -13,14 +13,14 @@ title: Export-AdoBuildTestFailure
 
 ## SYNOPSIS
 
-Writes one interactive HTML failed-test report per failure set and downloads attachments from its most recent test run.
+Writes one compact HTML failed-test report per failure set and downloads the JSON and text attachments of its most recent test run.
 
 ## SYNTAX
 
 ### Input (Default)
 
 ```
-Export-AdoBuildTestFailure [-InputObject] <AdoBuildTestFailureSet> [-Culture <string>] [-Path <string>] [-SkipAttachments] [-AllRunAttachments] [-NoClobber] [-Open] [-Connection <AdoConnection>] [-WhatIf] [-Confirm]
+Export-AdoBuildTestFailure [-InputObject] <AdoBuildTestFailureSet> [-Culture <string>] [-Path <string>] [-SkipAttachments] [-AllRunAttachments] [-AttachmentWindowDays <int>] [-IncludeFlaky] [-NoClobber] [-Open] [-Connection <AdoConnection>] [-WhatIf] [-Confirm]
 ```
 
 ## ALIASES
@@ -30,33 +30,52 @@ No aliases.
 ## DESCRIPTION
 
 Renders each `AdoBuildTestFailureSet` from `Get-AdoBuildTestFailure` as one dark HTML
-report in the report culture: the run history chart and table, an index, one card per
-failed or flaky test with every attempt, highlighted messages and stack traces, Test
-Case links, and diagnostics. The report is complete with scripts blocked; a small
-static script, allowed by a hash-based Content Security Policy, adds filtering,
-keyboard navigation and copy.
+report in the report culture. The report has four views, plus a fifth for diagnostics
+when there are any. Overview is a table with one row per failed test: its Test Case
+number linked to the work item, the status of each stage or job that ran it, and the
+first line of its latest error. By error groups the same rows under their latest error.
+Details has one card per test. Runs and history lists the build's test runs, the run
+history chart and the report details. Every group, attempt and attachment preview starts
+collapsed, and an error message or stack trace repeated from an earlier attempt of the
+same test is referenced instead of repeated.
 
-By default, attachments of reported results and sub-results are downloaded only from
-the build's most recent test run. The latest run is the last in attempt order: stage,
-phase and job attempt, then start date and run ID. Earlier runs' attachments remain
-listed with name, size and an Azure DevOps result link; every run and attempt stays
-in the report. If the latest run has no attachments, the export does not fall back
-to an older run and creates no attachment folder.
+When the build's test runs carry different stage or job names, for example one stage per
+language, each card groups its attempts by them and the overview shows one status column
+per group. The label uses the shortest name that tells the groups apart: the stage name,
+then the job name, then the job instance. Runs without distinct names keep one list.
 
-Use `-AllRunAttachments` to download attachments from every reported run, or
+Flaky tests are left out unless `-IncludeFlaky` is supplied; the header still counts
+them. The report is complete with scripts blocked. A small static script, allowed by a
+hash-based Content Security Policy, adds view switching, search, keyboard navigation and
+copy. Search matches every word you type against the whole card, including collapsed
+attempts: error messages, stack traces, inline JSON and text attachments, stage and job
+names, and run and attempt fields. A Test Case ID matches with or without `#`.
+
+Attachments appear only for test runs that started within `-AttachmentWindowDays` days
+of the export, 7 by default; a run without a start date counts as outside. Older runs keep
+every attempt, but their attachments are left out. Only JSON (`.json`) and text (`.txt`,
+`.log`) attachments are ever downloaded. PNG, HTML and other attachments stay links to
+their Azure DevOps result, whatever the switches. By default, only the most recent test run
+is downloaded, and only when it is inside the window. The latest run is the last in attempt
+order: stage, phase and job attempt, then start date and run ID. If it has no JSON or text
+attachments, the export does not fall back to an older run and creates no attachment folder.
+
+Use `-AllRunAttachments` to download JSON and text from every run inside the window, or
 `-SkipAttachments` to download none. `-SkipAttachments` takes precedence if both are
 supplied. Selected attachments are downloaded in report order into a folder named
-`<report base name>.files-<UTC stamp>` beside the report. Local files use toolkit
-names: `r<run>-<result>[-s<sub-result>]-a<attachment>.<ext>`. Remote names are display
-text and never become paths.
+`<report base name>.files-<UTC stamp>` beside the report. Local files use toolkit names:
+`r<run>-<result>[-s<sub-result>]-a<attachment>.<ext>`, where `.log` files are saved as
+`.txt`. Remote names are display text and never become paths.
 
-PNG files become thumbnails and JSON files up to the inline limit are highlighted,
-after their content is checked. A failed check saves the file as `.bin` and links it
-without a preview. HTML attachments are linked as test output and open outside the
-report's policy. Size limits (`maximumAttachmentBytes`, `maximumTotalAttachmentBytes`)
-and failed downloads produce warnings; affected attachments retain their Azure DevOps
-name, size and result link. Authentication, authorization and cancellation stop the
-export. An unreadable history build does not stop it.
+Downloaded content is checked before it is previewed: JSON must parse, and text must be
+UTF-8 or UTF-16 with a byte order mark. A failed check saves the file as `.bin` and links it
+without a preview. A preview is shown, and searchable, only for files up to
+`maximumInlineJsonBytes` and while the report's inline total stays within
+`maximumInlineTotalBytes`; larger files are linked only. Size limits
+(`maximumAttachmentBytes`, `maximumTotalAttachmentBytes`) and failed downloads produce
+warnings; affected attachments retain their Azure DevOps name, size and result link.
+Authentication, authorization and cancellation stop the export. An unreadable history
+build does not stop it.
 
 The report and its folder are committed in this order: download into a temporary
 folder, render and validate a temporary report, rename the folder, then replace the
@@ -88,6 +107,14 @@ Retrieves the failure set, then names the report that would be written. The expo
 makes no attachment-content requests and writes no files; the upstream
 `Get-AdoBuildTestFailure` still retrieves data from Azure DevOps.
 
+### Example 3
+
+```powershell
+Get-AdoBuildTestFailure -BuildId 401 | Export-AdoBuildTestFailure -IncludeFlaky -AllRunAttachments -AttachmentWindowDays 14
+```
+
+Includes flaky tests and downloads JSON and text attachments from every test run that
+started in the last 14 days.
 ## PARAMETERS
 
 ### -InputObject
@@ -155,7 +182,7 @@ HelpMessage: ''
 
 ### -SkipAttachments
 
-Downloads nothing and creates no folder; attachments are listed with their Azure DevOps names, sizes and result links. Takes precedence over -AllRunAttachments.
+Downloads nothing and creates no folder; attachments of runs inside the window are listed with their Azure DevOps names, sizes and result links. Takes precedence over -AllRunAttachments.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -173,10 +200,9 @@ DontShow: false
 AcceptedValues: []
 HelpMessage: ''
 ```
-
 ### -AllRunAttachments
 
-Downloads attachments from every reported run instead of only the most recent run. Existing per-file and total size limits still apply. Has no effect with -SkipAttachments.
+Downloads JSON and text attachments from every run inside the attachment window instead of only the most recent run. PNG and HTML attachments are never downloaded. Existing per-file and total size limits still apply. Has no effect with -SkipAttachments.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -194,7 +220,46 @@ DontShow: false
 AcceptedValues: []
 HelpMessage: ''
 ```
+### -AttachmentWindowDays
 
+Days before the export, from 1 to 365, in which a test run must have started for its attachments to appear and be downloaded. Older runs keep every attempt but lose their attachments; a run without a start date counts as outside. Defaults to 7.
+
+```yaml
+Type: System.Int32
+DefaultValue: '7'
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+### -IncludeFlaky
+
+Includes flaky tests, which failed and then passed in every stage or job. Without it they are left out of the report and only counted in its header.
+
+```yaml
+Type: System.Management.Automation.SwitchParameter
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
 ### -NoClobber
 
 Refuses an existing report before any download and never replaces a report created meanwhile.
@@ -316,7 +381,7 @@ The committed report. When attachments were downloaded, its AttachmentDirectory 
 
 ## NOTES
 
-Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Downloaded attachments are work data and stay on this machine. Attachment routes, version and fields await server confirmation (V-23), and browser behavior from local files awaits confirmation under the work browser policy (V-27).
+Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Downloaded attachments are work data and stay on this machine. Attachment routes, version and fields await server confirmation (V-23), as do the stage and job names used for grouping (V-19), and browser behavior from local files awaits confirmation under the work browser policy (V-27).
 
 ## RELATED LINKS
 

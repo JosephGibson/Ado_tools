@@ -346,3 +346,20 @@ these tests. No work response was copied. The public schema source for nesting a
 | `../AdoToolkit.PowerShell.Tests/Builds.Pester.ps1`, F04 | Existing synthetic build/timeline/log fixtures with a different default project; failure-to-log pipeline | Owning-project routing contract | V-14 |
 | `../../tools/tests/Package.Tests.ps1`, F09–F10 | Synthetic packages under paths with spaces; changed payloads, locked checksum/installer, disappeared staging file, PowerShell relative location | Filesystem fault injection; all outputs in TestDrive | — |
 | `../../tools/tests/LiveAudit.Tests.ps1` | Aggregate-only runs, absent/null Test Case links, minimal attachments, unfinished builds, manual history results, lowercase reruns, nested retry attempts, capped/repeated paging, conflicting batch parameters, formatted plain text and literal angle brackets, dynamic customer-like keys, unknown outcomes, large log counts | Offline mocks and isolated validation blocks; never executes a live script, reads a profile or loads an installed module | V-02, V-04, V-10, V-14, V-19–V-25 |
+
+## Compact failed-test report (2026-09-21)
+
+The report now groups attempts by the stage, phase and job names of their test runs, lists
+attachments only for runs inside the attachment window, and downloads only JSON and text.
+Every `Reports/testfailures-*.html` golden was regenerated for the compact layout. The report
+fixture now includes flaky tests and gives run 201 a start date inside the window. All data
+is synthetic.
+
+| Fixture or source | Represents | Source or assumption | V-item |
+| --- | --- | --- | --- |
+| `Reports/testfailures-grouped.en-US.html`, `.fr-CA.html` | The `grouped` variant of `TestFailureReportFixture.cs`: English and French stages, an English run outside the attachment window, an English retry that passes, a French message and trace repeated by the next attempt, text and JSON attachment metadata, and an unresolved Test Case | REST 6.0 `StageReference.stageName`, `PhaseReference.phaseName`, `JobReference.jobName`; Server 2020 presence unconfirmed | V-19, V-22 |
+| `TestRuns/runs-reattempt.json` | Stage, phase and job names added; a job re-attempt keeps the same names, so both runs stay one group | Same REST 6.0 schemas | V-19 |
+| `Attachments/attachments-download.json` | 6002 `binary.log` (served PNG bytes, so the text check fails), 6010 `oversize.log`, 6011 `understated.txt` and 6014 `sub-result.txt`; the PNG, HTML and other entries stay to prove they are never requested | Only JSON and text are downloaded | [V-23] |
+| `../AdoToolkit.Core.Tests/Reporting/TestFailures/CompactReportTests.cs` | Groups by stage, job and job instance, one list without distinct names, collapsed details, searchable card text, flaky exclusion, and a generated 100-failure by 14-attempt report checked against a size budget | Generated inside the test | V-19 |
+| `../AdoToolkit.Core.Tests/Reporting/TestFailures/LatestRunAttachmentTests.cs` | Attachment window boundaries and the JSON/text-only download rule, with and without `-AllRunAttachments` | Generated inside the test | [V-23] |
+| `../AdoToolkit.PowerShell.Tests/TestFailureExport.Pester.ps1` | `runs-two.json` start dates are rewritten relative to the current time, because the cmdlet measures the attachment window from the export time | Loopback fake server only | — |

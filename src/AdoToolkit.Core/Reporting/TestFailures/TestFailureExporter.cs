@@ -31,6 +31,7 @@ public sealed class TestFailureExporter
         {
             Culture = options.Culture, ConfiguredCulture = options.ConfiguredCulture, SessionCulture = options.SessionCulture,
             GeneratedAt = options.GeneratedAt, ToolkitVersion = options.ToolkitVersion,
+            AttachmentWindowDays = options.AttachmentWindowDays, IncludeFlaky = options.IncludeFlaky,
         });
         string name = ReportFileNames.TestFailures(set.Build.Id);
         string path = options.CreateDirectory && options.Path is not null && !Directory.Exists(options.Path)
@@ -39,13 +40,16 @@ public sealed class TestFailureExporter
         if (!path.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
             throw new AdoFileOutputException(Messages.Get(AdoMessage.TestFailureReportPathInvalid, options.SessionCulture, path));
         GenerationFolderPlan plan = commit.Plan(path, options.GeneratedAt, options.NoClobber, options.SessionCulture);
-        // Use the build's run order, never the last run with a reported attachment or failure.
+        // Only runs inside the attachment window qualify. By default that is the latest run in the
+        // build's run order (never the last run with a reported attachment or failure), with no
+        // fallback to an older run. The downloader itself allows only JSON and text.
         IReadOnlyList<AdoTestRun> runs = AttemptGrouper.OrderRuns(model.Runs);
-        int? runId = options.AllRunAttachments || runs.Count == 0 ? null : runs[^1].Id;
-        bool download = !options.SkipAttachments && (options.AllRunAttachments || runId.HasValue)
-            && model.Failures.SelectMany(f => f.Attempts).SelectMany(a => a.Attachments)
-                .Any(a => !runId.HasValue || a.RunId == runId.Value);
-        return new TestFailureExportPlan(model, plan, options, download, runId);
+        HashSet<int> selected = options.SkipAttachments ? []
+            : options.AllRunAttachments ? [.. model.AttachmentRunIds]
+            : runs.Count > 0 && model.AttachmentRunIds.Contains(runs[^1].Id) ? [runs[^1].Id] : [];
+        bool download = selected.Count > 0 && model.Failures.SelectMany(f => f.Attempts).SelectMany(a => a.Attachments)
+            .Any(a => AttachmentDownloader.Selected(a, selected));
+        return new TestFailureExportPlan(model, plan, options, download, selected);
     }
 
     public async Task<TestFailureExportResult> ExportAsync(TestFailureExportPlan plan, AttachmentDownloader? downloader,
@@ -69,13 +73,13 @@ public sealed class TestFailureExporter
             async (folder, token) =>
             {
                 AttachmentDownloadResult downloaded = await downloader!.DownloadAsync(plan.Model.Failures, plan.Model.Build.TeamProject,
-                    folder, plan.Commit.FolderName, culture, token, plan.AttachmentRunId).ConfigureAwait(false);
+                    folder, plan.Commit.FolderName, culture, token, plan.AttachmentRunIds).ConfigureAwait(false);
                 diagnostics = downloaded.Diagnostics;
                 foreach (AdoDiagnostic diagnostic in diagnostics) output.Warning(diagnostic.Message);
                 TestFailureLocalAttachments? local = downloaded.Files.Count == 0 ? null : new()
                 {
                     FolderName = plan.Commit.FolderName, SourceFolder = folder, Files = downloaded.Files,
-                    MaximumInlineJsonBytes = downloader.MaximumInlineJsonBytes,
+                    MaximumInlineJsonBytes = downloader.MaximumInlineJsonBytes, MaximumInlineTotalBytes = downloader.MaximumInlineTotalBytes,
                 };
                 model = TestFailureReportModelBuilder.WithAttachments(plan.Model, downloaded.Failures, diagnostics, local);
                 return local is not null;

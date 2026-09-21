@@ -6,14 +6,14 @@
       "fileName": "Capture d’écran.PNG",
       "size": 94,
       "attachmentType": "GeneralAttachment",
-      "comment": "Attachments 1: valid PNG"
+      "comment": "Attachments 1: PNG, never downloaded"
     },
     {
       "id": 6002,
-      "fileName": "unsigned.png",
+      "fileName": "binary.log",
       "size": 94,
       "attachmentType": "GeneralAttachment",
-      "comment": "Attachments 1: .png without the PNG signature"
+      "comment": "Attachments 1: .log whose bytes are not text"
     },
     {
       "id": 6003,
@@ -48,31 +48,31 @@
       "fileName": "output.htm",
       "size": 313,
       "attachmentType": "GeneralAttachment",
-      "comment": "Attachments 3: HTML containing script"
+      "comment": "Attachments 3: HTML containing script, never downloaded"
     },
     {
       "id": 6008,
       "fileName": "trace.dat",
       "size": 84,
       "attachmentType": "GeneralAttachment",
-      "comment": "Attachments 4: unknown extension"
+      "comment": "Attachments 4: unknown extension, never downloaded"
     },
     {
       "id": 6009,
       "fileName": "noextension",
       "attachmentType": "GeneralAttachment",
-      "comment": "Attachments 4: no extension and no declared size"
+      "comment": "Attachments 4: no extension and no declared size, never downloaded"
     },
     {
       "id": 6010,
-      "fileName": "oversize.png",
+      "fileName": "oversize.log",
       "size": 9999999,
       "attachmentType": "GeneralAttachment",
       "comment": "Attachments 5: declared size above maximumAttachmentBytes"
     },
     {
       "id": 6011,
-      "fileName": "understated.bin",
+      "fileName": "understated.txt",
       "size": 10,
       "attachmentType": "GeneralAttachment",
       "comment": "Attachments 5: understated size exceeded while streaming (generated)"
@@ -93,7 +93,7 @@
     },
     {
       "id": 6014,
-      "fileName": "sub-result.png",
+      "fileName": "sub-result.txt",
       "size": 94,
       "attachmentType": "GeneralAttachment",
       "comment": "Attachments 8: sub-result attachment"

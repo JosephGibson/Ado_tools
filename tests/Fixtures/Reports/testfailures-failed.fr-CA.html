@@ -2,7 +2,7 @@
 <html lang="fr-CA" data-failure-count="1" data-history-count="4">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src &#x27;none&#x27;; script-src &#x27;sha256-__SCRIPT_SHA256__&#x2B;8KlrsYAmwN9DnCQgh616XnU3N4Gph6QAnDIX4BiBQ=&#x27;; style-src &#x27;unsafe-inline&#x27;; img-src &#x27;self&#x27; data:; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;">
+<meta http-equiv="Content-Security-Policy" content="default-src &#x27;none&#x27;; script-src &#x27;sha256-__SCRIPT_SHA256__&#x27;; style-src &#x27;unsafe-inline&#x27;; img-src &#x27;self&#x27; data:; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;">
 <meta name="generator" content="AdoToolkit 5.3.0-test">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rapport des tests en échec — 20260916.3</title>
@@ -37,7 +37,6 @@
   --tok-line: #ffbd8c;
   --tok-property: #91c7ff;
   --tok-literal: #dfacff;
-  --tok-punct: #c1c7d0;
   --tok-framework: #a6afbd;
   --space-1: 4px;
   --space-2: 8px;
@@ -83,18 +82,17 @@ tbody tr:nth-child(even) { background: var(--surface-2); }
 pre { background: var(--code-bg); border: 1px solid var(--separator); border-radius: var(--radius); overflow-x: auto; padding: var(--space-4); margin: 0; }
 code { font: 13px/1.65 var(--font-mono); tab-size: 4; }
 .wrap-code pre { white-space: pre-wrap; overflow-wrap: anywhere; }
-.tok-keyword { color: var(--tok-keyword); }
-.tok-type { color: var(--tok-type); }
-.tok-method { color: var(--tok-method); }
-.tok-namespace { color: var(--tok-namespace); }
-.tok-string { color: var(--tok-string); }
-.tok-number { color: var(--tok-number); }
-.tok-path { color: var(--tok-path); }
-.tok-line { color: var(--tok-line); }
-.tok-property { color: var(--tok-property); }
-.tok-literal { color: var(--tok-literal); }
-.tok-punct { color: var(--tok-punct); }
-.framework-frame > span { color: var(--tok-framework); }
+code .k { color: var(--tok-keyword); }
+code .t { color: var(--tok-type); }
+code .m { color: var(--tok-method); }
+code .n { color: var(--tok-namespace); }
+code .s { color: var(--tok-string); }
+code .d { color: var(--tok-number); }
+code .f { color: var(--tok-path); }
+code .l { color: var(--tok-line); }
+code .p { color: var(--tok-property); }
+code .c { color: var(--tok-literal); }
+code .framework-frame, code .framework-frame > span { color: var(--tok-framework); }
 .first-user-frame { border-inline-start: 3px solid var(--focus); }
 .history-chart { width: 100%; min-width: 320px; height: auto; }
 .chart-scroll { overflow-x: auto; }
@@ -109,8 +107,6 @@ code { font: 13px/1.65 var(--font-mono); tab-size: 4; }
 .chart-caption { fill: var(--text); font-size: 12px; text-anchor: middle; }
 .history-strip, .attempt-strip, .status-legend { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; padding: 0; }
 [aria-current="true"].history-cell { outline: 2px solid var(--current); outline-offset: 2px; }
-.thumbnail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-3); }
-.thumbnail-grid img { max-width: 100%; max-height: 160px; object-fit: contain; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 [hidden] { display: none !important; }
 @media (max-width: 700px) {
@@ -153,7 +149,6 @@ code { font: 13px/1.65 var(--font-mono); tab-size: 4; }
     --tok-line: #8b3d00;
     --tok-property: #004d99;
     --tok-literal: #71328b;
-    --tok-punct: #4e4e4e;
     --tok-framework: #505050;
   }
   .top-bar { position: static; }
@@ -167,12 +162,12 @@ code { font: 13px/1.65 var(--font-mono); tab-size: 4; }
   .history-chart { print-color-adjust: exact; }
 }
 body { font-variant-numeric: tabular-nums; }
-main { padding: var(--space-6) var(--space-5) var(--space-7); }
-h2 { font-size: 1.3rem; margin: 0 0 var(--space-4); letter-spacing: -.015em; }
-h3 { font-size: 1rem; margin: var(--space-5) 0 var(--space-3); }
-h4, h5, h6 { font-size: .9rem; margin: var(--space-4) 0 var(--space-2); }
-.section-heading { color: var(--text); font-size: 1.1rem; letter-spacing: -.01em; }
-button { cursor: pointer; min-height: 36px; padding-inline: var(--space-3); }
+main { max-width: 1600px; padding: var(--space-4) var(--space-5) var(--space-6); }
+h2 { font-size: 1.1rem; margin: 0 0 var(--space-3); letter-spacing: -.01em; }
+h3 { font-size: .85rem; margin: var(--space-3) 0 var(--space-1); color: var(--text-muted); }
+h4, h5, h6 { font-size: .8rem; margin: var(--space-2) 0 var(--space-1); }
+.section-heading { color: var(--text); font-size: 1.05rem; }
+button { cursor: pointer; min-height: 30px; padding: var(--space-1) var(--space-2); font-size: .8rem; }
 button:hover { background: var(--surface); border-color: var(--link); }
 button .toggle-off, button .toggle-on { display: inline-block; width: 1.2em; }
 button .toggle-on { display: none; }
@@ -180,264 +175,286 @@ button[aria-pressed="true"] { border-color: var(--link); color: var(--link); }
 button[aria-pressed="true"] .toggle-on { display: inline-block; }
 button[aria-pressed="true"] .toggle-off { display: none; }
 input[type="checkbox"] { accent-color: var(--link); width: 1rem; height: 1rem; margin: 0; }
-input[type="search"] { width: min(26rem, 100%); min-width: 0; }
+input[type="search"], select { padding: var(--space-1) var(--space-2); font-size: .85rem; }
+input[type="search"] { width: min(24rem, 100%); min-width: 0; }
 .skip-link { position: fixed; inset-block-start: -5rem; inset-inline-start: var(--space-4); z-index: 10; padding: var(--space-3); background: var(--surface); }
 .skip-link:focus { inset-block-start: var(--space-2); }
-.top-bar { max-width: none; padding: 0; max-height: 42vh; overflow-y: auto; }
-.top-bar-inner { max-width: 1280px; margin-inline: auto; padding: var(--space-5); }
-.title-line, .build-line, .build-context, .count-line, .card-links, .index-heading, .index-footer { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
-.title-line { justify-content: space-between; align-items: flex-start; gap: var(--space-3); margin-bottom: var(--space-4); }
-.report-title { min-width: 0; }
-.report-brand { display: block; color: var(--text-muted); font-size: .7rem; font-weight: 600; letter-spacing: .14em; }
-.top-bar h1 { margin: var(--space-1) 0 0; font-size: clamp(1.4rem, 2.3vw, 1.85rem); font-weight: 600; letter-spacing: -.035em; }
-.section-links { display: flex; flex-wrap: wrap; gap: var(--space-1); padding: var(--space-1); margin: 0; font-size: .8rem; background: var(--bg); border: 1px solid var(--separator); border-radius: var(--radius); }
-.section-links a { padding: var(--space-1) var(--space-3); border-radius: 4px; color: var(--text-muted); }
-.section-links a:hover, .section-links a:focus-visible { color: var(--text); background: var(--surface-2); }
-.build-line { overflow-wrap: anywhere; gap: var(--space-3); }
-.pipeline-name { font-size: 1rem; font-weight: 600; }
-.build-number { font-family: var(--font-mono); font-size: .8rem; padding: 2px var(--space-2); background: var(--surface-2); border: 1px solid var(--separator); border-radius: 4px; }
-.build-context { color: var(--text-muted); font-size: .8rem; margin-block: var(--space-2); overflow-wrap: anywhere; }
-.build-context code, .commit { font-size: .8rem; }
-.count-line { gap: var(--space-3); margin-top: var(--space-4); }
-.count-chip { align-items: baseline; gap: var(--space-4); padding: var(--space-2) var(--space-3); border: 1px solid var(--separator); background: var(--bg); min-width: 9rem; }
-.count-label { font-size: .8rem; }
-.count-value { margin-inline-start: auto; font-size: 1.4rem; line-height: 1.2; font-weight: 600; letter-spacing: -.025em; }
+.top-bar { max-width: none; padding: 0; max-height: 40vh; overflow-y: auto; }
+.top-bar-inner { max-width: 1600px; margin-inline: auto; padding: var(--space-3) var(--space-5); display: grid; gap: var(--space-2); }
+.title-line, .count-line, .view-links, .filter-controls, .card-links, .failure-card > header { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-3); }
+.title-line { font-size: .8rem; color: var(--text-muted); overflow-wrap: anywhere; }
+.report-brand { color: var(--text-muted); font-size: .65rem; font-weight: 600; letter-spacing: .14em; }
+.top-bar h1 { margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text); letter-spacing: -.02em; }
+.pipeline-name { font-weight: 600; color: var(--text); }
+.build-number { font-family: var(--font-mono); padding: 0 var(--space-2); background: var(--surface-2); border: 1px solid var(--separator); border-radius: 4px; }
+.title-line code, .commit { font-size: .78rem; }
+.results-link { margin-inline-start: auto; }
+.count-line { gap: var(--space-2); }
+.count-chip { align-items: baseline; gap: var(--space-2); padding: 0 var(--space-2); border: 1px solid var(--separator); border-radius: 4px; background: var(--bg); }
+.count-label { font-size: .75rem; }
+.count-value { font-size: 1rem; font-weight: 600; }
+.count-note { font-size: .7rem; color: var(--text-muted); }
 .status-attachments { color: var(--text-muted); }
-.results-link { margin-inline-start: auto; font-size: .8rem; padding: var(--space-1) 0; }
-.partial-link { color: var(--flaky); border: 1px solid var(--flaky); border-radius: var(--radius); padding: var(--space-1) var(--space-3); font-size: .8rem; }
+.partial-link { color: var(--flaky); border: 1px solid var(--flaky); border-radius: 4px; padding: 0 var(--space-2); font-size: .75rem; }
 .partial-link:visited { color: var(--flaky); }
-.report-context { max-width: 1280px; margin-inline: auto; padding: var(--space-4) var(--space-5) 0; }
-.secondary-line { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); margin: 0; font-size: .75rem; }
-.secondary-line .metadata-item { max-width: 100%; }
-.secondary-line dt { font-size: .7rem; }
-.secondary-line dd { color: var(--text-muted); }
-.history-panel { background: var(--surface); border: 1px solid var(--separator); border-radius: var(--radius); padding: var(--space-5); }
-.history-chart { max-height: 240px; }
-.history-data { margin-top: var(--space-4); border-top: 1px solid var(--separator); }
-.history-data > summary { padding-block: var(--space-3); color: var(--link); font-size: .85rem; }
-.history-data table { font-size: .85rem; }
-.history-data caption { text-align: start; color: var(--text-muted); padding: var(--space-2) 0 var(--space-3); font-size: .8rem; }
-.history-data th { white-space: nowrap; }
-.history-data td { min-width: 4rem; }
-.history-data tbody tr:last-child td { border-bottom: 0; }
-.failure-navigation { padding: var(--space-6) 0; }
-.filter-controls { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); background: var(--surface); border: 1px solid var(--separator); border-radius: var(--radius); padding: var(--space-4); margin-bottom: var(--space-4); }
-.filter-controls > label { display: inline-flex; align-items: center; gap: var(--space-2); font-size: .85rem; }
-.filter-controls > label:first-child { flex: 1 1 22rem; }
-.filter-controls > label:first-child input { flex: 1; margin-inline-start: var(--space-2); }
-.filter-controls > label:has(input[type="checkbox"]) { cursor: pointer; padding-block: var(--space-2); }
-.filter-controls button { font-size: .8rem; }
-.filter-result-count { font-size: .8rem; color: var(--text-muted); margin-inline-start: auto; }
-.keyboard-hint { flex-basis: 100%; margin: 0; padding-top: var(--space-3); border-top: 1px solid var(--separator); font-size: .75rem; }
-[data-no-matches] { padding: var(--space-5); text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); }
-.failure-index { display: grid; gap: var(--space-3); list-style: none; padding: 0; margin: 0; }
-.failure-index > li { padding: var(--space-4) var(--space-5); background: var(--surface); border: 1px solid var(--separator); border-radius: var(--radius); }
-.failure-index > li:hover { border-color: var(--border); }
-.failure-index > li.is-current { border-color: var(--focus); }
-.index-heading { gap: var(--space-2) var(--space-3); }
-.index-heading > a { font-weight: 600; font-size: 1rem; overflow-wrap: anywhere; }
-.index-heading > .text-muted { flex: 1 1 15rem; font-family: var(--font-mono); font-size: .75rem; overflow-wrap: anywhere; }
-.index-strips { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: var(--space-4); margin-block: var(--space-4); }
-.strip-label { display: block; color: var(--text-muted); font-size: .75rem; font-weight: 600; }
-.history-strip, .attempt-strip { margin: var(--space-2) 0 0; align-items: stretch; gap: var(--space-2); }
-.history-strip > li, .attempt-strip > li { display: flex; min-width: 0; }
-.history-cell, .attempt-cell { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-2); padding: var(--space-1) var(--space-2); border: 1px solid var(--border); border-radius: 4px; font-size: .75rem; }
-.history-cell:hover, .attempt-cell:hover { background: var(--surface-2); border-color: var(--link); }
-.history-build, .attempt-caption { color: var(--text-muted); }
-.history-current { color: var(--current); }
-.history-cell .status-badge, .attempt-cell .status-badge { border: 0; padding: 0; gap: var(--space-1); }
-.history-cell > [role="img"] { font-size: .7rem; }
-.attempt-cell .attempt-outcome { color: var(--text-muted); font-size: .7rem; }
-.failure-index .status-legend { display: none; }
-.index-footer { border-top: 1px solid var(--separator); padding-top: var(--space-3); color: var(--text-muted); font-size: .8rem; }
-.index-footer > span:last-child { margin-inline-start: auto; }
-.test-case-link { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); }
-.test-case-link > span { font-size: .75rem; color: var(--text-muted); }
-.failure-card, .attempt, .attachment-list > li, #history, #failure-index, #diagnostics, .history-data tr { scroll-margin-top: var(--report-header-offset, 22rem); }
-.failure-card { padding: var(--space-5); margin-block: 0 var(--space-6); border-top-width: 3px; }
+.view-links { max-width: none; margin: 0; padding: 0; gap: var(--space-1); font-size: .85rem; border-bottom: 1px solid var(--separator); }
+.view-links a { padding: var(--space-1) var(--space-3); color: var(--text-muted); border-radius: 4px 4px 0 0; }
+.view-links a:hover, .view-links a:focus-visible { color: var(--text); background: var(--surface-2); text-decoration: none; }
+.view-links a[aria-current="page"] { color: var(--text); background: var(--surface-2); box-shadow: inset 0 -2px 0 var(--focus); }
+.filter-controls { gap: var(--space-2) var(--space-3); font-size: .8rem; }
+.filter-controls > label { display: inline-flex; align-items: center; gap: var(--space-2); }
+.filter-controls > label.search { flex: 0 1 26rem; }
+.filter-controls > label.search input { flex: 1; }
+.filter-controls > label:has(input[type="checkbox"]) { cursor: pointer; }
+.filter-result-count { color: var(--text-muted); }
+.keyboard-hint { margin: 0 0 0 auto; font-size: .7rem; }
+.views .view:not(.is-active) { display: none; }
+.view + .view { margin-top: var(--space-6); }
+.views .view + .view { margin-top: 0; }
+.legend, .window-note { margin: 0 0 var(--space-2); font-size: .75rem; }
+[data-no-matches] { padding: var(--space-4); text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); }
+.failure-table, .runs-table { font-size: .82rem; }
+.failure-table th, .failure-table td, .runs-table th, .runs-table td { padding: 3px var(--space-2); vertical-align: middle; }
+.failure-table th, .runs-table th { position: sticky; top: var(--report-header-height, 0); z-index: 1; white-space: nowrap; }
+.failure-table tbody tr:hover { background: var(--surface); }
+.failure-table tr.is-current { outline: 1px solid var(--focus); outline-offset: -1px; }
+.col-number { white-space: nowrap; color: var(--text-muted); }
+.col-test { white-space: nowrap; max-width: 26rem; overflow: hidden; text-overflow: ellipsis; }
+.col-test a { font-weight: 600; }
+.col-test .text-muted, .runs-table .text-muted { font-size: .75rem; }
+.col-case, .col-group { white-space: nowrap; }
+.col-error { width: 45%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); font: .75rem var(--font-mono); }
+.status-glyph { display: inline-block; width: 1em; text-align: center; }
+.group-status { font-weight: 600; font-size: .8rem; }
+.mini-strip { display: inline-flex; gap: 2px; margin-inline-start: var(--space-2); vertical-align: middle; }
+.sq { display: inline-block; width: .55rem; height: .8rem; border: 1px solid currentColor; border-radius: 2px; }
+.sq.status-failed { background: var(--fail); }
+.sq.status-other { border-style: dashed; }
+a.sq:hover, a.sq:focus-visible { outline: 1px solid var(--link); outline-offset: 1px; }
+.cluster-heading th { position: static; background: var(--surface); color: var(--text); font-weight: 400; white-space: normal; padding-block: var(--space-2); }
+.cluster-heading code { font-size: .75rem; overflow-wrap: anywhere; }
+.cluster-count { display: inline-block; min-width: 2rem; margin-inline-end: var(--space-2); text-align: center; font-weight: 600; background: var(--surface-2); border: 1px solid var(--separator); border-radius: 4px; }
+.test-case-link { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); font-size: .85rem; }
+.test-case-link > a { font-weight: 600; padding: 0 var(--space-2); border: 1px solid var(--separator); border-radius: 4px; background: var(--surface-2); }
+.test-case-title, .test-case-state { font-size: .8rem; color: var(--text-muted); }
+.failure-card, .attempt, .attempt-group, .attachment-list > li, #history, #diagnostics, .view, .history-data tr { scroll-margin-top: var(--report-header-offset, 12rem); }
+.failure-card { padding: var(--space-3) var(--space-4); margin-block: 0 var(--space-3); border-top-width: 3px; }
 .failure-card[data-classification="failed"] { border-top-color: var(--fail); }
 .failure-card[data-classification="flaky"] { border-top-color: var(--flaky); }
 .failure-card.is-current { outline: 2px solid var(--focus); outline-offset: 2px; }
-.failure-card > header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: 0; }
-.failure-card > header h2 { overflow-wrap: anywhere; margin: 0; font-size: 1.4rem; letter-spacing: -.025em; }
-.failure-number { display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; min-height: 2rem; padding-inline: var(--space-1); border: 1px solid var(--separator); border-radius: 4px; color: var(--text-muted); font: .8rem var(--font-mono); }
-.status-badge { font-size: .8rem; align-items: center; border-radius: 4px; }
-.name-section { display: flex; align-items: center; gap: var(--space-3); background: var(--code-bg); border: 1px solid var(--separator); border-radius: var(--radius); padding: var(--space-3) var(--space-4); margin-block: var(--space-4); }
-.name-section code { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.name-section button { flex-shrink: 0; font-size: .8rem; }
-.metadata-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4) var(--space-5); margin: var(--space-5) 0; }
-.metadata-item { min-width: 0; }
-.metadata-grid .metadata-item { border-inline-start: 1px solid var(--separator); padding-inline-start: var(--space-3); }
-.metadata-grid dt { font-size: .75rem; margin-bottom: var(--space-1); }
-.metadata-grid dd { white-space: pre-wrap; font-size: .875rem; }
-.card-links { font-size: .8rem; gap: var(--space-2) var(--space-4); }
-.card-strips { margin-block: var(--space-5); padding-block: var(--space-4); border-block: 1px solid var(--separator); display: grid; gap: var(--space-4); }
-.status-legend { gap: var(--space-2) var(--space-3); margin: var(--space-3) 0 0; }
-.status-legend .status-badge { padding: 0; border: 0; font-size: .75rem; color: var(--text-muted); }
-.attempt { border: 1px solid var(--separator); border-radius: var(--radius); margin-block: var(--space-4); padding: 0 var(--space-4) var(--space-4); }
+.failure-card > header { padding: 0; max-width: none; gap: var(--space-2) var(--space-3); }
+.failure-card > header h2 { overflow-wrap: anywhere; margin: 0; font-size: 1.05rem; }
+.failure-number { display: inline-flex; align-items: center; justify-content: center; min-width: 1.8rem; padding-inline: var(--space-1); border: 1px solid var(--separator); border-radius: 4px; color: var(--text-muted); font: .75rem var(--font-mono); }
+.status-badge { font-size: .75rem; align-items: center; border-radius: 4px; padding: 0 var(--space-1); }
+.card-links { margin-inline-start: auto; font-size: .78rem; gap: var(--space-1) var(--space-3); }
+.name-section { display: flex; align-items: center; gap: var(--space-2); background: var(--code-bg); border: 1px solid var(--separator); border-radius: 6px; padding: 2px var(--space-3); margin-block: var(--space-2); }
+.name-section code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: .78rem; }
+.name-section button { flex-shrink: 0; min-height: 24px; }
+.metadata-grid { display: flex; flex-wrap: wrap; gap: 2px var(--space-4); margin: var(--space-2) 0; font-size: .78rem; }
+.metadata-grid > div { display: flex; gap: var(--space-2); min-width: 0; max-width: 100%; }
+.metadata-grid dt { font-size: .72rem; line-height: 1.9; white-space: nowrap; }
+.metadata-grid dd { white-space: pre-wrap; min-width: 0; }
+.card-history { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-2); }
+.strip-label { color: var(--text-muted); font-size: .72rem; font-weight: 600; }
+.history-strip { margin: 0; gap: var(--space-1); }
+.history-strip > li { display: flex; min-width: 0; }
+.history-cell { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-1); border: 1px solid var(--border); border-radius: 4px; font-size: .7rem; }
+.history-cell:hover { background: var(--surface-2); border-color: var(--link); }
+.history-build { color: var(--text-muted); }
+.history-current { color: var(--current); }
+.history-cell .status-badge { border: 0; padding: 0; gap: var(--space-1); }
+.history-cell > [role="img"] { font-size: .7rem; }
+.status-legend { gap: var(--space-2) var(--space-3); margin: var(--space-2) 0 0; }
+.status-legend .status-badge { padding: 0; border: 0; font-size: .72rem; color: var(--text-muted); }
+.attempt-group { border: 1px solid var(--separator); border-radius: 6px; margin-block: var(--space-1); background: var(--bg); }
+.attempt-group > summary { padding: 3px var(--space-3); font-size: .82rem; border-radius: 6px; background: var(--surface-2); }
+.attempt-group[open] > summary { border-bottom: 1px solid var(--separator); border-end-start-radius: 0; border-end-end-radius: 0; }
+.attempt-group > .attempt { margin: var(--space-1) var(--space-2); }
+.pipeline-names { margin: var(--space-1) var(--space-3); }
+.group-label { font-weight: 600; margin-inline-end: var(--space-1); }
+.group-count { color: var(--text-muted); font-size: .75rem; margin-inline-start: var(--space-1); }
+.attempt-group > summary .status-badge, .attempt > summary .status-badge { border: 0; padding-block: 0; }
+.attempt { border: 1px solid var(--separator); border-radius: 6px; margin-block: var(--space-1); padding: 0 var(--space-3) var(--space-2); background: var(--surface); }
 .attempt:not([open]) { padding-bottom: 0; }
-.attempt > summary { padding: var(--space-3) var(--space-4); margin-inline: calc(-1 * var(--space-4)); font-size: .85rem; border-radius: var(--radius); background: var(--surface-2); }
-.attempt-title { font-weight: 600; margin-inline-end: var(--space-2); }
-.attempt-duration { color: var(--text-muted); white-space: nowrap; margin-inline-start: var(--space-2); }
-.attempt > summary::marker { color: var(--link); }
-.attempt > summary:hover { outline: 1px solid var(--link); outline-offset: -1px; }
-.attempt[open] > summary { border-bottom: 1px solid var(--separator); border-end-start-radius: 0; border-end-end-radius: 0; }
-.attempt > summary .status-badge { border: 0; padding-block: 0; }
-.attempt > summary .attempt-outcome { color: var(--text-muted); font-size: .8rem; }
-.code-section { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); border: 1px solid var(--separator); border-radius: var(--radius); background: var(--surface-2); margin-block: var(--space-4); overflow: hidden; }
+.attempt > summary { padding: 2px var(--space-3); margin-inline: calc(-1 * var(--space-3)); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 6px; }
+.attempt[open] > summary { white-space: normal; border-bottom: 1px solid var(--separator); border-end-start-radius: 0; border-end-end-radius: 0; background: var(--surface-2); }
+.attempt > summary:hover, .attempt-group > summary:hover { outline: 1px solid var(--link); outline-offset: -1px; }
+.attempt > summary::marker, .attempt-group > summary::marker { color: var(--link); }
+.attempt-title { font-weight: 600; margin-inline-end: var(--space-1); }
+.attempt-meta { color: var(--text-muted); margin-inline-start: var(--space-2); }
+.attempt-error { color: var(--text-muted); margin-inline-start: var(--space-2); font: .72rem var(--font-mono); }
+.attempt-outcome { color: var(--text-muted); font-size: .75rem; }
+.attempt.is-match > summary, .attempt-group.is-match > summary { box-shadow: inset 3px 0 0 var(--focus); }
+.same-as { margin: var(--space-2) 0; font-size: .78rem; color: var(--text-muted); }
+.code-section { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); border: 1px solid var(--separator); border-radius: 6px; background: var(--surface-2); margin-block: var(--space-2); overflow: hidden; }
 .code-section .code-block { display: contents; }
-.code-section .language-label { order: 1; flex: 1 1 12rem; padding: var(--space-2) var(--space-4); color: var(--text-muted); font-size: .8rem; font-weight: 600; }
-.code-tools { order: 2; display: flex; flex-wrap: wrap; gap: var(--space-1); padding: var(--space-1) var(--space-2); }
-.code-tools button { padding: var(--space-1) var(--space-2); font-size: .75rem; min-height: 30px; }
-.code-section pre { order: 3; flex-basis: 100%; width: 100%; border: 0; border-top: 1px solid var(--separator); border-radius: 0; padding: var(--space-4); }
-.code-section .diagnostic { order: 4; flex-basis: 100%; margin: 0 var(--space-3) var(--space-3); }
+.code-section .language-label { order: 1; flex: 1 1 10rem; padding: 2px var(--space-3); color: var(--text-muted); font-size: .72rem; font-weight: 600; }
+.code-tools { order: 2; display: flex; flex-wrap: wrap; gap: var(--space-1); padding: 2px var(--space-2); }
+.code-tools button { padding: 0 var(--space-2); font-size: .7rem; min-height: 24px; }
+.code-section pre { order: 3; flex-basis: 100%; width: 100%; max-height: 32rem; overflow: auto; border: 0; border-top: 1px solid var(--separator); border-radius: 0; padding: var(--space-2) var(--space-3); }
+.code-section code { font-size: 12px; line-height: 1.55; }
+.code-section .diagnostic { order: 4; flex-basis: 100%; margin: 0 var(--space-3) var(--space-2); }
 .code-section.hide-framework .framework-frame { display: none; }
-.sub-result, .iteration { border-inline-start: 2px solid var(--separator); padding-inline-start: var(--space-4); margin-block: var(--space-5); }
-.sub-result .metadata-grid, .iteration .metadata-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.attachment-list { list-style: none; padding: 0; margin-block: var(--space-3); display: grid; gap: var(--space-2); overflow-wrap: anywhere; }
-.attachment-list > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-4); background: var(--bg); border: 1px solid var(--separator); border-radius: var(--radius); padding: var(--space-3) var(--space-4); font-size: .85rem; }
-.attachment-list > li > span { color: var(--text-muted); font: .75rem/1.6 var(--font-mono); text-align: end; }
-.attachment-list .metadata-grid { grid-column: 1 / -1; margin: var(--space-2) 0 0; gap: var(--space-3); }
-.attachment-list .metadata-grid:empty { display: none; }
-.attachment-local, .attachment-list > li > .code-section { grid-column: 1 / -1; min-width: 0; }
-.attachment-local { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
-.attachment-local > span, .attachment-status { color: var(--text-muted); font-size: .8rem; }
+.sub-result, .iteration { border-inline-start: 2px solid var(--separator); padding-inline-start: var(--space-3); margin-block: var(--space-2); font-size: .85rem; }
+.attachment-list { list-style: none; padding: 0; margin-block: var(--space-1); display: flex; flex-wrap: wrap; gap: var(--space-1); overflow-wrap: anywhere; }
+.attachment-list > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-3); background: var(--bg); border: 1px solid var(--separator); border-radius: 6px; padding: 2px var(--space-3); font-size: .8rem; }
+.attachment-list > li:has(.attachment-local, .metadata-grid) { flex-basis: 100%; }
+.attachment-size { color: var(--text-muted); font: .72rem var(--font-mono); }
+.attachment-list .metadata-grid { flex-basis: 100%; margin: 0; }
+.attachment-local { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-2); }
+.attachment-local > span, .attachment-status { color: var(--text-muted); font-size: .75rem; }
+.attachment-local code { font-size: .72rem; }
 .attachment-status { flex-basis: 100%; margin: 0; }
-.thumbnail-grid { display: flex; flex-wrap: wrap; gap: var(--space-2); min-width: 0; }
-.thumbnail { display: block; line-height: 0; padding: var(--space-1); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); max-width: 100%; }
-.thumbnail img { display: block; width: auto; height: auto; max-width: min(16rem, 100%); max-height: 10rem; object-fit: contain; }
-.card-footer { border-top: 1px solid var(--separator); padding-top: var(--space-4); margin-top: var(--space-5); font-size: .8rem; }
-#diagnostics { margin-top: var(--space-6); }
-.diagnostic p { margin: var(--space-2) 0 0; overflow-wrap: anywhere; font-size: .875rem; }
-.diagnostic strong { font-size: .85rem; font-weight: 600; }
+.attachment-preview { flex-basis: 100%; min-width: 0; }
+.attachment-preview > summary { color: var(--link); font-size: .75rem; }
+.runs-table td { white-space: nowrap; }
+.history-panel { background: var(--surface); border: 1px solid var(--separator); border-radius: var(--radius); padding: var(--space-4); margin-block: var(--space-4); }
+.history-chart { max-height: 220px; }
+.history-data { margin-top: var(--space-3); border-top: 1px solid var(--separator); }
+.history-data > summary { padding-block: var(--space-2); color: var(--link); font-size: .8rem; }
+.history-data table { font-size: .8rem; }
+.history-data caption { text-align: start; color: var(--text-muted); padding: var(--space-2) 0; font-size: .75rem; }
+.history-data th { white-space: nowrap; }
+.history-data td { min-width: 4rem; }
+.history-data tbody tr:last-child td { border-bottom: 0; }
+.secondary-line { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: var(--space-3) 0 0; font-size: .72rem; }
+.secondary-line > div { display: flex; gap: var(--space-2); }
+.secondary-line dd { color: var(--text-muted); }
+.diagnostic p { margin: var(--space-1) 0 0; overflow-wrap: anywhere; font-size: .85rem; }
+.diagnostic strong { font-size: .8rem; font-weight: 600; }
 .diagnostic[data-severity="error"] { border-inline-start-color: var(--fail); }
 .diagnostic[data-severity="warning"] { border-inline-start-color: var(--flaky); }
 .copy-feedback { position: fixed; bottom: var(--space-5); left: 50%; transform: translateX(-50%); max-width: calc(100vw - 2rem); z-index: 5; background: var(--surface-2); border: 1px solid var(--link); border-radius: var(--radius); padding: var(--space-3) var(--space-4); margin: 0; }
-.image-viewer { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); max-width: 95vw; max-height: 95vh; }
-.image-viewer img { display: block; max-width: 85vw; max-height: 80vh; object-fit: contain; }
-.image-viewer::backdrop { background: #000b; }
-.side-by-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+@media (min-width: 901px) {
+  .view > .table-scroll { overflow: visible; }
+}
 @media (max-width: 900px) {
-  .metadata-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .index-strips { grid-template-columns: 1fr; }
+  .keyboard-hint { display: none; }
   .results-link { margin-inline-start: 0; }
+  .card-links { margin-inline-start: 0; }
 }
 @media (max-width: 700px) {
-  main, .top-bar-inner { padding: var(--space-4) var(--space-3); }
-  .title-line { margin-bottom: var(--space-3); }
-  .section-links { font-size: .75rem; }
-  .section-links a { padding-inline: var(--space-2); }
-  .count-line { gap: var(--space-2); }
-  .count-chip { min-width: 0; flex: 1 1 auto; gap: var(--space-3); }
-  .count-value { font-size: 1.2rem; }
-  .report-context { padding: var(--space-3) var(--space-3) 0; }
-  .secondary-line { gap: var(--space-2) var(--space-4); }
-  .history-panel, .failure-card, .failure-index > li { padding: var(--space-4); }
-  .failure-card > header h2 { font-size: 1.2rem; flex-basis: 100%; }
-  .metadata-grid, .sub-result .metadata-grid, .iteration .metadata-grid, .side-by-side { grid-template-columns: 1fr; }
-  .metadata-grid dd { margin-bottom: 0; }
+  main, .top-bar-inner { padding: var(--space-3); }
+  .failure-card { padding: var(--space-3); }
+  .failure-card > header h2 { flex-basis: 100%; }
+  .col-error { min-width: 16rem; }
   .name-section { flex-wrap: wrap; }
   .name-section code { flex-basis: 100%; }
-  .filter-controls > label:first-child { flex-wrap: wrap; }
-  .filter-controls > label:first-child input { width: 100%; flex-basis: 100%; margin-inline-start: 0; }
-  .index-footer > span:last-child { margin-inline-start: 0; }
-  .attempt { padding-inline: var(--space-3); }
-  .attempt > summary { padding-inline: var(--space-3); margin-inline: calc(-1 * var(--space-3)); }
-  .attachment-list > li { grid-template-columns: 1fr; }
-  .attachment-list > li > span { text-align: start; }
+  .filter-controls > label.search { flex-basis: 100%; }
 }
 @media print {
-  main { padding: 0; }
-  .top-bar { max-height: none; overflow: visible; }
-  .top-bar-inner, .report-context { padding-inline: 0; }
-  .section-links, .skip-link, .copy-feedback, .card-footer, .image-viewer, [data-no-matches] { display: none !important; }
-  .failure-card, .history-panel { margin-block: var(--space-4); border-radius: 0; }
-  .failure-card > header h2 { flex-basis: auto; }
-  .metadata-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .metadata-grid .metadata-item { break-inside: avoid; }
+  main { padding: 0; max-width: none; }
+  .top-bar { max-height: none; overflow: visible; position: static; }
+  .top-bar-inner { padding-inline: 0; }
+  .view-links, .filter-controls, .skip-link, .copy-feedback, [data-no-matches] { display: none !important; }
+  .failure-card, .history-panel { margin-block: var(--space-3); border-radius: 0; }
+  .failure-table th, .runs-table th { position: static; }
+  .col-error { white-space: normal; max-width: none; }
+  .metadata-grid > div { break-inside: avoid; }
   .code-section { overflow: visible; }
   .code-section.hide-framework .framework-frame { display: inline; }
-  .code-section pre { overflow: visible; }
-  .attempt, .code-section, .attachment-list > li { break-inside: avoid; }
+  .code-section pre { overflow: visible; max-height: none; }
+  .attempt, .attempt-group > summary, .code-section, .attachment-list > li { break-inside: avoid; }
 }
 @media (forced-colors: active) {
-  .failure-card, .failure-index > li, .history-panel, .count-chip, .attempt, .attachment-list > li { border-color: CanvasText; }
+  .failure-card, .history-panel, .count-chip, .attempt, .attempt-group, .attachment-list > li, .sq { border-color: CanvasText; }
+  .sq.status-failed { background: CanvasText; }
   .failure-card.is-current, :focus-visible { outline-color: Highlight; }
 }
 </style>
 </head>
 <body>
-<a class="skip-link" href="#failure-index">Index des échecs</a>
+<a class="skip-link" href="#overview">Vue d’ensemble</a>
 <header class="top-bar"><div class="top-bar-inner">
-<div class="title-line"><div class="report-title"><span class="report-brand">AdoToolkit</span><h1>Rapport des tests en échec</h1></div><nav class="section-links" aria-label="Sections du rapport"><a href="#history">Historique des exécutions</a><a href="#failure-index">Index des échecs</a></nav></div>
-<div class="build-line"><span class="pipeline-name"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build?definitionId=12">Synthetic UI tests <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span><span class="build-number"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401">20260916.3 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span></div>
-<div class="build-context"><code>refs/heads/main</code><span class="commit" title="Commit"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_git/11111111-2222-3333-4444-555555555555/commit/0123456789abcdef0123456789abcdef01234567">0123456 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span><span>failed</span><span>Fin: 2026-09-16 13 h 18</span></div>
-<div class="count-line"><span class="count-chip status-failed"><span class="count-label">✕ Échec</span><strong class="count-value">1</strong></span><span class="count-chip status-flaky"><span class="count-label">≈ Instable</span><strong class="count-value">0</strong></span><span class="count-chip status-attachments"><span class="count-label">Pièces jointes</span><strong class="count-value">2</strong></span><span class="results-link"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab">Résultat du test <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span></div>
-</div></header>
-<div class="report-context"><dl class="secondary-line"><div class="metadata-item"><dt>Généré le</dt><dd>2026-09-16 13 h 30</dd></div><div class="metadata-item"><dt>Version de la boîte à outils</dt><dd>5.3.0-test</dd></div><div class="metadata-item"><dt>Serveur</dt><dd>https://ado.example.test</dd></div><div class="metadata-item"><dt>Collection</dt><dd>/tfs/Collection%20A/</dd></div><div class="metadata-item"><dt>Projet</dt><dd>Équipe / Web?#</dd></div></dl></div>
-<main id="report-content">
-<section class="history-panel" id="history">
-<h2 class="section-heading">Historique des exécutions</h2>
-<div class="chart-scroll"><svg class="history-chart" xmlns="http://www.w3.org/2000/svg" role="img" viewBox="0 0 352 260"><title>Historique des exécutions</title><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="398"><title>Build 20260916.0; branche refs/heads/main; fin 2026-09-13 13 h 30; ✓ Réussi : 0; ✕ Échec : 0; ≈ Instable : 0; – Autre : 0; Indisponible; Ouvrir dans Azure DevOps</title><rect class="chart-unavailable" x="16" y="40" width="52" height="180"/><path class="chart-hatch" d="M 16 48 l 52 -8"/><path class="chart-hatch" d="M 16 60 l 52 -8"/><path class="chart-hatch" d="M 16 72 l 52 -8"/><path class="chart-hatch" d="M 16 84 l 52 -8"/><path class="chart-hatch" d="M 16 96 l 52 -8"/><path class="chart-hatch" d="M 16 108 l 52 -8"/><path class="chart-hatch" d="M 16 120 l 52 -8"/><path class="chart-hatch" d="M 16 132 l 52 -8"/><path class="chart-hatch" d="M 16 144 l 52 -8"/><path class="chart-hatch" d="M 16 156 l 52 -8"/><path class="chart-hatch" d="M 16 168 l 52 -8"/><path class="chart-hatch" d="M 16 180 l 52 -8"/><path class="chart-hatch" d="M 16 192 l 52 -8"/><path class="chart-hatch" d="M 16 204 l 52 -8"/><path class="chart-hatch" d="M 16 216 l 52 -8"/><text class="chart-caption" x="42" y="138">?</text><text class="chart-caption" x="42" y="244">1 ↗</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="399"><title>Build 20260916.1; branche refs/heads/main; fin 2026-09-14 13 h 30; ✓ Réussi : 42; ✕ Échec : 0; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi: 42</title><rect class="chart-pass" x="96" y="52" width="52" height="168"/><text class="chart-count" x="122" y="140">42</text></g><g data-outcome="other" data-count="2"><title>– Autre: 2</title><rect class="chart-other" x="96" y="44" width="52" height="8"/></g><text class="chart-caption" x="122" y="244">2 ↗</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="400"><title>Build 20260916.2; branche refs/heads/main; fin 2026-09-15 13 h 30; ✓ Réussi : 42; ✕ Échec : 1; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi: 42</title><rect class="chart-pass" x="176" y="52" width="52" height="168"/><text class="chart-count" x="202" y="140">42</text></g><g data-outcome="failed" data-count="1"><title>✕ Échec: 1</title><rect class="chart-fail" x="176" y="48" width="52" height="4"/></g><g data-outcome="other" data-count="2"><title>– Autre: 2</title><rect class="chart-other" x="176" y="40" width="52" height="8"/></g><text class="chart-caption" x="202" y="244">3 ↗</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="401" aria-current="true"><title>Build 20260916.3; branche refs/heads/main; fin 2026-09-16 13 h 30; ✓ Réussi : 42; ✕ Échec : 1; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi: 42</title><rect class="chart-pass" x="256" y="52" width="52" height="168"/><text class="chart-count" x="282" y="140">42</text></g><g data-outcome="failed" data-count="1"><title>✕ Échec: 1</title><rect class="chart-fail" x="256" y="48" width="52" height="4"/></g><g data-outcome="other" data-count="2"><title>– Autre: 2</title><rect class="chart-other" x="256" y="40" width="52" height="8"/></g><rect class="chart-current" x="253" y="37" width="58" height="186"/><text class="chart-caption" x="282" y="20">Cette exécution</text><text class="chart-caption" x="282" y="244">4 ↗</text></a></svg></div><details class="history-data"><summary>Données de l’historique</summary><div class="table-scroll"><table><caption>Historique des exécutions</caption><thead><tr><th scope="col">Build</th><th scope="col">Branche</th><th scope="col">Fin</th><th scope="col">Réussi</th><th scope="col">Échec</th><th scope="col">Instable</th><th scope="col">Autre</th><th scope="col">État</th></tr></thead><tbody><tr data-build-id="398"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab">20260916.0 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></th><td>refs/heads/main</td><td>2026-09-13 13 h 30</td><td>0</td><td>0</td><td>0</td><td>0</td><td><span class="status-badge status-unavailable"><span aria-hidden="true">?</span> Indisponible</span></td></tr><tr data-build-id="399"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab">20260916.1 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></th><td>refs/heads/main</td><td>2026-09-14 13 h 30</td><td>42</td><td>0</td><td>0</td><td>2</td><td>Disponible</td></tr><tr data-build-id="400"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab">20260916.2 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></th><td>refs/heads/main</td><td>2026-09-15 13 h 30</td><td>42</td><td>1</td><td>0</td><td>2</td><td>Disponible</td></tr><tr data-build-id="401"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" aria-current="true">20260916.3 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> Cette exécution</th><td>refs/heads/main</td><td>2026-09-16 13 h 30</td><td>42</td><td>1</td><td>0</td><td>2</td><td>Disponible</td></tr></tbody></table></div></details>
-</section>
-<nav class="failure-navigation" id="failure-index" aria-label="Index des échecs">
-<h2 class="section-heading">Index des échecs</h2>
+<div class="title-line"><span class="report-brand">AdoToolkit</span><h1>Rapport des tests en échec</h1><span class="pipeline-name"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build?definitionId=12">Synthetic UI tests <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span><span class="build-number"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401">20260916.3 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span><code>refs/heads/main</code><span class="commit" title="Commit"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_git/11111111-2222-3333-4444-555555555555/commit/0123456789abcdef0123456789abcdef01234567">0123456 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span><span>failed</span><span>Fin 2026-09-16 13 h 18</span><span class="results-link"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab">Résultat du test <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span></div>
+<div class="count-line"><span class="count-chip status-failed"><span class="count-label">✕ Échec</span><strong class="count-value">1</strong></span><span class="count-chip status-flaky"><span class="count-label">≈ Instable</span><strong class="count-value">0</strong></span><span class="count-chip status-attachments"><span class="count-label">Pièces jointes</span><strong class="count-value">2</strong></span></div>
+<nav class="view-links" aria-label="Sections du rapport"><a href="#overview" data-view-link="overview">Vue d’ensemble</a><a href="#by-error" data-view-link="by-error">Par erreur</a><a href="#details" data-view-link="details">Détails</a><a href="#runs" data-view-link="runs">Exécutions et historique</a></nav>
 <div class="interactive filter-controls" data-enhance hidden>
-<label>Filtrer les tests <input type="search" data-filter></label>
-<label><input type="checkbox" data-toggle="failed" checked>Échec</label>
-<label><input type="checkbox" data-toggle="flaky" checked>Instable</label>
+<label class="search">Rechercher <input type="search" data-filter></label>
 <label><input type="checkbox" data-toggle="attachments">Avec pièces jointes</label>
-<button type="button" class="interactive" data-enhance hidden data-action="expand">Tout développer</button><button type="button" class="interactive" data-enhance hidden data-action="collapse">Tout réduire</button><span class="filter-result-count" role="status" aria-live="polite" data-filter-count data-label-count="{0} tests sur {1}"></span><p class="text-muted keyboard-hint">/ Filtre · j/k Test suivant/précédent · o Ouvrir/fermer la tentative</p></div>
+<button type="button" class="interactive" data-enhance hidden data-action="expand">Tout développer</button><button type="button" class="interactive" data-enhance hidden data-action="collapse">Tout réduire</button><span class="filter-result-count" role="status" aria-live="polite" data-filter-count data-label-count="{0} tests sur {1}"></span><p class="text-muted keyboard-hint">/ Recherche · j/k Test suivant/précédent · o Ouvrir/fermer · Entrée Ouvrir les détails</p></div>
+</div></header>
+<main id="report-content">
+<section class="view" id="overview" data-view>
+<h2 class="section-heading">Vue d’ensemble</h2>
+<p class="text-muted legend">✕ en échec à la fin · ≈ en échec, puis réussi · ✓ sans échec · n/m : tentatives en échec sur l’ensemble des tentatives</p>
 <p data-no-matches hidden>Aucun test ne correspond à ces filtres.</p>
-<ol class="failure-index">
-<li data-index-for="f-1"><div class="index-heading"><span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <a href="#f-1">SubmitOrder</a> <span class="text-muted">Synthetic.CheckoutTests</span></div><div class="index-strips"><div><span class="strip-label">Tentatives</span><ol class="attempt-strip" aria-label="Tentatives"><li><a class="attempt-cell" href="#f-1-a1"><span class="attempt-caption">Tentative 1 sur 1</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="attempt-outcome">Failed</span></a></li></ol></div><div><span class="strip-label">Historique des exécutions</span><ol class="history-strip" aria-label="Historique des exécutions"><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="398"><span class="history-build">20260916.0</span> <span class="status-badge status-unavailable"><span aria-hidden="true">?</span> Indisponible</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="399"><span class="history-build">20260916.1</span> <span class="status-badge status-notrun"><span aria-hidden="true">–</span> Non exécuté</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="400"><span class="history-build">20260916.2</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="401" aria-current="true"><span class="history-build">20260916.3</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="history-current">Cette exécution</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li></ol><ul class="status-legend"><li><span class="status-badge status-passed"><span aria-hidden="true">✓</span> Réussi</span></li><li><span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span></li><li><span class="status-badge status-flaky"><span aria-hidden="true">≈</span> Instable</span></li><li><span class="status-badge status-other"><span aria-hidden="true">–</span> Autre</span></li><li><span class="status-badge status-notrun"><span aria-hidden="true">–</span> Non exécuté</span></li><li><span class="status-badge status-unavailable"><span aria-hidden="true">?</span> Indisponible</span></li></ul></div></div><div class="index-footer"><span>Durée · 1,234 s</span><span class="test-case-link"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/901">#901 Valider la commande <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span>Ready</span></span><span>Pièces jointes 2</span></div></li>
-</ol>
-</nav>
-<article class="card failure-card" id="f-1" tabindex="-1" data-attempt-count="1" data-classification="failed" data-attachment-count="2">
-<header><span class="failure-number" aria-hidden="true">1</span><span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span><h2 data-short-name>SubmitOrder</h2></header>
+<div class="table-scroll"><table class="failure-table">
+<thead><tr><th scope="col">#</th><th scope="col">Test</th><th scope="col">Cas de test</th><th scope="col">Tentatives</th><th scope="col">Dernière erreur</th></tr></thead>
+<tbody>
+<tr data-index-for="f-1"><td class="col-number"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span> 1</td><td class="col-test"><a href="#f-1">SubmitOrder</a> <span class="text-muted">CheckoutTests</span></td><td class="col-case"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/901">#901 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></td><td class="col-group"><span class="group-status status-failed"><span aria-hidden="true">✕</span> <span class="sr-only">Échec</span>1/1</span> <span class="mini-strip"><a class="sq status-failed" href="#f-1-a1" aria-label="Tentative 1 sur 1: Échec"></a></span></td><td class="col-error">Assert.Equal() Failure: Expected: &quot;Confirmed&quot; Actual: &quot;Pending&quot;</td></tr>
+</tbody></table></div>
+</section>
+<section class="view" id="by-error" data-view>
+<h2 class="section-heading">Par erreur</h2>
+<p data-no-matches hidden>Aucun test ne correspond à ces filtres.</p>
+<div class="table-scroll"><table class="failure-table by-error">
+<thead><tr><th scope="col">#</th><th scope="col">Test</th><th scope="col">Cas de test</th><th scope="col">Tentatives</th></tr></thead>
+<tbody class="error-cluster"><tr class="cluster-heading"><th scope="colgroup" colspan="4"><span class="cluster-count">1</span> <code>Assert.Equal() Failure: Expected: &quot;Confirmed&quot; Actual: &quot;Pending&quot;</code></th></tr>
+<tr data-index-for="f-1"><td class="col-number"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span> 1</td><td class="col-test"><a href="#f-1">SubmitOrder</a> <span class="text-muted">CheckoutTests</span></td><td class="col-case"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/901">#901 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></td><td class="col-group"><span class="group-status status-failed"><span aria-hidden="true">✕</span> <span class="sr-only">Échec</span>1/1</span></td></tr>
+</tbody>
+</table></div>
+</section>
+<section class="view" id="details" data-view>
+<h2 class="section-heading">Détails</h2>
+<p data-no-matches hidden>Aucun test ne correspond à ces filtres.</p>
+<article class="card failure-card" id="f-1" tabindex="-1" data-attempt-count="1" data-classification="failed" data-attachment-count="2" data-test-case="901">
+<header><span class="failure-number" aria-hidden="true">1</span><span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span><h2 data-short-name>SubmitOrder</h2><span class="test-case-link"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/901">Cas de test #901 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span class="test-case-title">Valider la commande</span> <span class="test-case-state">Ready</span></span><span class="card-links"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">Résultat du test <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Exécution de tests <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801">Bogues associés #801 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/802">Bogues associés #802 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span></header>
 <div class="name-section"><code data-full-name data-copy-value>Synthetic.CheckoutTests.SubmitOrder</code> <button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Nom complet du test">Copier</button></div>
-<dl class="metadata-grid"><div class="metadata-item"><dt>Assembly de tests</dt><dd>Synthetic.Tests.dll</dd></div><div class="metadata-item"><dt>Titre</dt><dd>Valider la commande</dd></div><div class="metadata-item"><dt>Responsable</dt><dd>Fictional Tester &lt;tester@example.test&gt;</dd></div><div class="metadata-item"><dt>Priorité</dt><dd>2</dd></div></dl>
-<div class="card-links"><span class="test-case-link"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/901">#901 Valider la commande <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span>Ready</span></span><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">Résultat du test <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Exécution de tests <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801">Bogues associés #801 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/802">Bogues associés #802 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></div>
-<div class="card-strips"><div><span class="strip-label">Tentatives</span><ol class="attempt-strip" aria-label="Tentatives"><li><a class="attempt-cell" href="#f-1-a1"><span class="attempt-caption">Tentative 1 sur 1</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="attempt-outcome">Failed</span></a></li></ol></div>
-<div><span class="strip-label">Historique des exécutions</span><ol class="history-strip" aria-label="Historique des exécutions"><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="398"><span class="history-build">20260916.0</span> <span class="status-badge status-unavailable"><span aria-hidden="true">?</span> Indisponible</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="399"><span class="history-build">20260916.1</span> <span class="status-badge status-notrun"><span aria-hidden="true">–</span> Non exécuté</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="400"><span class="history-build">20260916.2</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="401" aria-current="true"><span class="history-build">20260916.3</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="history-current">Cette exécution</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li></ol><ul class="status-legend"><li><span class="status-badge status-passed"><span aria-hidden="true">✓</span> Réussi</span></li><li><span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span></li><li><span class="status-badge status-flaky"><span aria-hidden="true">≈</span> Instable</span></li><li><span class="status-badge status-other"><span aria-hidden="true">–</span> Autre</span></li><li><span class="status-badge status-notrun"><span aria-hidden="true">–</span> Non exécuté</span></li><li><span class="status-badge status-unavailable"><span aria-hidden="true">?</span> Indisponible</span></li></ul></div>
-</div>
-<details class="attempt" id="f-1-a1" data-failure-class="true" open><summary><span class="attempt-title">Tentative 1 sur 1</span> · <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="attempt-outcome">Failed</span> <span class="attempt-duration">· 1,234 s</span></summary>
-<dl class="metadata-grid"><div class="metadata-item"><dt>Source de la tentative</dt><dd>Résultat unique</dd></div><div class="metadata-item"><dt>Début</dt><dd>2026-09-16 13 h 15</dd></div><div class="metadata-item"><dt>Fin</dt><dd>2026-09-16 13 h 16</dd></div><div class="metadata-item"><dt>Durée</dt><dd>1,234 s</dd></div><div class="metadata-item"><dt>Machine</dt><dd>SYNTHETIC-AGENT</dd></div><div class="metadata-item"><dt>Exécution de tests</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Synthetic Windows tests <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Résultat du test</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">11 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Exécuté par</dt><dd>Fictional Runner &lt;runner@example.test&gt;</dd></div><div class="metadata-item"><dt>Type d’échec</dt><dd>Regression</dd></div><div class="metadata-item"><dt>État de résolution</dt><dd>Unresolved</dd></div><div class="metadata-item"><dt>En échec depuis</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400">400 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Bogues associés</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801">#801 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Bogues associés</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/802">#802 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Commentaire</dt><dd>« Résultat attendu : commande confirmée »</dd></div></dl>
-<div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Message d’erreur">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button></div><div class="code-block"><div class="language-label">Message d’erreur</div><pre><code class="lang-error"><span class="tok-plain">Assert.Equal() Failure: </span><span class="tok-keyword">Expected</span><span class="tok-plain">: </span><span class="tok-string">&quot;Confirmed&quot;</span><span class="tok-plain"> </span><span class="tok-keyword">Actual</span><span class="tok-plain">: </span><span class="tok-string">&quot;Pending&quot;</span><span class="tok-plain">&#xA;</span><span class="tok-url"><a rel="noreferrer" href="https://repo.example.test/source?q=1&amp;line=42">https://repo.example.test/source?q=1&amp;line=42</a></span></code></pre></div></div>
-<div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Arborescence des appels de procédure (.NET)">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button><button type="button" class="interactive" data-enhance hidden data-action="framework" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Masquer les appels du framework</button></div><div class="code-block"><div class="language-label">Arborescence des appels de procédure (.NET)</div><pre><code class="lang-stacktrace"><span class="tok-type">System.InvalidOperationException</span><span class="tok-punct">:</span><span class="tok-plain"> Synthetic failure</span><span class="tok-plain">&#xA;</span><span class="framework-frame"><span class="tok-plain">   </span><span class="tok-keyword">at</span><span class="tok-plain"> </span><span class="tok-namespace">System.Threading.Tasks.</span><span class="tok-type">Task.</span><span class="tok-method">Execute</span><span class="tok-punct">(</span><span class="tok-punct">)</span><span class="tok-plain">&#xA;</span></span><span class="first-user-frame"><span class="tok-plain">   </span><span class="tok-keyword">at</span><span class="tok-plain"> </span><span class="tok-namespace">Synthetic.</span><span class="tok-type">CheckoutTests.</span><span class="tok-method">SubmitOrder</span><span class="tok-punct">(</span><span class="tok-punct">)</span><span class="tok-keyword"> in </span><span class="tok-path">C:\synthetic\Checkout.cs</span><span class="tok-punct">:</span><span class="tok-keyword">line</span><span class="tok-plain"> </span><span class="tok-line">42</span><span class="tok-plain">&#xA;</span></span><span class="tok-plain">   </span><span class="tok-keyword">à</span><span class="tok-plain"> </span><span class="tok-namespace">Synthetic.</span><span class="tok-type">Assertions.</span><span class="tok-method">Vérifier</span><span class="tok-punct">(</span><span class="tok-punct">)</span><span class="tok-keyword"> dans </span><span class="tok-path">C:\synthetic\Assertions.cs</span><span class="tok-punct">:</span><span class="tok-keyword">ligne</span><span class="tok-plain"> </span><span class="tok-line">18</span></code></pre></div></div>
+<dl class="metadata-grid"><div><dt>Assembly de tests</dt><dd>Synthetic.Tests.dll</dd></div><div><dt>Titre</dt><dd>Valider la commande</dd></div><div><dt>Responsable</dt><dd>Fictional Tester &lt;tester@example.test&gt;</dd></div><div><dt>Priorité</dt><dd>2</dd></div></dl>
+<div class="card-history"><span class="strip-label">Historique des exécutions</span><ol class="history-strip" aria-label="Historique des exécutions"><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="398"><span class="history-build">20260916.0</span> <span class="status-badge status-unavailable"><span aria-hidden="true">?</span> Indisponible</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="399"><span class="history-build">20260916.1</span> <span class="status-badge status-notrun"><span aria-hidden="true">–</span> Non exécuté</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="400"><span class="history-build">20260916.2</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="401" aria-current="true"><span class="history-build">20260916.3</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="history-current">Cette exécution</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li></ol><ul class="status-legend"><li><span class="status-badge status-passed"><span aria-hidden="true">✓</span> Réussi</span></li><li><span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span></li><li><span class="status-badge status-flaky"><span aria-hidden="true">≈</span> Instable</span></li><li><span class="status-badge status-other"><span aria-hidden="true">–</span> Autre</span></li><li><span class="status-badge status-notrun"><span aria-hidden="true">–</span> Non exécuté</span></li><li><span class="status-badge status-unavailable"><span aria-hidden="true">?</span> Indisponible</span></li></ul></div>
+<details class="attempt" id="f-1-a1"><summary><span class="attempt-title">Tentative 1 sur 1</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="attempt-meta">1,235 s</span> <span class="attempt-meta">SYNTHETIC-AGENT</span> <span class="attempt-error">Assert.Equal() Failure: Expected: &quot;Confirmed&quot; Actual: &quot;Pending&quot;</span></summary>
+<dl class="metadata-grid"><div><dt>Source de la tentative</dt><dd>Résultat unique</dd></div><div><dt>Exécution de tests</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Synthetic Windows tests (201) <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div><dt>Résultat du test</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">11 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div><dt>Début</dt><dd>2026-09-16 13 h 15</dd></div><div><dt>Fin</dt><dd>2026-09-16 13 h 16</dd></div><div><dt>Exécuté par</dt><dd>Fictional Runner &lt;runner@example.test&gt;</dd></div><div><dt>Type d’échec</dt><dd>Regression</dd></div><div><dt>État de résolution</dt><dd>Unresolved</dd></div><div><dt>En échec depuis</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400">400 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div><dt>Bogues associés</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801">#801 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div><dt>Bogues associés</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/802">#802 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div><dt>Commentaire</dt><dd>« Résultat attendu : commande confirmée »</dd></div></dl>
+<div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Message d’erreur">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button></div><div class="code-block"><div class="language-label">Message d’erreur</div><pre><code class="lang-error">Assert.Equal() Failure: <span class="k">Expected</span>: <span class="s">&quot;Confirmed&quot;</span> <span class="k">Actual</span>: <span class="s">&quot;Pending&quot;</span>
+<span class="u"><a rel="noreferrer" href="https://repo.example.test/source?q=1&amp;line=42">https://repo.example.test/source?q=1&amp;line=42</a></span></code></pre></div></div>
+<div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Arborescence des appels de procédure (.NET)">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button><button type="button" class="interactive" data-enhance hidden data-action="framework" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Masquer les appels du framework</button></div><div class="code-block"><div class="language-label">Arborescence des appels de procédure (.NET)</div><pre><code class="lang-stacktrace"><span class="t">System.InvalidOperationException</span>: Synthetic failure
+<span class="framework-frame">   <span class="k">at</span> <span class="n">System.Threading.Tasks.</span><span class="t">Task.</span><span class="m">Execute</span>()
+</span><span class="first-user-frame">   <span class="k">at</span> <span class="n">Synthetic.</span><span class="t">CheckoutTests.</span><span class="m">SubmitOrder</span>()<span class="k"> in </span><span class="f">C:\synthetic\Checkout.cs</span>:<span class="k">line</span> <span class="l">42</span>
+</span>   <span class="k">à</span> <span class="n">Synthetic.</span><span class="t">Assertions.</span><span class="m">Vérifier</span>()<span class="k"> dans </span><span class="f">C:\synthetic\Assertions.cs</span>:<span class="k">ligne</span> <span class="l">18</span></code></pre></div></div>
 <h3>Sous-résultats</h3>
 <section class="sub-result" data-sub-result="301"><h4>Data row A</h4>
-<span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="attempt-outcome">Failed</span><dl class="metadata-grid"><div class="metadata-item"><dt>ID</dt><dd>301</dd></div><div class="metadata-item"><dt>Séquence</dt><dd>1</dd></div><div class="metadata-item"><dt>Type de groupe de résultats</dt><dd>DataDriven</dd></div><div class="metadata-item"><dt>Début</dt><dd>2026-09-16 13 h 15</dd></div><div class="metadata-item"><dt>Fin</dt><dd>2026-09-16 13 h 16</dd></div><div class="metadata-item"><dt>Durée</dt><dd>1,000 s</dd></div><div class="metadata-item"><dt>Machine</dt><dd>SYNTHETIC-DATA</dd></div><div class="metadata-item"><dt>Commentaire</dt><dd>Sub-result comment</dd></div></dl>
-<div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Message d’erreur">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button></div><div class="code-block"><div class="language-label">Message d’erreur</div><pre><code class="lang-error"><span class="tok-plain">Sub-result message </span><span class="tok-punct">&lt;</span><span class="tok-plain">expected</span><span class="tok-punct">&gt;</span></code></pre></div></div>
-<div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Arborescence des appels de procédure (.NET)">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button><button type="button" class="interactive" data-enhance hidden data-action="framework" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Masquer les appels du framework</button></div><div class="code-block"><div class="language-label">Arborescence des appels de procédure (.NET)</div><pre><code class="lang-stacktrace"><span class="first-user-frame"><span class="tok-plain">   </span><span class="tok-keyword">at</span><span class="tok-plain"> </span><span class="tok-namespace">Synthetic.</span><span class="tok-type">Data.</span><span class="tok-method">Row</span><span class="tok-punct">(</span><span class="tok-punct">)</span></span></code></pre></div></div>
+<span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span><dl class="metadata-grid"><div><dt>ID</dt><dd>301</dd></div><div><dt>Séquence</dt><dd>1</dd></div><div><dt>Type de groupe de résultats</dt><dd>DataDriven</dd></div><div><dt>Début</dt><dd>2026-09-16 13 h 15</dd></div><div><dt>Fin</dt><dd>2026-09-16 13 h 16</dd></div><div><dt>Durée</dt><dd>1 s</dd></div><div><dt>Machine</dt><dd>SYNTHETIC-DATA</dd></div><div><dt>Commentaire</dt><dd>Sub-result comment</dd></div></dl>
+<div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Message d’erreur">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button></div><div class="code-block"><div class="language-label">Message d’erreur</div><pre><code class="lang-error">Sub-result message &lt;expected&gt;</code></pre></div></div>
+<div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Arborescence des appels de procédure (.NET)">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button><button type="button" class="interactive" data-enhance hidden data-action="framework" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Masquer les appels du framework</button></div><div class="code-block"><div class="language-label">Arborescence des appels de procédure (.NET)</div><pre><code class="lang-stacktrace"><span class="first-user-frame">   <span class="k">at</span> <span class="n">Synthetic.</span><span class="t">Data.</span><span class="m">Row</span>()</span></code></pre></div></div>
 <section class="sub-result" data-sub-result="302"><h5>Nested row</h5>
-<span class="status-badge status-other"><span aria-hidden="true">–</span> Autre</span> <span class="attempt-outcome">Blocked</span><dl class="metadata-grid"><div class="metadata-item"><dt>ID</dt><dd>302</dd></div></dl>
-<div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Message d’erreur">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button></div><div class="code-block"><div class="language-label">Message d’erreur</div><pre><code class="lang-error"><span class="tok-plain">Nested message</span></code></pre></div></div>
-<div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Arborescence des appels de procédure (.NET)">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button><button type="button" class="interactive" data-enhance hidden data-action="framework" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Masquer les appels du framework</button></div><div class="code-block"><div class="language-label">Arborescence des appels de procédure (.NET)</div><pre><code class="lang-stacktrace"><span class="tok-plain">Nested trace</span></code></pre></div></div>
+<span class="status-badge status-other"><span aria-hidden="true">–</span> Autre</span> <span class="attempt-outcome">Blocked</span><dl class="metadata-grid"><div><dt>ID</dt><dd>302</dd></div></dl>
+<div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Message d’erreur">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button></div><div class="code-block"><div class="language-label">Message d’erreur</div><pre><code class="lang-error">Nested message</code></pre></div></div>
+<div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Arborescence des appels de procédure (.NET)">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button><button type="button" class="interactive" data-enhance hidden data-action="framework" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Masquer les appels du framework</button></div><div class="code-block"><div class="language-label">Arborescence des appels de procédure (.NET)</div><pre><code class="lang-stacktrace">Nested trace</code></pre></div></div>
 </section>
 </section>
 <h3>Itérations</h3>
-<section class="iteration" data-iteration="7"><h4>Itérations 7</h4><dl class="metadata-grid"><div class="metadata-item"><dt>Résultat</dt><dd>Failed</dd></div></dl><div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Message d’erreur">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button></div><div class="code-block"><div class="language-label">Message d’erreur</div><pre><code class="lang-error"><span class="tok-plain">Iteration message</span></code></pre></div></div>
+<section class="iteration" data-iteration="7"><h4>Itérations 7</h4><dl class="metadata-grid"><div><dt>Résultat</dt><dd>Failed</dd></div></dl><div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Message d’erreur">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button></div><div class="code-block"><div class="language-label">Message d’erreur</div><pre><code class="lang-error">Iteration message</code></pre></div></div>
 <h5>Paramètres</h5>
-<dl class="metadata-grid"><div class="metadata-item"><dt>quantity</dt><dd>3 &lt; 4</dd></div></dl>
-<div class="action-result"><dl class="metadata-grid"><div class="metadata-item"><dt>Chemin de l’action</dt><dd>00000001</dd></div><div class="metadata-item"><dt>Identifiant d’étape</dt><dd>step-A</dd></div><div class="metadata-item"><dt>Résultat</dt><dd>Failed</dd></div></dl><div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Message d’erreur">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button></div><div class="code-block"><div class="language-label">Message d’erreur</div><pre><code class="lang-error"><span class="tok-plain">Action message</span></code></pre></div></div>
+<dl class="metadata-grid"><div><dt>quantity</dt><dd>3 &lt; 4</dd></div></dl>
+<div class="action-result"><dl class="metadata-grid"><div><dt>Chemin de l’action</dt><dd>00000001</dd></div><div><dt>Identifiant d’étape</dt><dd>step-A</dd></div><div><dt>Résultat</dt><dd>Failed</dd></div></dl><div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Message d’erreur">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button></div><div class="code-block"><div class="language-label">Message d’erreur</div><pre><code class="lang-error">Action message</code></pre></div></div>
 </div>
 </section>
 <h3>Pièces jointes</h3>
 <ul class="attachment-list">
-<li id="f-1-a1-att51" data-attachment="51"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">Screenshot.PNG <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span>1 234 octets</span><dl class="metadata-grid"><div class="metadata-item"><dt>Commentaire</dt><dd>Synthetic screenshot metadata</dd></div><div class="metadata-item"><dt>Type de pièce jointe</dt><dd>GeneralAttachment</dd></div></dl></li>
-<li id="f-1-a1-att52" data-attachment="52"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">Details.json <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span>256 octets</span><dl class="metadata-grid"><div class="metadata-item"><dt>ID</dt><dd>301</dd></div></dl></li>
+<li id="f-1-a1-att51"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">Screenshot.PNG <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span class="attachment-size">1 234 octets</span><dl class="metadata-grid"><div><dt>Commentaire</dt><dd>Synthetic screenshot metadata</dd></div></dl></li>
+<li id="f-1-a1-att52"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">Details.json <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span class="attachment-size">256 octets</span><dl class="metadata-grid"><div><dt>ID</dt><dd>301</dd></div></dl></li>
 </ul>
 <h3>Champs personnalisés</h3>
-<dl class="metadata-grid"><div class="metadata-item"><dt>SyntheticFlag</dt><dd>True</dd></div><div class="metadata-item"><dt>SyntheticNumber</dt><dd>1234,5</dd></div></dl>
+<dl class="metadata-grid"><div><dt>SyntheticFlag</dt><dd>True</dd></div><div><dt>SyntheticNumber</dt><dd>1234,5</dd></div></dl>
 <h3>Champs supplémentaires</h3>
-<dl class="metadata-grid"><div class="metadata-item"><dt>futureField</dt><dd>Forward-compatible value</dd></div></dl>
+<dl class="metadata-grid"><div><dt>futureField</dt><dd>Forward-compatible value</dd></div></dl>
 </details>
-<footer class="card-footer"><a href="#failure-index">↑ Index des échecs</a></footer>
 </article>
+</section>
+<section class="view" id="runs" data-view>
+<h2 class="section-heading">Exécutions et historique</h2>
+<p class="window-note">Les pièces jointes des exécutions commencées avant le 2026-09-09 13 h 30 sont omises : 0.</p>
+<div class="table-scroll"><table class="runs-table"><thead><tr><th scope="col">Exécution de tests</th><th scope="col">Tentatives (phase / travail / instance)</th><th scope="col">Début</th><th scope="col">État</th><th scope="col">Tests</th><th scope="col">Réussi</th><th scope="col">Pièces jointes</th></tr></thead>
+<tbody>
+<tr data-run="201"><td><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Synthetic Windows tests <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span class="text-muted">201</span></td><td></td><td>2026-09-16 13 h 15</td><td>Completed</td><td></td><td></td><td>Listées</td></tr>
+</tbody></table></div>
+<section class="history-panel" id="history">
+<h3>Historique des exécutions</h3>
+<div class="chart-scroll"><svg class="history-chart" xmlns="http://www.w3.org/2000/svg" role="img" viewBox="0 0 352 260"><title>Historique des exécutions</title><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="398"><title>Build 20260916.0; branche refs/heads/main; fin 2026-09-13 13 h 30; ✓ Réussi : 0; ✕ Échec : 0; ≈ Instable : 0; – Autre : 0; Indisponible; Ouvrir dans Azure DevOps</title><rect class="chart-unavailable" x="16" y="40" width="52" height="180"/><path class="chart-hatch" d="M 16 48 l 52 -8"/><path class="chart-hatch" d="M 16 60 l 52 -8"/><path class="chart-hatch" d="M 16 72 l 52 -8"/><path class="chart-hatch" d="M 16 84 l 52 -8"/><path class="chart-hatch" d="M 16 96 l 52 -8"/><path class="chart-hatch" d="M 16 108 l 52 -8"/><path class="chart-hatch" d="M 16 120 l 52 -8"/><path class="chart-hatch" d="M 16 132 l 52 -8"/><path class="chart-hatch" d="M 16 144 l 52 -8"/><path class="chart-hatch" d="M 16 156 l 52 -8"/><path class="chart-hatch" d="M 16 168 l 52 -8"/><path class="chart-hatch" d="M 16 180 l 52 -8"/><path class="chart-hatch" d="M 16 192 l 52 -8"/><path class="chart-hatch" d="M 16 204 l 52 -8"/><path class="chart-hatch" d="M 16 216 l 52 -8"/><text class="chart-caption" x="42" y="138">?</text><text class="chart-caption" x="42" y="244">1 ↗</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="399"><title>Build 20260916.1; branche refs/heads/main; fin 2026-09-14 13 h 30; ✓ Réussi : 42; ✕ Échec : 0; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi: 42</title><rect class="chart-pass" x="96" y="52" width="52" height="168"/><text class="chart-count" x="122" y="140">42</text></g><g data-outcome="other" data-count="2"><title>– Autre: 2</title><rect class="chart-other" x="96" y="44" width="52" height="8"/></g><text class="chart-caption" x="122" y="244">2 ↗</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="400"><title>Build 20260916.2; branche refs/heads/main; fin 2026-09-15 13 h 30; ✓ Réussi : 42; ✕ Échec : 1; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi: 42</title><rect class="chart-pass" x="176" y="52" width="52" height="168"/><text class="chart-count" x="202" y="140">42</text></g><g data-outcome="failed" data-count="1"><title>✕ Échec: 1</title><rect class="chart-fail" x="176" y="48" width="52" height="4"/></g><g data-outcome="other" data-count="2"><title>– Autre: 2</title><rect class="chart-other" x="176" y="40" width="52" height="8"/></g><text class="chart-caption" x="202" y="244">3 ↗</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="401" aria-current="true"><title>Build 20260916.3; branche refs/heads/main; fin 2026-09-16 13 h 30; ✓ Réussi : 42; ✕ Échec : 1; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi: 42</title><rect class="chart-pass" x="256" y="52" width="52" height="168"/><text class="chart-count" x="282" y="140">42</text></g><g data-outcome="failed" data-count="1"><title>✕ Échec: 1</title><rect class="chart-fail" x="256" y="48" width="52" height="4"/></g><g data-outcome="other" data-count="2"><title>– Autre: 2</title><rect class="chart-other" x="256" y="40" width="52" height="8"/></g><rect class="chart-current" x="253" y="37" width="58" height="186"/><text class="chart-caption" x="282" y="20">Cette exécution</text><text class="chart-caption" x="282" y="244">4 ↗</text></a></svg></div><details class="history-data"><summary>Données de l’historique</summary><div class="table-scroll"><table><caption>Historique des exécutions</caption><thead><tr><th scope="col">Build</th><th scope="col">Branche</th><th scope="col">Fin</th><th scope="col">Réussi</th><th scope="col">Échec</th><th scope="col">Instable</th><th scope="col">Autre</th><th scope="col">État</th></tr></thead><tbody><tr data-build-id="398"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab">20260916.0 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></th><td>refs/heads/main</td><td>2026-09-13 13 h 30</td><td>0</td><td>0</td><td>0</td><td>0</td><td><span class="status-badge status-unavailable"><span aria-hidden="true">?</span> Indisponible</span></td></tr><tr data-build-id="399"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab">20260916.1 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></th><td>refs/heads/main</td><td>2026-09-14 13 h 30</td><td>42</td><td>0</td><td>0</td><td>2</td><td>Disponible</td></tr><tr data-build-id="400"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab">20260916.2 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></th><td>refs/heads/main</td><td>2026-09-15 13 h 30</td><td>42</td><td>1</td><td>0</td><td>2</td><td>Disponible</td></tr><tr data-build-id="401"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" aria-current="true">20260916.3 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> Cette exécution</th><td>refs/heads/main</td><td>2026-09-16 13 h 30</td><td>42</td><td>1</td><td>0</td><td>2</td><td>Disponible</td></tr></tbody></table></div></details>
+</section>
+<dl class="secondary-line"><div><dt>Généré le</dt><dd>2026-09-16 13 h 30</dd></div><div><dt>Version de la boîte à outils</dt><dd>5.3.0-test</dd></div><div><dt>Serveur</dt><dd>https://ado.example.test</dd></div><div><dt>Collection</dt><dd>/tfs/Collection%20A/</dd></div><div><dt>Projet</dt><dd>Équipe / Web?#</dd></div></dl>
+</section>
 </main>
-<dialog class="image-viewer" aria-label="Image jointe">
-<button type="button" class="interactive" data-enhance hidden data-action="close">Fermer</button><div data-image-slot></div></dialog>
 <p class="copy-feedback" role="status" data-copy-status hidden data-label-done="Copié" data-label-selected="Texte sélectionné ; utilisez votre raccourci de copie."></p>
 <script>__SCRIPT_ASSET__</script>
 </body>

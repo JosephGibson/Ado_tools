@@ -13,6 +13,11 @@ public sealed class AdoTestRun
     public int? PipelineAttempt { get; init; }
     internal int? StageAttempt { get; init; }
     internal int? PhaseAttempt { get; init; }
+    // Pipeline names from pipelineReference [Verify V-19]. PhaseName is the YAML job; JobName is
+    // the matrix or parallel leg, usually __default. Null when the server sends no name.
+    public string? StageName { get; init; }
+    public string? PhaseName { get; init; }
+    public string? JobName { get; init; }
     public int? TotalTests { get; init; }
     // Server run aggregates, kept in the server's own terms. UnanalyzedTests counts results that
     // did not pass and are not yet analyzed; it is not a result outcome.

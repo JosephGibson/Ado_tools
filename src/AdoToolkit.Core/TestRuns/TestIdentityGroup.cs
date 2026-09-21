@@ -11,12 +11,14 @@ internal sealed class TestIdentityGroup
     internal int FirstResultId => Records.Min(static record => record.ResultId);
     // A rerun parent is always a detail candidate: its failed attempts live in sub-results (§15.10).
     internal bool IsCandidate => Records.Any(static record => record.IsRerunGroup || record.OutcomeClass == AdoTestOutcomeClass.Failure);
-    internal AdoTestOutcomeClass LastOutcomeClass => Records[^1].OutcomeClass;
+    internal AdoTestOutcomeClass LastOutcomeClass =>
+        OutcomeClassifier.Deciding(Records.Select(static record => (record.PipelineKey, record.OutcomeClass)));
 
     // Provisional classification from pass-1 data only, used for report order and the detail limit.
-    internal AdoTestFailureClassification ProvisionalClassification => Records[^1].IsRerunGroup
-        ? (LastOutcomeClass == AdoTestOutcomeClass.Failure ? AdoTestFailureClassification.Failed : AdoTestFailureClassification.Flaky)
-        : OutcomeClassifier.Classify(LastOutcomeClass);
+    // A rerun parent that did not fail counts as passing: its failed attempts live in sub-results.
+    internal AdoTestFailureClassification ProvisionalClassification => OutcomeClassifier.Classify(OutcomeClassifier.Deciding(
+        Records.Select(static record => (record.PipelineKey,
+            record.IsRerunGroup && record.OutcomeClass != AdoTestOutcomeClass.Failure ? AdoTestOutcomeClass.Pass : record.OutcomeClass))));
 
     internal AdoTestHistoryOutcome Cell => OutcomeClassifier.Cell(LastOutcomeClass, IsCandidate);
 }

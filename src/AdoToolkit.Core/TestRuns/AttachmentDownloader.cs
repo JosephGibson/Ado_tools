@@ -7,8 +7,9 @@ using AdoToolkit.Core.IO;
 namespace AdoToolkit.Core.TestRuns;
 
 // §15.13: downloads in report order into the temporary generation folder, with per-file and
-// total byte limits, content checks, and toolkit-generated names only. The input failures are
-// never modified; the result carries updated copies.
+// total byte limits, content checks, and toolkit-generated names only. Only JSON and text
+// attachments are ever requested, whatever the caller selects; PNG, HTML and other kinds stay
+// links. The input failures are never modified; the result carries updated copies.
 public sealed class AttachmentDownloader
 {
     private const string PartialExtension = ".part";
@@ -23,7 +24,8 @@ public sealed class AttachmentDownloader
     internal AttachmentDownloader(AdoHttpPipeline pipeline, TestResultOptions limits, IAdoLog? log = null)
     {
         ArgumentNullException.ThrowIfNull(limits);
-        if (limits.MaximumAttachmentBytes < 1 || limits.MaximumTotalAttachmentBytes < 1 || limits.MaximumInlineJsonBytes < 1)
+        if (limits.MaximumAttachmentBytes < 1 || limits.MaximumTotalAttachmentBytes < 1 || limits.MaximumInlineJsonBytes < 1
+            || limits.MaximumInlineTotalBytes < 1)
             throw new ArgumentOutOfRangeException(nameof(limits));
         this.pipeline = pipeline;
         this.limits = limits;
@@ -31,9 +33,10 @@ public sealed class AttachmentDownloader
     }
 
     internal long MaximumInlineJsonBytes => limits.MaximumInlineJsonBytes;
+    internal long MaximumInlineTotalBytes => limits.MaximumInlineTotalBytes;
 
     internal async Task<AttachmentDownloadResult> DownloadAsync(IReadOnlyList<AdoTestFailure> failures, string project,
-        string folder, string folderName, CultureInfo culture, CancellationToken cancellationToken, int? runId = null)
+        string folder, string folderName, CultureInfo culture, CancellationToken cancellationToken, IReadOnlySet<int>? runIds = null)
     {
         ArgumentNullException.ThrowIfNull(failures);
         ArgumentException.ThrowIfNullOrWhiteSpace(project);
@@ -42,7 +45,7 @@ public sealed class AttachmentDownloader
         ArgumentNullException.ThrowIfNull(culture);
         Session session = new(this, project, folder, folderName, culture,
             failures.SelectMany(f => f.Attempts).SelectMany(a => a.Attachments)
-                .Where(a => !runId.HasValue || a.RunId == runId.Value).Select(Key).Distinct().Count());
+                .Where(a => Selected(a, runIds)).Select(Key).Distinct().Count());
         List<AdoTestFailure> updated = new(failures.Count);
         foreach (AdoTestFailure failure in failures)
         {
@@ -52,7 +55,7 @@ public sealed class AttachmentDownloader
             {
                 List<AdoTestAttachment> attachments = new(attempt.Attachments.Count);
                 foreach (AdoTestAttachment attachment in attempt.Attachments)
-                    attachments.Add(!runId.HasValue || attachment.RunId == runId.Value
+                    attachments.Add(Selected(attachment, runIds)
                         ? await session.GetAsync(attachment, cancellationToken).ConfigureAwait(false)
                         : attachment);
                 attempts.Add(attempt.WithAttachments(attachments.AsReadOnly()));
@@ -61,6 +64,10 @@ public sealed class AttachmentDownloader
         }
         return new AttachmentDownloadResult(updated.AsReadOnly(), session.Diagnostics.AsReadOnly(), session.Files);
     }
+
+    // Null selects every run; the kind rule applies either way.
+    internal static bool Selected(AdoTestAttachment attachment, IReadOnlySet<int>? runIds) =>
+        AttachmentKinds.IsDownloadable(attachment.Kind) && (runIds is null || runIds.Contains(attachment.RunId));
 
     private static (int, int, int?, int) Key(AdoTestAttachment attachment) =>
         (attachment.RunId, attachment.ResultId, attachment.SubResultId, attachment.Id);
@@ -140,7 +147,7 @@ public sealed class AttachmentDownloader
             if (!matches)
             {
                 Add(DiagnosticCodes.AttachmentContentMismatch, attachment,
-                    attachment.Kind == AdoTestAttachmentKind.Png ? "PNG" : "JSON");
+                    attachment.Kind == AdoTestAttachmentKind.Text ? "TXT" : "JSON");
                 return attachment.WithDownload(AdoTestAttachmentStatus.ContentMismatch, folderName + "/" + name);
             }
             return attachment.WithDownload(AdoTestAttachmentStatus.Downloaded, folderName + "/" + name);

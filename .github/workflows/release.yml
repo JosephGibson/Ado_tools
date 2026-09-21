@@ -1,7 +1,7 @@
 # Builds, verifies and publishes an AdoToolkit release when a v<major>.<minor>.<patch> tag is
-# pushed. The tag must match VersionPrefix in Directory.Build.props. Assets: the module zip, its
-# SHA-256 checksum file and the standalone installer. Releases are unsigned; the checksum protects
-# the download. End users need only Windows and PowerShell 7.6.
+# pushed. The tag must match VersionPrefix in Directory.Build.props. Assets: a portable Windows
+# x64 bundle, the module-only zip, their SHA-256 checksums and the standalone module installer.
+# The portable bundle includes the exact PowerShell runtime verified below.
 name: Release
 
 on:
@@ -111,8 +111,20 @@ jobs:
         run: |
           pwsh -NoProfile -File ./tools/package/Publish-AdoToolkitPackage.ps1 -NoBuild
           if ($LASTEXITCODE -ne 0) { throw 'Packaging failed.' }
-          pwsh -NoProfile -File ./tools/package/New-AdoToolkitRelease.ps1
+          $runtime = Join-Path $env:RUNNER_TEMP "PowerShell-$env:POWERSHELL_VERSION-win-x64.zip"
+          $checksums = Join-Path $env:RUNNER_TEMP 'powershell-hashes.sha256'
+          pwsh -NoProfile -File ./tools/package/New-AdoToolkitRelease.ps1 -PowerShellArchivePath $runtime -PowerShellChecksumPath $checksums -PowerShellVersion $env:POWERSHELL_VERSION
           if ($LASTEXITCODE -ne 0) { throw 'Release assets failed.' }
+
+      - name: Check the portable launcher offline
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:GITHUB_WORKSPACE "artifacts/release/AdoToolkit-$env:VERSION-win-x64.zip"
+          pwsh -NoProfile -File ./tools/package/Test-AdoToolkitPortable.ps1 -ArchivePath $archive -ModuleVersion $env:VERSION -PowerShellVersion $env:POWERSHELL_VERSION
+          if ($LASTEXITCODE -ne 0) { throw 'Portable launcher check failed.' }
 
       - name: Publish the GitHub release
         shell: pwsh
@@ -123,10 +135,25 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $release = Join-Path $env:GITHUB_WORKSPACE 'artifacts/release'
           $zip = "AdoToolkit-$env:VERSION.zip"
+          $portable = "AdoToolkit-$env:VERSION-win-x64.zip"
           $hash = ((Get-Content -LiteralPath (Join-Path $release "$zip.sha256") -TotalCount 1).Trim() -split '\s+')[0]
+          $portableHash = ((Get-Content -LiteralPath (Join-Path $release "$portable.sha256") -TotalCount 1).Trim() -split '\s+')[0]
           $fence = '```'
           $notes = @(
-            '## Install'
+            '## Portable download (recommended for Windows x64)'
+            ''
+            "Includes PowerShell $env:POWERSHELL_VERSION and its runtime. No separate PowerShell installation, .NET SDK or administrator rights are needed."
+            ''
+            "1. Download ``$portable``."
+            '2. Right-click the ZIP, choose Properties, select Unblock if shown, and click Apply.'
+            '3. Extract the entire ZIP to a folder you can write to.'
+            '4. Double-click `Start-AdoToolkit.cmd`. A console opens with AdoToolkit already loaded.'
+            ''
+            'To update, extract a new portable release into a new folder and use its launcher. Saved profiles are retained. The bundled PowerShell does not update itself.'
+            ''
+            "SHA-256 of ``$portable``: ``$portableHash`` (also available in ``$portable.sha256``)."
+            ''
+            '## Module-only installation'
             ''
             'Requires Windows and PowerShell 7.6 (`pwsh`). No administrator rights, .NET SDK or other modules are needed.'
             ''
@@ -143,12 +170,12 @@ jobs:
             ''
             "SHA-256 of ``$zip``: ``$hash``"
             ''
-            'This release is not code-signed. The installer checks the zip against its SHA-256 checksum before installing.'
+            'AdoToolkit scripts and modules are not code-signed. Organization policies requiring signed code still apply. The module installer checks its ZIP against the SHA-256 checksum before installing.'
             ''
           )
           $notesFile = Join-Path $env:RUNNER_TEMP 'release-notes.md'
           $notes | Set-Content -LiteralPath $notesFile -Encoding utf8
-          $assets = @($zip, "$zip.sha256", 'Install-AdoToolkit.ps1') | ForEach-Object { Join-Path $release $_ }
+          $assets = @($portable, "$portable.sha256", $zip, "$zip.sha256", 'Install-AdoToolkit.ps1') | ForEach-Object { Join-Path $release $_ }
           # Only --notes-file: combining it with --generate-notes is not documented behaviour.
           gh release create $env:GITHUB_REF_NAME @assets --title "AdoToolkit $env:VERSION" --notes-file $notesFile --verify-tag
           if ($LASTEXITCODE -ne 0) { throw 'Creating the release failed.' }

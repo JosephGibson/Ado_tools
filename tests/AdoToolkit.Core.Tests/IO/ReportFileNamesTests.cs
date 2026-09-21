@@ -78,10 +78,9 @@ public sealed class ReportFileNamesTests
             Assert.Equal("20270101T020509007Z", stamp);
             Assert.Equal("Build-1234567-TestFailures.files-20270101T020509007Z", ReportFileNames.AttachmentFolder("Build-1234567-TestFailures", stamp));
             Assert.Equal("Rapport été.files-20270101T020509007Z", ReportFileNames.AttachmentFolder("Rapport été", stamp));
-            Assert.Equal("r201-1234567-a5001.png", ReportFileNames.Attachment(201, 1234567, null, 5001, ".png"));
+            Assert.Equal("r201-1234567-a5001.txt", ReportFileNames.Attachment(201, 1234567, null, 5001, ".txt"));
             Assert.Equal("r201-11-s301-a5101.bin", ReportFileNames.Attachment(201, 11, 301, 5101, ".bin"));
             Assert.Equal("r1-2-a3.json", ReportFileNames.Attachment(1, 2, null, 3, ".json"));
-            Assert.Equal("r1-2-a3.html", ReportFileNames.Attachment(1, 2, null, 3, ".html"));
         }
         finally { CultureInfo.CurrentCulture = previous; }
     }
@@ -112,11 +111,14 @@ public sealed class ReportFileNamesTests
     public void InvalidFailedTestNameInputsAreRejected()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.TestFailures(0));
-        Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.Attachment(0, 1, null, 1, ".png"));
-        Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.Attachment(1, 0, null, 1, ".png"));
-        Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.Attachment(1, 1, 0, 1, ".png"));
-        Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.Attachment(1, 1, null, 0, ".png"));
-        Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.Attachment(1, 1, null, 1, ".PNG"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.Attachment(0, 1, null, 1, ".json"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.Attachment(1, 0, null, 1, ".json"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.Attachment(1, 1, 0, 1, ".json"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.Attachment(1, 1, null, 0, ".json"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.Attachment(1, 1, null, 1, ".TXT"));
+        // PNG and HTML attachments are never downloaded, so they never get a local name.
+        Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.Attachment(1, 1, null, 1, ".png"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.Attachment(1, 1, null, 1, ".html"));
         Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.Attachment(1, 1, null, 1, ".exe"));
         Assert.Throws<ArgumentException>(() => ReportFileNames.AttachmentFolder("Build-1-TestFailures", "20260915T100000000"));
         Assert.Throws<ArgumentException>(() => ReportFileNames.AttachmentFolder("", "20260915T100000000Z"));

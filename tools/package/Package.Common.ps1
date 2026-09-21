@@ -203,7 +203,11 @@ function Publish-AdoReleaseFiles {
 
 function New-AdoReleaseArchive {
     param([Parameter(Mandatory = $true)][string] $PackagePath, [Parameter(Mandatory = $true)][string] $OutputRoot,
-        [string] $InstallerPath)
+        [string] $InstallerPath, [string] $PowerShellArchivePath, [string] $PowerShellChecksumPath, [string] $PowerShellVersion)
+    $portable = [bool] ($PowerShellArchivePath -or $PowerShellChecksumPath -or $PowerShellVersion)
+    if ($portable -and (-not $PowerShellArchivePath -or -not $PowerShellChecksumPath -or -not $PowerShellVersion)) {
+        throw 'Portable releases require PowerShellArchivePath, PowerShellChecksumPath and PowerShellVersion together.'
+    }
     Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.ZipFile
     $package = Resolve-AdoPackagePath -Path $PackagePath
     $version = Assert-AdoPackage -PackagePath $package
@@ -216,6 +220,9 @@ function New-AdoReleaseArchive {
     $temporaryArchive = Join-Path $output ".$name.$random.tmp"
     $temporaryChecksum = Join-Path $output ".$name.sha256.$random.tmp"
     $temporaryInstaller = Join-Path $output ".Install-AdoToolkit.ps1.$random.tmp"
+    $portableName = "AdoToolkit-$version-win-x64.zip"
+    $temporaryPortable = Join-Path $output ".$portableName.$random.tmp"
+    $temporaryPortableChecksum = Join-Path $output ".$portableName.sha256.$random.tmp"
     try {
         $files = @(Get-AdoPackageFile -PackagePath $package | ForEach-Object {
                 [pscustomobject]@{
@@ -265,11 +272,26 @@ function New-AdoReleaseArchive {
             if (@($errors).Count -gt 0) { throw 'The installer script does not parse.' }
             $assets += @{ Source = $temporaryInstaller; Target = (Join-Path $output 'Install-AdoToolkit.ps1') }
         }
+        $portableArchive = $null
+        $portableChecksum = $null
+        if ($portable) {
+            . (Join-Path $PSScriptRoot 'Portable.Common.ps1')
+            New-AdoPortableArchive -PackagePath $package -Version $version -PowerShellArchivePath $PowerShellArchivePath `
+                -PowerShellChecksumPath $PowerShellChecksumPath -PowerShellVersion $PowerShellVersion -DestinationPath $temporaryPortable
+            $portableHash = (Get-FileHash -LiteralPath $temporaryPortable -Algorithm SHA256).Hash.ToLowerInvariant()
+            [IO.File]::WriteAllText($temporaryPortableChecksum, "$portableHash  $portableName`n", [Text.UTF8Encoding]::new($false))
+            $portableArchive = Join-Path $output $portableName
+            $portableChecksum = $portableArchive + '.sha256'
+            $assets += @(
+                @{ Source = $temporaryPortable; Target = $portableArchive },
+                @{ Source = $temporaryPortableChecksum; Target = $portableChecksum }
+            )
+        }
         Publish-AdoReleaseFiles -Files $assets -Root $output
-        return [pscustomobject]@{ Version = $version; Archive = $archive; Checksum = $checksum; Sha256 = $hash }
+        return [pscustomobject]@{ Version = $version; Archive = $archive; Checksum = $checksum; Sha256 = $hash; PortableArchive = $portableArchive; PortableChecksum = $portableChecksum }
     }
     finally {
-        foreach ($temporary in @($temporaryArchive, $temporaryChecksum, $temporaryInstaller)) {
+        foreach ($temporary in @($temporaryArchive, $temporaryChecksum, $temporaryInstaller, $temporaryPortable, $temporaryPortableChecksum)) {
             if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
         }
     }

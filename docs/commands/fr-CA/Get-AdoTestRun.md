@@ -35,7 +35,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Filtre les séries de tests par l’URI du build et lit leurs détails, en parcourant toutes les pages. Utilise l’URI du build lorsqu’il en possède un, sinon compose vstfs:///Build/Build/<id>. Avec BuildId, lit d’abord le build ; un build reçu du pipeline fournit déjà ces métadonnées. Les séries sont émises dans l’ordre des tentatives : la tentative de pipeline lorsque la série l’expose, puis la date de début, puis l’identifiant de la série. Les décomptes par résultat proviennent des statistiques de la série, conservent le nom exact rapporté par le serveur et restent vides lorsque le serveur n’en envoie pas. Les totaux PassedTests, NotApplicableTests, UnanalyzedTests et IncompleteTests conservent les catégories du serveur; UnanalyzedTests compte les résultats qui n’ont pas réussi et ne sont pas encore analysés. Les liens Web sont reconstruits à partir de l’URL de la collection et des identifiants numériques ; les URL des réponses sont ignorées. Une autre collection produit une erreur ConnectionMismatch pour cette entrée.
+Filtre les séries de tests par l’URI du build et lit leurs détails, en parcourant toutes les pages. Utilise l’URI du build lorsqu’il en possède un, sinon compose vstfs:///Build/Build/<id>. Avec BuildId, lit d’abord le build ; un build reçu du pipeline fournit déjà ces métadonnées. Les séries sont émises dans l’ordre des tentatives : la tentative de pipeline lorsque la série l’expose, puis la date de début, puis l’identifiant de la série. Les décomptes par résultat proviennent des statistiques de la série, conservent le nom exact rapporté par le serveur et restent vides lorsque le serveur n’en envoie pas. Les totaux PassedTests, NotApplicableTests, UnanalyzedTests et IncompleteTests conservent les catégories du serveur; UnanalyzedTests compte les résultats qui n’ont pas réussi et ne sont pas encore analysés. StageName, PhaseName et JobName proviennent de la référence de pipeline de la série lorsque le serveur les envoie : PhaseName est le travail YAML et JobName l’instance de matrice ou parallèle, habituellement __default. Les liens Web sont reconstruits à partir de l’URL de la collection et des identifiants numériques ; les URL des réponses sont ignorées. Une autre collection produit une erreur ConnectionMismatch pour cette entrée.
 
 ## EXAMPLES
 
@@ -147,7 +147,7 @@ Prend en charge les paramètres communs, dont ErrorAction, ErrorVariable, Verbos
 
 ## NOTES
 
-Nécessite PowerShell 7.6 sur Windows et Azure DevOps Server 2020. La route, la version, les champs et la pagination des séries de tests restent à confirmer sur le serveur (V-19, V-25), tout comme la référence à la tentative de pipeline. Les liens Web restent à confirmer au travail (V-26).
+Nécessite PowerShell 7.6 sur Windows et Azure DevOps Server 2020. La route, la version, les champs et la pagination des séries de tests restent à confirmer sur le serveur (V-19, V-25), tout comme la référence à la tentative de pipeline et ses noms. Les liens Web restent à confirmer au travail (V-26).
 
 ## RELATED LINKS
 

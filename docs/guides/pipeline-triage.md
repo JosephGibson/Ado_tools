@@ -75,8 +75,11 @@ the run totals `PassedTests`, `NotApplicableTests`, `UnanalyzedTests` and
 
 | Classification | Meaning |
 | --- | --- |
-| `Failed` | The last attempt did not pass |
-| `Flaky` | The test failed, then passed on a later attempt |
+| `Failed` | The last attempt did not pass, in at least one stage or job |
+| `Flaky` | The test failed, then passed on a later attempt, in every stage or job |
+
+When the test runs carry stage or job names, attempts are grouped by them, so a test that
+fails in every French attempt stays `Failed` even if an English retry passes last.
 
 Each failure keeps all its attempts, with error messages, stack traces,
 attachment metadata and any linked Test Case. Run history covers the current build

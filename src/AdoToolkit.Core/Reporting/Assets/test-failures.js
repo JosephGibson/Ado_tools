@@ -1,29 +1,52 @@
 (() => {
   'use strict';
-  const all = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const root = document.documentElement;
+  const lang = root.lang;
+  const all = (selector, scope = document) => [...scope.querySelectorAll(selector)];
   const cards = all('.failure-card');
+  const views = all('[data-view]');
   const filter = document.querySelector('[data-filter]');
+  const failing = document.querySelector('[data-failing]');
   const toggles = all('[data-toggle]');
   const status = document.querySelector('[data-copy-status]');
-  const dialog = document.querySelector('dialog');
   const count = document.querySelector('[data-filter-count]');
-  const numbers = new Intl.NumberFormat(document.documentElement.lang);
+  const numbers = new Intl.NumberFormat(lang);
+  const rows = new Map(cards.map(card => [card, all(`[data-index-for="${card.id}"]`)]));
+  const attempts = new Map(cards.map(card => [card, all('.attempt', card)]));
+  const texts = new WeakMap();
   let current = null;
-  let printState = null;
   let copyTimer;
-  const visible = () => cards.filter(card => !card.hidden);
-  const index = card => document.querySelector(`[data-index-for="${card.id}"]`);
+  let filterTimer;
+  // Search text is the whole element, collapsed parts included, lowercased once on first use.
+  const text = node => {
+    let value = texts.get(node);
+    if (value === undefined) { value = node.textContent.toLocaleLowerCase(lang); texts.set(node, value); }
+    return value;
+  };
+  // Every term must match. A Test Case ID matches with or without '#'; other terms match text.
+  const matches = (node, terms, testCase) => terms.every(term =>
+    (/^#?\d+$/.test(term) && testCase === term.replace('#', '')) || text(node).includes(term));
+  const activeView = () => views.find(view => view.classList.contains('is-active'));
+  const show = id => {
+    const target = views.find(view => view.id === id) || views[0];
+    views.forEach(view => view.classList.toggle('is-active', view === target));
+    all('[data-view-link]').forEach(link => {
+      if (link.dataset.viewLink === target.id) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
+  };
   const select = card => {
     current = card;
     cards.forEach(candidate => {
-      candidate.classList.toggle('is-current', candidate === card);
-      index(candidate).classList.toggle('is-current', candidate === card);
+      const on = candidate === card;
+      candidate.classList.toggle('is-current', on);
+      rows.get(candidate).forEach(row => row.classList.toggle('is-current', on));
     });
   };
   const updateCount = () => {
-    const shown = visible().length;
+    const shown = cards.filter(card => !card.hidden).length;
     count.textContent = count.dataset.labelCount.replace('{0}', numbers.format(shown)).replace('{1}', numbers.format(cards.length));
-    document.querySelector('[data-no-matches]').hidden = shown !== 0;
+    all('[data-no-matches]').forEach(note => { note.hidden = shown !== 0; });
   };
   const focus = card => {
     if (!card) return;
@@ -32,27 +55,39 @@
     card.scrollIntoView({ block: 'start' });
   };
   const apply = () => {
-    const query = filter.value.toLocaleLowerCase(document.documentElement.lang);
+    const terms = filter.value.toLocaleLowerCase(lang).split(/\s+/).filter(Boolean);
+    const group = failing ? failing.value : '';
     cards.forEach(card => {
-      const names = all('[data-short-name], [data-full-name]', card).map(node => node.textContent).join('\n');
-      card.hidden = !names.toLocaleLowerCase(document.documentElement.lang).includes(query) || toggles.some(toggle =>
-        toggle.dataset.toggle === 'attachments' ? toggle.checked && +card.dataset.attachmentCount === 0 :
+      const failed = (card.dataset.failing || '').split(' ').filter(Boolean);
+      const hidden = !matches(card, terms, card.dataset.testCase)
+        || (group.startsWith('g') && !failed.includes(group.slice(1)))
+        || (group.startsWith('o') && !(failed.length === 1 && failed[0] === group.slice(1)))
+        || toggles.some(toggle => toggle.dataset.toggle === 'attachments' ? toggle.checked && +card.dataset.attachmentCount === 0 :
           !toggle.checked && toggle.dataset.toggle === card.dataset.classification);
-      index(card).hidden = card.hidden;
+      card.hidden = hidden;
+      rows.get(card).forEach(row => { row.hidden = hidden; });
+      // Mark the attempts and groups that hold the search terms; nothing opens by itself.
+      attempts.get(card).forEach(attempt => attempt.classList.toggle('is-match', terms.length > 0 && !hidden && matches(attempt, terms)));
+      all('.attempt-group', card).forEach(node => node.classList.toggle('is-match', node.querySelector('.attempt.is-match') !== null));
     });
+    all('.error-cluster').forEach(cluster => { cluster.hidden = all('tr[data-index-for]', cluster).every(row => row.hidden); });
     updateCount();
     if (current?.hidden) select(null);
   };
   const fragment = () => {
-    let target;
-    try { target = document.getElementById(decodeURIComponent(location.hash.slice(1))); } catch { return; }
-    const card = target?.closest('.failure-card');
-    if (!card) return;
-    card.hidden = false;
-    index(card).hidden = false;
+    let target = null;
+    try { target = document.getElementById(decodeURIComponent(location.hash.slice(1))); } catch { target = null; }
+    const view = target?.closest('[data-view]');
+    show(view ? view.id : 'overview');
+    if (!target || target === view) { window.scrollTo(0, 0); return; }
+    const card = target.closest('.failure-card');
+    if (card) {
+      card.hidden = false;
+      rows.get(card).forEach(row => { row.hidden = false; });
+      select(card);
+      updateCount();
+    }
     for (let node = target; node; node = node.parentElement) if (node.matches('details')) node.open = true;
-    select(card);
-    updateCount();
     target.scrollIntoView({ block: 'start' });
   };
   const copy = async button => {
@@ -73,14 +108,15 @@
     clearTimeout(copyTimer);
     copyTimer = setTimeout(() => { status.hidden = true; }, 5000);
   };
-  filter.addEventListener('input', apply);
+  filter.addEventListener('input', () => { clearTimeout(filterTimer); filterTimer = setTimeout(apply, 150); });
+  failing?.addEventListener('change', apply);
   toggles.forEach(toggle => toggle.addEventListener('change', apply));
   all('[data-action]').forEach(button => button.addEventListener('click', () => {
     const action = button.dataset.action;
     if (action === 'copy') { void copy(button); return; }
-    if (action === 'close') { dialog.close(); return; }
     if (action === 'expand' || action === 'collapse') {
-      all('.attempt').forEach(attempt => { attempt.open = action === 'expand'; });
+      if (activeView()?.id !== 'details') location.hash = 'details';
+      cards.filter(card => !card.hidden).forEach(card => all('.attempt-group, .attempt', card).forEach(node => { node.open = action === 'expand'; }));
       return;
     }
     const scope = button.closest('.code-section');
@@ -95,60 +131,60 @@
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && event.target === filter) {
       filter.value = '';
+      if (failing) failing.value = '';
       toggles.forEach(toggle => { toggle.checked = toggle.dataset.toggle !== 'attachments'; });
       apply();
     }
-    if (event.ctrlKey || event.metaKey || event.altKey || dialog.open ||
+    if (event.ctrlKey || event.metaKey || event.altKey ||
         event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
     if (event.key === '/') { event.preventDefault(); filter.focus(); return; }
+    const view = activeView();
+    const details = view?.id === 'details';
     if (event.key === 'j' || event.key === 'k') {
+      // Details moves between cards; the tables move between their visible rows.
+      const items = details ? cards.filter(card => !card.hidden) : all('tr[data-index-for]', view).filter(row => !row.hidden);
+      const cardOf = item => details ? item : document.getElementById(item.dataset.indexFor);
+      const position = items.findIndex(item => cardOf(item) === current);
+      const next = items[Math.max(0, Math.min(items.length - 1, position + (event.key === 'j' ? 1 : -1)))];
+      if (!next) return;
       event.preventDefault();
-      const list = visible();
-      const position = list.indexOf(current);
-      focus(list[Math.max(0, Math.min(list.length - 1, position + (event.key === 'j' ? 1 : -1)))]);
+      if (details) { focus(next); return; }
+      select(cardOf(next));
+      next.querySelector('.col-test a').focus();
     }
-    if (event.key === 'o') {
-      const card = current || visible()[0];
-      const attempt = event.target.closest('.attempt') || all('.attempt', card || document).at(-1);
-      if (attempt) { event.preventDefault(); attempt.open = !attempt.open; }
+    if (event.key === 'o' && details) {
+      const card = current || cards.find(candidate => !candidate.hidden);
+      const node = event.target.closest('.attempt, .attempt-group') || card?.querySelector('.attempt-group, .attempt');
+      if (node) { event.preventDefault(); node.open = !node.open; }
     }
   });
   document.addEventListener('click', event => {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
     const link = event.target.closest('a');
     if (!link) return;
-    if (link.getAttribute('href')?.startsWith('#f-') && link.hash === location.hash) fragment();
-    const image = link.querySelector('img');
-    if (image && link.closest('.thumbnail-grid') && image.complete && image.naturalWidth && typeof dialog.showModal === 'function') {
-      event.preventDefault();
-      dialog.querySelector('[data-image-slot]').replaceChildren(image.cloneNode(true));
-      dialog.showModal();
-      return;
-    }
+    if (link.getAttribute('href')?.startsWith('#') && link.hash === location.hash) fragment();
     if (link.matches('.history-chart a, .history-cell')) {
       const card = link.closest('.failure-card');
       if (card && link.getAttribute('aria-current') === 'true') { event.preventDefault(); focus(card); return; }
       const row = document.querySelector(`.history-data tr[data-build-id="${link.dataset.buildId}"]`);
       if (row) {
         event.preventDefault();
+        show('runs');
         row.closest('details').open = true;
         row.scrollIntoView({ block: 'center' });
       }
     }
   });
   window.addEventListener('hashchange', fragment);
-  window.addEventListener('beforeprint', () => {
-    if (!printState) printState = cards.map(card => [card, card.hidden]);
-    cards.forEach(card => { card.hidden = false; index(card).hidden = false; });
-    all('.attempt[data-failure-class="true"]').forEach(attempt => { attempt.open = true; });
-  });
-  window.addEventListener('afterprint', () => {
-    printState?.forEach(([card, hidden]) => { card.hidden = hidden; index(card).hidden = hidden; });
-    printState = null;
-  });
   all('[data-enhance]').forEach(control => { control.hidden = false; });
+  root.classList.add('views');
   const header = document.querySelector('.top-bar');
-  const measure = () => document.documentElement.style.setProperty('--report-header-offset', `${Math.ceil(header.getBoundingClientRect().height) + 16}px`);
+  // Table headers stick below the top bar; scroll targets keep a little more room.
+  const measure = () => {
+    const height = Math.ceil(header.getBoundingClientRect().height);
+    root.style.setProperty('--report-header-height', `${height}px`);
+    root.style.setProperty('--report-header-offset', `${height + 16}px`);
+  };
   measure();
   if (typeof ResizeObserver === 'function') new ResizeObserver(measure).observe(header);
   apply();

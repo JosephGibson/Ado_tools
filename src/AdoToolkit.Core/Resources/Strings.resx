@@ -161,9 +161,8 @@
   <data name="TestReportErrorMessage" xml:space="preserve"><value>Error message</value></data>
   <data name="TestReportJson" xml:space="preserve"><value>JSON</value></data>
   <data name="TestReportHeading" xml:space="preserve"><value>Failed test report</value></data>
-  <data name="TestReportIndex" xml:space="preserve"><value>Failure index</value></data>
   <data name="TestReportAttachments" xml:space="preserve"><value>Attachments</value></data>
-  <data name="TestReportFilter" xml:space="preserve"><value>Filter tests</value></data>
+  <data name="TestReportFilter" xml:space="preserve"><value>Search</value></data>
   <data name="TestReportHasAttachments" xml:space="preserve"><value>Has attachments</value></data>
   <data name="TestReportExpandAll" xml:space="preserve"><value>Expand all</value></data>
   <data name="TestReportCollapseAll" xml:space="preserve"><value>Collapse all</value></data>
@@ -172,10 +171,8 @@
   <data name="TestReportSelectCopy" xml:space="preserve"><value>Text selected; use your copy shortcut.</value></data>
   <data name="TestReportWrap" xml:space="preserve"><value>Wrap lines</value></data>
   <data name="TestReportFramework" xml:space="preserve"><value>Hide framework frames</value></data>
-  <data name="TestReportClose" xml:space="preserve"><value>Close</value></data>
-  <data name="TestReportImage" xml:space="preserve"><value>Attachment image</value></data>
   <data name="TestReportDuration" xml:space="preserve"><value>Duration</value></data>
-  <data name="TestReportSeconds" xml:space="preserve"><value>{0:N3} s</value></data>
+  <data name="TestReportSeconds" xml:space="preserve"><value>{0:#,0.###} s</value></data>
   <data name="TestReportStarted" xml:space="preserve"><value>Started</value></data>
   <data name="TestReportMachine" xml:space="preserve"><value>Machine</value></data>
   <data name="TestReportRun" xml:space="preserve"><value>Test run</value></data>
@@ -207,7 +204,7 @@
   <data name="TestReportFullName" xml:space="preserve"><value>Full test name</value></data>
   <data name="TestReportNoFailures" xml:space="preserve"><value>No failed or flaky tests to report.</value></data>
   <data name="TestReportNoMatches" xml:space="preserve"><value>No tests match these filters.</value></data>
-  <data name="TestReportNavigationHint" xml:space="preserve"><value>/ Filter · j/k Next/previous test · o Toggle attempt</value></data>
+  <data name="TestReportNavigationHint" xml:space="preserve"><value>/ Search · j/k Next/previous test · o Open or close · Enter Open the details</value></data>
   <data name="TestReportInfo" xml:space="preserve"><value>Information</value></data>
   <data name="TestReportWarning" xml:space="preserve"><value>Warning</value></data>
   <data name="TestReportError" xml:space="preserve"><value>Error</value></data>
@@ -217,12 +214,42 @@
   <data name="AttachmentDownloadFailed" xml:space="preserve"><value>Attachment {0} of test result {2} in run {1} could not be downloaded; it is listed without a local file.</value></data>
   <data name="AttachmentContentMismatch" xml:space="preserve"><value>Attachment {0} of test result {2} in run {1} does not contain valid {3} content; it is linked as a .bin file and not previewed.</value></data>
   <data name="TestReportLocalCopy" xml:space="preserve"><value>Local copy</value></data>
-  <data name="TestReportTestOutputHtml" xml:space="preserve"><value>Test output HTML (local file)</value></data>
   <data name="TestReportNotDownloadedTooLarge" xml:space="preserve"><value>Not downloaded: larger than the size limit.</value></data>
   <data name="TestReportNotDownloadedBudget" xml:space="preserve"><value>Not downloaded: the total attachment budget was reached.</value></data>
   <data name="TestReportDownloadFailed" xml:space="preserve"><value>Download failed; the original remains in Azure DevOps.</value></data>
   <data name="TestReportContentMismatch" xml:space="preserve"><value>The content does not match the file type; saved as .bin and not previewed.</value></data>
-  <data name="TestReportImageOf" xml:space="preserve"><value>Attachment image: {0}</value></data>
+  <data name="TestReportOverview" xml:space="preserve"><value>Overview</value></data>
+  <data name="TestReportByError" xml:space="preserve"><value>By error</value></data>
+  <data name="TestReportDetails" xml:space="preserve"><value>Details</value></data>
+  <data name="TestReportRunsAndHistory" xml:space="preserve"><value>Runs and history</value></data>
+  <data name="TestReportTest" xml:space="preserve"><value>Test</value></data>
+  <data name="TestReportTestCase" xml:space="preserve"><value>Test Case</value></data>
+  <data name="TestReportLatestError" xml:space="preserve"><value>Latest error</value></data>
+  <data name="TestReportNoErrorMessage" xml:space="preserve"><value>No error message</value></data>
+  <data name="TestReportGroupFailed" xml:space="preserve"><value>{0} of {1} failed</value></data>
+  <data name="TestReportGroupLegend" xml:space="preserve"><value>✕ ended failed · ≈ failed, then passed · ✓ did not fail · n/m: failed attempts out of all attempts</value></data>
+  <data name="TestReportSameError" xml:space="preserve"><value>Same error message as attempt {0}.</value></data>
+  <data name="TestReportSameStack" xml:space="preserve"><value>Same stack trace as attempt {0}.</value></data>
+  <data name="TestReportSameBoth" xml:space="preserve"><value>Same error message and stack trace as attempt {0}.</value></data>
+  <data name="TestReportNotShown" xml:space="preserve"><value>not shown</value></data>
+  <data name="TestReportFailingIn" xml:space="preserve"><value>Failing in</value></data>
+  <data name="TestReportAnyGroup" xml:space="preserve"><value>Any</value></data>
+  <data name="TestReportGroupOnly" xml:space="preserve"><value>{0} only</value></data>
+  <data name="TestReportNoPipelineName" xml:space="preserve"><value>No stage or job name</value></data>
+  <data name="TestReportStage" xml:space="preserve"><value>Stage</value></data>
+  <data name="TestReportJob" xml:space="preserve"><value>Job</value></data>
+  <data name="TestReportInstance" xml:space="preserve"><value>Job instance</value></data>
+  <data name="TestReportAttemptNumbers" xml:space="preserve"><value>Attempts (stage / job / instance)</value></data>
+  <data name="TestReportState" xml:space="preserve"><value>State</value></data>
+  <data name="TestReportTests" xml:space="preserve"><value>Tests</value></data>
+  <data name="TestReportDownloaded" xml:space="preserve"><value>Downloaded</value></data>
+  <data name="TestReportListed" xml:space="preserve"><value>Listed</value></data>
+  <data name="TestReportOutsideWindow" xml:space="preserve"><value>Outside the window</value></data>
+  <data name="TestReportWindowNote" xml:space="preserve"><value>Attachments of runs started before {0} are left out: {1}.</value></data>
+  <data name="TestReportPreview" xml:space="preserve"><value>Preview</value></data>
+  <data name="TestReportNotInlinedSize" xml:space="preserve"><value>Too large to show here; open the local copy.</value></data>
+  <data name="TestReportNotInlinedBudget" xml:space="preserve"><value>Not shown here: the report reached its limit for inline attachments; open the local copy.</value></data>
+  <data name="TestReportText" xml:space="preserve"><value>Text</value></data>
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Export failed-test report</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Export failed-test report and download attachments to {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Downloading attachments: {0} of {1}</value></data>

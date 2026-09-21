@@ -31,8 +31,8 @@ public sealed class HighlightedCodeWriterTests
             Assert.Contains("<a rel=\"noreferrer\" href=\"https://repo.example.test/path?q=%22&amp;x=%3Cscript%3E\">", html, StringComparison.Ordinal);
             Assert.Contains("</a></span>", html, StringComparison.Ordinal);
         }
-        string[] classes = ["tok-keyword", "tok-type", "tok-method", "tok-namespace", "tok-parameter", "tok-string", "tok-number",
-            "tok-path", "tok-line", "tok-property", "tok-literal", "tok-punct", "tok-url", "tok-plain", "first-user-frame", "framework-frame"];
+        // Plain text and punctuation carry no span; tokens use one-letter classes.
+        string[] classes = ["k", "t", "m", "n", "a", "s", "d", "f", "l", "p", "c", "u", "first-user-frame", "framework-frame"];
         foreach (Match match in Regex.Matches(code, "<span class=\"([^\"]+)\">")) Assert.Contains(match.Groups[1].Value, classes);
     }
 

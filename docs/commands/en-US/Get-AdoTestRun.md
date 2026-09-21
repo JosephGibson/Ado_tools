@@ -35,7 +35,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Filters test runs by the build URI and reads run details, paging through every offset page. Uses the build's own URI when it has one and composes vstfs:///Build/Build/<id> otherwise. With BuildId, retrieves the build first; piped builds already supply that metadata. Runs are emitted in attempt order: pipeline attempt when the run exposes one, then start date, then run ID. Outcome counts come from the run statistics, keyed by the exact outcome name the server reports, and stay empty when the server sends none. The run totals PassedTests, NotApplicableTests, UnanalyzedTests and IncompleteTests keep the server’s own categories; UnanalyzedTests counts results that did not pass and are not yet analyzed. Web links are rebuilt from the connection URL and numeric IDs; response URLs are ignored. A foreign collection produces a ConnectionMismatch error for that input.
+Filters test runs by the build URI and reads run details, paging through every offset page. Uses the build's own URI when it has one and composes vstfs:///Build/Build/<id> otherwise. With BuildId, retrieves the build first; piped builds already supply that metadata. Runs are emitted in attempt order: pipeline attempt when the run exposes one, then start date, then run ID. Outcome counts come from the run statistics, keyed by the exact outcome name the server reports, and stay empty when the server sends none. The run totals PassedTests, NotApplicableTests, UnanalyzedTests and IncompleteTests keep the server’s own categories; UnanalyzedTests counts results that did not pass and are not yet analyzed. StageName, PhaseName and JobName come from the run's pipeline reference when the server sends them: PhaseName is the YAML job, and JobName is the matrix or parallel instance, usually __default. Web links are rebuilt from the connection URL and numeric IDs; response URLs are ignored. A foreign collection produces a ConnectionMismatch error for that input.
 
 ## EXAMPLES
 
@@ -147,7 +147,7 @@ Supports common parameters including ErrorAction, ErrorVariable, Verbose, and De
 
 ## NOTES
 
-Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. The test run route, version, fields and paging await server confirmation (V-19, V-25), as does the pipeline attempt reference. Web links await confirmation at work (V-26).
+Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. The test run route, version, fields and paging await server confirmation (V-19, V-25), as do the pipeline attempt reference and its names. Web links await confirmation at work (V-26).
 
 ## RELATED LINKS
 

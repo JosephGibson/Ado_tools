@@ -5,15 +5,50 @@ Azure DevOps Server 2020 collection.
 
 ## Before you begin
 
-- Use Windows with PowerShell 7.6. Check with `$PSVersionTable.PSVersion` in a `pwsh`
-  window. Windows PowerShell 5.1 (`powershell.exe`) can't load AdoToolkit, and its
-  prompt looks the same, so make sure you're in `pwsh`.
+- The portable release supports Windows x64 and includes PowerShell and its .NET
+  runtime. You don't need to install PowerShell first.
+- The module-only release requires your own PowerShell 7.6 installation. Windows
+  PowerShell 5.1 (`powershell.exe`) can't load AdoToolkit.
 - You don't need administrator rights, the .NET SDK or any other module to use a
   release.
 
 ## Install the module
 
-### From a release (recommended)
+### Portable release (recommended for Windows x64)
+
+1. From the [releases page](https://github.com/JosephGibson/Ado_tools/releases),
+   download `AdoToolkit-<version>-win-x64.zip`.
+2. Right-click the ZIP in Explorer, choose **Properties**, select **Unblock** if it
+   appears, and click **Apply**. Do this before extracting it.
+3. Extract the entire ZIP to a folder you can write to.
+4. Double-click **`Start-AdoToolkit.cmd`**. The bundled PowerShell opens with
+   AdoToolkit loaded. Run `Get-Command -Module AdoToolkit` to list its commands,
+   then [save a profile](#save-a-profile).
+
+Always use this launcher for the portable copy. It loads the adjacent module,
+without installing it in your user module folder or changing `PATH`. Relative
+report paths start in the extracted folder. Startup needs no internet access;
+commands that query Azure DevOps still need access to your server.
+
+To update, extract a new release into a new folder, close the old console, and use
+the new launcher. Saved profiles remain in your Windows user profile. The bundled
+PowerShell version is tested and pinned for each release; it does not update
+itself. PowerShell fixes are delivered in updated AdoToolkit portable releases.
+
+The `.zip.sha256` asset and release notes provide the bundle's checksum. To check
+it before extraction, run this in Windows PowerShell or PowerShell 7 and compare
+the result with the published checksum:
+
+```powershell
+(Get-FileHash .\AdoToolkit-0.3.0-win-x64.zip -Algorithm SHA256).Hash
+```
+
+The launcher uses `RemoteSigned` for its process only. It does not change your
+saved execution policy or override Group Policy. AdoToolkit is unsigned, so an
+organization that requires signed code needs a signed build. If a downloaded
+script is blocked, unblock the original ZIP in Properties and extract it again.
+
+### Module-only release (existing PowerShell 7.6)
 
 1. From the [releases page](https://github.com/JosephGibson/Ado_tools/releases),
    download `AdoToolkit-<version>.zip`, `AdoToolkit-<version>.zip.sha256` and
@@ -24,7 +59,7 @@ Azure DevOps Server 2020 collection.
 
    ```powershell
    Unblock-File .\Install-AdoToolkit.ps1
-   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.2.0.zip
+   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.3.0.zip
    ```
 
    The script checks the zip against the `.sha256` file and checks that it contains
@@ -52,9 +87,9 @@ To install without the script, check the hash yourself, then unblock the zip bef
 extracting it so that no extracted file carries the download mark:
 
 ```powershell
-(Get-FileHash .\AdoToolkit-0.2.0.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
-Unblock-File .\AdoToolkit-0.2.0.zip
-Expand-Archive .\AdoToolkit-0.2.0.zip `
+(Get-FileHash .\AdoToolkit-0.3.0.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
+Unblock-File .\AdoToolkit-0.3.0.zip
+Expand-Archive .\AdoToolkit-0.3.0.zip `
     -DestinationPath (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell\Modules')
 ```
 
@@ -68,7 +103,7 @@ PowerShell 7:
 ```powershell
 & .\tools\package\Publish-AdoToolkitPackage.ps1    # restores, builds and stages the package
 & .\tools\package\New-AdoToolkitRelease.ps1        # writes artifacts\release
-& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.2.0.zip
+& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.3.0.zip
 ```
 
 The package script lists every missing prerequisite before it starts. Restore uses

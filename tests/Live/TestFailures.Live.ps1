@@ -143,6 +143,16 @@ try {
         elseif (-not $listing.Complete) { Write-AdoLiveResult 'INCONCLUSIVE V-19 PAGE_LIMIT_REACHED_FIELDS_AGREE' }
         elseif ($hasAttempt) { Write-AdoLiveResult 'PASS V-19 ROUTE_FIELDS_PAGING_AND_PIPELINE_ATTEMPT_AGREE' }
         else { Write-AdoLiveResult 'PASS V-19 ROUTE_FIELDS_AND_PAGING_AGREE_NO_PIPELINE_ATTEMPT' }
+        # Report grouping names are counted per level, never printed: distinct names other than __default.
+        $counts = foreach ($level in @(@('stageReference', 'stageName'), @('phaseReference', 'phaseName'), @('jobReference', 'jobName'))) {
+            @($runs | ForEach-Object {
+                [string] (Get-AdoLivePropertyValue (Get-AdoLivePropertyValue (Get-AdoLivePropertyValue $_ 'pipelineReference') $level[0]) $level[1])
+            } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and $_ -ne '__default' } | Sort-Object -Unique).Count
+        }
+        if ($runs.Count -gt 0) {
+            Write-AdoLiveResult ('NOTE V-19 PIPELINE_NAMES STAGES=' + $counts[0].ToString([cultureinfo]::InvariantCulture) +
+                ' PHASES=' + $counts[1].ToString([cultureinfo]::InvariantCulture) + ' JOBS=' + $counts[2].ToString([cultureinfo]::InvariantCulture))
+        }
     }
     catch { Write-AdoLiveResult 'FAIL V-19 CHECK_FAILED' }
 

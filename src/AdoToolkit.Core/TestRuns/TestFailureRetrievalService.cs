@@ -43,11 +43,12 @@ public sealed class TestFailureRetrievalService
 
     internal int RequestCount => counter.Count;
 
-    internal static TestResultRecord ToRecord(TestResultDto result, int runId, int runOrder) => new()
+    internal static TestResultRecord ToRecord(TestResultDto result, AdoTestRun run, int runOrder) => new()
     {
-        RunId = runId,
+        RunId = run.Id,
         ResultId = result.Id,
         RunOrder = runOrder,
+        PipelineKey = PipelineGrouping.Key(run),
         Outcome = result.Outcome,
         AutomatedTestName = result.AutomatedTestName,
         AutomatedTestStorage = result.AutomatedTestStorage,
@@ -87,7 +88,7 @@ public sealed class TestFailureRetrievalService
             cancellationToken.ThrowIfCancellationRequested();
             runOrder++;
             foreach (TestResultDto result in await runs.GetResultsAsync(project, run.Id, culture, cancellationToken).ConfigureAwait(false))
-                records.Add(ToRecord(result, run.Id, runOrder));
+                records.Add(ToRecord(result, run, runOrder));
             progress.Progress(new AdoProgress { Phase = AdoProgressPhase.TestResults, Completed = runOrder, Total = ordered.Count });
         }
         IReadOnlyList<TestIdentityGroup> groups = AttemptGrouper.Group(records, culture, diagnostics, cancellationToken);
@@ -291,7 +292,7 @@ public sealed class TestFailureRetrievalService
         {
             cancellationToken.ThrowIfCancellationRequested();
             bool reported = item.Attempts.Any(static attempt => attempt.OutcomeClass == AdoTestOutcomeClass.Failure);
-            overrides[item.Group.Identity] = OutcomeClassifier.Cell(item.Attempts[^1].OutcomeClass, reported);
+            overrides[item.Group.Identity] = OutcomeClassifier.Cell(item.Deciding, reported);
         }
         HistoryBuildData pass1 = HistoryBuildData.FromGroups(groups, cancellationToken);
         if (overrides.Count == 0) return pass1;
@@ -364,6 +365,10 @@ public sealed class TestFailureRetrievalService
         internal List<AdoTestAttempt> Attempts { get; } = attempts;
         internal List<TestResultDto> Details { get; } = details;
         internal int? TestCaseId { get; set; }
-        internal AdoTestFailureClassification Classification => OutcomeClassifier.Classify(Attempts[^1].OutcomeClass);
+        // Each attempt belongs to its run's pipeline group, so a failure in one language is never
+        // hidden by a later pass in another.
+        internal AdoTestOutcomeClass Deciding => OutcomeClassifier.Deciding(Attempts.Select(attempt => (
+            Group.Records.FirstOrDefault(record => record.RunId == attempt.RunId)?.PipelineKey ?? "", attempt.OutcomeClass)));
+        internal AdoTestFailureClassification Classification => OutcomeClassifier.Classify(Deciding);
     }
 }

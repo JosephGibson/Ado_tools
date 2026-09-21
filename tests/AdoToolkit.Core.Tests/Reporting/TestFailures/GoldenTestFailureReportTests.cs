@@ -6,7 +6,7 @@ namespace AdoToolkit.Core.Tests.Reporting.TestFailures;
 [Trait("Acceptance", "S5-4")]
 public sealed class GoldenTestFailureReportTests
 {
-    private static readonly string[] Variants = ["failed", "flaky", "partial", "hostile"];
+    private static readonly string[] Variants = ["failed", "flaky", "partial", "hostile", "grouped"];
     private static readonly string[] Cultures = ["en-US", "fr-CA"];
     public static TheoryData<string, string> Cases => new(
         from variant in Variants

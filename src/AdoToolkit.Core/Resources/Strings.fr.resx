@@ -161,9 +161,8 @@
   <data name="TestReportErrorMessage" xml:space="preserve"><value>Message d’erreur</value></data>
   <data name="TestReportJson" xml:space="preserve"><value>JSON</value></data>
   <data name="TestReportHeading" xml:space="preserve"><value>Rapport des tests en échec</value></data>
-  <data name="TestReportIndex" xml:space="preserve"><value>Index des échecs</value></data>
   <data name="TestReportAttachments" xml:space="preserve"><value>Pièces jointes</value></data>
-  <data name="TestReportFilter" xml:space="preserve"><value>Filtrer les tests</value></data>
+  <data name="TestReportFilter" xml:space="preserve"><value>Rechercher</value></data>
   <data name="TestReportHasAttachments" xml:space="preserve"><value>Avec pièces jointes</value></data>
   <data name="TestReportExpandAll" xml:space="preserve"><value>Tout développer</value></data>
   <data name="TestReportCollapseAll" xml:space="preserve"><value>Tout réduire</value></data>
@@ -172,10 +171,8 @@
   <data name="TestReportSelectCopy" xml:space="preserve"><value>Texte sélectionné ; utilisez votre raccourci de copie.</value></data>
   <data name="TestReportWrap" xml:space="preserve"><value>Retour automatique à la ligne</value></data>
   <data name="TestReportFramework" xml:space="preserve"><value>Masquer les appels du framework</value></data>
-  <data name="TestReportClose" xml:space="preserve"><value>Fermer</value></data>
-  <data name="TestReportImage" xml:space="preserve"><value>Image jointe</value></data>
   <data name="TestReportDuration" xml:space="preserve"><value>Durée</value></data>
-  <data name="TestReportSeconds" xml:space="preserve"><value>{0:N3} s</value></data>
+  <data name="TestReportSeconds" xml:space="preserve"><value>{0:#,0.###} s</value></data>
   <data name="TestReportStarted" xml:space="preserve"><value>Début</value></data>
   <data name="TestReportMachine" xml:space="preserve"><value>Machine</value></data>
   <data name="TestReportRun" xml:space="preserve"><value>Exécution de tests</value></data>
@@ -207,7 +204,7 @@
   <data name="TestReportFullName" xml:space="preserve"><value>Nom complet du test</value></data>
   <data name="TestReportNoFailures" xml:space="preserve"><value>Aucun test en échec ou instable à signaler.</value></data>
   <data name="TestReportNoMatches" xml:space="preserve"><value>Aucun test ne correspond à ces filtres.</value></data>
-  <data name="TestReportNavigationHint" xml:space="preserve"><value>/ Filtre · j/k Test suivant/précédent · o Ouvrir/fermer la tentative</value></data>
+  <data name="TestReportNavigationHint" xml:space="preserve"><value>/ Recherche · j/k Test suivant/précédent · o Ouvrir/fermer · Entrée Ouvrir les détails</value></data>
   <data name="TestReportInfo" xml:space="preserve"><value>Information</value></data>
   <data name="TestReportWarning" xml:space="preserve"><value>Avertissement</value></data>
   <data name="TestReportError" xml:space="preserve"><value>Erreur</value></data>
@@ -217,12 +214,42 @@
   <data name="AttachmentDownloadFailed" xml:space="preserve"><value>La pièce jointe {0} du résultat de test {2} de l’exécution {1} n’a pas pu être téléchargée; elle est répertoriée sans fichier local.</value></data>
   <data name="AttachmentContentMismatch" xml:space="preserve"><value>La pièce jointe {0} du résultat de test {2} de l’exécution {1} ne contient pas de contenu {3} valide; elle est liée en tant que fichier .bin, sans aperçu.</value></data>
   <data name="TestReportLocalCopy" xml:space="preserve"><value>Copie locale</value></data>
-  <data name="TestReportTestOutputHtml" xml:space="preserve"><value>HTML produit par le test (fichier local)</value></data>
   <data name="TestReportNotDownloadedTooLarge" xml:space="preserve"><value>Non téléchargée : taille supérieure à la limite.</value></data>
   <data name="TestReportNotDownloadedBudget" xml:space="preserve"><value>Non téléchargée : le budget total des pièces jointes est atteint.</value></data>
   <data name="TestReportDownloadFailed" xml:space="preserve"><value>Échec du téléchargement; l’original reste dans Azure DevOps.</value></data>
   <data name="TestReportContentMismatch" xml:space="preserve"><value>Le contenu ne correspond pas au type de fichier; enregistré en .bin, sans aperçu.</value></data>
-  <data name="TestReportImageOf" xml:space="preserve"><value>Image jointe : {0}</value></data>
+  <data name="TestReportOverview" xml:space="preserve"><value>Vue d’ensemble</value></data>
+  <data name="TestReportByError" xml:space="preserve"><value>Par erreur</value></data>
+  <data name="TestReportDetails" xml:space="preserve"><value>Détails</value></data>
+  <data name="TestReportRunsAndHistory" xml:space="preserve"><value>Exécutions et historique</value></data>
+  <data name="TestReportTest" xml:space="preserve"><value>Test</value></data>
+  <data name="TestReportTestCase" xml:space="preserve"><value>Cas de test</value></data>
+  <data name="TestReportLatestError" xml:space="preserve"><value>Dernière erreur</value></data>
+  <data name="TestReportNoErrorMessage" xml:space="preserve"><value>Aucun message d’erreur</value></data>
+  <data name="TestReportGroupFailed" xml:space="preserve"><value>{0} sur {1} en échec</value></data>
+  <data name="TestReportGroupLegend" xml:space="preserve"><value>✕ en échec à la fin · ≈ en échec, puis réussi · ✓ sans échec · n/m : tentatives en échec sur l’ensemble des tentatives</value></data>
+  <data name="TestReportSameError" xml:space="preserve"><value>Même message d’erreur que la tentative {0}.</value></data>
+  <data name="TestReportSameStack" xml:space="preserve"><value>Même arborescence des appels que la tentative {0}.</value></data>
+  <data name="TestReportSameBoth" xml:space="preserve"><value>Même message d’erreur et même arborescence des appels que la tentative {0}.</value></data>
+  <data name="TestReportNotShown" xml:space="preserve"><value>non affichés</value></data>
+  <data name="TestReportFailingIn" xml:space="preserve"><value>En échec dans</value></data>
+  <data name="TestReportAnyGroup" xml:space="preserve"><value>Tous</value></data>
+  <data name="TestReportGroupOnly" xml:space="preserve"><value>{0} seulement</value></data>
+  <data name="TestReportNoPipelineName" xml:space="preserve"><value>Sans nom de phase ni de travail</value></data>
+  <data name="TestReportStage" xml:space="preserve"><value>Phase</value></data>
+  <data name="TestReportJob" xml:space="preserve"><value>Travail</value></data>
+  <data name="TestReportInstance" xml:space="preserve"><value>Instance du travail</value></data>
+  <data name="TestReportAttemptNumbers" xml:space="preserve"><value>Tentatives (phase / travail / instance)</value></data>
+  <data name="TestReportState" xml:space="preserve"><value>État</value></data>
+  <data name="TestReportTests" xml:space="preserve"><value>Tests</value></data>
+  <data name="TestReportDownloaded" xml:space="preserve"><value>Téléchargées</value></data>
+  <data name="TestReportListed" xml:space="preserve"><value>Listées</value></data>
+  <data name="TestReportOutsideWindow" xml:space="preserve"><value>Hors de la fenêtre</value></data>
+  <data name="TestReportWindowNote" xml:space="preserve"><value>Les pièces jointes des exécutions commencées avant le {0} sont omises : {1}.</value></data>
+  <data name="TestReportPreview" xml:space="preserve"><value>Aperçu</value></data>
+  <data name="TestReportNotInlinedSize" xml:space="preserve"><value>Trop volumineuse pour être affichée ici; ouvrez la copie locale.</value></data>
+  <data name="TestReportNotInlinedBudget" xml:space="preserve"><value>Non affichée ici : le rapport a atteint sa limite de pièces jointes affichées; ouvrez la copie locale.</value></data>
+  <data name="TestReportText" xml:space="preserve"><value>Texte</value></data>
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Exporter le rapport des tests en échec</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Exporter le rapport des tests en échec et télécharger les pièces jointes dans {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Téléchargement des pièces jointes : {0} de {1}</value></data>

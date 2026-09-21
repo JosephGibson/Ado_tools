@@ -14,6 +14,7 @@ public static class TestFailureReportModelBuilder
         ArgumentNullException.ThrowIfNull(set);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(options.ToolkitVersion);
+        ArgumentOutOfRangeException.ThrowIfLessThan(options.AttachmentWindowDays, 1);
         ReportCultureResult resolved = ReportCultureResolver.Resolve(options.Culture, options.ConfiguredCulture, options.SessionCulture);
         CultureInfo culture = resolved.Culture;
         Uri collection = set.CollectionUri;
@@ -26,12 +27,25 @@ public static class TestFailureReportModelBuilder
             Message = DiagnosticMessageRenderer.Render(d.Code, d.Arguments, culture),
             WorkItemId = d.WorkItemId, StepNumber = d.StepNumber, ReferenceChain = Array.AsReadOnly(d.ReferenceChain.ToArray()),
         }).ToArray();
-        AdoTestFailure[] failures = set.Failures.OrderBy(f => f.Classification == AdoTestFailureClassification.Failed ? 0 : 1)
+        // Attachments of runs outside the window are left out; every attempt stays.
+        DateTimeOffset windowStart = options.GeneratedAt.AddDays(-options.AttachmentWindowDays);
+        HashSet<int> inWindow = [.. set.Runs.Where(run => run.StartedDate >= windowStart).Select(run => run.Id)];
+        int omitted = 0;
+        AdoTestAttempt Windowed(AdoTestAttempt attempt)
+        {
+            AdoTestAttachment[] kept = [.. attempt.Attachments.Where(a => inWindow.Contains(a.RunId))];
+            if (kept.Length == attempt.Attachments.Count) return attempt;
+            omitted += attempt.Attachments.Count - kept.Length;
+            return attempt.WithAttachments(Array.AsReadOnly(kept));
+        }
+        bool flakyExcluded = !options.IncludeFlaky && set.Failures.Any(f => f.Classification == AdoTestFailureClassification.Flaky);
+        AdoTestFailure[] failures = set.Failures.Where(f => options.IncludeFlaky || f.Classification != AdoTestFailureClassification.Flaky)
+            .OrderBy(f => f.Classification == AdoTestFailureClassification.Failed ? 0 : 1)
             .ThenBy(f => f.Storage, StringComparer.Ordinal).ThenBy(f => f.TestName, StringComparer.Ordinal)
             .ThenBy(f => f.Attempts.Count == 0 ? 0 : f.Attempts[0].ResultId).Select((f, index) => new AdoTestFailure
             {
                 Ordinal = index + 1, Classification = f.Classification, TestName = f.TestName, ShortName = f.ShortName,
-                Storage = f.Storage, Title = f.Title, Attempts = Array.AsReadOnly(f.Attempts.OrderBy(a => a.Number).ToArray()),
+                Storage = f.Storage, Title = f.Title, Attempts = Array.AsReadOnly(f.Attempts.OrderBy(a => a.Number).Select(Windowed).ToArray()),
                 TestCase = f.TestCase, History = Array.AsReadOnly(f.History.ToArray()), Owner = f.Owner, Priority = f.Priority, CollectionUri = collection,
             }).ToArray();
         return new TestFailureReportModel
@@ -48,6 +62,8 @@ public static class TestFailureReportModelBuilder
             ResultsUrl = AdoWebLinks.BuildTestResult(collection, project, set.Build.Id),
             DefinitionUrl = AdoWebLinks.BuildDefinition(collection, project, set.Build.Definition.Id),
             CommitUrl = AdoWebLinks.Commit(collection, project, set.Build.RepositoryType, set.Build.RepositoryId, set.Build.SourceVersion),
+            AttachmentRunIds = inWindow, AttachmentWindowStart = windowStart, OmittedAttachmentCount = omitted, FlakyExcluded = flakyExcluded,
+            Grouping = PipelineGrouping.Create(set.Runs, failures.SelectMany(f => f.Attempts).Select(a => a.RunId)),
         };
     }
 
@@ -75,7 +91,8 @@ public static class TestFailureReportModelBuilder
             FailedCount = model.FailedCount, FlakyCount = model.FlakyCount,
             Status = diagnostics.Any(d => d.Severity == AdoDiagnosticSeverity.Error) ? AdoTestFailureStatus.Partial : model.Status,
             BuildUrl = model.BuildUrl, ResultsUrl = model.ResultsUrl, DefinitionUrl = model.DefinitionUrl, CommitUrl = model.CommitUrl,
-            LocalAttachments = local,
+            LocalAttachments = local, AttachmentRunIds = model.AttachmentRunIds, AttachmentWindowStart = model.AttachmentWindowStart,
+            OmittedAttachmentCount = model.OmittedAttachmentCount, FlakyExcluded = model.FlakyExcluded, Grouping = model.Grouping,
         };
     }
 }

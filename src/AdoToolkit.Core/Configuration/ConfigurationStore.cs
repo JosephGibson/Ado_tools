@@ -75,7 +75,7 @@ public sealed class ConfigurationStore
             JsonObject results = Object(root, "testResults");
             JsonObject reporting = Object(root, "reporting");
             WarnUnknown(cases, ["maximumSharedStepDepth", "maximumExpandedSteps", "maximumResolvedWorkItems"], "testCases.", culture, warnings);
-            WarnUnknown(results, ["historyCount", "historyScope", "maximumReportedFailures", "maximumHistoryRequests", "maximumAttachmentBytes", "maximumTotalAttachmentBytes", "maximumInlineJsonBytes"], "testResults.", culture, warnings);
+            WarnUnknown(results, ["historyCount", "historyScope", "maximumReportedFailures", "maximumHistoryRequests", "maximumAttachmentBytes", "maximumTotalAttachmentBytes", "maximumInlineJsonBytes", "maximumInlineTotalBytes"], "testResults.", culture, warnings);
             WarnUnknown(reporting, ["culture"], "reporting.", culture, warnings);
             return new AdoConfiguration
             {
@@ -97,6 +97,7 @@ public sealed class ConfigurationStore
                     MaximumAttachmentBytes = Positive(results, "maximumAttachmentBytes", 52428800),
                     MaximumTotalAttachmentBytes = Positive(results, "maximumTotalAttachmentBytes", 524288000),
                     MaximumInlineJsonBytes = Positive(results, "maximumInlineJsonBytes", 262144),
+                    MaximumInlineTotalBytes = Positive(results, "maximumInlineTotalBytes", 8388608),
                 },
                 Reporting = new ReportingOptions { Culture = reporting["culture"]?.GetValue<string>() },
                 Warnings = warnings.AsReadOnly(),
@@ -180,6 +181,7 @@ public sealed class ConfigurationStore
         results["maximumAttachmentBytes"] = configuration.TestResults.MaximumAttachmentBytes;
         results["maximumTotalAttachmentBytes"] = configuration.TestResults.MaximumTotalAttachmentBytes;
         results["maximumInlineJsonBytes"] = configuration.TestResults.MaximumInlineJsonBytes;
+        results["maximumInlineTotalBytes"] = configuration.TestResults.MaximumInlineTotalBytes;
         root["testResults"] = results.DeepClone();
         JsonObject reporting = Object(root, "reporting");
         reporting["culture"] = configuration.Reporting.Culture;

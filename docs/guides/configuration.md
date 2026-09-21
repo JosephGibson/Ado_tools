@@ -89,7 +89,8 @@ Where a cmdlet parameter exists, it overrides the setting for that call.
 | `testResults.maximumHistoryRequests` | `400` | Most requests spent on run history; older entries show as unavailable | none |
 | `testResults.maximumAttachmentBytes` | `52428800` (50 MiB) | Largest attachment that is downloaded | none |
 | `testResults.maximumTotalAttachmentBytes` | `524288000` (500 MiB) | Total attachment download size per report | none |
-| `testResults.maximumInlineJsonBytes` | `262144` (256 KiB) | Largest JSON attachment shown inline in the report | none |
+| `testResults.maximumInlineJsonBytes` | `262144` (256 KiB) | Largest JSON or text attachment shown inline, and so searchable, in the failed-test report | none |
+| `testResults.maximumInlineTotalBytes` | `8388608` (8 MiB) | Total JSON and text shown inline per failed-test report; later attachments are linked only | none |
 
 ### Reporting
 

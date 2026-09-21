@@ -4,7 +4,7 @@
 PowerShell toolkit for Azure DevOps Server 2020: compiled C\# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 <!-- project:end -->
 
-**Version 0.2.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.3.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
@@ -12,12 +12,13 @@ DevOps. Its cmdlets return typed objects that you can use in pipelines, and it w
 standalone HTML, Markdown or JSON reports when you need a document. All messages,
 report labels and help are available in English and French.
 
-Version 0.2.0 refreshes the failed-test report and downloads attachments from the latest
-test run by default; use `-AllRunAttachments` to include earlier runs. It also preserves
-rerun custom fields and HTTP errors, rejects duplicate result IDs, reduces build-query
-and report-rendering overhead, and checks release assembly versions and build-tool pins.
-Offline regression tests cover these fixes. See the [release audit](docs/release-0.2.0.md)
-for the Server 2020 API contracts, validation evidence and remaining work-PC checks.
+Version 0.3.0 adds a portable Windows x64 download that includes PowerShell, and reworks
+the failed-test report for builds with hundreds of failures and many attempts: an overview
+table, failures grouped by error, collapsed attempts grouped by stage or job (English and
+French apart), and search across every attempt. Reports are about seven times smaller.
+Flaky tests are left out unless you ask for them, attachments are limited to recent runs,
+and only JSON and text attachments are downloaded. See the [release notes](docs/release-0.3.0.md)
+for the changes, validation evidence and remaining work-PC checks.
 
 > [!NOTE]
 > Live validation against Azure DevOps Server 2020 is in progress. Connections, projects,
@@ -32,13 +33,14 @@ for the Server 2020 API contracts, validation evidence and remaining work-PC che
 | Test Cases | Plans and suite trees; Test Cases with recursively expanded Shared Steps, parameters and diagnostics | `Get-AdoTestPlan`, `Get-AdoTestSuite`, `Get-AdoTestCase` |
 | Reports and bulk export | One HTML, Markdown or JSON document for a Test Case, a suite tree or a WIQL result | `Export-AdoTestCase` |
 | Pipeline triage | Build lookup by definition and branch, deepest timeline failures, byte-exact log downloads | `Get-AdoBuildDefinition`, `Get-AdoBuild`, `Get-AdoBuildTimeline`, `Get-AdoBuildFailure`, `Save-AdoBuildLog` |
-| Failed-test reports | Failed and flaky tests with every attempt, run history, and an interactive HTML report with downloaded attachments | `Get-AdoTestRun`, `Get-AdoBuildTestFailure`, `Export-AdoBuildTestFailure` |
+| Failed-test reports | Failed and flaky tests with every attempt, grouped by stage or job, run history, and a compact searchable HTML report with JSON and text attachments | `Get-AdoTestRun`, `Get-AdoBuildTestFailure`, `Export-AdoBuildTestFailure` |
 
 ## Requirements
 
 | To | You need |
 | --- | --- |
-| Use the module | Windows, PowerShell 7.6 (`pwsh`), and access to an Azure DevOps Server 2020 collection with your Windows account. No administrator rights, .NET SDK or other modules |
+| Use the portable release | Windows x64 and access to an Azure DevOps Server 2020 collection with your Windows account. PowerShell and its runtime are included; no administrator rights, .NET SDK or other modules |
+| Use the module-only release | Windows and PowerShell 7.6 (`pwsh`), plus the same server access |
 | Build it from source | The .NET 10 SDK selected by [global.json](global.json) (a per-user install works) and PlatyPS 1.x (`Microsoft.PowerShell.PlatyPS`) for PowerShell 7 |
 | Develop and verify | The build prerequisites plus PowerShell 7.6.5 or later, Pester 5.x and PSScriptAnalyzer; ripgrep is recommended |
 
@@ -47,30 +49,36 @@ Azure DevOps Services and later Server versions are not supported.
 ## Installation
 
 Each [GitHub release](https://github.com/JosephGibson/Ado_tools/releases) contains a
-prebuilt module, so nothing is compiled on your machine:
+portable bundle and a module-only download, so nothing is compiled on your machine:
 
 | Asset | Purpose |
 | --- | --- |
-| `AdoToolkit-<version>.zip` | The module files |
-| `AdoToolkit-<version>.zip.sha256` | The SHA-256 checksum of the zip |
-| `Install-AdoToolkit.ps1` | Checks the zip against the checksum and installs it for the current user |
+| **`AdoToolkit-<version>-win-x64.zip`** | **Recommended:** AdoToolkit, PowerShell and a launcher in one folder |
+| `AdoToolkit-<version>-win-x64.zip.sha256` | The portable bundle's SHA-256 checksum |
+| `AdoToolkit-<version>.zip` | Module files for an existing PowerShell 7.6 installation |
+| `AdoToolkit-<version>.zip.sha256` | The module-only ZIP's SHA-256 checksum |
+| `Install-AdoToolkit.ps1` | Checks and installs the module-only ZIP for the current user |
 
-Download the three files into one folder, close any PowerShell window that has
-AdoToolkit loaded, and run this in PowerShell 7 from that folder:
+To use the portable bundle:
 
-```powershell
-Unblock-File .\Install-AdoToolkit.ps1
-.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.2.0.zip
-```
+1. Download `AdoToolkit-<version>-win-x64.zip`.
+2. Right-click the ZIP, choose **Properties**, select **Unblock** if shown, and click **Apply**.
+3. Extract the entire ZIP to a folder you can write to.
+4. Double-click **`Start-AdoToolkit.cmd`**. A console opens with AdoToolkit already loaded.
 
-Then open a new PowerShell window and run `Import-Module AdoToolkit`. Releases are not
-code-signed. For other options, such as installing without the script or from a
-source build, see [Getting started](docs/guides/getting-started.md#install-the-module).
+Use that launcher each time. The bundle needs no runtime download on first launch.
+To update, extract a new portable release into a new folder and use its launcher;
+saved connection profiles are retained. PowerShell is pinned to the version tested
+with the release and is refreshed through new AdoToolkit releases.
+
+AdoToolkit scripts and modules are not code-signed; workplace policies requiring
+signed code still apply. For checksum verification, module-only installation and
+source builds, see [Getting started](docs/guides/getting-started.md#install-the-module).
 
 ## Quick start
 
 ```powershell
-Import-Module AdoToolkit
+Import-Module AdoToolkit  # already loaded when using Start-AdoToolkit.cmd
 # Once: save the collection URL (not a project URL) and your usual project.
 Set-AdoProfile -Name work -CollectionUrl 'https://ado.example.test/DefaultCollection' `
     -DefaultProject 'Web' -DefaultProfile

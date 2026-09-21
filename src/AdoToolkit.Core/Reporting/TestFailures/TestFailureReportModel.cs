@@ -24,4 +24,12 @@ public sealed class TestFailureReportModel
     public Uri? CommitUrl { get; init; }
     // Null when nothing was downloaded; then the report contains no local links.
     public TestFailureLocalAttachments? LocalAttachments { get; init; }
+    // Runs whose attachments are listed: those started at or after AttachmentWindowStart.
+    public IReadOnlySet<int> AttachmentRunIds { get; init; } = new HashSet<int>();
+    public DateTimeOffset AttachmentWindowStart { get; init; }
+    // Attachments of reported attempts in runs outside the window, left out of Failures.
+    public int OmittedAttachmentCount { get; init; }
+    // True when flaky tests were left out of Failures; FlakyCount still counts them.
+    public bool FlakyExcluded { get; init; }
+    internal PipelineGrouping Grouping { get; init; } = PipelineGrouping.None;
 }

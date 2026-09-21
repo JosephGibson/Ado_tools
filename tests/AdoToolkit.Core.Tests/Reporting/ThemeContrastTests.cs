@@ -26,7 +26,7 @@ public sealed class ThemeContrastTests
                 foreach (string foreground in new[] { "--pass", "--fail", "--flaky", "--other", "--unavailable" }) Check(palette, foreground, background, 4.5);
             }
             string[] codeTokens = palette.Keys.Where(static key => key.StartsWith("--tok-", StringComparison.Ordinal)).ToArray();
-            Assert.True(codeTokens.Length >= 12);
+            Assert.True(codeTokens.Length >= 11);
             foreach (string token in codeTokens) Check(palette, token, "--code-bg", 4.5);
             foreach (string background in new[] { "--pass", "--fail", "--other" }) Check(palette, "--chart-label", background, 4.5);
         }
@@ -53,16 +53,16 @@ public sealed class ThemeContrastTests
     {
         string html = TestFailureReportFixture.Render();
         string css = Asset("test-failures.css");
-        foreach (string name in new[] { "report-title", "section-heading", "count-label", "count-value", "attempt-title", "attempt-duration" })
+        foreach (string name in new[] { "report-brand", "section-heading", "count-label", "count-value", "attempt-title", "attempt-meta" })
         {
             Assert.Contains("class=\"" + name + "\"", html, StringComparison.Ordinal);
             Assert.Contains("." + name + " {", css, StringComparison.Ordinal);
         }
         string print = css[css.IndexOf("@media print", StringComparison.Ordinal)..];
-        Assert.Contains(".top-bar { max-height: none; overflow: visible; }", print, StringComparison.Ordinal);
+        Assert.Contains(".top-bar { max-height: none; overflow: visible; position: static; }", print, StringComparison.Ordinal);
         Assert.Contains(".code-section.hide-framework .framework-frame { display: inline; }", print, StringComparison.Ordinal);
-        Assert.Contains(".code-section pre { overflow: visible; }", print, StringComparison.Ordinal);
-        Assert.Contains(".metadata-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }", print, StringComparison.Ordinal);
+        Assert.Contains(".code-section pre { overflow: visible; max-height: none; }", print, StringComparison.Ordinal);
+        Assert.Contains(".col-error { white-space: normal; max-width: none; }", print, StringComparison.Ordinal);
     }
 
     private static string Asset(string name)

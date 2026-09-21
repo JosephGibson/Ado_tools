@@ -79,6 +79,8 @@ public sealed class AttemptClassificationTests
         // Runs order by pipeline attempt even though the listing returned attempt 2 first.
         Assert.Equal([301, 302], set.Runs.Select(static run => run.Id));
         Assert.Equal([1, 2], set.Runs.Select(static run => run.PipelineAttempt));
+        // A re-attempt keeps its pipeline names, so both runs stay one group and the test is flaky.
+        Assert.All(set.Runs, static run => Assert.Equal(("Tests", "Web", "__default"), (run.StageName, run.PhaseName, run.JobName)));
         Assert.Equal([301, 302], flaky.Attempts.Select(static attempt => attempt.RunId));
         Assert.Equal(["Failed", "Passed"], flaky.Attempts.Select(static attempt => attempt.Outcome));
         Assert.All(flaky.Attempts, static attempt =>
@@ -87,6 +89,28 @@ public sealed class AttemptClassificationTests
             Assert.Null(attempt.SubResultId);
         });
         Assert.Equal(["AGENT-01", "AGENT-04"], flaky.Attempts.Select(static attempt => attempt.ComputerName));
+    }
+
+    // English and French run in separate stages: a French failure is never hidden by a later English
+    // pass. Without distinct names the last attempt still decides (§15.10).
+    [Fact]
+    public void AFailureInOnePipelineGroupIsNotHiddenByALaterPassInAnother()
+    {
+        static TestIdentityGroup Group(params (string Key, string Outcome)[] records) => new()
+        {
+            Identity = TestIdentity.ForAutomated("Synthetic.Tests.dll", "Synthetic.Localized"),
+            Records = [.. records.Select((record, index) => new TestResultRecord
+            {
+                RunId = 301 + index, ResultId = 1, RunOrder = index + 1, PipelineKey = record.Key, Outcome = record.Outcome, AutomatedTestName = "Synthetic.Localized",
+            })],
+        };
+        TestIdentityGroup split = Group(("en", "Failed"), ("fr", "Failed"), ("en", "Passed"));
+        Assert.Equal(AdoTestFailureClassification.Failed, split.ProvisionalClassification);
+        Assert.Equal(AdoTestHistoryOutcome.Failed, split.Cell);
+        Assert.Equal(AdoTestFailureClassification.Flaky, Group(("en", "Failed"), ("fr", "Passed"), ("en", "Passed")).ProvisionalClassification);
+        Assert.Equal(AdoTestFailureClassification.Flaky, Group(("", "Failed"), ("", "Failed"), ("", "Passed")).ProvisionalClassification);
+        Assert.Equal(AdoTestOutcomeClass.Failure, OutcomeClassifier.Deciding([("en", AdoTestOutcomeClass.Pass), ("fr", AdoTestOutcomeClass.Failure)]));
+        Assert.Equal(AdoTestOutcomeClass.Other, OutcomeClassifier.Deciding([("en", AdoTestOutcomeClass.Pass), ("fr", AdoTestOutcomeClass.Other)]));
     }
 
     // Test results fixture 5: both sources combined for one identity, run first then sub-result.
@@ -153,6 +177,19 @@ public sealed class AttemptClassificationTests
         Assert.Equal("2", attempt.Iterations[1].Parameters[0].Value);
         Assert.Equal("Step failed.", Assert.Single(attempt.Iterations[1].ActionResults).ErrorMessage);
         Assert.Equal("00000002", attempt.Iterations[1].ActionResults[0].ActionPath);
+    }
+
+    // Dots inside a data-driven test's arguments are not name separators.
+    [Theory]
+    [InlineData("Contoso.Web.Tests.LoginTests.SignIn", "SignIn", "LoginTests")]
+    [InlineData("Contoso.Web.Tests.LoginTests.SignIn(\"user@example.test\",3.5)", "SignIn(\"user@example.test\",3.5)", "LoginTests")]
+    [InlineData("Contoso.Web.Tests.Outer+Inner.Check", "Check", "Inner")]
+    [InlineData("SignIn(\"a.b\")", "SignIn(\"a.b\")", null)]
+    [InlineData("Contoso.Web.", "Contoso.Web.", "Web")]
+    public void ShortAndClassNamesIgnoreSeparatorsInsideArguments(string name, string shortName, string? className)
+    {
+        Assert.Equal(shortName, AttemptGrouper.ShortName(name, "Title"));
+        Assert.Equal(className, AttemptGrouper.ClassName(name));
     }
 
     private static async Task<AdoBuildTestFailureSet> RerunSetAsync()

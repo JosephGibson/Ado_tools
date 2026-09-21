@@ -12,6 +12,9 @@ public sealed class TestFailureExportOptions
     public bool NoClobber { get; init; }
     public bool SkipAttachments { get; init; }
     public bool AllRunAttachments { get; init; }
+    // Attachments are listed and downloaded only for runs started this many days before GeneratedAt.
+    public int AttachmentWindowDays { get; init; } = TestFailureReportOptions.DefaultAttachmentWindowDays;
+    public bool IncludeFlaky { get; init; }
     public bool Open { get; init; }
     public required DateTimeOffset GeneratedAt { get; init; }
     public required string ToolkitVersion { get; init; }

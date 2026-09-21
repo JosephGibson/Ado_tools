@@ -20,10 +20,11 @@ definition and a branch, see [Pipeline failure triage](pipeline-triage.md).
 Get-AdoBuildTestFailure -BuildId 12345 | Export-AdoBuildTestFailure -Open
 ```
 
-That writes `Build-12345-TestFailures.html` to your Downloads folder, downloads the
-attachments from the build's most recent test run into a folder beside it, and opens
-the report. Earlier runs' attachments stay listed with name, size and a link. The rest of this guide is
-the same thing with a look at the data first, and the options worth knowing.
+That writes `Build-12345-TestFailures.html` to your Downloads folder, downloads the JSON
+and text attachments of the build's most recent test run into a folder beside it, and
+opens the report. Other attachments stay listed with name, size and a link. Flaky tests
+are left out. The rest of this guide is the same thing with a look at the data first,
+how to read the report, and the options worth knowing.
 
 ## Step 1 — Connect
 
@@ -55,8 +56,8 @@ Check that `BuildNumber` and `Definition` are the build you meant before exporti
 | --- | --- |
 | `Build` | The build the ID resolved to |
 | `Failures` | One entry per test that failed in at least one attempt |
-| `FailedCount`, `FlakyCount` | `Failed` means the last attempt did not pass; `Flaky` means it failed, then passed later |
-| `Runs` | The build's test runs, in attempt order |
+| `FailedCount`, `FlakyCount` | `Failed` means the last attempt did not pass in at least one stage or job; `Flaky` means it failed, then passed later in every stage or job |
+| `Runs` | The build's test runs, in attempt order, with `StageName`, `PhaseName` and `JobName` when the server sends them |
 | `History` | Run summaries, oldest first, current build last |
 | `Status` | `Complete`, or `Partial` when something could not be retrieved |
 | `Diagnostics` | Why a `Partial` set is partial |
@@ -100,18 +101,85 @@ $report.FullName
 $report.AttachmentDirectory
 ```
 
+## Reading the report
+
+The report is built to be scanned with 100–200 failures and up to 14 attempts each. The
+tabs under the header switch between views; with scripts blocked, the views follow one
+another on a single page.
+
+| View | What it shows |
+| --- | --- |
+| Overview | One row per failed test: its number, name and class, Test Case number, one status column per stage or job, and the first line of its latest error |
+| By error | The same rows, grouped under their latest error, largest group first. Numbers and GUIDs are ignored when grouping, so "after 30012 ms" and "after 30020 ms" group together |
+| Details | One card per test: Test Case number and title, links, full name and history, then its attempts |
+| Runs and history | The build's test runs with their stage, job, attempts and attachment status, the run history chart, and when and where the report was made |
+| Diagnostics | Shown only when something could not be retrieved |
+
+In the overview, each stage or job cell reads `✕ 7/7`: `✕` means the last attempt in that
+group failed, `≈` that it failed, then passed, and `✓` that it never failed. The numbers are
+failed attempts out of all attempts, and each square after them opens that attempt.
+
+In a card, every group and every attempt starts collapsed. An attempt's summary line shows its
+outcome, duration, machine and the first line of its error. When a later attempt has the same
+error message or stack trace as an earlier one, it shows a link to that attempt instead of
+another copy.
+
+### English and French attempts
+
+When the test runs of the build carry different stage or job names, attempts are grouped by
+them, so English and French attempts sit in separate labelled groups. The label is the
+shortest name that tells the groups apart: the stage name when the languages run in separate
+stages, otherwise the job name, otherwise the matrix or parallel instance. The names come
+from the test runs' `pipelineReference`; when the server sends none, or every run has the same
+names, attempts stay in one list.
+
+Grouping also decides the classification. A test that fails in every French attempt stays
+`Failed` even when an English retry passes last. It is `Flaky` only when every group ends
+with a pass.
+
+To check what names your server sends, look at `Runs` before exporting:
+
+```powershell
+$set.Runs | Format-Table Id, Name, StageName, PhaseName, JobName, PipelineAttempt
+```
+
+`PhaseName` is what a YAML pipeline calls the job; `JobName` is the matrix or parallel
+instance, `__default` when there is none.
+
+### Search
+
+Press `/` or use the Search box. Every word you type must appear somewhere in a test's card,
+collapsed attempts included: error messages, stack traces, JSON and text attachments shown in
+the report, stage and job names, and run and attempt fields such as run name, machine or
+failure type. `12345` and `#12345` both find the tests linked to Test Case 12345. Attempts
+that match are marked in their summary line; nothing opens by itself. **Failing in**
+narrows the list to tests whose last attempt in a group failed, or failed only there.
+
+Keys: `j`/`k` move between tests, `Enter` opens the selected test's card, `o` opens or closes
+an attempt or group, and `Esc` in the Search box clears every filter.
+
 ## What lands on disk
 
-By default, only the most recent run's attachments are downloaded. The latest run is
-the last in attempt order: stage, phase and job attempt, then start date and run ID.
-If that run has no attachments, no attachment folder is created; the export does not
-fall back to an older run. Every run and attempt remains in the report.
+Attachments are shown only for test runs that started within the last 7 days; change that
+with `-AttachmentWindowDays`. Older runs keep every attempt in the report, but their
+attachments are left out, and a run without a start date counts as outside.
 
-To download attachments from every reported run:
+Only JSON and text (`.txt`, `.log`) attachments are ever downloaded. PNG, HTML and other
+attachments stay links to their Azure DevOps result. By default, only the most recent run is
+downloaded, and only when it is inside the window. The latest run is the last in attempt
+order: stage, phase and job attempt, then start date and run ID. If that run has no JSON or
+text attachments, no attachment folder is created; the export does not fall back to an
+older run.
+
+To download JSON and text from every run inside the window:
 
 ```powershell
 $set | Export-AdoBuildTestFailure -Path .\reports\build-12345 -AllRunAttachments
 ```
+
+Downloaded JSON and text appear in a collapsed preview, which is also what makes their
+contents searchable. Files above `testResults.maximumInlineJsonBytes`, or past
+`testResults.maximumInlineTotalBytes` for the whole report, are linked but not shown.
 
 | Item | Where |
 | --- | --- |
@@ -132,8 +200,10 @@ intact. Older attachment folders of the same report are removed after the replac
 | Option | Effect |
 | --- | --- |
 | `-Open` | Opens the committed report with the default handler |
-| `-SkipAttachments` | Downloads nothing; attachments are still listed with name, size and a link |
-| `-AllRunAttachments` | Downloads attachments from every reported run. `-SkipAttachments` takes precedence if both switches are supplied |
+| `-SkipAttachments` | Downloads nothing; attachments of runs inside the window are still listed with name, size and a link |
+| `-AllRunAttachments` | Downloads JSON and text from every run inside the window. `-SkipAttachments` takes precedence if both switches are supplied |
+| `-AttachmentWindowDays` | Days, 1–365, in which a run must have started for its attachments to appear. Default 7 |
+| `-IncludeFlaky` | Includes flaky tests; by default they are left out and only counted in the header |
 | `-Path` | A directory, or an `.html` file path for a single build |
 | `-Culture fr-CA` | Report language. Defaults to the configured, then the session, culture |
 | `-NoClobber` | Refuses to replace an existing report, before any download |
@@ -141,7 +211,7 @@ intact. Older attachment folders of the same report are removed after the replac
 | `-HistoryCount` (step 2) | Builds of run history, 1–50. Default 10 |
 | `-HistoryScope AllBranches` (step 2) | History across branches instead of the build's own branch |
 
-Defaults for history, attachment size limits and report culture live in the
+Defaults for history, attachment size and inline limits, and report culture live in the
 [configuration file](configuration.md#settings).
 
 ## The same build ID, other questions
@@ -165,6 +235,9 @@ failed". `Save-AdoBuildLog` needs an existing directory, unlike the export.
 | A path error naming the report | `-Path` has an extension other than `.html`, or names an existing file |
 | `Status` is `Partial` | Read `Diagnostics`. A common cause is more failing tests than `testResults.maximumReportedFailures` |
 | Warnings about attachment size | The attachment or the total exceeded the configured limit. Those attachments are listed in the report but not downloaded |
+| A flaky test is missing | Flaky tests are left out by default. Add `-IncludeFlaky` |
+| A run's attachments are missing | The run started before the attachment window. Raise `-AttachmentWindowDays`; the Runs and history view marks runs outside the window |
+| No English and French columns | The server sent no stage or job names, or every run has the same names. Check `$set.Runs` as shown above |
 | The report opens without filtering or keyboard shortcuts | Scripts are blocked. The report content is complete; only the built-in interactions are lost |
 
 Reports, logs and attachments can contain server names, test output and other internal

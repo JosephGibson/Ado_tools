@@ -14,8 +14,9 @@ internal static class TestFailureReportFixture
     internal const string Hostile = "</script><script>alert('fixture-only')</script> <img src=x onerror=fixture()> \" & ../CON 日本語 « L’été : 1 234 ! »";
     internal static readonly DateTimeOffset Clock = new(2026, 9, 16, 13, 30, 0, TimeSpan.Zero);
 
+    // Reviewed reports show every failure; the default flaky exclusion has its own tests.
     internal static TestFailureReportOptions Options(string culture) => new()
-    { Culture = culture, SessionCulture = CultureInfo.GetCultureInfo("en-US"), GeneratedAt = Clock, ToolkitVersion = "5.3.0-test" };
+    { Culture = culture, SessionCulture = CultureInfo.GetCultureInfo("en-US"), GeneratedAt = Clock, ToolkitVersion = "5.3.0-test", IncludeFlaky = true };
 
     internal static TestFailureReportModel Model(string variant = "failed", string culture = "en-US") => TestFailureReportModelBuilder.Build(Set(variant), Options(culture));
 
@@ -30,6 +31,7 @@ internal static class TestFailureReportFixture
 
     internal static AdoBuildTestFailureSet Set(string variant)
     {
+        if (variant == "grouped") return GroupedSet();
         bool hostile = variant == "hostile";
         bool partial = variant is "partial" or "review";
         bool flaky = variant is "flaky" or "review";
@@ -48,10 +50,55 @@ internal static class TestFailureReportFixture
                 SourceBranch = "refs/heads/main", SourceVersion = "0123456789abcdef0123456789abcdef01234567", RepositoryType = "TfsGit",
                 RepositoryId = "11111111-2222-3333-4444-555555555555", Result = "failed", FinishTime = Clock.AddMinutes(-12),
                 TeamProject = Project, CollectionUri = Collection, WebUrl = Untrusted },
-            Runs = [new AdoTestRun { Id = 201, Name = "Synthetic Windows tests", BuildId = 401, State = "Completed", TeamProject = Project, CollectionUri = Collection }],
+            Runs = [new AdoTestRun { Id = 201, Name = "Synthetic Windows tests", BuildId = 401, State = "Completed", StartedDate = Clock.AddMinutes(-15),
+                TeamProject = Project, CollectionUri = Collection }],
             Summary = summary, History = [Summary(398, false, false, 0, 0), Summary(399, false, true, 0, 0), Summary(400, false, true, 1, 0), summary],
             Failures = failures, FailedCount = summary.Failed + (partial ? 7 : 0), FlakyCount = summary.Flaky,
             Status = partial ? AdoTestFailureStatus.Partial : AdoTestFailureStatus.Complete, Diagnostics = diagnostics, RetrievedAt = Clock.AddMinutes(-1), CollectionUri = Collection,
+        };
+    }
+
+    // English and French stages. Run 200 is outside the attachment window; English then passes,
+    // and French fails twice with the same message and trace.
+    private static AdoBuildTestFailureSet GroupedSet()
+    {
+        AdoTestRun Run(int id, string stage, int attempt, DateTimeOffset started) => new()
+        {
+            Id = id, Name = "Synthetic " + stage, BuildId = 401, State = "Completed", StartedDate = started, StageName = stage, PhaseName = "UiTests",
+            JobName = "__default", PipelineAttempt = attempt, TotalTests = 40, PassedTests = 38, TeamProject = Project, CollectionUri = Collection,
+        };
+        AdoTestAttachment File(int id, int run, int result, string name) => new()
+        { Id = id, RunId = run, ResultId = result, FileName = name, Size = 128, AttachmentType = "GeneralAttachment", Kind = AttachmentKinds.FromFileName(name) };
+        AdoTestAttempt Attempt(int number, int run, string? error, params AdoTestAttachment[] attachments) => new()
+        {
+            Number = number, Source = number == 1 ? AdoTestAttemptSource.Single : AdoTestAttemptSource.RunAttempt, RunId = run, ResultId = 10 + number,
+            Outcome = error is null ? "Passed" : "Failed", OutcomeClass = error is null ? AdoTestOutcomeClass.Pass : AdoTestOutcomeClass.Failure,
+            StartedDate = Clock.AddMinutes(-15), CompletedDate = Clock.AddMinutes(-14), Duration = TimeSpan.FromSeconds(12.5), ComputerName = "SYNTHETIC-AGENT",
+            ErrorMessage = error, StackTrace = error is null ? null : @"   at Synthetic.CheckoutTests.SubmitOrder() in C:\synthetic\Checkout.cs:line " + error.Length.ToString(CultureInfo.InvariantCulture),
+            Attachments = attachments,
+        };
+        const string French = "Assert.Equal() Failure: Expected: « Confirmée » Actual: « Confirmed »";
+        AdoTestFailure[] failures =
+        [
+            new() { Ordinal = 1, Classification = AdoTestFailureClassification.Failed, TestName = "Synthetic.CheckoutTests.SubmitOrder", ShortName = "SubmitOrder",
+                Storage = "Synthetic.Tests.dll", CollectionUri = Collection,
+                TestCase = new AdoTestCaseLink { Id = 901, Title = "Valider la commande", State = "Ready", IsResolved = true, WebUrl = Untrusted },
+                Attempts = [Attempt(1, 200, "Timed out waiting for #submit", File(61, 200, 11, "old-run.txt")), Attempt(2, 201, null),
+                    Attempt(3, 202, French, File(62, 202, 13, "Details.json"), File(63, 202, 13, "console.log")), Attempt(4, 203, French)] },
+            new() { Ordinal = 2, Classification = AdoTestFailureClassification.Failed, TestName = "Synthetic.HomeTests.ShowBanner", ShortName = "ShowBanner",
+                Storage = "Synthetic.Tests.dll", CollectionUri = Collection,
+                TestCase = new AdoTestCaseLink { Id = 903, IsResolved = false, WebUrl = Untrusted },
+                Attempts = [Attempt(1, 201, "Banner not shown"), Attempt(2, 202, null)] },
+        ];
+        AdoBuildTestSummary summary = Summary(401, true, true, 2, 0);
+        return new AdoBuildTestFailureSet
+        {
+            Build = new AdoBuild { Id = 401, BuildNumber = "20260916.4", Definition = new AdoBuildDefinitionRef { Id = 12, Name = "Synthetic UI tests" },
+                SourceBranch = "refs/heads/main", Result = "failed", FinishTime = Clock.AddMinutes(-5), TeamProject = Project, CollectionUri = Collection, WebUrl = Untrusted },
+            Runs = [Run(200, "Tests_EN", 1, Clock.AddDays(-10)), Run(201, "Tests_EN", 2, Clock.AddMinutes(-20)), Run(202, "Tests_FR", 1, Clock.AddMinutes(-19)),
+                Run(203, "Tests_FR", 2, Clock.AddMinutes(-10))],
+            Summary = summary, History = [summary], Failures = failures, FailedCount = 2, Status = AdoTestFailureStatus.Complete,
+            RetrievedAt = Clock.AddMinutes(-1), CollectionUri = Collection,
         };
     }
 

@@ -191,7 +191,7 @@ internal sealed class RunHistoryService
             cancellationToken.ThrowIfCancellationRequested();
             order++;
             foreach (TestResultDto result in await runs.GetResultsAsync(project, run.Id, culture, cancellationToken).ConfigureAwait(false))
-                records.Add(TestFailureRetrievalService.ToRecord(result, run.Id, order));
+                records.Add(TestFailureRetrievalService.ToRecord(result, run, order));
         }
         return HistoryBuildData.FromGroups(AttemptGrouper.Group(records, culture, null, cancellationToken), cancellationToken);
     }

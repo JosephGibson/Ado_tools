@@ -32,6 +32,7 @@ public static class HighlightedCodeWriter
             CodeLanguage.StackTrace => ("stacktrace", AdoMessage.TestReportStackTrace, StackTraceLexer.Lex(displayed)),
             CodeLanguage.ErrorMessage => ("error", AdoMessage.TestReportErrorMessage, ErrorMessageLexer.Lex(displayed)),
             CodeLanguage.Json => ("json", AdoMessage.TestReportJson, JsonLexer.Lex(displayed)),
+            CodeLanguage.Text => ("text", AdoMessage.TestReportText, [new CodeToken { Kind = CodeTokenKind.Plain, Text = displayed }]),
             _ => throw new ArgumentOutOfRangeException(nameof(language)),
         };
         writer.Write("<div class=\"code-block\"><div class=\"language-label\">");
@@ -49,6 +50,8 @@ public static class HighlightedCodeWriter
                 if (nextFrame is not null) { writer.Write("<span class=\""); writer.Write(nextFrame); writer.Write("\">"); }
                 frame = nextFrame;
             }
+            // Plain text and punctuation need no span, and newlines stay literal: all keep large reports small.
+            if (token.Kind is CodeTokenKind.Plain or CodeTokenKind.Punctuation) { writer.Write(Text(token.Text)); continue; }
             writer.Write("<span class=\"");
             writer.Write(TokenClass(token.Kind));
             writer.Write("\">");
@@ -56,9 +59,9 @@ public static class HighlightedCodeWriter
             {
                 writer.Write("<a rel=\"noreferrer\" href=\"");
                 writer.Write(SinkEncoding.Attribute(uri!.AbsoluteUri));
-                writer.Write("\">"); writer.Write(SinkEncoding.Attribute(token.Text)); writer.Write("</a>");
+                writer.Write("\">"); writer.Write(Text(token.Text)); writer.Write("</a>");
             }
-            else writer.Write(SinkEncoding.Attribute(token.Text));
+            else writer.Write(Text(token.Text));
             writer.Write("</span>");
         }
         if (frame is not null) writer.Write("</span>");
@@ -74,12 +77,14 @@ public static class HighlightedCodeWriter
         return diagnostic;
     }
 
+    private static string Text(string value) => SinkEncoding.Attribute(value).Replace("&#xA;", "\n", StringComparison.Ordinal);
+
+    // One-letter classes, styled only inside code: a stack trace has a dozen tokens per frame.
     private static string TokenClass(CodeTokenKind kind) => kind switch
     {
-        CodeTokenKind.Keyword => "tok-keyword", CodeTokenKind.Type => "tok-type", CodeTokenKind.Method => "tok-method",
-        CodeTokenKind.Namespace => "tok-namespace", CodeTokenKind.Parameter => "tok-parameter", CodeTokenKind.QuotedString => "tok-string",
-        CodeTokenKind.Number => "tok-number", CodeTokenKind.Path => "tok-path", CodeTokenKind.Line => "tok-line",
-        CodeTokenKind.Property => "tok-property", CodeTokenKind.Literal => "tok-literal", CodeTokenKind.Punctuation => "tok-punct",
-        CodeTokenKind.Url => "tok-url", _ => "tok-plain",
+        CodeTokenKind.Keyword => "k", CodeTokenKind.Type => "t", CodeTokenKind.Method => "m", CodeTokenKind.Namespace => "n",
+        CodeTokenKind.Parameter => "a", CodeTokenKind.QuotedString => "s", CodeTokenKind.Number => "d", CodeTokenKind.Path => "f",
+        CodeTokenKind.Line => "l", CodeTokenKind.Property => "p", CodeTokenKind.Literal => "c", CodeTokenKind.Url => "u",
+        _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 }

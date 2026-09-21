@@ -6,6 +6,8 @@ internal sealed class TestResultRecord
     internal required int RunId { get; init; }
     internal required int ResultId { get; init; }
     internal required int RunOrder { get; init; }
+    // The run's PipelineGrouping key; records of one key form one group for classification.
+    internal string PipelineKey { get; init; } = "";
     internal string? Outcome { get; init; }
     internal string? AutomatedTestName { get; init; }
     internal string? AutomatedTestStorage { get; init; }

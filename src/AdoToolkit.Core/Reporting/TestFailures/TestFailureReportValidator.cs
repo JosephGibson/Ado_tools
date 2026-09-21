@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using AdoToolkit.Core.TestRuns;
 
 namespace AdoToolkit.Core.Reporting.TestFailures;
 
@@ -27,6 +28,7 @@ public static partial class TestFailureReportValidator
         ArgumentNullException.ThrowIfNull(model);
         LocalLinks links = new(model, attachmentFolder);
         int roots = 0, generators = 0, policies = 0, cards = 0, attempts = 0, closedCards = 0, ended = 0;
+        IReadOnlyList<AdoTestAttempt> order = [];
         string? policy = null;
         bool inCard = false, assetSeen = false;
         List<string> scripts = [];
@@ -78,11 +80,16 @@ public static partial class TestFailureReportValidator
                     if (Attribute("id") != "f-" + N(failure.Ordinal) || Attribute("data-attempt-count") != N(failure.Attempts.Count)) Invalid(model);
                     inCard = true;
                     attempts = 0;
+                    // Attempts appear once each, grouped by pipeline group when the build has groups.
+                    order = [.. TestFailureGroups.Of(failure, model.Grouping).SelectMany(group => group.Attempts)];
+                    break;
+                case "details" when attributes.ContainsKey("open"):
+                    // Every attempt, group and preview starts collapsed.
+                    Invalid(model);
                     break;
                 case "details" when Attribute("class") == "attempt":
-                    if (!inCard || attempts >= model.Failures[cards - 1].Attempts.Count) Invalid(model);
-                    var current = model.Failures[cards - 1];
-                    if (Attribute("id") != "f-" + N(current.Ordinal) + "-a" + N(current.Attempts[attempts++].Number)) Invalid(model);
+                    if (!inCard || attempts >= order.Count) Invalid(model);
+                    if (Attribute("id") != "f-" + N(model.Failures[cards - 1].Ordinal) + "-a" + N(order[attempts++].Number)) Invalid(model);
                     break;
                 case "/article":
                     if (!inCard || attempts != model.Failures[cards - 1].Attempts.Count) Invalid(model);
@@ -119,7 +126,8 @@ public static partial class TestFailureReportValidator
             if (parts.Length != 2 || parts[0] != Uri.EscapeDataString(local.FolderName)) Invalid(model);
             string name = Uri.UnescapeDataString(parts[1]);
             long length = 0;
-            if (parts[1] != Uri.EscapeDataString(name) || !ToolkitName().IsMatch(name) || (image && !name.EndsWith(".png", StringComparison.Ordinal))
+            // Only JSON, text and mismatched .bin files are ever downloaded; none is an image.
+            if (parts[1] != Uri.EscapeDataString(name) || !ToolkitName().IsMatch(name) || image
                 || !local.Files.TryGetValue(name, out length)) Invalid(model);
             if (linked.Contains(name)) return;
             FileInfo file = new(Path.Combine(folder, name));
@@ -193,7 +201,7 @@ public static partial class TestFailureReportValidator
     private static string N(int number) => number.ToString(CultureInfo.InvariantCulture);
     private static void Invalid(TestFailureReportModel model) => throw new InvalidDataException(Messages.Get(AdoMessage.InvalidReportOutput, model.Culture));
 
-    [GeneratedRegex(@"^r[1-9][0-9]*-[1-9][0-9]*(?:-s[1-9][0-9]*)?-a[1-9][0-9]*\.(?:png|json|html|bin)$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^r[1-9][0-9]*-[1-9][0-9]*(?:-s[1-9][0-9]*)?-a[1-9][0-9]*\.(?:json|txt|bin)$", RegexOptions.CultureInvariant)]
     private static partial Regex ToolkitName();
 
     [GeneratedRegex(@"^/?[a-zA-Z!][a-zA-Z0-9!:-]*", RegexOptions.CultureInvariant)]

@@ -8,5 +8,7 @@ public sealed class TestFailureLocalAttachments
     public required string SourceFolder { get; init; }
     // Toolkit file name → bytes written.
     public required IReadOnlyDictionary<string, long> Files { get; init; }
+    // Per-file and per-report limits on JSON and text shown, and so searchable, in the report.
     public required long MaximumInlineJsonBytes { get; init; }
+    public long MaximumInlineTotalBytes { get; init; } = 8388608;
 }

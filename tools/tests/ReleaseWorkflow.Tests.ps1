@@ -2,6 +2,7 @@ BeforeAll {
     Set-StrictMode -Version 2.0
     $ErrorActionPreference = 'Stop'
     . (Join-Path $PSScriptRoot '../lib/dependencies.ps1')
+    function gh { throw 'Unexpected GitHub request.' }
     $workflowPath = Join-Path $PSScriptRoot '../../.github/workflows/release.yml'
     function Get-ReleaseStep {
         param([string] $Name)
@@ -45,13 +46,15 @@ Describe 'Release module selection' {
 Describe 'Release workflow external contracts without network calls' {
     BeforeEach {
         $savedEnvironment = @{}
-        foreach ($name in @('RUNNER_TEMP', 'GITHUB_PATH', 'GITHUB_OUTPUT', 'GITHUB_REF_NAME', 'POWERSHELL_VERSION')) {
+        foreach ($name in @('RUNNER_TEMP', 'GITHUB_PATH', 'GITHUB_OUTPUT', 'GITHUB_REF_NAME', 'GITHUB_WORKSPACE', 'POWERSHELL_VERSION', 'VERSION')) {
             $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
         }
         $env:RUNNER_TEMP = $TestDrive
         $env:GITHUB_PATH = Join-Path $TestDrive 'github-path.txt'
         $env:GITHUB_OUTPUT = Join-Path $TestDrive 'github-output.txt'
         $env:POWERSHELL_VERSION = '7.6.6'
+        $env:GITHUB_WORKSPACE = Join-Path $TestDrive 'workspace'
+        $env:VERSION = '0.2.0'
         Mock Invoke-WebRequest { throw 'Unexpected network request.' }
     }
     AfterEach {
@@ -96,5 +99,45 @@ Describe 'Release workflow external contracts without network calls' {
             { & $step } | Should -Throw '*does not match its published hash*'
             Should -Invoke Expand-Archive -Exactly -Times 0
         }
+    }
+
+    It 'passes the previously verified runtime archive and checksums into portable packaging' {
+        $script:packagingCalls = [Collections.Generic.List[object]]::new()
+        Mock pwsh { $script:packagingCalls.Add(@($args)); $global:LASTEXITCODE = 0 }
+        & (Get-ReleaseStep -Name 'Package the verified build')
+        $script:packagingCalls.Count | Should -Be 2
+        $script:packagingCalls[0] | Should -Contain '-NoBuild'
+        $script:packagingCalls[1] | Should -Contain (Join-Path $env:RUNNER_TEMP 'PowerShell-7.6.6-win-x64.zip')
+        $script:packagingCalls[1] | Should -Contain (Join-Path $env:RUNNER_TEMP 'powershell-hashes.sha256')
+        $script:packagingCalls[1] | Should -Contain '-PowerShellVersion'
+        $script:packagingCalls[1] | Should -Contain '7.6.6'
+    }
+
+    It 'fails the release step when the portable launcher check fails' {
+        Mock pwsh { $global:LASTEXITCODE = 1 }
+        { & (Get-ReleaseStep -Name 'Check the portable launcher offline') } | Should -Throw '*Portable launcher check failed*'
+    }
+
+    It 'publishes both ZIPs and checksums with portable-first user instructions' {
+        $output = Join-Path $env:GITHUB_WORKSPACE 'artifacts/release'
+        [void] [IO.Directory]::CreateDirectory($output)
+        foreach ($name in @('AdoToolkit-0.2.0.zip', 'AdoToolkit-0.2.0-win-x64.zip')) {
+            [IO.File]::WriteAllText((Join-Path $output "$name.sha256"), ('a' * 64) + "  $name`n")
+        }
+        $script:publishArguments = @()
+        Mock gh { $script:publishArguments = @($args); $global:LASTEXITCODE = 0 }
+        & (Get-ReleaseStep -Name 'Publish the GitHub release')
+        foreach ($name in @('AdoToolkit-0.2.0-win-x64.zip', 'AdoToolkit-0.2.0-win-x64.zip.sha256',
+                'AdoToolkit-0.2.0.zip', 'AdoToolkit-0.2.0.zip.sha256', 'Install-AdoToolkit.ps1')) {
+            $script:publishArguments | Should -Contain (Join-Path $output $name)
+        }
+        $script:publishArguments | Should -Contain '--notes-file'
+        $notes = Get-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'release-notes.md') -Raw
+        $notes | Should -Match '^## Portable download'
+        $notes | Should -Match 'Start-AdoToolkit\.cmd'
+        $notes | Should -Match 'PowerShell 7\.6\.6'
+        $notes | Should -Match 'Unblock'
+        $notes | Should -Match '## Module-only installation'
+        Should -Invoke Invoke-WebRequest -Exactly -Times 0
     }
 }

@@ -297,6 +297,13 @@ All inputs below are generated synthetic data inside the named tests.
 
 ## Version 0.1.1: Server 2020 wire shapes
 
+The in-memory fixtures in `../AdoToolkit.Core.Tests/Reporting/TestFailures/LatestRunAttachmentTests.cs`
+cover attachment selection across two runs, repeated sub-result attachments, missing
+run metadata, and stage/phase/job/date/ID ordering. All names, IDs and three-byte bodies
+are synthetic; no server data or network is used. `TestFailureExport.Pester.ps1` also
+reuses `TestRuns/attachments-result.json` on both runs to exercise the export switch
+against the loopback server.
+
 The first work run (2026-09-17) found that Server 2020 sends reference IDs as numeric JSON
 strings (`build.id` on runs, `testRun.id` on results), and run totals instead of
 `runStatistics`. These shapes are hand-written synthetic data; no response was copied. Only
@@ -313,6 +320,17 @@ field names and JSON value kinds were reported.
 | `tests/Live/Smoke.Live.ps1`, `tests/Live/Shape.Live.ps1` | Opt-in work checks. The first runs the cmdlets end to end. The second prints JSON property paths and value kinds, never values, so fixtures can follow the server | Printed output only; nothing persists | V-19–V-25 |
 
 ## Approved Server 2020 audit regressions (2026-09-17)
+
+The 0.2.0 regressions also generate synthetic data inline: stalled error-body
+streams in `Http/ErrorTranslationTests.cs`, child/parent custom fields in
+`TestRuns/TestAttemptMapperTests.cs`, overlapping numeric/string result IDs in
+`TestRuns/WireAuditRegressionTests.cs`, continuation pages with bounded build/history
+queries, and long URL punctuation in `Reporting/RenderedHeaderAndLinkTests.cs`.
+`tools/tests/Package.Tests.ps1` emits minimal versioned PE assemblies in TestDrive
+without using product output; stale, invalid and changed packages remain synthetic.
+`tools/tests/ReleaseWorkflow.Tests.ps1` mocks downloads and module inventory and
+generates UTF-16LE checksums. It never installs modules or calls external services.
+`HelpMetadata.Pester.ps1` compares both source-help locales with the staged cmdlets.
 
 All bodies, encodings, names, IDs and files below are synthetic and generated inside
 these tests. No work response was copied. The public schema source for nesting and

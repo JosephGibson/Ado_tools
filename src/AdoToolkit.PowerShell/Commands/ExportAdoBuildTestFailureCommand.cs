@@ -29,6 +29,7 @@ public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposabl
     [Parameter] [ValidateNotNullOrEmpty] public string? Culture { get; set; }
     [Parameter] [ValidateNotNullOrEmpty] public string? Path { get; set; }
     [Parameter] public SwitchParameter SkipAttachments { get; set; }
+    [Parameter] public SwitchParameter AllRunAttachments { get; set; }
     [Parameter] public SwitchParameter NoClobber { get; set; }
     [Parameter] public SwitchParameter Open { get; set; }
     [Parameter] public AdoConnection? Connection { get; set; }
@@ -71,6 +72,7 @@ public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposabl
         {
             Culture = Culture, ConfiguredCulture = configuration.Reporting.Culture, SessionCulture = MessageCulture,
             Path = resolvedPath, CreateDirectory = createDirectory, NoClobber = NoClobber, SkipAttachments = SkipAttachments, Open = Open,
+            AllRunAttachments = AllRunAttachments,
             GeneratedAt = DateTimeOffset.Now,
             ToolkitVersion = typeof(ExportAdoBuildTestFailureCommand).Assembly.GetName().Version!.ToString(),
         });

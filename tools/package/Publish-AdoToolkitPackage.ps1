@@ -7,6 +7,7 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 . (Join-Path $PSScriptRoot 'Package.Common.ps1')
+. (Join-Path $PSScriptRoot '../lib/dependencies.ps1')
 $repository = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 if (-not $OutputRoot) { $OutputRoot = Join-Path $repository 'artifacts' }
 $root = Resolve-AdoPackagePath -Path $OutputRoot -Root $repository
@@ -24,11 +25,12 @@ try {
         finally { Pop-Location }
         if ($sdkExit -ne 0) { $missing.Add('the .NET SDK version that global.json requests') }
     }
-    if (@(Get-Module -ListAvailable -Name Microsoft.PowerShell.PlatyPS | Where-Object { $_.Version.Major -eq 1 }).Count -eq 0) {
-        $missing.Add('the Microsoft.PowerShell.PlatyPS 1.x module for PowerShell 7')
+    $platy = @(Get-BuildModule -Name Microsoft.PowerShell.PlatyPS)
+    if ($platy.Count -eq 0) {
+        $missing.Add('the required Microsoft.PowerShell.PlatyPS version (1.x locally; the pinned version for a release)')
     }
     if ($missing.Count -gt 0) { throw ('Packaging requires ' + ($missing -join '; ') + '. See docs/tooling.md.') }
-    Import-Module Microsoft.PowerShell.PlatyPS -MinimumVersion 1.0 -MaximumVersion 1.999.999 -ErrorAction Stop
+    Import-Module -Name $platy[0].Path -ErrorAction Stop
     $arguments = @('msbuild', $project, '-getProperty:Version', '-nologo')
     $version = (& $dotnet.Source @arguments | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or $version -notmatch '^\d+\.\d+\.\d+$') { throw 'MSBuild did not return a supported module version.' }

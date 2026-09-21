@@ -11,6 +11,7 @@ public sealed class TestFailureExportOptions
     public bool CreateDirectory { get; init; }
     public bool NoClobber { get; init; }
     public bool SkipAttachments { get; init; }
+    public bool AllRunAttachments { get; init; }
     public bool Open { get; init; }
     public required DateTimeOffset GeneratedAt { get; init; }
     public required string ToolkitVersion { get; init; }

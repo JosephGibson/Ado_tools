@@ -35,7 +35,7 @@ internal static class TestAttemptMapper
             // Rerun children are attempts, so only non-attempt groups nest here (§15.10).
             SubResults = SubResults(result.SubResults, 1, cancellationToken),
             Iterations = Iterations(result, cancellationToken),
-            CustomFields = CustomFields(result),
+            CustomFields = CustomFields(result.CustomFields),
             AdditionalFields = AdditionalFields(result),
             WebUrl = webUrl,
         };
@@ -65,7 +65,7 @@ internal static class TestAttemptMapper
             FailingSinceBuildId = FailingSinceBuild(parent),
             AssociatedBugIds = Bugs(parent),
             SubResults = SubResults(sub.SubResults, 2, cancellationToken),
-            CustomFields = CustomFields(parent),
+            CustomFields = CustomFields(sub.CustomFields, parent.CustomFields),
             AdditionalFields = AdditionalFields(parent),
             WebUrl = webUrl,
         };
@@ -148,10 +148,11 @@ internal static class TestAttemptMapper
         return iterations.AsReadOnly();
     }
 
-    private static ReadOnlyDictionary<string, object?> CustomFields(TestResultDto result)
+    private static ReadOnlyDictionary<string, object?> CustomFields(List<CustomFieldDto>? values, List<CustomFieldDto>? fallback = null)
     {
         Dictionary<string, object?> fields = new(StringComparer.Ordinal);
-        foreach (CustomFieldDto field in result.CustomFields ?? [])
+        // An attempt's own values take precedence; missing fields inherit result metadata.
+        foreach (CustomFieldDto field in (values ?? []).Concat(fallback ?? []))
             if (field is not null && !string.IsNullOrEmpty(field.FieldName) && field.Value.ValueKind != JsonValueKind.Undefined)
                 fields.TryAdd(field.FieldName, FieldValueMapper.MapValue(field.Value));
         return new ReadOnlyDictionary<string, object?>(fields);

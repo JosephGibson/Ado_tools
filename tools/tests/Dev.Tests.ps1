@@ -186,6 +186,39 @@ urllib3>=2.0
         @($result.Tools | Where-Object { $_.Name -eq 'PSScriptAnalyzer' }).Count | Should -Be 1
     }
 
+    It 'reports missing compiled-help tooling before the product gate needs it' {
+        $repository = Join-Path $TestDrive 'help-prerequisite'
+        New-TestFile -Path (Join-Path $repository 'tools/package/Publish-AdoToolkitPackage.ps1')
+        New-TestFile -Path (Join-Path $repository 'docs/commands/en-US/Get-Sample.md') -Content '# Get-Sample'
+        Mock Get-Module { [pscustomobject]@{ Name = $Name; Version = [version]'1.25.0'; Path = 'synthetic.psd1' } }
+        Mock Get-Module { @() } -ParameterFilter { $ListAvailable -and $Name -eq 'Microsoft.PowerShell.PlatyPS' }
+        $result = Get-ProjectDiagnostics -Root $repository
+        $result.Status | Should -Be 'incomplete'
+        $result.RequiredProblems | Should -Contain 'Microsoft.PowerShell.PlatyPS'
+    }
+
+    It 'uses the release-pinned Pester when a newer compatible version is installed' {
+        $repository = Join-Path $TestDrive 'release-pester'
+        New-TestFile -Path (Join-Path $repository 'tools/tests/Sample.Tests.ps1') -Content "Describe 'sample' {}"
+        Mock Get-Module {
+            @([pscustomobject]@{ Name = 'Pester'; Version = [version]'5.9.1'; Path = 'pinned-pester.psd1' },
+              [pscustomobject]@{ Name = 'Pester'; Version = [version]'5.99.0'; Path = 'newer-pester.psd1' })
+        } -ParameterFilter { $ListAvailable -and $Name -eq 'Pester' }
+        Mock Get-Module { @() } -ParameterFilter { -not $ListAvailable -and $Name -eq 'Pester' }
+        Mock Import-Module { }
+        Mock Invoke-ValidationStage {
+            [pscustomobject]@{ Name = $Stage.Name; Status = 'pass'; ExitCode = 0; Summary = @(); Warnings = @() }
+        }
+        $previous = $env:ADOTOOLKIT_RELEASE_BUILD
+        try {
+            $env:ADOTOOLKIT_RELEASE_BUILD = '1'
+            $null = Invoke-ProjectVerification -Root $repository -Stage 'powershell-test'
+            Should -Invoke Import-Module -Exactly -Times 1 -ParameterFilter { $Name -eq 'pinned-pester.psd1' }
+            Should -Invoke Import-Module -Exactly -Times 0 -ParameterFilter { $Name -eq 'newer-pester.psd1' }
+        }
+        finally { $env:ADOTOOLKIT_RELEASE_BUILD = $previous }
+    }
+
     It 'treats a conventional src entry file as an entry point' {
         $repository = Join-Path $TestDrive 'entrypoint-sample'
         New-TestFile -Path (Join-Path $repository 'src\main.py')
@@ -299,7 +332,7 @@ urllib3>=2.0
 
         $outcome.Failures | Should -BeNullOrEmpty
         $outcome.Unavailable | Should -BeTrue
-        $outcome.Warnings | Should -Be @('PSScriptAnalyzer is not installed (run bootstrap -Install).')
+        $outcome.Warnings | Should -Be @('The required PSScriptAnalyzer version is not installed (run bootstrap -Install).')
     }
 
     It 'uses a repository-owned check for product stages and retains template checks' {
@@ -460,6 +493,7 @@ urllib3>=2.0
         foreach ($library in @('discovery', 'dependencies', 'validation', 'setup')) {
             New-TestFile (Join-Path $repository "tools/lib/$library.ps1") (Get-Content -LiteralPath (Join-Path $PSScriptRoot "../lib/$library.ps1") -Raw)
         }
+        New-TestFile (Join-Path $repository 'tools/BuildModules.psd1') (Get-Content -LiteralPath (Join-Path $PSScriptRoot '../BuildModules.psd1') -Raw)
         New-TestFile (Join-Path $repository 'sample.json') '{}'
         New-TestFile (Join-Path $repository 'PSScriptAnalyzerSettings.psd1') (Get-Content -LiteralPath (Join-Path $PSScriptRoot '../../PSScriptAnalyzerSettings.psd1') -Raw)
         New-TestFile (Join-Path $repository 'tools/check.ps1') ('[CmdletBinding()] param([switch] $SkipTests)' + [Environment]::NewLine + "exit $CheckExit")

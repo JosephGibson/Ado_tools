@@ -15,12 +15,12 @@ certificate on every script, manifest and toolkit assembly.
 
 .EXAMPLE
 Unblock-File .\Install-AdoToolkit.ps1
-.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.1.1.zip
+.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.2.0.zip
 
-Uses AdoToolkit-0.1.1.zip.sha256 from the same folder as the zip.
+Uses AdoToolkit-0.2.0.zip.sha256 from the same folder as the zip.
 
 .EXAMPLE
-.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.1.1.zip -Sha256 <64 hexadecimal characters> -WhatIf
+.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.2.0.zip -Sha256 <64 hexadecimal characters> -WhatIf
 #>
 [CmdletBinding(SupportsShouldProcess = $true, DefaultParameterSetName = 'ChecksumFile')]
 param(

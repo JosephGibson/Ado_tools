@@ -5,6 +5,16 @@ BeforeAll {
     . (Join-Path $packageTools 'Package.Common.ps1')
     $expected = 'A' * 40
     $wrong = 'B' * 40
+    $assemblyFixtures = Join-Path $TestDrive 'assembly-fixtures'
+    foreach ($name in @('AdoToolkit.Core.dll', 'AdoToolkit.PowerShell.dll', 'fr/AdoToolkit.Core.resources.dll', 'fr/AdoToolkit.PowerShell.resources.dll')) {
+        $file = Join-Path $assemblyFixtures $name
+        [void] [IO.Directory]::CreateDirectory((Split-Path -Parent $file))
+        $identity = [Reflection.AssemblyName]::new([IO.Path]::GetFileNameWithoutExtension($name))
+        $identity.Version = [version]'0.1.0.0'
+        $assembly = [Reflection.Emit.PersistedAssemblyBuilder]::new($identity, [object].Assembly)
+        $null = $assembly.DefineDynamicModule($identity.Name).DefineType('SyntheticFixture').CreateType()
+        $assembly.Save($file)
+    }
     function New-SyntheticPackage {
         param([string] $Path)
         [void] [System.IO.Directory]::CreateDirectory($Path)
@@ -20,7 +30,7 @@ CmdletsToExport = @('Connect-Ado','Disconnect-Ado','Get-AdoConnection','Test-Ado
         foreach ($name in @('AdoToolkit.Core.dll', 'AdoToolkit.PowerShell.dll', 'fr/AdoToolkit.Core.resources.dll', 'fr/AdoToolkit.PowerShell.resources.dll')) {
             $file = Join-Path $Path $name
             [void] [System.IO.Directory]::CreateDirectory((Split-Path -Parent $file))
-            Set-Content -LiteralPath $file -Value 'synthetic signature fixture, not an assembly'
+            [IO.File]::Copy((Join-Path $assemblyFixtures $name), $file)
         }
         foreach ($culture in @('en-US', 'fr')) {
             $folder = Join-Path $Path $culture
@@ -33,12 +43,31 @@ CmdletsToExport = @('Connect-Ado','Disconnect-Ado','Get-AdoConnection','Test-Ado
 Describe 'Package validation and deployment boundaries' {
     BeforeEach { $package = New-SyntheticPackage -Path (Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))) }
 
+    It 'rejects assemblies from a previous release under a new manifest version' {
+        $manifest = Join-Path $package 'AdoToolkit.psd1'
+        $text = [IO.File]::ReadAllText($manifest).Replace("ModuleVersion = '0.1.0'", "ModuleVersion = '0.2.0'")
+        [IO.File]::WriteAllText($manifest, $text)
+        { Assert-AdoPackage -PackagePath $package } | Should -Throw '*assembly version*'
+    }
+
+    It 'rejects an invalid assembly before writing release assets' {
+        Set-Content -LiteralPath (Join-Path $package 'AdoToolkit.Core.dll') -Value 'not an assembly'
+        $output = Join-Path $TestDrive 'invalid-release'
+        { New-AdoReleaseArchive -PackagePath $package -OutputRoot $output } | Should -Throw '*assembly*'
+        Test-Path -LiteralPath (Join-Path $output 'AdoToolkit-0.1.0.zip') | Should -BeFalse
+    }
+
+    It 'rejects a DLL with the right version but the wrong assembly identity' {
+        [IO.File]::Copy((Join-Path $package 'AdoToolkit.Core.dll'), (Join-Path $package 'AdoToolkit.PowerShell.dll'), $true)
+        { Assert-AdoPackage -PackagePath $package } | Should -Throw '*assembly identity*'
+    }
+
     It 'F09 restores the existing release when its checksum cannot be replaced' {
         $output = Join-Path $TestDrive 'release with spaces'
         $release = New-AdoReleaseArchive -PackagePath $package -OutputRoot $output
         $before = (Get-FileHash -LiteralPath $release.Archive).Hash
         $checksum = [IO.File]::ReadAllText($release.Checksum)
-        Set-Content -LiteralPath (Join-Path $package 'AdoToolkit.Core.dll') -Value 'changed synthetic assembly'
+        [IO.File]::AppendAllText((Join-Path $package 'AdoToolkit.Core.dll'), 'changed synthetic assembly overlay')
         $lock = [IO.File]::Open($release.Checksum, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
         try { { New-AdoReleaseArchive -PackagePath $package -OutputRoot $output } | Should -Throw }
         finally { $lock.Dispose() }
@@ -76,7 +105,7 @@ Describe 'Package validation and deployment boundaries' {
         $installerSource = Join-Path $packageTools 'Install-AdoToolkit.ps1'
         $release = New-AdoReleaseArchive -PackagePath $package -OutputRoot $output -InstallerPath $installerSource
         $before = @(Get-ChildItem -LiteralPath $output -File | Sort-Object Name | Get-FileHash | ForEach-Object Hash)
-        Set-Content -LiteralPath (Join-Path $package 'AdoToolkit.Core.dll') -Value 'changed synthetic assembly'
+        [IO.File]::AppendAllText((Join-Path $package 'AdoToolkit.Core.dll'), 'changed synthetic assembly overlay')
         $lock = [IO.File]::Open((Join-Path $output 'Install-AdoToolkit.ps1'), [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
         try { { New-AdoReleaseArchive -PackagePath $package -OutputRoot $output -InstallerPath $installerSource } | Should -Throw }
         finally { $lock.Dispose() }

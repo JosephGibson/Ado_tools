@@ -8,6 +8,24 @@ namespace AdoToolkit.Core.Tests.Reporting;
 public sealed class RenderedHeaderAndLinkTests
 {
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void LongTrailingUrlPunctuationUsesBoundedAllocations(bool markdown)
+    {
+        Func<string, string> render = markdown ? ContentLinks.Markdown : ContentLinks.Html;
+        const string url = "https://example.test/path(a)";
+        string suffix = new(')', 4000);
+        string input = url + suffix;
+        string expected = render(url) + suffix;
+        _ = render(input[..100]); // Warm the regex and encoder before measuring this thread.
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        string output = render(input);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Assert.Equal(expected, output);
+        Assert.InRange(allocated, 0, 1_000_000);
+    }
+
+    [Theory]
     [InlineData("direct", "en-US")]
     [InlineData("parameterized", "fr-CA")]
     [InlineData("partial", "en-US")]

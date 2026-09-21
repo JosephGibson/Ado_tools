@@ -24,7 +24,7 @@ Azure DevOps Server 2020 collection.
 
    ```powershell
    Unblock-File .\Install-AdoToolkit.ps1
-   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.1.1.zip
+   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.2.0.zip
    ```
 
    The script checks the zip against the `.sha256` file and checks that it contains
@@ -52,9 +52,9 @@ To install without the script, check the hash yourself, then unblock the zip bef
 extracting it so that no extracted file carries the download mark:
 
 ```powershell
-(Get-FileHash .\AdoToolkit-0.1.1.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
-Unblock-File .\AdoToolkit-0.1.1.zip
-Expand-Archive .\AdoToolkit-0.1.1.zip `
+(Get-FileHash .\AdoToolkit-0.2.0.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
+Unblock-File .\AdoToolkit-0.2.0.zip
+Expand-Archive .\AdoToolkit-0.2.0.zip `
     -DestinationPath (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell\Modules')
 ```
 
@@ -68,7 +68,7 @@ PowerShell 7:
 ```powershell
 & .\tools\package\Publish-AdoToolkitPackage.ps1    # restores, builds and stages the package
 & .\tools\package\New-AdoToolkitRelease.ps1        # writes artifacts\release
-& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.1.1.zip
+& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.2.0.zip
 ```
 
 The package script lists every missing prerequisite before it starts. Restore uses

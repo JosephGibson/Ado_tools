@@ -135,6 +135,7 @@ internal sealed class RunHistoryService
             ["definitions"] = current.Definition.Id.ToString(CultureInfo.InvariantCulture),
             ["statusFilter"] = "completed",
             ["queryOrder"] = "finishTimeDescending",
+            ["$top"] = historyCount.ToString(CultureInfo.InvariantCulture),
         };
         DateTimeOffset? maxTime = current.FinishTime ?? current.QueueTime;
         if (maxTime.HasValue)

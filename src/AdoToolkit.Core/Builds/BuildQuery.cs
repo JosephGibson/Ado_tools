@@ -20,6 +20,7 @@ public sealed class BuildQuery
         BuildStatus status = Status ?? (Latest ? BuildStatus.Completed : BuildStatus.All);
         values["statusFilter"] = EnumParameter(status);
         if (Result.HasValue) values["resultFilter"] = EnumParameter(Result.Value);
+        if (Top.HasValue) values["$top"] = Top.Value.ToString(CultureInfo.InvariantCulture);
         if (Latest)
         {
             values["$top"] = "1";

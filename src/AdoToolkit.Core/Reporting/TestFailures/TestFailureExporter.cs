@@ -39,8 +39,13 @@ public sealed class TestFailureExporter
         if (!path.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
             throw new AdoFileOutputException(Messages.Get(AdoMessage.TestFailureReportPathInvalid, options.SessionCulture, path));
         GenerationFolderPlan plan = commit.Plan(path, options.GeneratedAt, options.NoClobber, options.SessionCulture);
-        bool download = !options.SkipAttachments && model.Failures.Any(f => f.Attempts.Any(a => a.Attachments.Count > 0));
-        return new TestFailureExportPlan(model, plan, options, download);
+        // Use the build's run order, never the last run with a reported attachment or failure.
+        IReadOnlyList<AdoTestRun> runs = AttemptGrouper.OrderRuns(model.Runs);
+        int? runId = options.AllRunAttachments || runs.Count == 0 ? null : runs[^1].Id;
+        bool download = !options.SkipAttachments && (options.AllRunAttachments || runId.HasValue)
+            && model.Failures.SelectMany(f => f.Attempts).SelectMany(a => a.Attachments)
+                .Any(a => !runId.HasValue || a.RunId == runId.Value);
+        return new TestFailureExportPlan(model, plan, options, download, runId);
     }
 
     public async Task<TestFailureExportResult> ExportAsync(TestFailureExportPlan plan, AttachmentDownloader? downloader,
@@ -64,7 +69,7 @@ public sealed class TestFailureExporter
             async (folder, token) =>
             {
                 AttachmentDownloadResult downloaded = await downloader!.DownloadAsync(plan.Model.Failures, plan.Model.Build.TeamProject,
-                    folder, plan.Commit.FolderName, culture, token).ConfigureAwait(false);
+                    folder, plan.Commit.FolderName, culture, token, plan.AttachmentRunId).ConfigureAwait(false);
                 diagnostics = downloaded.Diagnostics;
                 foreach (AdoDiagnostic diagnostic in diagnostics) output.Warning(diagnostic.Message);
                 TestFailureLocalAttachments? local = downloaded.Files.Count == 0 ? null : new()

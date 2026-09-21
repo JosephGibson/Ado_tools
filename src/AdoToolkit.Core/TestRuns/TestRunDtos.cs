@@ -105,6 +105,7 @@ internal sealed class CustomFieldDto
 
 internal sealed class TestSubResultDto
 {
+    public List<CustomFieldDto>? CustomFields { get; init; }
     public int Id { get; init; }
     public int? SequenceId { get; init; }
     public string? DisplayName { get; init; }

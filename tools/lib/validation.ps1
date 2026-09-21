@@ -14,8 +14,9 @@ function Get-PowerShellLintOutcome {
 
     $warnings = New-Object System.Collections.ArrayList
     $unavailable = $false
-    if (Get-Module -ListAvailable -Name PSScriptAnalyzer) {
-        Import-Module PSScriptAnalyzer
+    $analyzer = @(Get-BuildModule -Name PSScriptAnalyzer)
+    if ($analyzer.Count -gt 0) {
+        Import-Module -Name $analyzer[0].Path
         $settingsFile = Join-Path $ProjectProfile.Root 'PSScriptAnalyzerSettings.psd1'
         $analyzerArgs = @{}
         if (Test-Path -LiteralPath $settingsFile -PathType Leaf) { $analyzerArgs['Settings'] = $settingsFile }
@@ -32,7 +33,7 @@ function Get-PowerShellLintOutcome {
     }
     else {
         $unavailable = $true
-        [void] $warnings.Add('PSScriptAnalyzer is not installed (run bootstrap -Install).')
+        [void] $warnings.Add('The required PSScriptAnalyzer version is not installed (run bootstrap -Install).')
     }
 
     return [pscustomobject]@{
@@ -46,10 +47,7 @@ function Get-PowerShellLintOutcome {
 function Get-PesterOutcome {
     param([Parameter(Mandatory = $true)][string[]] $TestPath)
 
-    $pester = @(
-        Get-Module -Name Pester |
-            Where-Object { $_.Version -ge [version] '5.0' -and $_.Version -lt [version] '6.0' }
-    )
+    $pester = @(Get-BuildModule -Name Pester -Loaded)
     if ($pester.Count -eq 0) {
         return [pscustomobject]@{
             Failures = @()
@@ -629,16 +627,8 @@ function Invoke-ProjectVerification {
     # Pester; if that is a 6.x, importing 5.x afterwards fails with "assembly with same name
     # is already loaded" and the suite cannot run at all.
     if (@($plan | Where-Object { $_.Name -eq 'powershell-test' }).Count -gt 0) {
-        $pesterModule = @(
-            Get-Module -ListAvailable -Name Pester |
-                Where-Object { $_.Version -ge [version] '5.0' -and $_.Version -lt [version] '6.0' } |
-                Sort-Object Version -Descending |
-                Select-Object -First 1
-        )
-        $loadedPester = @(
-            Get-Module -Name Pester |
-                Where-Object { $_.Version -ge [version] '5.0' -and $_.Version -lt [version] '6.0' }
-        )
+        $pesterModule = @(Get-BuildModule -Name Pester)
+        $loadedPester = @(Get-BuildModule -Name Pester -Loaded)
         if ($pesterModule.Count -gt 0 -and $loadedPester.Count -eq 0) {
             Import-Module -Name $pesterModule[0].Path
         }

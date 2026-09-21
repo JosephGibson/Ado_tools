@@ -80,7 +80,7 @@ public sealed class TestFailureExporterTests
             CapturingLog log = new();
             AttachmentDownloader downloader = new(new AdoHttpPipeline(client, TestRunFixture.Connection.CollectionUri,
                 TimeSpan.FromSeconds(100), log, new FakeClock()), new TestResultOptions(), log);
-            TestFailureExportPlan plan = exporter.Prepare(set, Options(destination, open: true));
+            TestFailureExportPlan plan = exporter.Prepare(set, Options(destination, open: true, allRuns: true));
             string folderName = "Build-401-TestFailures.files-20260916T133000000Z";
             Assert.Equal(Path.Combine(destination, folderName), plan.AttachmentDirectory);
             Assert.False(Directory.Exists(plan.AttachmentDirectory));
@@ -111,7 +111,7 @@ public sealed class TestFailureExporterTests
             TestFailureReportValidator.Validate(result.Report.FullName, model, result.AttachmentDirectory.FullName);
 
             // Re-export later: a new generation replaces the report and removes the previous folder.
-            TestFailureExportPlan again = exporter.Prepare(set, Options(destination, generated: Generated.AddMinutes(5)));
+            TestFailureExportPlan again = exporter.Prepare(set, Options(destination, generated: Generated.AddMinutes(5), allRuns: true));
             TestFailureExportResult second = await exporter.ExportAsync(again, downloader, log, TestContext.Current.CancellationToken);
             Assert.False(Directory.Exists(result.AttachmentDirectory.FullName));
             Assert.Equal([second.AttachmentDirectory!.FullName, second.Report.FullName],
@@ -131,7 +131,7 @@ public sealed class TestFailureExporterTests
         {
             int requests = handler.Requests.Count;
             TestFailureExporter exporter = new(new RecordingLauncher(), () => directory.Root);
-            TestFailureExportPlan plan = exporter.Prepare(set, Options(null));
+            TestFailureExportPlan plan = exporter.Prepare(set, Options(null, allRuns: true));
             Assert.Equal(Path.Combine(directory.Root, "Build-401-TestFailures.html"), plan.ReportPath);
             Assert.Equal(Path.Combine(directory.Root, "Build-401-TestFailures.files-20260916T133000000Z"), plan.AttachmentDirectory);
             Assert.Empty(Directory.GetDirectories(directory.Root));
@@ -168,10 +168,11 @@ public sealed class TestFailureExporterTests
     }
 
     private static TestFailureExportOptions Options(string? path, bool skip = false, bool noClobber = false, bool open = false,
-        string culture = "en-US", DateTimeOffset? generated = null, bool createDirectory = false) => new()
+        string culture = "en-US", DateTimeOffset? generated = null, bool createDirectory = false, bool allRuns = false) => new()
         {
             Culture = culture, SessionCulture = Session, Path = path, SkipAttachments = skip, NoClobber = noClobber, Open = open,
             GeneratedAt = generated ?? Generated, ToolkitVersion = "5.4.0-test", CreateDirectory = createDirectory,
+            AllRunAttachments = allRuns,
         };
 
     private static TestFailureReportModel Model(AdoBuildTestFailureSet set) => TestFailureReportModelBuilder.Build(set,

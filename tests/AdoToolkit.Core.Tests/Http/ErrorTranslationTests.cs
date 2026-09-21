@@ -6,6 +6,46 @@ namespace AdoToolkit.Core.Tests.Http;
 public sealed class ErrorTranslationTests
 {
     [Theory]
+    [InlineData(403, typeof(AdoAuthorizationException))]
+    [InlineData(404, typeof(AdoNotFoundException))]
+    [InlineData(400, typeof(AdoRequestException))]
+    public async Task StalledErrorBodyPreservesTheKnownHttpStatus(int status, Type expected)
+    {
+        using FakeHttpMessageHandler handler = new();
+        using DripStream stream = new(1, Timeout.InfiniteTimeSpan);
+        handler.Enqueue(new HttpResponseMessage((System.Net.HttpStatusCode)status) { Content = new StreamContent(stream) });
+        using HttpClient client = new(handler);
+        AdoHttpPipeline pipeline = new(client, new Uri("https://ado.example.test/Collection"), TimeSpan.FromMilliseconds(100));
+        Exception? caught = await Record.ExceptionAsync(() => pipeline.GetPagesAsync(EndpointRegistry.ProjectsList,
+            AdoJsonContext.Default.ProjectPageDto, static page => page.Value, static item => item.Id ?? "",
+            CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
+        AdoException error = Assert.IsAssignableFrom<AdoException>(caught);
+        Assert.Equal(expected, error.GetType());
+        Assert.Equal(status, error.StatusCode);
+        Assert.Single(handler.Requests);
+        Assert.True(stream.Disposed);
+    }
+
+    [Fact]
+    public async Task CallerCancellationWhileReadingAnErrorBodyStillCancels()
+    {
+        using FakeHttpMessageHandler handler = new();
+        using DripStream stream = new(1, Timeout.InfiniteTimeSpan);
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        handler.Enqueue((_, _) =>
+        {
+            cancellation.CancelAfter(TimeSpan.FromMilliseconds(100));
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden) { Content = new StreamContent(stream) });
+        });
+        using HttpClient client = new(handler);
+        AdoHttpPipeline pipeline = new(client, new Uri("https://ado.example.test/Collection"), TimeSpan.FromSeconds(10));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pipeline.GetPagesAsync(EndpointRegistry.ProjectsList,
+            AdoJsonContext.Default.ProjectPageDto, static page => page.Value, static item => item.Id ?? "",
+            CultureInfo.InvariantCulture, cancellation.Token));
+        Assert.True(stream.Disposed);
+    }
+
+    [Theory]
     [Trait("Acceptance", "S0-3")]
     [InlineData(401, "iis-unauthenticated.html.txt", typeof(AdoAuthenticationException))]
     [InlineData(403, "forbidden.json", typeof(AdoAuthorizationException))]

@@ -90,6 +90,19 @@ function Assert-AdoPackage {
     if ($manifest.ModuleVersion -notmatch '^\d+\.\d+\.\d+$' -or
         $manifest.RootModule -ne 'AdoToolkit.PowerShell.dll' -or
         @($manifest.CmdletsToExport).Count -ne 22) { throw 'Invalid package manifest.' }
+    $expectedVersion = [version] ([string] $manifest.ModuleVersion + '.0')
+    foreach ($file in $files | Where-Object Extension -eq '.dll') {
+        # Read PE metadata without loading package code into this process. In particular,
+        # -NoBuild must not relabel binaries left over from the previous release.
+        try { $identity = [Reflection.AssemblyName]::GetAssemblyName($file.FullName) }
+        catch { throw "Invalid package assembly: $($file.Name)." }
+        if ($identity.Version -ne $expectedVersion) {
+            throw "Package assembly version mismatch: $($file.Name) is $($identity.Version), expected $expectedVersion. Rebuild before packaging."
+        }
+        if ($identity.Name -cne [IO.Path]::GetFileNameWithoutExtension($file.Name)) {
+            throw "Package assembly identity mismatch: $($file.Name)."
+        }
+    }
     return [string] $manifest.ModuleVersion
 }
 

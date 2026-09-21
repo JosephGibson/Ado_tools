@@ -26,6 +26,7 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       POWERSHELL_TELEMETRY_OPTOUT: '1'
       POWERSHELL_VERSION: '7.6.6'
+      ADOTOOLKIT_RELEASE_BUILD: '1'
     steps:
       - uses: actions/checkout@v7
 
@@ -66,10 +67,10 @@ jobs:
           if (-not $gallery) { try { Register-PSResourceRepository -PSGallery -Trusted } catch { Write-Host "PSGallery registration: $($_.Exception.Message)" } }
           # Bracketed versions are exact. A bare version is a minimum, which would allow Pester 6.x,
           # and the verify gate requires Pester 5.x.
-          $modules = @{ 'Pester' = '[5.9.1]'; 'PSScriptAnalyzer' = '[1.25.0]'; 'Microsoft.PowerShell.PlatyPS' = '[1.0.3]' }
+          $modules = Import-PowerShellDataFile -LiteralPath ./tools/BuildModules.psd1
           foreach ($module in $modules.GetEnumerator()) {
-            $exact = $module.Value.Trim('[', ']')
-            try { Install-PSResource -Name $module.Key -Version $module.Value -Scope CurrentUser -TrustRepository -Quiet }
+            $exact = $module.Value
+            try { Install-PSResource -Name $module.Key -Version "[$exact]" -Scope CurrentUser -TrustRepository -Quiet }
             catch {
               Write-Host "Install-PSResource failed for $($module.Key): $($_.Exception.Message)"
               Install-Module -Name $module.Key -RequiredVersion $exact -Scope CurrentUser -Repository PSGallery -Force -AllowClobber
@@ -79,7 +80,7 @@ jobs:
           $installed = Get-Module -ListAvailable -Name @($modules.Keys) | Sort-Object Name, Version
           $installed | Select-Object Name, Version | Format-Table -AutoSize | Out-String | Write-Host
           foreach ($name in $modules.Keys) {
-            $wanted = [version] $modules[$name].Trim('[', ']')
+            $wanted = [version] $modules[$name]
             if (-not ($installed | Where-Object { $_.Name -eq $name -and $_.Version -eq $wanted })) {
               throw "$name $wanted is not available after installation."
             }

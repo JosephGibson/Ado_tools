@@ -67,7 +67,7 @@ public sealed class BuildQueryTests
         Assert.Equal("inProgress", new BuildQuery { Latest = true, Status = BuildStatus.InProgress }.Parameters(42)["statusFilter"]);
         Assert.Equal("all", new BuildQuery { Latest = true, Status = BuildStatus.All }.Parameters(42)["statusFilter"]);
         Assert.Equal("partiallySucceeded", new BuildQuery { Result = BuildResult.PartiallySucceeded }.Parameters(42)["resultFilter"]);
-        Assert.False(new BuildQuery { Top = 2 }.Parameters(42).ContainsKey("$top"));
+        Assert.Equal("2", new BuildQuery { Top = 2 }.Parameters(42)["$top"]);
     }
 
     [Fact]
@@ -179,14 +179,27 @@ public sealed class BuildQueryTests
     }
 
     [Fact]
-    public async Task TopStopsAfterFirstPageWithoutChangingPageSizeOrFetchingTheToken()
+    public async Task TopBoundsTheServerPageAndStopsWithoutFetchingTheToken()
     {
         using FakeHttpMessageHandler handler = Pages("builds-first.json", "builds-last.json");
         using HttpClient client = new(handler);
         Assert.Single(await new BuildService(client, Connection).GetBuildsAsync(Project, new BuildQuery { DefinitionId = 42, Top = 1 },
             CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
         Assert.Single(handler.Requests);
-        Assert.DoesNotContain(Parameters(handler.Requests[0].Uri), item => item.StartsWith("$top=", StringComparison.Ordinal));
+        Assert.Contains("$top=1", Parameters(handler.Requests[0].Uri));
+    }
+
+    [Fact]
+    public async Task TopStillFollowsShortAndEmptyPagesWithContinuationTokens()
+    {
+        using FakeHttpMessageHandler handler = Pages("builds-first.json", "builds-last.json");
+        using HttpClient client = new(handler);
+        IReadOnlyList<AdoBuild> builds = await new BuildService(client, Connection).GetBuildsAsync(Project,
+            new BuildQuery { Top = 2 }, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
+        Assert.Equal(BuildIds, builds.Select(build => build.Id));
+        Assert.Equal(3, handler.Requests.Count);
+        Assert.All(handler.Requests, request => Assert.Contains("$top=2", Parameters(request.Uri)));
+        Assert.Contains("continuationToken=page 2+/=", Parameters(handler.Requests[1].Uri));
     }
 
     [Fact]

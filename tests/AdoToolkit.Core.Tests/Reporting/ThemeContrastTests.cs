@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using AdoToolkit.Core.Reporting.Charts;
+using AdoToolkit.Core.Tests.Reporting.TestFailures;
 
 namespace AdoToolkit.Core.Tests.Reporting;
 
@@ -39,10 +40,29 @@ public sealed class ThemeContrastTests
         Assert.DoesNotContain("url(", css, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("prefers-color-scheme", css, StringComparison.OrdinalIgnoreCase);
         foreach (string rule in new[] { "max-width: 1280px", "position: sticky", "max-width: 700px", ":focus-visible", "prefers-reduced-motion",
-            "@media print", "break-inside: avoid", "white-space: pre-wrap", "tab-size: 4", "[hidden]" }) Assert.Contains(rule, css, StringComparison.Ordinal);
+            "@media print", "break-inside: avoid", "white-space: pre-wrap", "tab-size: 4", "[hidden]",
+            "var(--font-sans)", "var(--font-mono)", "tbody tr:nth-child(even)", "thead { display: table-header-group; }",
+            "@media (forced-colors: active)" }) Assert.Contains(rule, css, StringComparison.Ordinal);
         Assert.Empty(Regex.Matches(css, "(?<!-)\\bcontent\\s*:"));
         HashSet<string> defined = Regex.Matches(css, "(--[a-z0-9-]+)\\s*:").Select(static match => match.Groups[1].Value).ToHashSet(StringComparer.Ordinal);
         foreach (Match match in Regex.Matches(css, "var\\((--[a-z0-9-]+)\\)")) Assert.Contains(match.Groups[1].Value, defined);
+    }
+
+    [Fact]
+    public void ReportHierarchyHasMatchingMarkupAndPrintOverrides()
+    {
+        string html = TestFailureReportFixture.Render();
+        string css = Asset("test-failures.css");
+        foreach (string name in new[] { "report-title", "section-heading", "count-label", "count-value", "attempt-title", "attempt-duration" })
+        {
+            Assert.Contains("class=\"" + name + "\"", html, StringComparison.Ordinal);
+            Assert.Contains("." + name + " {", css, StringComparison.Ordinal);
+        }
+        string print = css[css.IndexOf("@media print", StringComparison.Ordinal)..];
+        Assert.Contains(".top-bar { max-height: none; overflow: visible; }", print, StringComparison.Ordinal);
+        Assert.Contains(".code-section.hide-framework .framework-frame { display: inline; }", print, StringComparison.Ordinal);
+        Assert.Contains(".code-section pre { overflow: visible; }", print, StringComparison.Ordinal);
+        Assert.Contains(".metadata-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }", print, StringComparison.Ordinal);
     }
 
     private static string Asset(string name)

@@ -93,6 +93,28 @@ function Get-DependencyInventory {
     }
 }
 
+function Get-BuildModule {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Pester', 'PSScriptAnalyzer', 'Microsoft.PowerShell.PlatyPS')][string] $Name,
+        [switch] $Loaded
+    )
+
+    # Release children inherit this flag. Installation and every import use the same
+    # manifest, so a newer module preinstalled on the runner cannot change the build.
+    $pinned = $null
+    if ($env:ADOTOOLKIT_RELEASE_BUILD -eq '1') {
+        $versions = Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot '../BuildModules.psd1')
+        $pinned = [version] $versions[$Name]
+    }
+    Get-Module -Name $Name -ListAvailable:(-not $Loaded) | Where-Object {
+        if ($null -ne $pinned) { $_.Version -eq $pinned }
+        elseif ($Name -eq 'Pester') { $_.Version.Major -eq 5 }
+        elseif ($Name -eq 'Microsoft.PowerShell.PlatyPS') { $_.Version.Major -eq 1 }
+        else { $true }
+    } | Sort-Object Version -Descending | Select-Object -First 1
+}
+
 function Get-ToolState {
     param(
         [Parameter(Mandatory = $true)][string] $Name,
@@ -155,6 +177,10 @@ function Get-ProjectDiagnostics {
         [void] $tools.Add((Get-ToolState -Name 'PSScriptAnalyzer' -Commands @() -Level 'required' -Module))
     }
     if ($projectProfile.Stack -contains 'dotnet') { [void] $tools.Add((Get-ToolState -Name 'dotnet' -Commands @('dotnet') -Level 'required')) }
+    if (@($projectProfile.Files | Where-Object { $_.Extension -eq '.md' -and
+                (Get-RelativeRepositoryPath -Path $_.FullName -Root $Root) -like 'docs/commands/*' }).Count -gt 0) {
+        [void] $tools.Add((Get-ToolState -Name 'Microsoft.PowerShell.PlatyPS' -Commands @() -MinimumVersion '1.0' -MaximumVersion '2.0' -Level 'required' -Module))
+    }
     if ($projectProfile.Stack -contains 'node') {
         $managers = @($projectProfile.Files | Where-Object Name -eq 'package.json' | ForEach-Object { Get-NodeManager -PackageFile $_ -Root $projectProfile.Root } | Where-Object { $_ } | Sort-Object -Unique)
         foreach ($manager in $managers) { [void] $tools.Add((Get-ToolState -Name $manager -Commands @($manager) -Level 'required')) }

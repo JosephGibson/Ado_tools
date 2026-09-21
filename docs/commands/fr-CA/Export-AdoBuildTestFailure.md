@@ -13,14 +13,14 @@ title: Export-AdoBuildTestFailure
 
 ## SYNOPSIS
 
-Écrit un rapport HTML interactif des tests en échec par ensemble et télécharge ses pièces jointes.
+Écrit un rapport HTML interactif des tests en échec par ensemble et télécharge les pièces jointes de son exécution de tests la plus récente.
 
 ## SYNTAX
 
 ### Input (Default)
 
 ```
-Export-AdoBuildTestFailure [-InputObject] <AdoBuildTestFailureSet> [-Culture <string>] [-Path <string>] [-SkipAttachments] [-NoClobber] [-Open] [-Connection <AdoConnection>] [-WhatIf] [-Confirm]
+Export-AdoBuildTestFailure [-InputObject] <AdoBuildTestFailureSet> [-Culture <string>] [-Path <string>] [-SkipAttachments] [-AllRunAttachments] [-NoClobber] [-Open] [-Connection <AdoConnection>] [-WhatIf] [-Confirm]
 ```
 
 ## ALIASES
@@ -37,8 +37,19 @@ cas de test et diagnostics. Le rapport est complet lorsque les scripts sont bloq
 Un petit script statique, autorisé par une stratégie de sécurité du contenu fondée
 sur des hachages, ajoute le filtrage, la navigation au clavier et la copie.
 
-Sauf avec `-SkipAttachments`, les pièces jointes de chaque résultat signalé et de
-ses sous-résultats sont téléchargées dans l’ordre du rapport, dans un dossier nommé
+Par défaut, seules les pièces jointes des résultats signalés et de leurs
+sous-résultats dans l’exécution de tests la plus récente de la build sont téléchargées.
+Cette exécution est la dernière dans l’ordre des tentatives : étape, phase et travail,
+puis date de début et ID d’exécution. Les pièces jointes des exécutions précédentes
+restent répertoriées avec leur nom, leur taille et un lien vers le résultat Azure
+DevOps; toutes les exécutions et tentatives restent dans le rapport. Si l’exécution
+la plus récente n’a aucune pièce jointe, l’exportation ne télécharge rien d’une
+exécution précédente et ne crée aucun dossier de pièces jointes.
+
+Utilisez `-AllRunAttachments` pour télécharger les pièces jointes de toutes les
+exécutions signalées, ou `-SkipAttachments` pour n’en télécharger aucune.
+`-SkipAttachments` a priorité si les deux paramètres sont fournis. Les pièces jointes
+sélectionnées sont téléchargées dans l’ordre du rapport, dans un dossier nommé
 `<nom de base du rapport>.files-<horodatage UTC>` à côté du rapport. Les fichiers
 locaux utilisent les noms `r<exécution>-<résultat>[-s<sous-résultat>]-a<pièce jointe>.<ext>`.
 Les noms distants sont affichés et ne deviennent jamais des chemins.
@@ -150,7 +161,28 @@ HelpMessage: ''
 
 ### -SkipAttachments
 
-Ne télécharge rien et ne crée aucun dossier; les pièces jointes sont répertoriées avec leur nom et leur taille dans Azure DevOps.
+Ne télécharge rien et ne crée aucun dossier; les pièces jointes sont répertoriées avec leur nom, leur taille et un lien vers le résultat Azure DevOps. A priorité sur -AllRunAttachments.
+
+```yaml
+Type: System.Management.Automation.SwitchParameter
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -AllRunAttachments
+
+Télécharge les pièces jointes de toutes les exécutions signalées plutôt que celles de l’exécution la plus récente seulement. Les limites de taille par fichier et au total continuent de s’appliquer. Sans effet avec -SkipAttachments.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter

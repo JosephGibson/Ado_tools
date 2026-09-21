@@ -33,7 +33,8 @@ public static class HtmlTestFailureRenderer
         private static AdoTestHistoryOutcome Status(AdoTestFailure failure) => failure.Classification == AdoTestFailureClassification.Flaky
             ? AdoTestHistoryOutcome.Flaky : AdoTestHistoryOutcome.Failed;
         private void Badge(AdoTestFailure failure) => StatusPresentation.Write(writer, Status(failure), Culture);
-        private void Heading(int level, string label) { W("<h" + N(level) + ">"); T(label); W("</h" + N(level) + ">\n"); }
+        private void Heading(int level, string label)
+        { W("<h" + N(level) + (level == 2 ? " class=\"section-heading\"" : "") + ">"); T(label); W("</h" + N(level) + ">\n"); }
 
         internal void Write()
         {
@@ -59,7 +60,7 @@ public static class HtmlTestFailureRenderer
         private void Header()
         {
             W("<a class=\"skip-link\" href=\"#failure-index\">"); T(L("Index")); W("</a>\n<header class=\"top-bar\"><div class=\"top-bar-inner\">\n");
-            W("<div class=\"title-line\"><div><span class=\"report-brand\">"); T(M(AdoMessage.ReportBrand)); W("</span><h1>"); T(L("Heading")); W("</h1></div>");
+            W("<div class=\"title-line\"><div class=\"report-title\"><span class=\"report-brand\">"); T(M(AdoMessage.ReportBrand)); W("</span><h1>"); T(L("Heading")); W("</h1></div>");
             W("<nav class=\"section-links\" aria-label=\""); T(M(AdoMessage.ReportNavigation)); W("\"><a href=\"#history\">"); T(L("History"));
             W("</a><a href=\"#failure-index\">"); T(L("Index")); W("</a>");
             if (model.Diagnostics.Count > 0 || model.Status == AdoTestFailureStatus.Partial)
@@ -80,8 +81,8 @@ public static class HtmlTestFailureRenderer
             foreach ((string css, string glyph, string label, int count) in new[] { ("failed", "✕", L("Failed"), model.FailedCount),
                 ("flaky", "≈", L("Flaky"), model.FlakyCount), ("attachments", "", L("Attachments"), model.Failures.Sum(Attachments)) })
             {
-                W("<span class=\"count-chip status-" + css + "\"><span>"); T((glyph.Length > 0 ? glyph + " " : "") + label);
-                W("</span><strong>"); T(count.ToString(Culture)); W("</strong></span>");
+                W("<span class=\"count-chip status-" + css + "\"><span class=\"count-label\">"); T((glyph.Length > 0 ? glyph + " " : "") + label);
+                W("</span><strong class=\"count-value\">"); T(count.ToString(Culture)); W("</strong></span>");
             }
             if (model.Status == AdoTestFailureStatus.Partial)
             { W("<a class=\"partial-link\" href=\"#diagnostics\"><span aria-hidden=\"true\">!</span> "); T(M(AdoMessage.ReportPartial)); W("</a>"); }
@@ -152,8 +153,10 @@ public static class HtmlTestFailureRenderer
         {
             W("<details class=\"attempt\" id=\"" + Anchor(failure, attempt) + "\" data-failure-class=\"" + (attempt.OutcomeClass == AdoTestOutcomeClass.Failure ? "true" : "false") + "\"");
             if (attempt.OutcomeClass == AdoTestOutcomeClass.Failure) W(" open");
-            W("><summary>"); T(Messages.Get(AdoMessage.TestReportAttemptOf, Culture, attempt.Number, failure.Attempts.Count)); W(" · ");
-            Outcome(attempt.Outcome, attempt.OutcomeClass); if (attempt.Duration is not null) { W(" · "); T(Duration(attempt.Duration)); } W("</summary>\n");
+            W("><summary><span class=\"attempt-title\">"); T(Messages.Get(AdoMessage.TestReportAttemptOf, Culture, attempt.Number, failure.Attempts.Count)); W("</span> · ");
+            Outcome(attempt.Outcome, attempt.OutcomeClass);
+            if (attempt.Duration is not null) { W(" <span class=\"attempt-duration\">· "); T(Duration(attempt.Duration)); W("</span>"); }
+            W("</summary>\n");
             W("<dl class=\"metadata-grid\">");
             Field(L("Source"), L(attempt.Source.ToString())); Field(L("Started"), Date(attempt.StartedDate)); Field(L("Finished"), Date(attempt.CompletedDate));
             Field(L("Duration"), Duration(attempt.Duration)); Field(L("Machine"), attempt.ComputerName);

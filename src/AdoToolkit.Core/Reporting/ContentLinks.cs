@@ -26,7 +26,15 @@ public static partial class ContentLinks
         foreach (Match match in UrlPattern().Matches(text))
         {
             string candidate = match.Value.TrimEnd('.', ',', ';', '!', '?');
-            while (candidate.EndsWith(')') && candidate.Count(c => c == ')') > candidate.Count(c => c == '(')) candidate = candidate[..^1];
+            int balance = 0;
+            foreach (char character in candidate)
+            {
+                if (character == '(') balance++;
+                else if (character == ')') balance--;
+            }
+            int end = candidate.Length;
+            while (balance < 0 && end > 0 && candidate[end - 1] == ')') { end--; balance++; }
+            if (end < candidate.Length) candidate = candidate[..end];
             if (!Uri.TryCreate(candidate, UriKind.Absolute, out Uri? uri) || uri.Scheme is not ("http" or "https" or "mailto")) continue;
             result.Append(encode(text[position..match.Index]));
             result.Append(html ? HtmlLink(candidate, uri) : MarkdownLink(candidate, uri));

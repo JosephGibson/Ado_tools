@@ -4,7 +4,7 @@
 PowerShell toolkit for Azure DevOps Server 2020: compiled C\# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 <!-- project:end -->
 
-**Version 0.1.1** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.2.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
@@ -12,8 +12,12 @@ DevOps. Its cmdlets return typed objects that you can use in pipelines, and it w
 standalone HTML, Markdown or JSON reports when you need a document. All messages,
 report labels and help are available in English and French.
 
-Every feature is covered by offline tests. Version 0.1.1 fixes the failed-test report on
-Azure DevOps Server 2020, which sends some IDs as text, and ships as a prebuilt release.
+Version 0.2.0 refreshes the failed-test report and downloads attachments from the latest
+test run by default; use `-AllRunAttachments` to include earlier runs. It also preserves
+rerun custom fields and HTTP errors, rejects duplicate result IDs, reduces build-query
+and report-rendering overhead, and checks release assembly versions and build-tool pins.
+Offline regression tests cover these fixes. See the [release audit](docs/release-0.2.0.md)
+for the Server 2020 API contracts, validation evidence and remaining work-PC checks.
 
 > [!NOTE]
 > Live validation against Azure DevOps Server 2020 is in progress. Connections, projects,
@@ -56,7 +60,7 @@ AdoToolkit loaded, and run this in PowerShell 7 from that folder:
 
 ```powershell
 Unblock-File .\Install-AdoToolkit.ps1
-.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.1.1.zip
+.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.2.0.zip
 ```
 
 Then open a new PowerShell window and run `Import-Module AdoToolkit`. Releases are not

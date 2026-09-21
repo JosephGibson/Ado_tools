@@ -57,10 +57,11 @@ try {
             exit 2
         }
     }
-    $pester = @(Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -eq 5 })
+    . (Join-Path $PSScriptRoot 'lib/dependencies.ps1')
+    $pester = @(Get-BuildModule -Name Pester)
     if ($pester.Count -eq 0) { Write-Output 'Pester 5.x missing: authorized setup step required'; exit 2 }
     if (Test-Path -LiteralPath (Join-Path $repository 'docs/commands') -PathType Container) {
-        $platy = @(Get-Module -ListAvailable -Name Microsoft.PowerShell.PlatyPS | Where-Object { $_.Version.Major -eq 1 })
+        $platy = @(Get-BuildModule -Name Microsoft.PowerShell.PlatyPS)
         if ($platy.Count -eq 0) { Write-Output 'PlatyPS 1.x missing: authorized setup step required'; exit 2 }
     }
 
@@ -157,7 +158,10 @@ try {
                 $child = @'
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
-Import-Module Pester -MinimumVersion 5.0 -MaximumVersion 5.999.999 -ErrorAction Stop
+. (Join-Path (Get-Location).Path 'tools/lib/dependencies.ps1')
+$pester = Get-BuildModule -Name Pester
+if ($null -eq $pester) { throw 'The required Pester version is not installed.' }
+Import-Module -Name $pester.Path -ErrorAction Stop
 $ProgressPreference = 'SilentlyContinue'
 $configuration = New-PesterConfiguration
 $configuration.Run.Path = Join-Path (Get-Location).Path 'tests/AdoToolkit.PowerShell.Tests'

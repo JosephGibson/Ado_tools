@@ -21,7 +21,8 @@ Get-AdoBuildTestFailure -BuildId 12345 | Export-AdoBuildTestFailure -Open
 ```
 
 That writes `Build-12345-TestFailures.html` to your Downloads folder, downloads the
-attachments into a folder beside it, and opens the report. The rest of this guide is
+attachments from the build's most recent test run into a folder beside it, and opens
+the report. Earlier runs' attachments stay listed with name, size and a link. The rest of this guide is
 the same thing with a look at the data first, and the options worth knowing.
 
 ## Step 1 — Connect
@@ -37,7 +38,7 @@ needs a connection connects with the default profile and says so with `-Verbose`
 ## Step 2 — Gather the failures
 
 ```powershell
-$set = Get-AdoBuildTestFailure -BuildId 12345 -HistoryCount 15
+$set = Get-AdoBuildTestFailure -BuildId 12345 -HistoryCount 7
 $set                   # BuildId, BuildNumber, FailedCount, FlakyCount, Runs, Status
 ```
 
@@ -101,6 +102,17 @@ $report.AttachmentDirectory
 
 ## What lands on disk
 
+By default, only the most recent run's attachments are downloaded. The latest run is
+the last in attempt order: stage, phase and job attempt, then start date and run ID.
+If that run has no attachments, no attachment folder is created; the export does not
+fall back to an older run. Every run and attempt remains in the report.
+
+To download attachments from every reported run:
+
+```powershell
+$set | Export-AdoBuildTestFailure -Path .\reports\build-12345 -AllRunAttachments
+```
+
 | Item | Where |
 | --- | --- |
 | The report | `<-Path>\Build-<id>-TestFailures.html`, or your Downloads folder with no `-Path` |
@@ -121,6 +133,7 @@ intact. Older attachment folders of the same report are removed after the replac
 | --- | --- |
 | `-Open` | Opens the committed report with the default handler |
 | `-SkipAttachments` | Downloads nothing; attachments are still listed with name, size and a link |
+| `-AllRunAttachments` | Downloads attachments from every reported run. `-SkipAttachments` takes precedence if both switches are supplied |
 | `-Path` | A directory, or an `.html` file path for a single build |
 | `-Culture fr-CA` | Report language. Defaults to the configured, then the session, culture |
 | `-NoClobber` | Refuses to replace an existing report, before any download |

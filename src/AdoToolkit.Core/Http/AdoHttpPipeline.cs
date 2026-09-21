@@ -195,7 +195,11 @@ internal sealed class AdoHttpPipeline
                         return result;
                     }
                     if (!endpoint.IsSafeToRetry || !RetryPolicy.IsRetryable(response.StatusCode) || attempt == 3)
-                        throw await ErrorTranslator.TranslateAsync(response, endpoint, culture, token).ConfigureAwait(false);
+                    {
+                        AdoException error = await ErrorTranslator.TranslateAsync(response, endpoint, culture, token).ConfigureAwait(false);
+                        callerToken.ThrowIfCancellationRequested();
+                        throw error;
+                    }
                     delay = retry.Delay(response, attempt);
                     reason = ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture);
                 }

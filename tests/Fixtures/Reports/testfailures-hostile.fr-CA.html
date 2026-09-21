@@ -8,24 +8,25 @@
 <title>Rapport des tests en échec — &lt;/script&gt;&lt;script&gt;alert(&#x27;fixture-only&#x27;)&lt;/script&gt; &lt;img src=x onerror=fixture()&gt; &quot; &amp; ../CON 日本語 « L’été : 1 234 ! »</title>
 <style>:root {
   color-scheme: dark;
-  --bg: #0f1115;
-  --surface: #171a21;
-  --surface-2: #1f232c;
-  --border: #768190;
-  --text: #e6e8ee;
-  --text-muted: #a6afbd;
-  --link: #7cb7ff;
-  --link-visited: #b9a3ff;
-  --focus: #ffd166;
-  --pass: #65d478;
-  --fail: #ff827b;
-  --flaky: #e6b94f;
-  --other: #b0b9c4;
-  --unavailable: #a2acba;
-  --info: #79b8ff;
-  --current: #ffd166;
-  --chart-label: #0f1115;
-  --code-bg: #101319;
+  --bg: #111315;
+  --surface: #191c20;
+  --surface-2: #23272d;
+  --border: #7b8592;
+  --separator: #3c434c;
+  --text: #eef0f3;
+  --text-muted: #b0b7c1;
+  --link: #9cc7ef;
+  --link-visited: #c8b8ea;
+  --focus: #f2ce83;
+  --pass: #93d3ac;
+  --fail: #f3a09c;
+  --flaky: #e3c17f;
+  --other: #b7c1cc;
+  --unavailable: #aeb8c6;
+  --info: #9cc7ef;
+  --current: #f2ce83;
+  --chart-label: #111315;
+  --code-bg: #131619;
   --tok-keyword: #dfacff;
   --tok-type: #82d9d0;
   --tok-method: #e6cc87;
@@ -44,21 +45,24 @@
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
-  --radius: 6px;
+  --space-7: 48px;
+  --radius: 8px;
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, "Segoe UI", sans-serif; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 var(--font-sans); }
 header, nav, main { max-width: 1280px; margin-inline: auto; padding: var(--space-4); }
-.top-bar { position: sticky; top: 0; z-index: 2; background: var(--surface); border-bottom: 1px solid var(--border); }
-h1, h2, h3 { line-height: 1.25; }
-a { color: var(--link); text-decoration: none; }
+.top-bar { position: sticky; top: 0; z-index: 2; background: var(--surface); border-bottom: 1px solid var(--separator); }
+h1, h2, h3 { line-height: 1.3; font-weight: 600; }
+a { color: var(--link); text-decoration: none; text-underline-offset: .2em; text-decoration-thickness: 1px; }
 a:visited { color: var(--link-visited); }
 a:hover, a:focus { text-decoration: underline; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 button, input, select, summary { font: inherit; color: inherit; }
 button, input, select { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-2); }
 summary { cursor: pointer; }
-.card, .diagnostic { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-4); margin-block: var(--space-4); }
+.card, .diagnostic { background: var(--surface); border: 1px solid var(--separator); border-radius: var(--radius); padding: var(--space-4); margin-block: var(--space-4); }
 .diagnostic { border-inline-start: 4px solid var(--info); }
 .status-badge, .count-chip { display: inline-flex; gap: var(--space-1); padding: var(--space-1) var(--space-2); border: 1px solid currentColor; border-radius: var(--radius); }
 .status-passed { color: var(--pass); }
@@ -69,13 +73,15 @@ summary { cursor: pointer; }
 .text-muted, dt, .language-label { color: var(--text-muted); }
 .metadata-grid { display: grid; grid-template-columns: minmax(8rem, 1fr) 3fr; gap: var(--space-2) var(--space-4); }
 dd { margin: 0; overflow-wrap: anywhere; }
-.table-scroll { overflow-x: auto; }
+.table-scroll { max-width: 100%; overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
-th, td { text-align: start; padding: var(--space-2); border-bottom: 1px solid var(--border); }
+th, td { text-align: start; vertical-align: top; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--separator); }
+th { color: var(--text-muted); font-size: .8rem; font-weight: 600; background: var(--surface-2); }
+tbody tr:nth-child(even) { background: var(--surface-2); }
 .code-block { margin-block: var(--space-3); min-width: 0; }
 .language-label { padding: var(--space-1) var(--space-2); }
-pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; padding: var(--space-3); margin: 0; }
-code { font: 13px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; tab-size: 4; }
+pre { background: var(--code-bg); border: 1px solid var(--separator); border-radius: var(--radius); overflow-x: auto; padding: var(--space-4); margin: 0; }
+code { font: 13px/1.65 var(--font-mono); tab-size: 4; }
 .wrap-code pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .tok-keyword { color: var(--tok-keyword); }
 .tok-type { color: var(--tok-type); }
@@ -122,6 +128,7 @@ code { font: 13px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; tab-si
     --surface: #ffffff;
     --surface-2: #f4f4f4;
     --border: #656565;
+    --separator: #b7bcc4;
     --text: #171717;
     --text-muted: #4e4e4e;
     --link: #004d99;
@@ -151,16 +158,21 @@ code { font: 13px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; tab-si
   }
   .top-bar { position: static; }
   .interactive, button, input, select { display: none !important; }
-  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; overflow: visible; }
+  .table-scroll { overflow: visible; }
+  thead { display: table-header-group; }
+  tr, img { break-inside: avoid; }
+  h2, h3, h4 { break-after: avoid; }
   .card { break-inside: avoid; }
   .history-chart { print-color-adjust: exact; }
 }
 body { font-variant-numeric: tabular-nums; }
-main { padding: var(--space-5); }
-h2 { font-size: 1.2rem; margin: 0 0 var(--space-4); }
+main { padding: var(--space-6) var(--space-5) var(--space-7); }
+h2 { font-size: 1.3rem; margin: 0 0 var(--space-4); letter-spacing: -.015em; }
 h3 { font-size: 1rem; margin: var(--space-5) 0 var(--space-3); }
-h4, h5, h6 { font-size: .95rem; margin: var(--space-4) 0 var(--space-2); }
-button { cursor: pointer; min-height: 36px; }
+h4, h5, h6 { font-size: .9rem; margin: var(--space-4) 0 var(--space-2); }
+.section-heading { color: var(--text); font-size: 1.1rem; letter-spacing: -.01em; }
+button { cursor: pointer; min-height: 36px; padding-inline: var(--space-3); }
 button:hover { background: var(--surface); border-color: var(--link); }
 button .toggle-off, button .toggle-on { display: inline-block; width: 1.2em; }
 button .toggle-on { display: none; }
@@ -168,26 +180,29 @@ button[aria-pressed="true"] { border-color: var(--link); color: var(--link); }
 button[aria-pressed="true"] .toggle-on { display: inline-block; }
 button[aria-pressed="true"] .toggle-off { display: none; }
 input[type="checkbox"] { accent-color: var(--link); width: 1rem; height: 1rem; margin: 0; }
-input[type="search"] { width: min(26rem, 100%); min-width: 12rem; }
+input[type="search"] { width: min(26rem, 100%); min-width: 0; }
 .skip-link { position: fixed; inset-block-start: -5rem; inset-inline-start: var(--space-4); z-index: 10; padding: var(--space-3); background: var(--surface); }
 .skip-link:focus { inset-block-start: var(--space-2); }
 .top-bar { max-width: none; padding: 0; max-height: 42vh; overflow-y: auto; }
-.top-bar-inner { max-width: 1280px; margin-inline: auto; padding: var(--space-4) var(--space-5); }
+.top-bar-inner { max-width: 1280px; margin-inline: auto; padding: var(--space-5); }
 .title-line, .build-line, .build-context, .count-line, .card-links, .index-heading, .index-footer { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
-.title-line { justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
-.report-brand { display: block; color: var(--text-muted); font-size: .7rem; letter-spacing: .12em; }
-.top-bar h1 { margin: var(--space-1) 0 0; font-size: 1.35rem; font-weight: 650; letter-spacing: -.02em; }
-.section-links { display: flex; flex-wrap: wrap; gap: var(--space-1); padding: 0; margin: 0; font-size: .8rem; }
-.section-links a { padding: var(--space-2); border-radius: var(--radius); }
-.section-links a:hover { background: var(--surface-2); }
-.build-line { overflow-wrap: anywhere; }
-.pipeline-name { font-size: 1.05rem; font-weight: 600; }
-.build-number { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .85rem; padding: 2px var(--space-2); background: var(--surface-2); border-radius: var(--radius); }
+.title-line { justify-content: space-between; align-items: flex-start; gap: var(--space-3); margin-bottom: var(--space-4); }
+.report-title { min-width: 0; }
+.report-brand { display: block; color: var(--text-muted); font-size: .7rem; font-weight: 600; letter-spacing: .14em; }
+.top-bar h1 { margin: var(--space-1) 0 0; font-size: clamp(1.4rem, 2.3vw, 1.85rem); font-weight: 600; letter-spacing: -.035em; }
+.section-links { display: flex; flex-wrap: wrap; gap: var(--space-1); padding: var(--space-1); margin: 0; font-size: .8rem; background: var(--bg); border: 1px solid var(--separator); border-radius: var(--radius); }
+.section-links a { padding: var(--space-1) var(--space-3); border-radius: 4px; color: var(--text-muted); }
+.section-links a:hover, .section-links a:focus-visible { color: var(--text); background: var(--surface-2); }
+.build-line { overflow-wrap: anywhere; gap: var(--space-3); }
+.pipeline-name { font-size: 1rem; font-weight: 600; }
+.build-number { font-family: var(--font-mono); font-size: .8rem; padding: 2px var(--space-2); background: var(--surface-2); border: 1px solid var(--separator); border-radius: 4px; }
 .build-context { color: var(--text-muted); font-size: .8rem; margin-block: var(--space-2); overflow-wrap: anywhere; }
 .build-context code, .commit { font-size: .8rem; }
-.count-line { gap: var(--space-2); margin-top: var(--space-3); }
-.count-chip { align-items: center; gap: var(--space-3); font-size: .8rem; border-color: var(--border); padding: var(--space-1) var(--space-3); }
-.count-chip strong { font-size: 1rem; }
+.count-line { gap: var(--space-3); margin-top: var(--space-4); }
+.count-chip { align-items: baseline; gap: var(--space-4); padding: var(--space-2) var(--space-3); border: 1px solid var(--separator); background: var(--bg); min-width: 9rem; }
+.count-label { font-size: .8rem; }
+.count-value { margin-inline-start: auto; font-size: 1.4rem; line-height: 1.2; font-weight: 600; letter-spacing: -.025em; }
+.status-attachments { color: var(--text-muted); }
 .results-link { margin-inline-start: auto; font-size: .8rem; padding: var(--space-1) 0; }
 .partial-link { color: var(--flaky); border: 1px solid var(--flaky); border-radius: var(--radius); padding: var(--space-1) var(--space-3); font-size: .8rem; }
 .partial-link:visited { color: var(--flaky); }
@@ -196,37 +211,37 @@ input[type="search"] { width: min(26rem, 100%); min-width: 12rem; }
 .secondary-line .metadata-item { max-width: 100%; }
 .secondary-line dt { font-size: .7rem; }
 .secondary-line dd { color: var(--text-muted); }
-.history-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-4); }
+.history-panel { background: var(--surface); border: 1px solid var(--separator); border-radius: var(--radius); padding: var(--space-5); }
 .history-chart { max-height: 240px; }
-.history-data { margin-top: var(--space-3); border-top: 1px solid var(--border); }
+.history-data { margin-top: var(--space-4); border-top: 1px solid var(--separator); }
 .history-data > summary { padding-block: var(--space-3); color: var(--link); font-size: .85rem; }
 .history-data table { font-size: .85rem; }
-.history-data caption { text-align: start; color: var(--text-muted); padding-block: var(--space-2); }
-.history-data thead { background: var(--surface-2); }
-.history-data th, .history-data td { vertical-align: top; }
-.failure-navigation { padding: var(--space-5) 0; }
-.filter-controls { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); background: var(--surface); border-radius: var(--radius); padding: var(--space-3); margin-bottom: var(--space-4); }
+.history-data caption { text-align: start; color: var(--text-muted); padding: var(--space-2) 0 var(--space-3); font-size: .8rem; }
+.history-data th { white-space: nowrap; }
+.history-data td { min-width: 4rem; }
+.history-data tbody tr:last-child td { border-bottom: 0; }
+.failure-navigation { padding: var(--space-6) 0; }
+.filter-controls { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); background: var(--surface); border: 1px solid var(--separator); border-radius: var(--radius); padding: var(--space-4); margin-bottom: var(--space-4); }
 .filter-controls > label { display: inline-flex; align-items: center; gap: var(--space-2); font-size: .85rem; }
-.filter-controls > label:first-child { flex: 1 1 20rem; }
-.filter-controls > label:first-child input { flex: 1; }
-.filter-controls > label:has(input[type="checkbox"]) { cursor: pointer; border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-2); }
-.filter-controls > label:has(input:checked) { border-color: var(--link); background: var(--surface-2); }
+.filter-controls > label:first-child { flex: 1 1 22rem; }
+.filter-controls > label:first-child input { flex: 1; margin-inline-start: var(--space-2); }
+.filter-controls > label:has(input[type="checkbox"]) { cursor: pointer; padding-block: var(--space-2); }
 .filter-controls button { font-size: .8rem; }
 .filter-result-count { font-size: .8rem; color: var(--text-muted); margin-inline-start: auto; }
-.keyboard-hint { flex-basis: 100%; margin: var(--space-1) 0 0; font-size: .75rem; }
+.keyboard-hint { flex-basis: 100%; margin: 0; padding-top: var(--space-3); border-top: 1px solid var(--separator); font-size: .75rem; }
 [data-no-matches] { padding: var(--space-5); text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); }
 .failure-index { display: grid; gap: var(--space-3); list-style: none; padding: 0; margin: 0; }
-.failure-index > li { padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
-.failure-index > li:hover { border-color: var(--link); }
+.failure-index > li { padding: var(--space-4) var(--space-5); background: var(--surface); border: 1px solid var(--separator); border-radius: var(--radius); }
+.failure-index > li:hover { border-color: var(--border); }
 .failure-index > li.is-current { border-color: var(--focus); }
 .index-heading { gap: var(--space-2) var(--space-3); }
-.index-heading > a { font-weight: 650; overflow-wrap: anywhere; }
-.index-heading > .text-muted { flex: 1 1 15rem; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .75rem; overflow-wrap: anywhere; }
-.index-strips { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: var(--space-4); margin-block: var(--space-3); }
-.strip-label { display: block; color: var(--text-muted); font-size: .75rem; }
-.history-strip, .attempt-strip { margin: var(--space-2) 0; align-items: stretch; gap: var(--space-2); }
+.index-heading > a { font-weight: 600; font-size: 1rem; overflow-wrap: anywhere; }
+.index-heading > .text-muted { flex: 1 1 15rem; font-family: var(--font-mono); font-size: .75rem; overflow-wrap: anywhere; }
+.index-strips { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: var(--space-4); margin-block: var(--space-4); }
+.strip-label { display: block; color: var(--text-muted); font-size: .75rem; font-weight: 600; }
+.history-strip, .attempt-strip { margin: var(--space-2) 0 0; align-items: stretch; gap: var(--space-2); }
 .history-strip > li, .attempt-strip > li { display: flex; min-width: 0; }
-.history-cell, .attempt-cell { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-2); padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius); font-size: .75rem; }
+.history-cell, .attempt-cell { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-2); padding: var(--space-1) var(--space-2); border: 1px solid var(--border); border-radius: 4px; font-size: .75rem; }
 .history-cell:hover, .attempt-cell:hover { background: var(--surface-2); border-color: var(--link); }
 .history-build, .attempt-caption { color: var(--text-muted); }
 .history-current { color: var(--current); }
@@ -234,61 +249,67 @@ input[type="search"] { width: min(26rem, 100%); min-width: 12rem; }
 .history-cell > [role="img"] { font-size: .7rem; }
 .attempt-cell .attempt-outcome { color: var(--text-muted); font-size: .7rem; }
 .failure-index .status-legend { display: none; }
-.index-footer { border-top: 1px solid var(--border); padding-top: var(--space-3); color: var(--text-muted); font-size: .8rem; }
+.index-footer { border-top: 1px solid var(--separator); padding-top: var(--space-3); color: var(--text-muted); font-size: .8rem; }
 .index-footer > span:last-child { margin-inline-start: auto; }
 .test-case-link { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); }
 .test-case-link > span { font-size: .75rem; color: var(--text-muted); }
 .failure-card, .attempt, .attachment-list > li, #history, #failure-index, #diagnostics, .history-data tr { scroll-margin-top: var(--report-header-offset, 22rem); }
-.failure-card { padding: var(--space-5); margin-block: 0 var(--space-5); border-top-width: 3px; }
+.failure-card { padding: var(--space-5); margin-block: 0 var(--space-6); border-top-width: 3px; }
 .failure-card[data-classification="failed"] { border-top-color: var(--fail); }
 .failure-card[data-classification="flaky"] { border-top-color: var(--flaky); }
 .failure-card.is-current { outline: 2px solid var(--focus); outline-offset: 2px; }
 .failure-card > header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: 0; }
-.failure-card > header h2 { overflow-wrap: anywhere; margin: 0; font-size: 1.3rem; }
-.failure-number { color: var(--text-muted); font-size: .8rem; }
-.status-badge { font-size: .8rem; align-items: center; }
-.name-section { display: flex; align-items: center; gap: var(--space-3); background: var(--surface-2); border-radius: var(--radius); padding: var(--space-3); margin-block: var(--space-4); }
+.failure-card > header h2 { overflow-wrap: anywhere; margin: 0; font-size: 1.4rem; letter-spacing: -.025em; }
+.failure-number { display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; min-height: 2rem; padding-inline: var(--space-1); border: 1px solid var(--separator); border-radius: 4px; color: var(--text-muted); font: .8rem var(--font-mono); }
+.status-badge { font-size: .8rem; align-items: center; border-radius: 4px; }
+.name-section { display: flex; align-items: center; gap: var(--space-3); background: var(--code-bg); border: 1px solid var(--separator); border-radius: var(--radius); padding: var(--space-3) var(--space-4); margin-block: var(--space-4); }
 .name-section code { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .name-section button { flex-shrink: 0; font-size: .8rem; }
-.metadata-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3) var(--space-5); margin: var(--space-4) 0; }
+.metadata-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4) var(--space-5); margin: var(--space-5) 0; }
 .metadata-item { min-width: 0; }
-.metadata-grid dt { font-size: .75rem; margin-bottom: 2px; }
-.metadata-grid dd { white-space: pre-wrap; font-size: .9rem; }
+.metadata-grid .metadata-item { border-inline-start: 1px solid var(--separator); padding-inline-start: var(--space-3); }
+.metadata-grid dt { font-size: .75rem; margin-bottom: var(--space-1); }
+.metadata-grid dd { white-space: pre-wrap; font-size: .875rem; }
 .card-links { font-size: .8rem; gap: var(--space-2) var(--space-4); }
-.card-strips { margin-block: var(--space-5); display: grid; gap: var(--space-3); }
+.card-strips { margin-block: var(--space-5); padding-block: var(--space-4); border-block: 1px solid var(--separator); display: grid; gap: var(--space-4); }
 .status-legend { gap: var(--space-2) var(--space-3); margin: var(--space-3) 0 0; }
-.status-legend .status-badge { padding: 0; border: 0; font-size: .7rem; color: var(--text-muted); }
-.attempt { border: 1px solid var(--border); border-radius: var(--radius); margin-block: var(--space-3); padding: 0 var(--space-4) var(--space-4); }
+.status-legend .status-badge { padding: 0; border: 0; font-size: .75rem; color: var(--text-muted); }
+.attempt { border: 1px solid var(--separator); border-radius: var(--radius); margin-block: var(--space-4); padding: 0 var(--space-4) var(--space-4); }
 .attempt:not([open]) { padding-bottom: 0; }
-.attempt > summary { padding: var(--space-3) var(--space-4); margin-inline: calc(-1 * var(--space-4)); font-size: .9rem; border-radius: var(--radius); background: var(--surface-2); }
+.attempt > summary { padding: var(--space-3) var(--space-4); margin-inline: calc(-1 * var(--space-4)); font-size: .85rem; border-radius: var(--radius); background: var(--surface-2); }
+.attempt-title { font-weight: 600; margin-inline-end: var(--space-2); }
+.attempt-duration { color: var(--text-muted); white-space: nowrap; margin-inline-start: var(--space-2); }
 .attempt > summary::marker { color: var(--link); }
 .attempt > summary:hover { outline: 1px solid var(--link); outline-offset: -1px; }
-.attempt[open] > summary { border-bottom: 1px solid var(--border); border-end-start-radius: 0; border-end-end-radius: 0; }
+.attempt[open] > summary { border-bottom: 1px solid var(--separator); border-end-start-radius: 0; border-end-end-radius: 0; }
+.attempt > summary .status-badge { border: 0; padding-block: 0; }
 .attempt > summary .attempt-outcome { color: var(--text-muted); font-size: .8rem; }
-.code-section { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); margin-block: var(--space-4); overflow: hidden; }
+.code-section { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); border: 1px solid var(--separator); border-radius: var(--radius); background: var(--surface-2); margin-block: var(--space-4); overflow: hidden; }
 .code-section .code-block { display: contents; }
-.code-section .language-label { order: 1; flex: 1 1 12rem; padding: var(--space-2) var(--space-3); color: var(--text); font-size: .8rem; }
+.code-section .language-label { order: 1; flex: 1 1 12rem; padding: var(--space-2) var(--space-4); color: var(--text-muted); font-size: .8rem; font-weight: 600; }
 .code-tools { order: 2; display: flex; flex-wrap: wrap; gap: var(--space-1); padding: var(--space-1) var(--space-2); }
 .code-tools button { padding: var(--space-1) var(--space-2); font-size: .75rem; min-height: 30px; }
-.code-section pre { order: 3; flex-basis: 100%; width: 100%; border: 0; border-top: 1px solid var(--border); border-radius: 0; padding: var(--space-4); }
+.code-section pre { order: 3; flex-basis: 100%; width: 100%; border: 0; border-top: 1px solid var(--separator); border-radius: 0; padding: var(--space-4); }
 .code-section .diagnostic { order: 4; flex-basis: 100%; margin: 0 var(--space-3) var(--space-3); }
 .code-section.hide-framework .framework-frame { display: none; }
-.sub-result, .iteration { border-inline-start: 2px solid var(--border); padding-inline-start: var(--space-4); margin-block: var(--space-4); }
+.sub-result, .iteration { border-inline-start: 2px solid var(--separator); padding-inline-start: var(--space-4); margin-block: var(--space-5); }
 .sub-result .metadata-grid, .iteration .metadata-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.attachment-list { list-style: none; padding: 0; display: grid; gap: var(--space-2); overflow-wrap: anywhere; }
-.attachment-list > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-3); background: var(--surface-2); border-radius: var(--radius); padding: var(--space-3); font-size: .85rem; }
-.attachment-list > li > span { color: var(--text-muted); font-size: .8rem; }
-.attachment-list .metadata-grid { grid-column: 1 / -1; margin: 0; }
-.attachment-local, .attachment-list > li > .code-section { grid-column: 1 / -1; }
+.attachment-list { list-style: none; padding: 0; margin-block: var(--space-3); display: grid; gap: var(--space-2); overflow-wrap: anywhere; }
+.attachment-list > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-4); background: var(--bg); border: 1px solid var(--separator); border-radius: var(--radius); padding: var(--space-3) var(--space-4); font-size: .85rem; }
+.attachment-list > li > span { color: var(--text-muted); font: .75rem/1.6 var(--font-mono); text-align: end; }
+.attachment-list .metadata-grid { grid-column: 1 / -1; margin: var(--space-2) 0 0; gap: var(--space-3); }
+.attachment-list .metadata-grid:empty { display: none; }
+.attachment-local, .attachment-list > li > .code-section { grid-column: 1 / -1; min-width: 0; }
 .attachment-local { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .attachment-local > span, .attachment-status { color: var(--text-muted); font-size: .8rem; }
 .attachment-status { flex-basis: 100%; margin: 0; }
-.thumbnail-grid { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.thumbnail { display: block; line-height: 0; padding: var(--space-1); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.thumbnail-grid { display: flex; flex-wrap: wrap; gap: var(--space-2); min-width: 0; }
+.thumbnail { display: block; line-height: 0; padding: var(--space-1); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); max-width: 100%; }
 .thumbnail img { display: block; width: auto; height: auto; max-width: min(16rem, 100%); max-height: 10rem; object-fit: contain; }
-.card-footer { border-top: 1px solid var(--border); padding-top: var(--space-4); margin-top: var(--space-4); font-size: .8rem; }
-.diagnostic p { margin-bottom: 0; overflow-wrap: anywhere; }
-.diagnostic strong { font-size: .85rem; }
+.card-footer { border-top: 1px solid var(--separator); padding-top: var(--space-4); margin-top: var(--space-5); font-size: .8rem; }
+#diagnostics { margin-top: var(--space-6); }
+.diagnostic p { margin: var(--space-2) 0 0; overflow-wrap: anywhere; font-size: .875rem; }
+.diagnostic strong { font-size: .85rem; font-weight: 600; }
 .diagnostic[data-severity="error"] { border-inline-start-color: var(--fail); }
 .diagnostic[data-severity="warning"] { border-inline-start-color: var(--flaky); }
 .copy-feedback { position: fixed; bottom: var(--space-5); left: 50%; transform: translateX(-50%); max-width: calc(100vw - 2rem); z-index: 5; background: var(--surface-2); border: 1px solid var(--link); border-radius: var(--radius); padding: var(--space-3) var(--space-4); margin: 0; }
@@ -302,53 +323,65 @@ input[type="search"] { width: min(26rem, 100%); min-width: 12rem; }
   .results-link { margin-inline-start: 0; }
 }
 @media (max-width: 700px) {
-  main, .top-bar-inner { padding: var(--space-3); }
-  .top-bar h1 { font-size: 1.15rem; }
+  main, .top-bar-inner { padding: var(--space-4) var(--space-3); }
+  .title-line { margin-bottom: var(--space-3); }
+  .section-links { font-size: .75rem; }
+  .section-links a { padding-inline: var(--space-2); }
+  .count-line { gap: var(--space-2); }
+  .count-chip { min-width: 0; flex: 1 1 auto; gap: var(--space-3); }
+  .count-value { font-size: 1.2rem; }
   .report-context { padding: var(--space-3) var(--space-3) 0; }
   .secondary-line { gap: var(--space-2) var(--space-4); }
-  .failure-card { padding: var(--space-3); }
-  .failure-card > header h2 { font-size: 1.1rem; flex-basis: 100%; }
+  .history-panel, .failure-card, .failure-index > li { padding: var(--space-4); }
+  .failure-card > header h2 { font-size: 1.2rem; flex-basis: 100%; }
   .metadata-grid, .sub-result .metadata-grid, .iteration .metadata-grid, .side-by-side { grid-template-columns: 1fr; }
   .metadata-grid dd { margin-bottom: 0; }
   .name-section { flex-wrap: wrap; }
   .name-section code { flex-basis: 100%; }
   .filter-controls > label:first-child { flex-wrap: wrap; }
-  .filter-controls > label:first-child input { width: 100%; flex-basis: 100%; }
+  .filter-controls > label:first-child input { width: 100%; flex-basis: 100%; margin-inline-start: 0; }
   .index-footer > span:last-child { margin-inline-start: 0; }
   .attempt { padding-inline: var(--space-3); }
   .attempt > summary { padding-inline: var(--space-3); margin-inline: calc(-1 * var(--space-3)); }
   .attachment-list > li { grid-template-columns: 1fr; }
+  .attachment-list > li > span { text-align: start; }
 }
 @media print {
   main { padding: 0; }
   .top-bar { max-height: none; overflow: visible; }
   .top-bar-inner, .report-context { padding-inline: 0; }
   .section-links, .skip-link, .copy-feedback, .card-footer, .image-viewer, [data-no-matches] { display: none !important; }
-  .failure-card, .history-panel { margin-block: var(--space-4); }
+  .failure-card, .history-panel { margin-block: var(--space-4); border-radius: 0; }
+  .failure-card > header h2 { flex-basis: auto; }
   .metadata-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .metadata-grid .metadata-item { break-inside: avoid; }
   .code-section { overflow: visible; }
   .code-section.hide-framework .framework-frame { display: inline; }
   .code-section pre { overflow: visible; }
   .attempt, .code-section, .attachment-list > li { break-inside: avoid; }
+}
+@media (forced-colors: active) {
+  .failure-card, .failure-index > li, .history-panel, .count-chip, .attempt, .attachment-list > li { border-color: CanvasText; }
+  .failure-card.is-current, :focus-visible { outline-color: Highlight; }
 }
 </style>
 </head>
 <body>
 <a class="skip-link" href="#failure-index">Index des échecs</a>
 <header class="top-bar"><div class="top-bar-inner">
-<div class="title-line"><div><span class="report-brand">AdoToolkit</span><h1>Rapport des tests en échec</h1></div><nav class="section-links" aria-label="Sections du rapport"><a href="#history">Historique des exécutions</a><a href="#failure-index">Index des échecs</a><a href="#diagnostics">Diagnostics</a></nav></div>
+<div class="title-line"><div class="report-title"><span class="report-brand">AdoToolkit</span><h1>Rapport des tests en échec</h1></div><nav class="section-links" aria-label="Sections du rapport"><a href="#history">Historique des exécutions</a><a href="#failure-index">Index des échecs</a><a href="#diagnostics">Diagnostics</a></nav></div>
 <div class="build-line"><span class="pipeline-name"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build?definitionId=12">Synthetic UI tests <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span><span class="build-number"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401">&lt;/script&gt;&lt;script&gt;alert(&#x27;fixture-only&#x27;)&lt;/script&gt; &lt;img src=x onerror=fixture()&gt; &quot; &amp; ../CON 日本語 « L’été : 1 234 ! » <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span></div>
 <div class="build-context"><code>refs/heads/main</code><span class="commit" title="Commit"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_git/11111111-2222-3333-4444-555555555555/commit/0123456789abcdef0123456789abcdef01234567">0123456 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span><span>failed</span><span>Fin: 2026-09-16 13 h 18</span></div>
-<div class="count-line"><span class="count-chip status-failed"><span>✕ Échec</span><strong>2</strong></span><span class="count-chip status-flaky"><span>≈ Instable</span><strong>0</strong></span><span class="count-chip status-attachments"><span>Pièces jointes</span><strong>4</strong></span><span class="results-link"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab">Résultat du test <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span></div>
+<div class="count-line"><span class="count-chip status-failed"><span class="count-label">✕ Échec</span><strong class="count-value">2</strong></span><span class="count-chip status-flaky"><span class="count-label">≈ Instable</span><strong class="count-value">0</strong></span><span class="count-chip status-attachments"><span class="count-label">Pièces jointes</span><strong class="count-value">4</strong></span><span class="results-link"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab">Résultat du test <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span></div>
 </div></header>
 <div class="report-context"><dl class="secondary-line"><div class="metadata-item"><dt>Généré le</dt><dd>2026-09-16 13 h 30</dd></div><div class="metadata-item"><dt>Version de la boîte à outils</dt><dd>5.3.0-test</dd></div><div class="metadata-item"><dt>Serveur</dt><dd>https://ado.example.test</dd></div><div class="metadata-item"><dt>Collection</dt><dd>/tfs/Collection%20A/</dd></div><div class="metadata-item"><dt>Projet</dt><dd>Équipe / Web?#</dd></div></dl></div>
 <main id="report-content">
 <section class="history-panel" id="history">
-<h2>Historique des exécutions</h2>
+<h2 class="section-heading">Historique des exécutions</h2>
 <div class="chart-scroll"><svg class="history-chart" xmlns="http://www.w3.org/2000/svg" role="img" viewBox="0 0 352 260"><title>Historique des exécutions</title><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="398"><title>Build 20260916.0; branche refs/heads/main; fin 2026-09-13 13 h 30; ✓ Réussi : 0; ✕ Échec : 0; ≈ Instable : 0; – Autre : 0; Indisponible; Ouvrir dans Azure DevOps</title><rect class="chart-unavailable" x="16" y="40" width="52" height="180"/><path class="chart-hatch" d="M 16 48 l 52 -8"/><path class="chart-hatch" d="M 16 60 l 52 -8"/><path class="chart-hatch" d="M 16 72 l 52 -8"/><path class="chart-hatch" d="M 16 84 l 52 -8"/><path class="chart-hatch" d="M 16 96 l 52 -8"/><path class="chart-hatch" d="M 16 108 l 52 -8"/><path class="chart-hatch" d="M 16 120 l 52 -8"/><path class="chart-hatch" d="M 16 132 l 52 -8"/><path class="chart-hatch" d="M 16 144 l 52 -8"/><path class="chart-hatch" d="M 16 156 l 52 -8"/><path class="chart-hatch" d="M 16 168 l 52 -8"/><path class="chart-hatch" d="M 16 180 l 52 -8"/><path class="chart-hatch" d="M 16 192 l 52 -8"/><path class="chart-hatch" d="M 16 204 l 52 -8"/><path class="chart-hatch" d="M 16 216 l 52 -8"/><text class="chart-caption" x="42" y="138">?</text><text class="chart-caption" x="42" y="244">1 ↗</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="399"><title>Build 20260916.1; branche refs/heads/main; fin 2026-09-14 13 h 30; ✓ Réussi : 42; ✕ Échec : 0; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi: 42</title><rect class="chart-pass" x="96" y="55.652" width="52" height="164.348"/><text class="chart-count" x="122" y="141.826">42</text></g><g data-outcome="other" data-count="2"><title>– Autre: 2</title><rect class="chart-other" x="96" y="47.826" width="52" height="7.826"/></g><text class="chart-caption" x="122" y="244">2 ↗</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="400"><title>Build 20260916.2; branche refs/heads/main; fin 2026-09-15 13 h 30; ✓ Réussi : 42; ✕ Échec : 1; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi: 42</title><rect class="chart-pass" x="176" y="55.652" width="52" height="164.348"/><text class="chart-count" x="202" y="141.826">42</text></g><g data-outcome="failed" data-count="1"><title>✕ Échec: 1</title><rect class="chart-fail" x="176" y="51.739" width="52" height="3.913"/></g><g data-outcome="other" data-count="2"><title>– Autre: 2</title><rect class="chart-other" x="176" y="43.913" width="52" height="7.826"/></g><text class="chart-caption" x="202" y="244">3 ↗</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="401" aria-current="true"><title>Build 20260916.3; branche refs/heads/main; fin 2026-09-16 13 h 30; ✓ Réussi : 42; ✕ Échec : 2; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi: 42</title><rect class="chart-pass" x="256" y="55.652" width="52" height="164.348"/><text class="chart-count" x="282" y="141.826">42</text></g><g data-outcome="failed" data-count="2"><title>✕ Échec: 2</title><rect class="chart-fail" x="256" y="47.826" width="52" height="7.826"/></g><g data-outcome="other" data-count="2"><title>– Autre: 2</title><rect class="chart-other" x="256" y="40" width="52" height="7.826"/></g><rect class="chart-current" x="253" y="37" width="58" height="186"/><text class="chart-caption" x="282" y="20">Cette exécution</text><text class="chart-caption" x="282" y="244">4 ↗</text></a></svg></div><details class="history-data"><summary>Données de l’historique</summary><div class="table-scroll"><table><caption>Historique des exécutions</caption><thead><tr><th scope="col">Build</th><th scope="col">Branche</th><th scope="col">Fin</th><th scope="col">Réussi</th><th scope="col">Échec</th><th scope="col">Instable</th><th scope="col">Autre</th><th scope="col">État</th></tr></thead><tbody><tr data-build-id="398"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab">20260916.0 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></th><td>refs/heads/main</td><td>2026-09-13 13 h 30</td><td>0</td><td>0</td><td>0</td><td>0</td><td><span class="status-badge status-unavailable"><span aria-hidden="true">?</span> Indisponible</span></td></tr><tr data-build-id="399"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab">20260916.1 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></th><td>refs/heads/main</td><td>2026-09-14 13 h 30</td><td>42</td><td>0</td><td>0</td><td>2</td><td>Disponible</td></tr><tr data-build-id="400"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab">20260916.2 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></th><td>refs/heads/main</td><td>2026-09-15 13 h 30</td><td>42</td><td>1</td><td>0</td><td>2</td><td>Disponible</td></tr><tr data-build-id="401"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" aria-current="true">20260916.3 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> Cette exécution</th><td>refs/heads/main</td><td>2026-09-16 13 h 30</td><td>42</td><td>2</td><td>0</td><td>2</td><td>Disponible</td></tr></tbody></table></div></details>
 </section>
 <nav class="failure-navigation" id="failure-index" aria-label="Index des échecs">
-<h2>Index des échecs</h2>
+<h2 class="section-heading">Index des échecs</h2>
 <div class="interactive filter-controls" data-enhance hidden>
 <label>Filtrer les tests <input type="search" data-filter></label>
 <label><input type="checkbox" data-toggle="failed" checked>Échec</label>
@@ -368,7 +401,7 @@ input[type="search"] { width: min(26rem, 100%); min-width: 12rem; }
 <div class="card-links"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">Résultat du test <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Exécution de tests <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801">Bogues associés #801 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/802">Bogues associés #802 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></div>
 <div class="card-strips"><div><span class="strip-label">Tentatives</span><ol class="attempt-strip" aria-label="Tentatives"><li><a class="attempt-cell" href="#f-1-a1"><span class="attempt-caption">Tentative 1 sur 1</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="attempt-outcome">Failed</span></a></li></ol></div>
 </div>
-<details class="attempt" id="f-1-a1" data-failure-class="true" open><summary>Tentative 1 sur 1 · <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="attempt-outcome">Failed</span> · 1,234 s</summary>
+<details class="attempt" id="f-1-a1" data-failure-class="true" open><summary><span class="attempt-title">Tentative 1 sur 1</span> · <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="attempt-outcome">Failed</span> <span class="attempt-duration">· 1,234 s</span></summary>
 <dl class="metadata-grid"><div class="metadata-item"><dt>Source de la tentative</dt><dd>Résultat unique</dd></div><div class="metadata-item"><dt>Début</dt><dd>2026-09-16 13 h 15</dd></div><div class="metadata-item"><dt>Fin</dt><dd>2026-09-16 13 h 16</dd></div><div class="metadata-item"><dt>Durée</dt><dd>1,234 s</dd></div><div class="metadata-item"><dt>Machine</dt><dd>&lt;/script&gt;&lt;script&gt;alert(&#x27;fixture-only&#x27;)&lt;/script&gt; &lt;img src=x onerror=fixture()&gt; &quot; &amp; ../CON 日本語 « L’été : 1 234 ! »</dd></div><div class="metadata-item"><dt>Exécution de tests</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Synthetic Windows tests <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Résultat du test</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">11 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Exécuté par</dt><dd>Fictional Runner &lt;runner@example.test&gt;</dd></div><div class="metadata-item"><dt>Type d’échec</dt><dd>Regression</dd></div><div class="metadata-item"><dt>État de résolution</dt><dd>Unresolved</dd></div><div class="metadata-item"><dt>En échec depuis</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400">400 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Bogues associés</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801">#801 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Bogues associés</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/802">#802 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Commentaire</dt><dd>&lt;/script&gt;&lt;script&gt;alert(&#x27;fixture-only&#x27;)&lt;/script&gt; &lt;img src=x onerror=fixture()&gt; &quot; &amp; ../CON 日本語 « L’été : 1 234 ! »</dd></div></dl>
 <div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Message d’erreur">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button></div><div class="code-block"><div class="language-label">Message d’erreur</div><pre><code class="lang-error"><span class="tok-punct">&lt;</span><span class="tok-plain">/script</span><span class="tok-punct">&gt;</span><span class="tok-punct">&lt;</span><span class="tok-plain">script</span><span class="tok-punct">&gt;</span><span class="tok-plain">alert(</span><span class="tok-string">&#x27;fixture-only&#x27;</span><span class="tok-plain">)</span><span class="tok-punct">&lt;</span><span class="tok-plain">/script</span><span class="tok-punct">&gt;</span><span class="tok-plain"> </span><span class="tok-punct">&lt;</span><span class="tok-plain">img src=x onerror=fixture()</span><span class="tok-punct">&gt;</span><span class="tok-plain"> &quot; &amp; ../CON 日本語 « L’été : </span><span class="tok-number">1</span><span class="tok-plain"> </span><span class="tok-number">234</span><span class="tok-plain"> ! »</span></code></pre></div></div>
 <div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Arborescence des appels de procédure (.NET)">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button><button type="button" class="interactive" data-enhance hidden data-action="framework" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Masquer les appels du framework</button></div><div class="code-block"><div class="language-label">Arborescence des appels de procédure (.NET)</div><pre><code class="lang-stacktrace"><span class="tok-plain">&lt;/script&gt;&lt;script&gt;alert(&#x27;fixture-only&#x27;)&lt;/script&gt; &lt;img src=x onerror=fixture()&gt; &quot; &amp; ../CON 日本語 « L’été : 1 234 ! »</span></code></pre></div></div>
@@ -410,7 +443,7 @@ input[type="search"] { width: min(26rem, 100%); min-width: 12rem; }
 <div class="card-strips"><div><span class="strip-label">Tentatives</span><ol class="attempt-strip" aria-label="Tentatives"><li><a class="attempt-cell" href="#f-2-a1"><span class="attempt-caption">Tentative 1 sur 1</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="attempt-outcome">Failed</span></a></li></ol></div>
 <div><span class="strip-label">Historique des exécutions</span><ol class="history-strip" aria-label="Historique des exécutions"><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="398"><span class="history-build">20260916.0</span> <span class="status-badge status-unavailable"><span aria-hidden="true">?</span> Indisponible</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="399"><span class="history-build">20260916.1</span> <span class="status-badge status-notrun"><span aria-hidden="true">–</span> Non exécuté</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="400"><span class="history-build">20260916.2</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li><li><a class="history-cell" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="401" aria-current="true"><span class="history-build">20260916.3</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="history-current">Cette exécution</span> <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></li></ol><ul class="status-legend"><li><span class="status-badge status-passed"><span aria-hidden="true">✓</span> Réussi</span></li><li><span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span></li><li><span class="status-badge status-flaky"><span aria-hidden="true">≈</span> Instable</span></li><li><span class="status-badge status-other"><span aria-hidden="true">–</span> Autre</span></li><li><span class="status-badge status-notrun"><span aria-hidden="true">–</span> Non exécuté</span></li><li><span class="status-badge status-unavailable"><span aria-hidden="true">?</span> Indisponible</span></li></ul></div>
 </div>
-<details class="attempt" id="f-2-a1" data-failure-class="true" open><summary>Tentative 1 sur 1 · <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="attempt-outcome">Failed</span> · 1,234 s</summary>
+<details class="attempt" id="f-2-a1" data-failure-class="true" open><summary><span class="attempt-title">Tentative 1 sur 1</span> · <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="attempt-outcome">Failed</span> <span class="attempt-duration">· 1,234 s</span></summary>
 <dl class="metadata-grid"><div class="metadata-item"><dt>Source de la tentative</dt><dd>Résultat unique</dd></div><div class="metadata-item"><dt>Début</dt><dd>2026-09-16 13 h 15</dd></div><div class="metadata-item"><dt>Fin</dt><dd>2026-09-16 13 h 16</dd></div><div class="metadata-item"><dt>Durée</dt><dd>1,234 s</dd></div><div class="metadata-item"><dt>Machine</dt><dd>&lt;/script&gt;&lt;script&gt;alert(&#x27;fixture-only&#x27;)&lt;/script&gt; &lt;img src=x onerror=fixture()&gt; &quot; &amp; ../CON 日本語 « L’été : 1 234 ! »</dd></div><div class="metadata-item"><dt>Exécution de tests</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Synthetic Windows tests <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Résultat du test</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">11 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Exécuté par</dt><dd>Fictional Runner &lt;runner@example.test&gt;</dd></div><div class="metadata-item"><dt>Type d’échec</dt><dd>Regression</dd></div><div class="metadata-item"><dt>État de résolution</dt><dd>Unresolved</dd></div><div class="metadata-item"><dt>En échec depuis</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400">400 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Bogues associés</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801">#801 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Bogues associés</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/802">#802 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div class="metadata-item"><dt>Commentaire</dt><dd>&lt;/script&gt;&lt;script&gt;alert(&#x27;fixture-only&#x27;)&lt;/script&gt; &lt;img src=x onerror=fixture()&gt; &quot; &amp; ../CON 日本語 « L’été : 1 234 ! »</dd></div></dl>
 <div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Message d’erreur">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button></div><div class="code-block"><div class="language-label">Message d’erreur</div><pre><code class="lang-error"><span class="tok-punct">&lt;</span><span class="tok-plain">/script</span><span class="tok-punct">&gt;</span><span class="tok-punct">&lt;</span><span class="tok-plain">script</span><span class="tok-punct">&gt;</span><span class="tok-plain">alert(</span><span class="tok-string">&#x27;fixture-only&#x27;</span><span class="tok-plain">)</span><span class="tok-punct">&lt;</span><span class="tok-plain">/script</span><span class="tok-punct">&gt;</span><span class="tok-plain"> </span><span class="tok-punct">&lt;</span><span class="tok-plain">img src=x onerror=fixture()</span><span class="tok-punct">&gt;</span><span class="tok-plain"> &quot; &amp; ../CON 日本語 « L’été : </span><span class="tok-number">1</span><span class="tok-plain"> </span><span class="tok-number">234</span><span class="tok-plain"> ! »</span></code></pre></div></div>
 <div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Arborescence des appels de procédure (.NET)">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button><button type="button" class="interactive" data-enhance hidden data-action="framework" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Masquer les appels du framework</button></div><div class="code-block"><div class="language-label">Arborescence des appels de procédure (.NET)</div><pre><code class="lang-stacktrace"><span class="tok-plain">&lt;/script&gt;&lt;script&gt;alert(&#x27;fixture-only&#x27;)&lt;/script&gt; &lt;img src=x onerror=fixture()&gt; &quot; &amp; ../CON 日本語 « L’été : 1 234 ! »</span></code></pre></div></div>
@@ -445,7 +478,7 @@ input[type="search"] { width: min(26rem, 100%); min-width: 12rem; }
 <footer class="card-footer"><a href="#failure-index">↑ Index des échecs</a></footer>
 </article>
 <section id="diagnostics">
-<h2>Diagnostics</h2>
+<h2 class="section-heading">Diagnostics</h2>
 <div class="diagnostic" data-severity="warning" data-diagnostic="UnresolvedTestCase"><strong>Avertissement · UnresolvedTestCase</strong><p>Le cas de test 902 est introuvable ou inaccessible; le lien vers son ID est conservé.</p></div>
 <div class="diagnostic" data-severity="warning" data-diagnostic="InvalidTestCaseReference"><strong>Avertissement · InvalidTestCaseReference</strong><p>Le résultat 11 de la série 201 a une référence de cas de test qui n’est pas un entier positif.</p></div>
 </section>

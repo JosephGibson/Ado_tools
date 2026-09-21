@@ -34,9 +34,10 @@ internal static class ErrorTranslator
                     catch (JsonException) { }
             }
         }
-        catch (Exception error) when (error is IOException or HttpRequestException)
+        catch (Exception error) when (error is IOException or HttpRequestException or OperationCanceledException)
         {
             // Once a status is known, an unreadable error body must not replace it or alter retries.
+            // The pipeline checks caller cancellation before throwing the translated error.
         }
         AdoMessage key = status switch
         {

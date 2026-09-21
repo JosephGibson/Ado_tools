@@ -33,7 +33,7 @@ public sealed class AttachmentDownloader
     internal long MaximumInlineJsonBytes => limits.MaximumInlineJsonBytes;
 
     internal async Task<AttachmentDownloadResult> DownloadAsync(IReadOnlyList<AdoTestFailure> failures, string project,
-        string folder, string folderName, CultureInfo culture, CancellationToken cancellationToken)
+        string folder, string folderName, CultureInfo culture, CancellationToken cancellationToken, int? runId = null)
     {
         ArgumentNullException.ThrowIfNull(failures);
         ArgumentException.ThrowIfNullOrWhiteSpace(project);
@@ -41,16 +41,20 @@ public sealed class AttachmentDownloader
         ArgumentException.ThrowIfNullOrWhiteSpace(folderName);
         ArgumentNullException.ThrowIfNull(culture);
         Session session = new(this, project, folder, folderName, culture,
-            failures.SelectMany(f => f.Attempts).SelectMany(a => a.Attachments).Select(Key).Distinct().Count());
+            failures.SelectMany(f => f.Attempts).SelectMany(a => a.Attachments)
+                .Where(a => !runId.HasValue || a.RunId == runId.Value).Select(Key).Distinct().Count());
         List<AdoTestFailure> updated = new(failures.Count);
         foreach (AdoTestFailure failure in failures)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             List<AdoTestAttempt> attempts = new(failure.Attempts.Count);
             foreach (AdoTestAttempt attempt in failure.Attempts)
             {
                 List<AdoTestAttachment> attachments = new(attempt.Attachments.Count);
                 foreach (AdoTestAttachment attachment in attempt.Attachments)
-                    attachments.Add(await session.GetAsync(attachment, cancellationToken).ConfigureAwait(false));
+                    attachments.Add(!runId.HasValue || attachment.RunId == runId.Value
+                        ? await session.GetAsync(attachment, cancellationToken).ConfigureAwait(false)
+                        : attachment);
                 attempts.Add(attempt.WithAttachments(attachments.AsReadOnly()));
             }
             updated.Add(failure.WithAttempts(attempts.AsReadOnly()));

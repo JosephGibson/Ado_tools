@@ -185,7 +185,7 @@ HelpMessage: ''
 Number of runs in the history window, including the current one, from 1 to 50. Defaults to the testResults.historyCount configuration value, 10.
 
 ```yaml
-Type: System.Int32
+Type: System.Nullable[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
@@ -206,7 +206,7 @@ HelpMessage: ''
 Branch scope of the history window. SameBranch keeps the current source branch; AllBranches widens it. Defaults to the testResults.historyScope configuration value, SameBranch.
 
 ```yaml
-Type: AdoToolkit.Core.TestRuns.AdoTestHistoryScope
+Type: System.Nullable[AdoToolkit.Core.TestRuns.AdoTestHistoryScope]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []

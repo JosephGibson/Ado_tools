@@ -61,6 +61,7 @@ public sealed class RunHistoryTests
             Assert.Contains("definitions=42", window.Uri.Query, StringComparison.Ordinal);
             Assert.Contains("statusFilter=completed", window.Uri.Query, StringComparison.Ordinal);
             Assert.Contains("queryOrder=finishTimeDescending", window.Uri.Query, StringComparison.Ordinal);
+            Assert.Contains("%24top=4&", window.Uri.Query, StringComparison.Ordinal);
             // maxTime is the current build's finish time, formatted with the invariant culture.
             Assert.Contains("maxTime=2026-09-15T10%3A00%3A00.0000000%2B00%3A00", window.Uri.Query, StringComparison.Ordinal);
             Assert.Equal(scope == AdoTestHistoryScope.SameBranch,

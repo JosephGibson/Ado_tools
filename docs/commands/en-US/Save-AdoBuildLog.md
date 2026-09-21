@@ -152,19 +152,20 @@ HelpMessage: ''
 
 ### -Project
 
-Project name; defaults to the connection project. Specify the owning project when the connection uses a different project.
+Project name; accepts the `TeamProject` property from piped failures. Defaults to the connection project when no value is supplied.
 
 ```yaml
 Type: System.String
 DefaultValue: ''
 SupportsWildcards: false
-Aliases: []
+Aliases:
+- TeamProject
 ParameterSets:
 - Name: (All)
   Position: Named
   IsRequired: false
   ValueFromPipeline: false
-  ValueFromPipelineByPropertyName: false
+  ValueFromPipelineByPropertyName: true
   ValueFromRemainingArguments: false
 DontShow: false
 AcceptedValues: []

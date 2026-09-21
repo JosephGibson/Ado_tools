@@ -112,6 +112,13 @@ Install tools only as an explicit, authorized step.
 limited to 5.x because the tooling depends on its result format. Upgrading it
 requires regression tests.
 
+The release workflow sets `ADOTOOLKIT_RELEASE_BUILD=1`. In that mode, verification,
+product tests and help generation require the exact versions in
+`tools/BuildModules.psd1`, which also supplies the workflow's installation versions.
+A newer installed version cannot substitute for a missing pin. Local development
+continues to accept Pester 5.x and PlatyPS 1.x. `diagnose` includes PlatyPS when
+command help sources are present.
+
 Without administrator rights, install the .NET SDK for your account only, with
 Microsoft's `dotnet-install.ps1` script, and put it first on `PATH` in every session
 that builds:
@@ -151,6 +158,10 @@ reparse points without a link target and are allowed. `Install-AdoToolkit.ps1` c
 its own copy of the module layout because it ships without the repository. A tooling
 test keeps that copy identical to `Assert-AdoPackage`.
 
+Package validation reads each DLL's assembly identity and version without loading
+its code. All four DLLs must match the manifest version; `-NoBuild` rejects stale
+binaries and requires a rebuild before packaging.
+
 Release generation stages and validates the archive, checksum and installer before
 replacing any asset. A failed replacement restores the previous set; backups are
 retained if recovery itself fails. This is rollback on failure, not a filesystem
@@ -161,7 +172,7 @@ including after `Set-Location`, and must stay inside the permitted repository ro
 To publish a release:
 
 1. Set `VersionPrefix` in `Directory.Build.props` and run `verify`.
-2. Push a tag named `v<VersionPrefix>`, for example `v0.1.1`.
+2. Push a tag named `v<VersionPrefix>`, for example `v0.2.0`.
 
 `.github/workflows/release.yml` then runs on a Windows runner. It installs the pinned
 PowerShell 7.6 after checking its published hash, installs Pester, PSScriptAnalyzer

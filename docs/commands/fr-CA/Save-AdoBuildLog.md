@@ -152,19 +152,20 @@ HelpMessage: ''
 
 ### -Project
 
-Nom du projet; par défaut, celui de la connexion. Précisez le projet propriétaire si la connexion utilise un autre projet.
+Nom du projet; reçoit la propriété `TeamProject` des échecs transmis dans le pipeline. Par défaut, celui de la connexion si aucune valeur n’est fournie.
 
 ```yaml
 Type: System.String
 DefaultValue: ''
 SupportsWildcards: false
-Aliases: []
+Aliases:
+- TeamProject
 ParameterSets:
 - Name: (All)
   Position: Named
   IsRequired: false
   ValueFromPipeline: false
-  ValueFromPipelineByPropertyName: false
+  ValueFromPipelineByPropertyName: true
   ValueFromRemainingArguments: false
 DontShow: false
 AcceptedValues: []

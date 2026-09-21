@@ -112,8 +112,9 @@ public sealed class TestRunService
                 ["runId"] = runId.ToString(CultureInfo.InvariantCulture),
             }, null, ResultPageSize,
             new Dictionary<string, string> { ["detailsToInclude"] = "None" }).ConfigureAwait(false);
+        HashSet<int> seen = [];
         foreach (TestResultDto value in values)
-            if (value.Id < 1) throw FormatError(culture, "TestResultsList");
+            if (value.Id < 1 || !seen.Add(value.Id)) throw FormatError(culture, "TestResultsList");
         return values;
     }
 

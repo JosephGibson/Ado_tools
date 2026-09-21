@@ -185,7 +185,7 @@ HelpMessage: ''
 Nombre d’exécutions dans la fenêtre d’historique, y compris l’exécution courante, de 1 à 50. Par défaut, la valeur de configuration testResults.historyCount, soit 10.
 
 ```yaml
-Type: System.Int32
+Type: System.Nullable[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
@@ -206,7 +206,7 @@ HelpMessage: ''
 Portée de branche de la fenêtre d’historique. SameBranch conserve la branche source courante ; AllBranches l’élargit. Par défaut, la valeur de configuration testResults.historyScope, soit SameBranch.
 
 ```yaml
-Type: AdoToolkit.Core.TestRuns.AdoTestHistoryScope
+Type: System.Nullable[AdoToolkit.Core.TestRuns.AdoTestHistoryScope]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []

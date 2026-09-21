@@ -13,6 +13,24 @@ namespace AdoToolkit.Core.Tests.TestRuns;
 // Approved audit regressions F01–F03 and F05–F08; all payloads are synthetic.
 public sealed class WireAuditRegressionTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DuplicateResultIdsWithinOneRunAreRejected(bool separatePages)
+    {
+        using FakeHttpMessageHandler handler = new();
+        handler.Enqueue(FakeHttpMessageHandler.Response(separatePages
+            ? """{"value":[{"id":1},{"id":"2"}]}"""
+            : """{"value":[{"id":1},{"id":"1"}]}"""));
+        if (separatePages) handler.Enqueue(FakeHttpMessageHandler.Response("""{"value":[{"id":2},{"id":3}]}"""));
+        handler.Enqueue(FakeHttpMessageHandler.Response(TestRunFixture.EmptyPage));
+        using HttpClient client = new(handler);
+        AdoResponseFormatException error = await Assert.ThrowsAsync<AdoResponseFormatException>(() =>
+            new TestRunService(client, TestRunFixture.Connection).GetResultsAsync(TestRunFixture.Project, 201,
+                CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
+        Assert.Equal("TestResultsList", error.Operation);
+    }
+
     [Fact]
     public async Task F01NestedAttemptsOrderBeforeClocksAndRespectParentResets()
     {

@@ -13,14 +13,14 @@ title: Export-AdoBuildTestFailure
 
 ## SYNOPSIS
 
-Writes one interactive HTML failed-test report per failure set and downloads its attachments.
+Writes one interactive HTML failed-test report per failure set and downloads attachments from its most recent test run.
 
 ## SYNTAX
 
 ### Input (Default)
 
 ```
-Export-AdoBuildTestFailure [-InputObject] <AdoBuildTestFailureSet> [-Culture <string>] [-Path <string>] [-SkipAttachments] [-NoClobber] [-Open] [-Connection <AdoConnection>] [-WhatIf] [-Confirm]
+Export-AdoBuildTestFailure [-InputObject] <AdoBuildTestFailureSet> [-Culture <string>] [-Path <string>] [-SkipAttachments] [-AllRunAttachments] [-NoClobber] [-Open] [-Connection <AdoConnection>] [-WhatIf] [-Confirm]
 ```
 
 ## ALIASES
@@ -36,8 +36,16 @@ Case links, and diagnostics. The report is complete with scripts blocked; a smal
 static script, allowed by a hash-based Content Security Policy, adds filtering,
 keyboard navigation and copy.
 
-Unless `-SkipAttachments` is used, attachments of every reported result and its
-sub-results are downloaded in report order into a folder named
+By default, attachments of reported results and sub-results are downloaded only from
+the build's most recent test run. The latest run is the last in attempt order: stage,
+phase and job attempt, then start date and run ID. Earlier runs' attachments remain
+listed with name, size and an Azure DevOps result link; every run and attempt stays
+in the report. If the latest run has no attachments, the export does not fall back
+to an older run and creates no attachment folder.
+
+Use `-AllRunAttachments` to download attachments from every reported run, or
+`-SkipAttachments` to download none. `-SkipAttachments` takes precedence if both are
+supplied. Selected attachments are downloaded in report order into a folder named
 `<report base name>.files-<UTC stamp>` beside the report. Local files use toolkit
 names: `r<run>-<result>[-s<sub-result>]-a<attachment>.<ext>`. Remote names are display
 text and never become paths.
@@ -147,7 +155,28 @@ HelpMessage: ''
 
 ### -SkipAttachments
 
-Downloads nothing and creates no folder; attachments are listed with their Azure DevOps names and sizes.
+Downloads nothing and creates no folder; attachments are listed with their Azure DevOps names, sizes and result links. Takes precedence over -AllRunAttachments.
+
+```yaml
+Type: System.Management.Automation.SwitchParameter
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
+### -AllRunAttachments
+
+Downloads attachments from every reported run instead of only the most recent run. Existing per-file and total size limits still apply. Has no effect with -SkipAttachments.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter

@@ -45,7 +45,11 @@ public sealed class TestCaseExporter
         if (!shouldProcess(path)) return null;
         FileInfo file = writer.Write(path, output => Render(model, output, options.Format, options.IncludeSource),
             temporary => Validate(temporary, model, options.Format), options.SessionCulture, options.NoClobber, cancellationToken);
-        if (options.Open) launcher.Open(file.FullName);
+        if (options.Open)
+        {
+            if (ShellDocumentLauncher.CanOpen(file.FullName)) launcher.Open(file.FullName);
+            else warning(Messages.Get(AdoMessage.ExportNotOpened, options.SessionCulture, file.FullName));
+        }
         return file;
     }
 

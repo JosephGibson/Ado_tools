@@ -15,6 +15,7 @@ namespace AdoToolkit.Core.Http;
 [JsonSerializable(typeof(IdentityDto))]
 [JsonSerializable(typeof(WorkItemBatchRequestDto))]
 [JsonSerializable(typeof(WorkItemBatchDto))]
+[JsonSerializable(typeof(WorkItemTypeStatePageDto))]
 [JsonSerializable(typeof(WiqlRequestDto))]
 [JsonSerializable(typeof(WiqlResponseDto))]
 [JsonSerializable(typeof(TestPlanPageDto))]

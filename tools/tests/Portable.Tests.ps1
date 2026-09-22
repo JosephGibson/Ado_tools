@@ -160,4 +160,25 @@ Describe 'Portable console startup' {
         Should -Invoke Import-Module -Exactly -Times 1 -ParameterFilter { $Global -and $Name -eq (Join-Path $launcherRoot 'module/AdoToolkit.psd1') }
         Should -Invoke Set-Location -Exactly -Times 1 -ParameterFilter { $LiteralPath -eq $launcherRoot }
     }
+
+    It 'greets the <Culture> console with correctly spelled text' -TestCases @(
+        @{ Culture = 'fr-CA'; Text = 'AdoToolkit 0.4.0 est prêt.' },
+        @{ Culture = 'en-US'; Text = 'AdoToolkit 0.4.0 is ready.' }
+    ) {
+        param($Culture, $Text)
+        $launcherRoot = Join-Path $packageTools 'portable'
+        Mock Import-Module {
+            [pscustomobject]@{ Version = [version] '0.4.0'; ExportedCmdlets = @(1..22); ModuleBase = Join-Path $launcherRoot 'module' }
+        }
+        Mock Set-Location { }
+        Mock Write-Host { }
+        $previous = [CultureInfo]::CurrentUICulture
+        try {
+            [CultureInfo]::CurrentUICulture = [CultureInfo]::GetCultureInfo($Culture)
+            & (Join-Path $launcherRoot 'Start-AdoToolkit.ps1')
+        }
+        finally { [CultureInfo]::CurrentUICulture = $previous }
+        Should -Invoke Write-Host -Exactly -Times 3
+        Should -Invoke Write-Host -Exactly -Times 1 -ParameterFilter { [string] $Object -ceq $Text }
+    }
 }

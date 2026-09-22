@@ -12,7 +12,7 @@ public sealed class ProfileNameCompleter : IArgumentCompleter
         {
             WildcardPattern pattern = new(WildcardPattern.Escape(wordToComplete.Trim('\'')) + "*", WildcardOptions.IgnoreCase | WildcardOptions.CultureInvariant);
             return new ConfigurationStore().Load(CultureInfo.InvariantCulture).Profiles.Keys.Where(pattern.IsMatch)
-                .Order(StringComparer.OrdinalIgnoreCase).Select(name => new CompletionResult("'" + name.Replace("'", "''", StringComparison.Ordinal) + "'", name, CompletionResultType.ParameterValue, name)).ToArray();
+                .Order(StringComparer.OrdinalIgnoreCase).Select(name => new CompletionResult("'" + CodeGeneration.EscapeSingleQuotedStringContent(name) + "'", name, CompletionResultType.ParameterValue, name)).ToArray();
         }
         catch (AdoException) { return []; }
     }

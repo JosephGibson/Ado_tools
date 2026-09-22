@@ -4,7 +4,7 @@
 PowerShell toolkit for Azure DevOps Server 2020: compiled C\# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 <!-- project:end -->
 
-**Version 0.3.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.4.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
@@ -12,13 +12,13 @@ DevOps. Its cmdlets return typed objects that you can use in pipelines, and it w
 standalone HTML, Markdown or JSON reports when you need a document. All messages,
 report labels and help are available in English and French.
 
-Version 0.3.0 adds a portable Windows x64 download that includes PowerShell, and reworks
-the failed-test report for builds with hundreds of failures and many attempts: an overview
-table, failures grouped by error, collapsed attempts grouped by stage or job (English and
-French apart), and search across every attempt. Reports are about seven times smaller.
-Flaky tests are left out unless you ask for them, attachments are limited to recent runs,
-and only JSON and text attachments are downloaded. See the [release notes](docs/release-0.3.0.md)
-for the changes, validation evidence and remaining work-PC checks.
+Version 0.4.0 shows the bugs of each failed test: the bugs associated with its test
+results and the bugs linked to its Test Case, with their title and state and whether they
+are still open. `Get-AdoBuildTestFailure` returns them in `Bugs` and `HasOpenBug`, and the
+failed-test report marks tests with an open bug and can show only the tests that no open
+bug tracks yet. This release also shows every report time in the export's time zone and
+closes several security and robustness gaps. See the [release notes](docs/release-0.4.0.md)
+for every change, the validation evidence and the remaining work-PC checks.
 
 > [!NOTE]
 > Live validation against Azure DevOps Server 2020 is in progress. Connections, projects,
@@ -33,7 +33,7 @@ for the changes, validation evidence and remaining work-PC checks.
 | Test Cases | Plans and suite trees; Test Cases with recursively expanded Shared Steps, parameters and diagnostics | `Get-AdoTestPlan`, `Get-AdoTestSuite`, `Get-AdoTestCase` |
 | Reports and bulk export | One HTML, Markdown or JSON document for a Test Case, a suite tree or a WIQL result | `Export-AdoTestCase` |
 | Pipeline triage | Build lookup by definition and branch, deepest timeline failures, byte-exact log downloads | `Get-AdoBuildDefinition`, `Get-AdoBuild`, `Get-AdoBuildTimeline`, `Get-AdoBuildFailure`, `Save-AdoBuildLog` |
-| Failed-test reports | Failed and flaky tests with every attempt, grouped by stage or job, run history, and a compact searchable HTML report with JSON and text attachments | `Get-AdoTestRun`, `Get-AdoBuildTestFailure`, `Export-AdoBuildTestFailure` |
+| Failed-test reports | Failed and flaky tests with every attempt, grouped by stage or job, their bugs and whether one is open, run history, and a compact searchable HTML report with JSON and text attachments | `Get-AdoTestRun`, `Get-AdoBuildTestFailure`, `Export-AdoBuildTestFailure` |
 
 ## Requirements
 
@@ -87,7 +87,8 @@ Test-AdoConnection        # commands connect with the default profile
 # Every Test Case in a suite tree, as one HTML report in Downloads
 Get-AdoTestCase -PlanId 10 -SuiteId 11 -Recurse | Export-AdoTestCase -Open
 
-# The failed and flaky tests of the latest failed build on main, as an HTML report
+# The failed tests of the latest failed build on main, with their bugs, as an HTML report
+# (add -IncludeFlaky to Export-AdoBuildTestFailure to list flaky tests too)
 Get-AdoBuildTestFailure -Definition 'Web CI' -Branch main -Result Failed |
     Export-AdoBuildTestFailure -Path .\reports -Open
 

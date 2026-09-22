@@ -26,9 +26,15 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       POWERSHELL_TELEMETRY_OPTOUT: '1'
       POWERSHELL_VERSION: '7.6.6'
+      # SHA-256 of PowerShell-7.6.6-win-x64.zip as published in that release's hashes.sha256. The
+      # published file comes from the same place as the archive, so the bundled runtime is pinned here.
+      POWERSHELL_SHA256: '02fe458be20493fbdf43f61ea20610b811ee6c738ab1676c61b9cfcd1a33c860'
       ADOTOOLKIT_RELEASE_BUILD: '1'
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Third-party modules, packages and tests run in this job; only the publish step gets the token.
+          persist-credentials: false
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -46,8 +52,12 @@ jobs:
           Invoke-WebRequest -Uri "$base/hashes.sha256" -OutFile $hashes
           $line = Get-Content -LiteralPath $hashes | Where-Object { $_ -match ([regex]::Escape($name) + '\s*$') } | Select-Object -First 1
           $expected = if ($line) { ($line.Trim() -split '\s+')[0] } else { '' }
-          if ($expected -notmatch '^[A-Fa-f0-9]{64}$' -or $expected -ne (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash) {
+          $actual = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
+          if ($expected -notmatch '^[A-Fa-f0-9]{64}$' -or $expected -ne $actual) {
             throw 'The PowerShell download does not match its published hash.'
+          }
+          if ("$env:POWERSHELL_SHA256" -notmatch '^[A-Fa-f0-9]{64}$' -or $env:POWERSHELL_SHA256 -ne $actual) {
+            throw 'The PowerShell download does not match the pinned hash.'
           }
           $target = Join-Path $env:RUNNER_TEMP 'pwsh'
           Expand-Archive -LiteralPath $zip -DestinationPath $target

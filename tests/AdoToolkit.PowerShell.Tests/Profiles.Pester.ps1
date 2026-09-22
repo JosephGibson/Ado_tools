@@ -34,6 +34,33 @@ Describe 'Local profiles' -Tag 'S0-5' {
         (Get-Content -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Raw | ConvertFrom-Json).defaultProfile | Should -BeNullOrEmpty
     }
 
+    It 'completes a profile name with a typographic apostrophe as one pasteable argument' {
+        $name = "Équipe d$([char]0x2019)Alice"
+        Set-AdoProfile -Name $name -CollectionUrl 'https://ado.example.test/Collection' | Out-Null
+        $line = 'Connect-Ado -Profile É'
+        $text = @([System.Management.Automation.CommandCompletion]::CompleteInput($line, $line.Length, $null).CompletionMatches.CompletionText)
+        $text.Count | Should -Be 1
+        $tokens = $null
+        $errors = $null
+        $ast = [System.Management.Automation.Language.Parser]::ParseInput("Connect-Ado -Profile $($text[0])", [ref] $tokens, [ref] $errors)
+        $errors.Count | Should -Be 0
+        $ast.EndBlock.Statements[0].PipelineElements[0].CommandElements[2].Value | Should -Be $name
+    }
+
+    It 'rejects a blank profile name as a parameter error without writing' {
+        { Set-AdoProfile -Name ' ' -CollectionUrl 'https://ado.example.test/Collection' } |
+            Should -Throw -ErrorId 'ParameterArgumentValidationError,AdoToolkit.SetAdoProfileCommand'
+        { Remove-AdoProfile -Name ' ' -Confirm:$false } | Should -Throw -ErrorId 'ParameterArgumentValidationError,AdoToolkit.RemoveAdoProfileCommand'
+        Test-Path -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH | Should -BeFalse
+    }
+
+    It 'reports a repeated property in the configuration file as a configuration error' {
+        [void] [System.IO.Directory]::CreateDirectory((Split-Path -Parent $env:ADOTOOLKIT_CONFIG_PATH))
+        [System.IO.File]::WriteAllText($env:ADOTOOLKIT_CONFIG_PATH, '{"defaultProfile":"a","defaultProfile":"b"}')
+        { Get-AdoProfile -ErrorAction Stop } | Should -Throw -ErrorId 'AdoConfiguration,AdoToolkit.GetAdoProfileCommand'
+        { Connect-Ado -ErrorAction Stop } | Should -Throw -ErrorId 'AdoConfiguration,AdoToolkit.ConnectAdoCommand'
+    }
+
     It 'rejects a request timeout above one day without writing' {
         { Set-AdoProfile -Name sample -CollectionUrl 'https://ado.example.test/Collection' -RequestTimeoutSeconds 86401 } |
             Should -Throw -ErrorId 'ParameterArgumentValidationError,AdoToolkit.SetAdoProfileCommand'

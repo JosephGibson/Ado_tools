@@ -54,8 +54,10 @@ Prerequisites must already be installed and packages restored. Verification neve
 installs anything. External stages run with `CI=true`, `NO_COLOR=1` and Corepack
 network access disabled. Each one has a five-minute timeout, and on timeout its
 process tree is stopped. Only the last 120 output lines are kept, each truncated to
-2,000 characters. Results come from exit codes and structured outcomes, never from
-console text.
+2,000 characters. Pass, fail and incomplete come from exit codes and structured
+outcomes, never from console text. An external stage's lines that mention something
+skipped, missing or not installed are also reported as advisory warnings; they never
+change the result.
 
 ### Product gate
 
@@ -186,8 +188,8 @@ pwsh -NoProfile -File ./tools/package/New-AdoToolkitRelease.ps1 `
     -PowerShellChecksumPath ./artifacts/runtime-download/hashes.sha256 `
     -PowerShellVersion 7.6.6
 pwsh -NoProfile -File ./tools/package/Test-AdoToolkitPortable.ps1 `
-    -ArchivePath ./artifacts/release/AdoToolkit-0.3.0-win-x64.zip `
-    -ModuleVersion 0.3.0 -PowerShellVersion 7.6.6
+    -ArchivePath ./artifacts/release/AdoToolkit-0.4.0-win-x64.zip `
+    -ModuleVersion 0.4.0 -PowerShellVersion 7.6.6
 ```
 
 The launcher loads only the adjacent AdoToolkit module and opens the bundled host
@@ -195,18 +197,23 @@ without user profiles. It sets `RemoteSigned` for that process, respects Group
 Policy, and does not persist execution-policy or `PATH` changes. Users unblock the
 downloaded ZIP in Explorer before extraction. New releases carry runtime updates;
 the private runtime does not update itself. Keep the workflow's `POWERSHELL_VERSION`
-pin current and rerun the gate and portable smoke check when updating it.
+and `POWERSHELL_SHA256` pins current together, taking the hash from that PowerShell
+release's `hashes.sha256`, and rerun the gate and portable smoke check when updating
+them.
 
 To publish a release:
 
 1. Set `VersionPrefix` in `Directory.Build.props` and run `verify`.
-2. Push a tag named `v<VersionPrefix>`, for example `v0.3.0`.
+2. Push a tag named `v<VersionPrefix>`, for example `v0.4.0`.
 
-`.github/workflows/release.yml` then runs on a Windows runner. It installs the pinned
-PowerShell 7.6 after checking its published hash, installs Pester, PSScriptAnalyzer
-and PlatyPS, and checks the tag against the module version. It then restores in
-locked mode, runs `verify`, packages the verified build, and creates the GitHub
-release with five assets and portable-first install notes. Before publication it
+`.github/workflows/release.yml` then runs on a Windows runner. It checks out the
+repository without keeping the job's write token in the Git configuration, because
+third-party modules, packages and tests run in the same job; only the publishing step
+receives the token. It installs the pinned PowerShell 7.6 after checking the download
+against both its published `hashes.sha256` and the SHA-256 pinned in the workflow,
+installs Pester, PSScriptAnalyzer and PlatyPS, and checks the tag against the module
+version. It then restores in locked mode, runs `verify`, packages the verified build,
+and creates the GitHub release with five assets and portable-first install notes. Before publication it
 checks the finished portable ZIP with `Test-AdoToolkitPortable.ps1`; the check uses
 a fresh folder containing spaces and shell metacharacters. AdoToolkit scripts and
 modules are unsigned by decision. Checksums detect download corruption; they are
@@ -226,7 +233,7 @@ shape check also prints `SHAPE` lines. No work values are printed. Exit codes ar
 | `Connection.Live.ps1` | Installation, access and project listing | `ADOTOOLKIT_LIVE_PROFILE` |
 | `Smoke.Live.ps1` | The user workflow through the cmdlets: connection, test runs, failed-test retrieval, report rendering, and optionally a Test Case report. Failures show the error code, operation and JSON path. Reports are rendered to a temporary folder that is deleted | `ADOTOOLKIT_LIVE_PROFILE`, then `ADOTOOLKIT_LIVE_TEST_BUILD_ID` or `ADOTOOLKIT_LIVE_DEFINITION`, and optionally `ADOTOOLKIT_LIVE_PLAN_ID` with `ADOTOOLKIT_LIVE_SUITE_ID` |
 | `Shape.Live.ps1` | Samples projects, BuildGet, build logs/timeline, test runs/results/detail, result/sub-result attachments and test plans/suites/cases. Prints allowlisted property paths and JSON kinds. Unknown keys become `<unknown>`; dynamic bags, including `customFields[].value`, are opaque. Samples do not establish complete enumeration | `ADOTOOLKIT_LIVE_PROFILE`, and optionally `ADOTOOLKIT_LIVE_TEST_BUILD_ID`, `ADOTOOLKIT_LIVE_PLAN_ID` and `ADOTOOLKIT_LIVE_SUITE_ID` |
-| `TestFailures.Live.ps1` | V-19–V-25. Optional fields may be absent. V-22 requires observed rerun details and distinct nested retry attempts, with complete paging; supplying build IDs alone does not pass | `ADOTOOLKIT_LIVE_PROFILE`, `ADOTOOLKIT_LIVE_TEST_BUILD_ID`; retry checks also need `ADOTOOLKIT_LIVE_RERUN_BUILD_ID` and `ADOTOOLKIT_LIVE_REATTEMPT_BUILD_ID` |
+| `TestFailures.Live.ps1` | V-19–V-25 and V-30. Optional fields may be absent. V-22 requires observed rerun details and distinct nested retry attempts, with complete paging; supplying build IDs alone does not pass. V-30 checks the bug lookup added in 0.4.0: the Bug category, the state categories of its first type on the `6.0-preview.1` states route, the Test Case read with relations, and the installed module's own lookup for the build, printing counts only | `ADOTOOLKIT_LIVE_PROFILE`, `ADOTOOLKIT_LIVE_TEST_BUILD_ID`; retry checks also need `ADOTOOLKIT_LIVE_RERUN_BUILD_ID` and `ADOTOOLKIT_LIVE_REATTEMPT_BUILD_ID` |
 | `Triage.Live.ps1` | V-11/V-14: timeline retries, continuation headers and log range semantics, including 64-bit line counts. This file exists in the repository | `ADOTOOLKIT_LIVE_PROFILE`, `ADOTOOLKIT_LIVE_DEFINITION`, `ADOTOOLKIT_LIVE_BUILD_ID`; optionally `ADOTOOLKIT_LIVE_RETRIED_BUILD_ID` |
 | `TestCase.Live.ps1` | V-01/02/03/05/10/13. V-10 acceptance contradicts the exclusion assumption; rejection is confirmed only if separate fields/expand control requests succeed. V-02 needs visual comparison; markup presence alone cannot prove formatting semantics | `ADOTOOLKIT_LIVE_PROFILE`, `ADOTOOLKIT_LIVE_TESTCASE_ID`; shared parameters also need `ADOTOOLKIT_LIVE_SHARED_PARAM_CASE_ID` |
 | `Bulk.Live.ps1` | V-04/V-06. Repeated continuation tokens or the 50-page ceiling yield incomplete enumeration and cannot pass V-04 | `ADOTOOLKIT_LIVE_PROFILE`, `ADOTOOLKIT_LIVE_PLAN_ID`, `ADOTOOLKIT_LIVE_SUITE_ID` |

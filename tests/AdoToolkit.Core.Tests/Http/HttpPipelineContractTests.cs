@@ -46,7 +46,7 @@ public sealed class HttpPipelineContractTests
     [Trait("Acceptance", "S0-3")]
     public void RegistryContainsOnlyUniqueExactServer2020Endpoints()
     {
-        Assert.Equal(19, EndpointRegistry.All.Count);
+        Assert.Equal(20, EndpointRegistry.All.Count);
         Assert.Equal(EndpointRegistry.All.Count, EndpointRegistry.All.Select(item => item.Name).Distinct(StringComparer.Ordinal).Count());
         Assert.Equal("6.0", EndpointRegistry.ProjectsList.ApiVersion);
         Assert.Equal(PagingStrategy.TopSkip, EndpointRegistry.ProjectsList.Paging);
@@ -66,6 +66,10 @@ public sealed class HttpPipelineContractTests
         Assert.All(new[] { EndpointRegistry.TestResultAttachmentsList, EndpointRegistry.TestSubResultAttachmentsList,
             EndpointRegistry.TestResultAttachmentContent }, static item => Assert.Equal("6.0-preview.1", item.ApiVersion));
         Assert.Equal(TimeoutClass.Download, EndpointRegistry.TestResultAttachmentContent.Timeout);
+        // Server 2020 documents the state list with its categories only as a preview version.
+        Assert.Equal("{project}/_apis/wit/workitemtypes/{type}/states", EndpointRegistry.WorkItemTypeStates.RouteTemplate);
+        Assert.Equal("6.0-preview.1", EndpointRegistry.WorkItemTypeStates.ApiVersion);
+        Assert.Equal(TimeoutClass.Metadata, EndpointRegistry.WorkItemTypeStates.Timeout);
         Assert.Equal("application/octet-stream", EndpointRegistry.TestResultAttachmentContent.Accept);
         Assert.All(EndpointRegistry.All, static item => Assert.True(item.IsSafeToRetry));
     }
@@ -100,6 +104,22 @@ public sealed class HttpPipelineContractTests
         Assert.Throws<ArgumentException>(() => RequestBuilder.Create(new Uri("https://ado.example.test/Collection"),
             endpoint, CultureInfo.InvariantCulture, new Dictionary<string, string> { ["project"] = "sample" },
             new Dictionary<string, string> { ["api-version"] = "7.0" }));
+    }
+
+    // Uri collapses "." and ".." segments even after escaping, so such a value would send an
+    // authenticated request above the collection, for example to the server-level /tfs/_apis.
+    [Theory]
+    [InlineData("..")]
+    [InlineData(".")]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void RouteValuesThatAreEmptyOrDotSegmentsAreRejectedBeforeAnyRequest(string project)
+    {
+        Assert.Throws<ArgumentException>(() => RequestBuilder.Create(new Uri("https://ado.example.test/tfs/Collection"),
+            EndpointRegistry.BuildGet, CultureInfo.InvariantCulture, new Dictionary<string, string> { ["project"] = project, ["buildId"] = "1" }));
+        using HttpRequestMessage kept = RequestBuilder.Create(new Uri("https://ado.example.test/tfs/Collection"),
+            EndpointRegistry.BuildGet, CultureInfo.InvariantCulture, new Dictionary<string, string> { ["project"] = "...", ["buildId"] = "1" });
+        Assert.StartsWith("/tfs/Collection/.../_apis/", kept.RequestUri!.AbsolutePath, StringComparison.Ordinal);
     }
 
     [Fact]

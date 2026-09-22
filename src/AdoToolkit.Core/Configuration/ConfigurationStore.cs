@@ -104,7 +104,9 @@ public sealed class ConfigurationStore
                 Preserved = root.DeepClone().AsObject(),
             };
         }
-        catch (Exception error) when (error is JsonException or InvalidOperationException or FormatException or OverflowException)
+        // JsonObject raises ArgumentException for a repeated property name when it is first read.
+        catch (Exception error) when (error is JsonException or InvalidOperationException or FormatException or OverflowException
+            or ArgumentException)
         {
             throw new AdoConfigurationException(Messages.Get(AdoMessage.InvalidConfiguration, culture, error.GetType().Name), error);
         }

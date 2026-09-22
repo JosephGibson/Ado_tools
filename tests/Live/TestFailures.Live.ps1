@@ -12,7 +12,7 @@ $InformationPreference = 'SilentlyContinue'
 # Opt-in, installed module only (signed or unsigned). Holds every response and downloaded byte in memory and
 # writes nothing. Never prints work values: only PASS|FAIL|INCONCLUSIVE <V-ID> <structural note>.
 $checkStates = [System.Collections.Generic.List[string]]::new()
-$items = @('V-19', 'V-20', 'V-21', 'V-22', 'V-23', 'V-24', 'V-25')
+$items = @('V-19', 'V-20', 'V-21', 'V-22', 'V-23', 'V-24', 'V-25', 'V-30')
 function Write-AdoLiveResult {
     param([Parameter(Mandatory = $true)][string] $Text)
     $checkStates.Add($Text.Split(' ')[0])
@@ -34,6 +34,16 @@ function Invoke-AdoTestRequest {
     param([Parameter(Mandatory = $true)][string] $Uri, [string] $Accept = 'application/json')
     $response = Invoke-WebRequest -Uri $Uri -Method Get -UseDefaultCredentials -SkipHttpErrorCheck -MaximumRedirection 0 `
         -Headers @{ 'Accept-Language' = $PSUICulture; Accept = $Accept } -TimeoutSec $connection.RequestTimeoutSeconds
+    if ([int] $response.StatusCode -ne 200) { throw 'HTTP_STATUS_DIFFERS' }
+    return $response
+}
+
+# The work item batch read, as the module sends it for a Test Case and its links.
+function Invoke-AdoTestBatch {
+    param([Parameter(Mandatory = $true)][string] $Body)
+    $response = Invoke-WebRequest -Uri ($connection.CollectionUri.AbsoluteUri.TrimEnd('/') + '/_apis/wit/workitemsbatch?api-version=6.0') `
+        -Method Post -Body $Body -ContentType 'application/json' -UseDefaultCredentials -SkipHttpErrorCheck -MaximumRedirection 0 `
+        -Headers @{ 'Accept-Language' = $PSUICulture; Accept = 'application/json' } -TimeoutSec $connection.RequestTimeoutSeconds
     if ([int] $response.StatusCode -ne 200) { throw 'HTTP_STATUS_DIFFERS' }
     return $response
 }
@@ -368,6 +378,55 @@ try {
         }
     }
     catch { Write-AdoLiveResult 'FAIL V-24 CHECK_FAILED' }
+
+    # V-30: the bug lookup added in 0.4.0. The Bug category, the state categories of its first type
+    # from the 6.0-preview.1 states route, a Test Case read with relations, then the installed
+    # module's own lookup for this build. Type names, states and titles are never printed.
+    try {
+        $category = (Invoke-AdoTestRequest -Uri ($projectBase + '/_apis/wit/workitemtypecategories/Microsoft.BugCategory?api-version=6.0')).Content |
+            ConvertFrom-Json
+        $types = @(@(Get-AdoLivePropertyValue $category 'workItemTypes') | ForEach-Object { [string] (Get-AdoLivePropertyValue $_ 'name') } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        $stateCount = 0
+        $unknownCategories = 0
+        if ($types.Count -gt 0) {
+            $statesUri = $projectBase + '/_apis/wit/workitemtypes/' + [uri]::EscapeDataString($types[0]) + '/states?api-version=6.0-preview.1'
+            foreach ($state in @(((Invoke-AdoTestRequest -Uri $statesUri).Content | ConvertFrom-Json).value)) {
+                $stateCount++
+                # Category names are the documented enumeration, so only its members count as known.
+                if ([string] (Get-AdoLivePropertyValue $state 'category') -notin @('Proposed', 'InProgress', 'Resolved', 'Completed', 'Removed')) {
+                    $unknownCategories++
+                }
+            }
+        }
+        $caseId = 0
+        $relations = 'NO_TESTCASE'
+        $reference = if ($null -ne $detail) { Get-AdoLivePropertyValue $detail 'testCase' } else { $null }
+        if ([int]::TryParse([string] (Get-AdoLivePropertyValue $reference 'id'), [ref] $caseId) -and $caseId -gt 0) {
+            $body = '{"ids":[' + $caseId.ToString([cultureinfo]::InvariantCulture) + '],"errorPolicy":"omit","$expand":"relations"}'
+            $read = @(((Invoke-AdoTestBatch -Body $body).Content | ConvertFrom-Json).value | Where-Object { $null -ne $_ })
+            $links = @($read | ForEach-Object { @(Get-AdoLivePropertyValue $_ 'relations') } | Where-Object {
+                    ([string] (Get-AdoLivePropertyValue $_ 'url')) -match '/_apis/wit/workItems/[0-9]+$' })
+            $relations = if ($read.Count -eq 0) { 'TESTCASE_UNREADABLE' } else { 'WORKITEM_LINKS=' + $links.Count.ToString([cultureinfo]::InvariantCulture) }
+        }
+        $set = Get-AdoBuildTestFailure -BuildId $buildId -HistoryCount 1 -WarningAction SilentlyContinue
+        $bugs = @($set.Failures | ForEach-Object { $_.Bugs })
+        $codes = @($set.Diagnostics | ForEach-Object Code)
+        $counts = [ordered]@{
+            TYPES = $types.Count; STATES = $stateCount; TESTS = @($set.Failures).Count; BUGS = $bugs.Count
+            OPEN = @($bugs | Where-Object IsOpen).Count; LINKED = @($bugs | Where-Object IsLinkedToTestCase).Count
+            LOOKUP_FAILED = @($codes | Where-Object { $_ -eq 'BugLookupFailed' }).Count
+            METADATA_UNAVAILABLE = @($codes | Where-Object { $_ -eq 'BugMetadataUnavailable' }).Count
+            UNRESOLVED = @($codes | Where-Object { $_ -eq 'UnresolvedBug' }).Count
+        }
+        $note = (@($counts.GetEnumerator() | ForEach-Object { $_.Key + '=' + ([int] $_.Value).ToString([cultureinfo]::InvariantCulture) }) + $relations) -join ' '
+        if ($types.Count -eq 0) { Write-AdoLiveResult "FAIL V-30 BUG_CATEGORY_EMPTY $note" }
+        elseif ($stateCount -eq 0 -or $unknownCategories -gt 0) { Write-AdoLiveResult "FAIL V-30 STATE_CATEGORIES_DIFFER UNKNOWN=$unknownCategories $note" }
+        elseif ($counts.LOOKUP_FAILED -gt 0 -or $counts.METADATA_UNAVAILABLE -gt 0) { Write-AdoLiveResult "FAIL V-30 MODULE_LOOKUP_DEGRADED $note" }
+        elseif ($counts.BUGS -eq 0) { Write-AdoLiveResult "INCONCLUSIVE V-30 NO_BUGS_ON_REPORTED_TESTS $note" }
+        else { Write-AdoLiveResult "PASS V-30 BUG_ROUTES_AND_LOOKUP_AGREE $note" }
+    }
+    catch { Write-AdoLiveResult 'FAIL V-30 CHECK_FAILED' }
 
     # S5-10 also requires the manual acceptance run in plan section 8.
     if ($checkStates.Contains('FAIL')) { exit 1 }

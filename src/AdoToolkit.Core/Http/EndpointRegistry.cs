@@ -10,6 +10,9 @@ internal static class EndpointRegistry
         "WorkItemsBatch", HttpMethod.Post, "_apis/wit/workitemsbatch", "6.0", PagingStrategy.IdChunks, true, TimeoutClass.Query, 200);
     internal static EndpointDefinition WorkItemTypeCategory { get; } = new(
         "WorkItemTypeCategory", HttpMethod.Get, "{project}/_apis/wit/workitemtypecategories/{category}", "6.0", PagingStrategy.None, true, TimeoutClass.Metadata);
+    // Server 2020 documents this route only as 6.0-preview.1; it names each state's category.
+    internal static EndpointDefinition WorkItemTypeStates { get; } = new(
+        "WorkItemTypeStates", HttpMethod.Get, "{project}/_apis/wit/workitemtypes/{type}/states", "6.0-preview.1", PagingStrategy.None, true, TimeoutClass.Metadata);
     // WIQL has no paging: the 20,000-result cap is enforced by WiqlService (§9.2).
     internal static EndpointDefinition Wiql { get; } = new(
         "Wiql", HttpMethod.Post, "{project}/_apis/wit/wiql", "6.0", PagingStrategy.None, true, TimeoutClass.Query);
@@ -51,7 +54,7 @@ internal static class EndpointRegistry
         PagingStrategy.None, true, TimeoutClass.Download, Accept: "application/octet-stream");
     internal static IReadOnlyList<EndpointDefinition> All { get; } = Array.AsReadOnly(new[]
     {
-        ProjectsList, WorkItemsBatch, WorkItemTypeCategory, Wiql, TestPlansList, TestSuitesForPlan, SuiteTestCaseList,
+        ProjectsList, WorkItemsBatch, WorkItemTypeCategory, WorkItemTypeStates, Wiql, TestPlansList, TestSuitesForPlan, SuiteTestCaseList,
         BuildDefinitionsList, BuildsList, BuildTimeline, BuildLogsList, BuildLog, BuildGet,
         TestRunsList, TestResultsList, TestResultGet, TestResultAttachmentsList, TestSubResultAttachmentsList,
         TestResultAttachmentContent,

@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-16-2026
+ms.date: 09-21-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoBuildTestFailure
 ---
@@ -44,7 +44,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Émet un objet AdoBuildTestFailureSet par build reçu. La récupération se fait en deux passes. La première liste tous les résultats de tests de toutes les séries du build, regroupe les résultats en identités de tests d’après le stockage et le nom du test automatisé, puis classe chaque identité. La seconde lit les détails complets uniquement pour les identités ayant une tentative en échec, dans l’ordre du rapport, afin d’obtenir chaque tentative, message, trace de pile et liste de pièces jointes. Un test est signalé dès qu’une tentative a échoué. Les tentatives sont regroupées selon les noms de phase, de travail et d’instance du travail de leurs séries de tests : une identité est instable (Flaky) lorsque la dernière tentative de chaque groupe a réussi, sinon en échec (Failed), de sorte qu’un échec dans une phase n’est jamais masqué par une réussite ultérieure dans une autre. Les séries sans noms distincts forment un seul groupe, où la dernière tentative décide. Toutes les tentatives sont conservées, y compris celles qui ont réussi. Les groupes de réexécution dans la tâche, les nouvelles tentatives de travail ou d’étape et les résultats simples sont tous des sources de tentatives ; les groupes pilotés par les données et les autres groupes qui ne sont pas des réexécutions sont imbriqués dans leur tentative. Les références aux cas de test sont résolues en un seul lot. L’historique des exécutions ajoute le build courant et des builds antérieurs de la même définition, avec des décomptes et une cellule par identité signalée ; un problème d’historique ne fait jamais échouer le rapport. Les tests qui ont seulement réussi ou qui n’ont pas été exécutés sont comptés dans le sommaire et l’historique, sans détail. Les métadonnées des pièces jointes sont lues ici ; leur contenu n’est téléchargé que par Export-AdoBuildTestFailure. Le statut est Partial lorsqu’un diagnostic d’erreur existe, par exemple lorsque le nombre d’identités en échec dépasse le maximum configuré. Avec -Definition, le dernier build terminé de la définition est choisi, comme avec Get-AdoBuild -Latest, éventuellement filtré par branche et par résultat.
+Émet un objet AdoBuildTestFailureSet par build reçu. La récupération se fait en deux passes. La première liste tous les résultats de tests de toutes les séries du build, regroupe les résultats en identités de tests d’après le stockage et le nom du test automatisé, puis classe chaque identité. La seconde lit les détails complets uniquement pour les identités ayant une tentative en échec, dans l’ordre du rapport, afin d’obtenir chaque tentative, message, trace de pile et liste de pièces jointes. Un test est signalé dès qu’une tentative a échoué. Les tentatives sont regroupées selon les noms de phase, de travail et d’instance du travail de leurs séries de tests : une identité est instable (Flaky) lorsque la dernière tentative de chaque groupe a réussi, sinon en échec (Failed), de sorte qu’un échec dans une phase n’est jamais masqué par une réussite ultérieure dans une autre. Les séries sans noms distincts forment un seul groupe, où la dernière tentative décide. Toutes les tentatives sont conservées, y compris celles qui ont réussi. Les groupes de réexécution dans la tâche, les nouvelles tentatives de travail ou d’étape et les résultats simples sont tous des sources de tentatives ; les groupes pilotés par les données et les autres groupes qui ne sont pas des réexécutions sont imbriqués dans leur tentative. Les références aux cas de test sont résolues en un seul lot, qui liste aussi les liens de chaque cas de test. Chaque test signalé liste ensuite ses bogues dans Bugs : tout élément de travail associé à l’un de ses résultats de test, et tout élément de travail lié à son cas de test, quel que soit le type de lien, dont le type fait partie de la catégorie Bogue du projet (Microsoft.BugCategory). Leur titre, leur état, leur type et leur projet sont lus par lots d’au plus 200, jamais par une requête par test. Un bogue est ouvert (IsOpen) sauf si son état appartient à la catégorie d’états Completed ou Removed, lue une fois par projet et type d’élément de travail; un bogue Resolved reste donc ouvert. HasOpenBug est vrai lorsqu’au moins un bogue est ouvert. Si la catégorie Bogue ou les catégories d’états d’un projet ne peuvent pas être lues, seul le type nommé Bug compte et les états Closed, Done et Removed sont considérés comme fermés, avec un avertissement BugMetadataUnavailable. Un bogue illisible conserve le lien vers son ID avec un avertissement UnresolvedBug et, si la recherche des bogues échoue, les ID de bogues associés restent des liens avec un avertissement BugLookupFailed; aucun de ces cas ne fait échouer la récupération. L’historique des exécutions ajoute le build courant et des builds antérieurs de la même définition, avec des décomptes et une cellule par identité signalée ; un problème d’historique ne fait jamais échouer le rapport. Les tests qui ont seulement réussi ou qui n’ont pas été exécutés sont comptés dans le sommaire et l’historique, sans détail. Les métadonnées des pièces jointes sont lues ici ; leur contenu n’est téléchargé que par Export-AdoBuildTestFailure. Le statut est Partial lorsqu’un diagnostic d’erreur existe, par exemple lorsque le nombre d’identités en échec dépasse le maximum configuré. Avec -Definition, le dernier build terminé de la définition est choisi, comme avec Get-AdoBuild -Latest, éventuellement filtré par branche et par résultat.
 
 ## EXAMPLES
 
@@ -72,6 +72,14 @@ Get-AdoBuildTestFailure -Definition 'Main Build' -Branch main -Result Failed |
 ```
 
 Rassemble les tests en échec du dernier build échoué de la branche main et écrit le rapport dans un nouveau dossier, puis l’ouvre.
+
+### Exemple 4
+
+```powershell
+(Get-AdoBuildTestFailure -BuildId 401).Failures | Where-Object HasOpenBug -eq $false
+```
+
+Sélectionne les tests signalés qu’aucun bogue ouvert ne suit encore.
 
 ## PARAMETERS
 
@@ -284,9 +292,11 @@ Prend en charge les paramètres communs, dont ErrorAction, ErrorVariable, Verbos
 
 ### AdoToolkit.Core.TestRuns.AdoBuildTestFailureSet
 
+Build, Runs, Summary, History, Failures, FailedCount, FlakyCount, Status, Diagnostics, RetrievedAt et CollectionUri. Chaque AdoTestFailure a ses tentatives (Attempts), TestCase, Bugs et HasOpenBug. Chaque AdoTestBug a Id, Title, State, WorkItemType, TeamProject, StateCategory, IsOpen, IsResolved, IsAssociatedWithResult, IsLinkedToTestCase et WebUrl, et s’affiche sous forme de tableau Id, IsOpen, State, WorkItemType et Title. TeamProject est vide lorsque le bogue n’a pas pu être lu ou n’indique aucun projet utilisable.
+
 ## NOTES
 
-Nécessite PowerShell 7.6 sur Windows et Azure DevOps Server 2020. Les listes d’historique sont mises en cache pour l’invocation, de sorte que plusieurs builds d’une même définition reçus du pipeline les partagent. Toutes les routes, versions et champs de la zone de tests restent à confirmer sur le serveur (V-19 à V-25), y compris la façon dont les nouvelles tentatives sont enregistrées. Les liens Web restent à confirmer au travail (V-26).
+Nécessite PowerShell 7.6 sur Windows et Azure DevOps Server 2020. Les listes d’historique sont mises en cache pour l’invocation, de sorte que plusieurs builds d’une même définition reçus du pipeline les partagent. Toutes les routes, versions et champs de la zone de tests restent à confirmer sur le serveur (V-19 à V-25), y compris la façon dont les nouvelles tentatives sont enregistrées. Les liens Web restent à confirmer au travail (V-26). Les catégories d’états proviennent de la route des états des types d’éléments de travail en version 6.0-preview.1, que la documentation REST de Server 2020 mentionne, mais qui n’a pas encore été confirmée au travail.
 
 ## RELATED LINKS
 

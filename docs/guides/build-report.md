@@ -55,7 +55,7 @@ Check that `BuildNumber` and `Definition` are the build you meant before exporti
 | Property | What it holds |
 | --- | --- |
 | `Build` | The build the ID resolved to |
-| `Failures` | One entry per test that failed in at least one attempt |
+| `Failures` | One entry per test that failed in at least one attempt, with its attempts, Test Case, `Bugs` and `HasOpenBug` |
 | `FailedCount`, `FlakyCount` | `Failed` means the last attempt did not pass in at least one stage or job; `Flaky` means it failed, then passed later in every stage or job |
 | `Runs` | The build's test runs, in attempt order, with `StageName`, `PhaseName` and `JobName` when the server sends them |
 | `History` | Run summaries, oldest first, current build last |
@@ -65,10 +65,17 @@ Check that `BuildNumber` and `Definition` are the build you meant before exporti
 ## Step 3 — Look before you write
 
 ```powershell
-$set.Failures | Format-Table Ordinal, Classification, ShortName, Attempts
+$set.Failures | Format-Table Ordinal, Classification, ShortName, HasOpenBug
 $set.Failures | Where-Object Classification -eq Flaky | Select-Object ShortName, Attempts
+$set.Failures | Where-Object HasOpenBug -eq $false | Select-Object ShortName   # no open bug yet
 $set.Diagnostics | Format-List Severity, Code, Message
 ```
+
+`Bugs` holds the bugs associated with the test's results and the Bug-category work items
+linked to its Test Case. A bug is open unless its state is in the Completed or Removed state
+category, so a `Resolved` bug is still open. See
+[Pipeline failure triage](pipeline-triage.md#bugs) for the details and the warnings the
+lookup can add.
 
 A `Partial` status also raises a warning naming the counts. The export still runs; the
 report lists the diagnostics in its own section.
@@ -109,9 +116,9 @@ another on a single page.
 
 | View | What it shows |
 | --- | --- |
-| Overview | One row per failed test: its number, name and class, Test Case number, one status column per stage or job, and the first line of its latest error |
+| Overview | One row per failed test: its number, name and class, an **Open bug** mark when a bug still tracks it, Test Case number, one status column per stage or job, and the first line of its latest error |
 | By error | The same rows, grouped under their latest error, largest group first. Numbers and GUIDs are ignored when grouping, so "after 30012 ms" and "after 30020 ms" group together |
-| Details | One card per test: Test Case number and title, links, full name and history, then its attempts |
+| Details | One card per test: Test Case number and title, links, full name, its bugs with title, state and an **Open** mark, and history, then its attempts |
 | Runs and history | The build's test runs with their stage, job, attempts and attachment status, the run history chart, and when and where the report was made |
 | Diagnostics | Shown only when something could not be retrieved |
 
@@ -123,6 +130,9 @@ In a card, every group and every attempt starts collapsed. An attempt's summary 
 outcome, duration, machine and the first line of its error. When a later attempt has the same
 error message or stack trace as an earlier one, it shows a link to that attempt instead of
 another copy.
+
+Every date and time in the report is shown in the time zone of the computer that exported it,
+the same zone as the report's own generation time.
 
 ### English and French attempts
 
@@ -150,10 +160,12 @@ instance, `__default` when there is none.
 
 Press `/` or use the Search box. Every word you type must appear somewhere in a test's card,
 collapsed attempts included: error messages, stack traces, JSON and text attachments shown in
-the report, stage and job names, and run and attempt fields such as run name, machine or
-failure type. `12345` and `#12345` both find the tests linked to Test Case 12345. Attempts
-that match are marked in their summary line; nothing opens by itself. **Failing in**
-narrows the list to tests whose last attempt in a group failed, or failed only there.
+the report, stage and job names, run and attempt fields such as run name, machine or
+failure type, and bug titles and states. `12345` and `#12345` both find the tests linked to
+Test Case 12345. Attempts that match are marked in their summary line; nothing opens by
+itself. **Failing in** narrows the list to tests whose last attempt in a group failed, or
+failed only there. **Without an open bug**, shown when at least one test has an open bug,
+leaves only the tests that no open bug tracks yet.
 
 Keys: `j`/`k` move between tests, `Enter` opens the selected test's card, `o` opens or closes
 an attempt or group, and `Esc` in the Search box clears every filter.
@@ -238,6 +250,8 @@ failed". `Save-AdoBuildLog` needs an existing directory, unlike the export.
 | A flaky test is missing | Flaky tests are left out by default. Add `-IncludeFlaky` |
 | A run's attachments are missing | The run started before the attachment window. Raise `-AttachmentWindowDays`; the Runs and history view marks runs outside the window |
 | No English and French columns | The server sent no stage or job names, or every run has the same names. Check `$set.Runs` as shown above |
+| A bug linked to the Test Case is missing | Its type is not in the project's Bug category, or it could not be read. A `BugMetadataUnavailable` warning means only the type named `Bug` was recognized |
+| A bug shows as open although it is resolved | Only the Completed and Removed state categories count as closed; `Resolved` is its own category |
 | The report opens without filtering or keyboard shortcuts | Scripts are blocked. The report content is complete; only the built-in interactions are lost |
 
 Reports, logs and attachments can contain server names, test output and other internal

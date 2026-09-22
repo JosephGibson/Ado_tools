@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 09-21-2026
 PlatyPS schema version: 2024-05-01
 title: Connect-Ado
 ---
@@ -99,7 +99,7 @@ HelpMessage: ''
 
 ### -Project
 
-Projet par défaut de cette connexion. La complétion utilise uniquement le cache de projets de l’espace d’exécution.
+Projet par défaut de cette connexion. La complétion utilise uniquement le cache de projets de l’espace d’exécution, et un nom complété est placé entre guillemets simples de sorte qu’il puisse être exécuté tel quel. Une commande qui utilise un projet nommé . ou .. échoue avec une erreur de configuration avant toute requête.
 
 ```yaml
 Type: System.String

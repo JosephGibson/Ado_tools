@@ -23,8 +23,8 @@ defaults apply.
 - Edit other sections by hand. Settings are read each time a cmdlet runs, and a
   profile is read when `Connect-Ado` runs.
 - If the file is invalid, commands that read it fail with a configuration error.
-  Examples are malformed JSON, a limit of zero or an unsupported authentication
-  value.
+  Examples are malformed JSON, a property named twice in the same object, a limit of
+  zero or an unsupported authentication value.
 - Unknown keys produce a warning and are kept when the file is saved.
 - A file with a newer `schemaVersion` than this version supports can be read but
   not saved.

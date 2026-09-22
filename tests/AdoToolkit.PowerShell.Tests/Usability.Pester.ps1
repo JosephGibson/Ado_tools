@@ -22,7 +22,9 @@ BeforeAll {
             @{ Body = Get-TestRunFixture 'result-detail-201-1.json' },
             @{ Body = Get-TestRunFixture 'attachments-empty.json' },
             @{ Body = Get-TestRunFixture 'attachments-result.json' },
-            @{ Body = Get-TestRunFixture 'workitems-testcases.json' }
+            @{ Body = Get-TestRunFixture 'workitems-testcases.json' },
+            @{ Body = Get-TestRunFixture 'workitems-bugs.json' },
+            @{ Body = Get-TestRunFixture 'workitemtype-states-bug.json' }
         )
     }
 }
@@ -86,6 +88,26 @@ Describe 'Connection diagnostics' {
             $requests.Count | Should -Be 3
             $requests[0].Line | Should -Match '^GET /Collection/%C3%89quipe%20O(%27|'')Web/_apis/projects\?'
             $requests[1].Line | Should -Match '^GET /Collection/_apis/projects\?'
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
+    It 'quotes a suggested project with a typographic apostrophe so the command parses' {
+        $name = "Équipe d$([char]0x2019)Alice"
+        $server = Start-FakeAdoServer -Responses @(
+            @{ Status = 404; Body = '{"message":"Synthetic resource not found.","typeKey":"NotFound"}' },
+            @{ Body = '{"value":[{"id":"11111111-1111-1111-1111-111111111111","name":"' + $name + '"}]}' },
+            @{ Body = '{"value":[]}' }
+        )
+        try {
+            Connect-Ado -CollectionUrl ($server.Uri + '/' + [uri]::EscapeDataString($name)) -WarningAction SilentlyContinue | Out-Null
+            $result = Test-AdoConnection -ErrorAction SilentlyContinue
+            $command = $result.Hint.Substring($result.Hint.IndexOf('Connect-Ado', [StringComparison]::Ordinal))
+            $tokens = $null
+            $errors = $null
+            $ast = [System.Management.Automation.Language.Parser]::ParseInput($command, [ref] $tokens, [ref] $errors)
+            $errors.Count | Should -Be 0
+            $ast.EndBlock.Statements[0].PipelineElements[0].CommandElements[-1].Value | Should -Be $name
         }
         finally { Stop-FakeAdoServer -Server $server }
     }

@@ -18,6 +18,7 @@ public sealed class TestFailureRetrievalService
     private readonly TestFailureInvocationCache cache;
     private readonly TestRunService runs;
     private readonly TestCaseLinkResolver links;
+    private readonly TestBugResolver bugs;
     private readonly RequestCounter counter = new();
 
     // The cache is shared across the pipeline records of one invocation (§17).
@@ -39,6 +40,7 @@ public sealed class TestFailureRetrievalService
         this.cache = cache ?? new TestFailureInvocationCache();
         runs = new TestRunService(client, connection, log, counter);
         links = new TestCaseLinkResolver(client, connection, log, counter);
+        bugs = new TestBugResolver(client, connection, log, counter);
     }
 
     internal int RequestCount => counter.Count;
@@ -149,6 +151,11 @@ public sealed class TestFailureRetrievalService
             .ThenBy(static item => item.Group.Name ?? "", StringComparer.Ordinal)
             .ThenBy(static item => item.Group.FirstResultId)
             .ToList();
+        // One lookup for every reported test, after the Test Case read that supplies the linked work items.
+        IReadOnlyList<IReadOnlyList<AdoTestBug>> reportedBugs = await bugs.ResolveAsync([.. reported.Select(item => new TestBugReferences(
+                item.Attempts.SelectMany(static attempt => attempt.AssociatedBugIds).ToHashSet(),
+                (item.TestCaseId is int testCaseId ? links.LinkedWorkItems(testCaseId) : []).ToHashSet()))],
+            build.Id, project, culture, diagnostics, cancellationToken).ConfigureAwait(false);
         HistoryBuildData currentData = CurrentBuildData(groups, detailed, cancellationToken);
         RunHistoryService history = new(client, connection, cache, log, counter);
         IReadOnlyList<HistoryEntry> entries = await history.GetHistoryAsync(build, currentData, query.HistoryCount,
@@ -169,6 +176,7 @@ public sealed class TestFailureRetrievalService
                 Title = item.Group.Title,
                 Attempts = item.Attempts.AsReadOnly(),
                 TestCase = item.TestCaseId is int id && resolved.TryGetValue(id, out AdoTestCaseLink? link) ? link : null,
+                Bugs = reportedBugs[index],
                 History = Cells(item.Group.Identity, entries, project),
                 Owner = last.Owner?.ToDomain(),
                 Priority = last.Priority,

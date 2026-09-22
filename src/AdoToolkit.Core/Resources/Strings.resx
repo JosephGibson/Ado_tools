@@ -41,6 +41,7 @@
   <data name="WorkItemNotFound" xml:space="preserve"><value>Work item {0} was not found or is inaccessible.</value></data>
   <data name="FieldRelationsConflict" xml:space="preserve"><value>Field selection and relation expansion cannot be combined in this toolkit.</value></data>
   <data name="ProjectRequired" xml:space="preserve"><value>Specify a project with -Project or connect with a default project.</value></data>
+  <data name="InvalidProjectName" xml:space="preserve"><value>{0} is not a valid project name.</value></data>
   <data name="TestPlanNotFound" xml:space="preserve"><value>Test plan {0} was not found or is inaccessible.</value></data>
   <data name="TestSuiteNotFound" xml:space="preserve"><value>Test suite {0} was not found in test plan {1}.</value></data>
   <data name="WiqlNotFlat" xml:space="preserve"><value>Only flat work item queries are supported; link and tree queries are not.</value></data>
@@ -102,6 +103,7 @@
   <data name="IncludeSourceJsonOnly" xml:space="preserve"><value>IncludeSource requires the JSON report format.</value></data>
   <data name="NoTestCasesToExport" xml:space="preserve"><value>No test cases were received; no report was written.</value></data>
   <data name="ExportReport" xml:space="preserve"><value>Export Test Case report</value></data>
+  <data name="ExportNotOpened" xml:space="preserve"><value>The report was written to {0} but not opened: only .html, .htm, .md, .markdown, .json and .txt files are opened.</value></data>
   <data name="FileSystemPathRequired" xml:space="preserve"><value>The report path must use the FileSystem provider.</value></data>
   <data name="ReportOverview" xml:space="preserve"><value>Overview</value></data>
   <data name="ReportSteps" xml:space="preserve"><value>Steps</value></data>
@@ -128,6 +130,9 @@
   <data name="UngroupedTestResult" xml:space="preserve"><value>Result {0} in run {1} has no automated test name, so its attempts cannot be grouped.</value></data>
   <data name="InvalidTestCaseReference" xml:space="preserve"><value>Result {0} in run {1} has a Test Case reference that is not a positive integer.</value></data>
   <data name="UnresolvedTestCase" xml:space="preserve"><value>Test Case {0} is missing or inaccessible; its ID link is kept.</value></data>
+  <data name="BugLookupFailed" xml:space="preserve"><value>The bugs of the tests of build {0} could not be read; bug IDs from test results are kept as links, without title, state or open marking.</value></data>
+  <data name="UnresolvedBug" xml:space="preserve"><value>Bug {0} is missing or inaccessible; its ID link is kept.</value></data>
+  <data name="BugMetadataUnavailable" xml:space="preserve"><value>The bug types or state categories of project {0} could not be read: a linked work item counts as a bug only when its type is Bug, and a bug counts as open unless its state is Closed, Done or Removed.</value></data>
   <data name="HistoryUnavailable" xml:space="preserve"><value>Build {0} could not be read; its history bar and cells show as unavailable.</value></data>
   <data name="HistoryLimitExceeded" xml:space="preserve"><value>The maximum of {0} history request(s) was reached; older history entries are unavailable.</value></data>
   <data name="ProgressTestFailureActivity" xml:space="preserve"><value>Retrieving failed tests</value></data>
@@ -250,6 +255,10 @@
   <data name="TestReportNotInlinedSize" xml:space="preserve"><value>Too large to show here; open the local copy.</value></data>
   <data name="TestReportNotInlinedBudget" xml:space="preserve"><value>Not shown here: the report reached its limit for inline attachments; open the local copy.</value></data>
   <data name="TestReportText" xml:space="preserve"><value>Text</value></data>
+  <data name="TestReportBugList" xml:space="preserve"><value>Bugs</value></data>
+  <data name="TestReportOpen" xml:space="preserve"><value>Open</value></data>
+  <data name="TestReportOpenBug" xml:space="preserve"><value>Open bug</value></data>
+  <data name="TestReportWithoutOpenBug" xml:space="preserve"><value>Without an open bug</value></data>
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Export failed-test report</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Export failed-test report and download attachments to {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Downloading attachments: {0} of {1}</value></data>

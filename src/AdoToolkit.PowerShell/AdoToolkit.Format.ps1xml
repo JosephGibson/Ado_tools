@@ -286,13 +286,32 @@
         <TableColumnHeader><Label>Classification</Label></TableColumnHeader>
         <TableColumnHeader><Label>ShortName</Label></TableColumnHeader>
         <TableColumnHeader><Label>Attempts</Label></TableColumnHeader>
+        <TableColumnHeader><Label>HasOpenBug</Label></TableColumnHeader>
         <TableColumnHeader><Label>Storage</Label></TableColumnHeader>
       </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
         <TableColumnItem><PropertyName>Ordinal</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>Classification</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>ShortName</PropertyName></TableColumnItem>
         <TableColumnItem><ScriptBlock>$_.Attempts.Count</ScriptBlock></TableColumnItem>
+        <TableColumnItem><PropertyName>HasOpenBug</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>Storage</PropertyName></TableColumnItem>
+      </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
+    </View>
+    <View>
+      <Name>AdoToolkit.Core.TestRuns.AdoTestBug</Name>
+      <ViewSelectedBy><TypeName>AdoToolkit.Core.TestRuns.AdoTestBug</TypeName></ViewSelectedBy>
+      <TableControl><TableHeaders>
+        <TableColumnHeader><Label>Id</Label></TableColumnHeader>
+        <TableColumnHeader><Label>IsOpen</Label></TableColumnHeader>
+        <TableColumnHeader><Label>State</Label></TableColumnHeader>
+        <TableColumnHeader><Label>WorkItemType</Label></TableColumnHeader>
+        <TableColumnHeader><Label>Title</Label></TableColumnHeader>
+      </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
+        <TableColumnItem><PropertyName>Id</PropertyName></TableColumnItem>
+        <TableColumnItem><PropertyName>IsOpen</PropertyName></TableColumnItem>
+        <TableColumnItem><PropertyName>State</PropertyName></TableColumnItem>
+        <TableColumnItem><PropertyName>WorkItemType</PropertyName></TableColumnItem>
+        <TableColumnItem><PropertyName>Title</PropertyName></TableColumnItem>
       </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
     </View>
   </ViewDefinitions>

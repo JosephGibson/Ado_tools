@@ -20,7 +20,7 @@ try {
         } | ConvertTo-Json -Compress
     }
     elseif ($PSUICulture -like 'fr*') {
-        Write-Host "AdoToolkit $($module.Version) est pret."
+        Write-Host "AdoToolkit $($module.Version) est prêt."
         Write-Host 'Commandes : Get-Command -Module AdoToolkit'
         Write-Host 'Aide : Get-Help Connect-Ado -Full'
     }

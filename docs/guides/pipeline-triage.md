@@ -1,8 +1,8 @@
 # Pipeline failure triage and failed-test reports
 
 Find out why a build failed, save the relevant logs, and produce an interactive
-report of its failed and flaky tests. The examples assume that you are
-[connected](getting-started.md#connect).
+report of its failed tests and the bugs that track them. The examples assume that you
+are [connected](getting-started.md#connect).
 
 If you already have a build ID, [Export a report from a build ID](build-report.md) is
 the shortest path to the HTML report.
@@ -82,42 +82,72 @@ When the test runs carry stage or job names, attempts are grouped by them, so a 
 fails in every French attempt stays `Failed` even if an English retry passes last.
 
 Each failure keeps all its attempts, with error messages, stack traces,
-attachment metadata and any linked Test Case. Run history covers the current build
+attachment metadata, any linked Test Case and its bugs. Run history covers the current build
 and earlier builds of the same definition. It uses 10 runs on the same branch by
 default. Change that with `-HistoryCount` (1–50) and `-HistoryScope AllBranches`.
 A result set with problems, such as more failing tests than the configured maximum,
 has `Status` set to `Partial` and details in `Diagnostics`.
 
+### Bugs
+
+Each reported test lists its bugs in `Bugs`, ordered by ID: every work item associated
+with one of its test results, and every work item linked to its Test Case, by any link
+type, whose type is in the project's Bug category. `HasOpenBug` is `$true` when at least
+one of them is open.
+
+```powershell
+$set.Failures | Format-Table Ordinal, ShortName, HasOpenBug
+$set.Failures | Where-Object HasOpenBug -eq $false            # failures that no open bug tracks
+$set.Failures[0].Bugs                                         # Id, IsOpen, State, WorkItemType, Title
+```
+
+A bug is open unless its state is in the Completed or Removed state category of its
+project and type, so a `Resolved` bug is still open. Each bug also has `StateCategory`,
+`TeamProject`, `WebUrl`, and `IsAssociatedWithResult` and `IsLinkedToTestCase`, which say
+where it was found. The lookup never fails the retrieval:
+
+| Warning | What happened |
+| --- | --- |
+| `BugMetadataUnavailable` | The Bug category or state categories of a project could not be read. Only the type named `Bug` counts, and `Closed`, `Done` and `Removed` count as closed |
+| `UnresolvedBug` | A bug of a test result could not be read. It keeps its ID and link; `IsOpen` is empty |
+| `BugLookupFailed` | No bug could be read. The bug IDs of the test results stay as links; linked work items can't be told apart from bugs, so they are left out |
+
 ### The HTML report
 
-`Export-AdoBuildTestFailure` writes one dark HTML report per build. By default, the
-report is saved to your Downloads folder as `Build-<id>-TestFailures.html`. It
-contains:
+`Export-AdoBuildTestFailure` writes one dark HTML report per build, by default to your
+Downloads folder as `Build-<id>-TestFailures.html`. Its views are an overview table, the
+same rows grouped by error, one card per test with every attempt, the build's runs with the
+run history, and diagnostics when something could not be retrieved. Tests with an open bug
+are marked in both tables, each card lists the test's bugs, and **Without an open bug**
+shows only the tests that still need one. Flaky tests are left out unless you add
+`-IncludeFlaky`. Times are shown in the time zone of the computer that exported the
+report.
 
-- a run history chart and table, and an index of reported tests
-- one card per test, with every attempt, highlighted messages and stack traces,
-  and Test Case links
-- diagnostics about anything that could not be retrieved
-
-The report is complete even when scripts are blocked. A small built-in script adds
-filtering, keyboard navigation (`/`, `j`, `k`, `o`) and copying of names, messages
+The report is complete even when scripts are blocked. A small built-in script adds views,
+search, filtering, keyboard navigation (`/`, `j`, `k`, `o`) and copying of names, messages
 and stack traces.
 
-Attachments of the reported results are downloaded into a
-`<report name>.files-<UTC timestamp>` folder beside the report. PNG files are shown
-as thumbnails, and small JSON files are highlighted inline. A file that fails its
-content check is saved as `.bin` and linked without a preview. Size limits and
-failed downloads produce warnings. The affected attachments are still listed, with
-their name, size and a link to the result in Azure DevOps. See
-[Configuration](configuration.md#settings) for the limits.
+Only JSON and text attachments are downloaded, into a `<report name>.files-<UTC timestamp>`
+folder beside the report: by default those of the build's latest test run, if it started
+within the last 7 days. PNG, HTML and other attachments are listed with their name, size
+and a link to the result in Azure DevOps. A file that fails its content check is saved as
+`.bin` and linked without a preview. Size limits and failed downloads produce warnings.
+See [Configuration](configuration.md#settings) for the limits.
 
 | Option | Effect |
 | --- | --- |
 | `-SkipAttachments` | Downloads nothing; attachments are only listed |
+| `-AllRunAttachments` | Downloads JSON and text from every run inside the attachment window |
+| `-AttachmentWindowDays` | Days, 1–365, in which a run must have started for its attachments to appear. Default 7 |
+| `-IncludeFlaky` | Includes flaky tests; by default they are only counted in the header |
 | `-Path` | Directory, or an `.html` file path when one build is exported. A missing directory is created when the report is written |
 | `-Culture` | Report language, for example `fr-CA` |
 | `-NoClobber` | Refuses to replace an existing report |
+| `-Open` | Opens the report when it is written |
 | `-WhatIf` | Names the report and attachment folder without downloading or writing |
+
+[Export a report from a build ID](build-report.md) walks through the views, search and
+attachment rules in detail.
 
 An existing report is replaced only after the new attachments are downloaded and
 the new report is validated. If the export fails before that point, the previous

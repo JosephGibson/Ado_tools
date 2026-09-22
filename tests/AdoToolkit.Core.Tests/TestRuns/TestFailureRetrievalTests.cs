@@ -127,6 +127,10 @@ public sealed class TestFailureRetrievalTests
         Assert.Equal("Reviewed by the on-call.", attempt.Comment);
         Assert.Equal(399, attempt.FailingSinceBuildId);
         Assert.Equal([2001, 2002], attempt.AssociatedBugIds);
+        // Associated bugs are read in one batch: 2001 is open, 2002 is closed.
+        Assert.Equal([2001, 2002], cart.Bugs.Select(static bug => bug.Id));
+        Assert.Equal([true, false], cart.Bugs.Select(static bug => bug.IsOpen));
+        Assert.True(cart.HasOpenBug);
         Assert.Equal("Équipe Web", cart.Owner!.DisplayName);
         Assert.Equal("equipe.web@contoso.test", cart.Owner.UniqueName);
         Assert.Equal("Build Service", attempt.RunBy!.DisplayName);
@@ -154,9 +158,10 @@ public sealed class TestFailureRetrievalTests
             Assert.Null(item.SubResultId);
         });
         Assert.Empty(set.Failures[0].Attempts[0].Attachments);
-        // §15.9 bound: 2 run pages + 4 result pages + 2 details + 2 attachment lists + 1 batch.
-        Assert.Equal(11, handler.Requests.Count);
-        Assert.Equal(11, service.RequestCount);
+        // §15.9 bound: 2 run pages + 4 result pages + 2 details + 2 attachment lists + 1 Test Case batch,
+        // plus 1 bug batch and 1 state list for the one bug type.
+        Assert.Equal(13, handler.Requests.Count);
+        Assert.Equal(13, service.RequestCount);
         Assert.Equal("None", Parameter(handler.Requests[2].Uri, "detailsToInclude"));
         Assert.Equal("1000", Parameter(handler.Requests[2].Uri, "%24top"));
         Assert.DoesNotContain(handler.Requests, static request =>
@@ -193,8 +198,10 @@ public sealed class TestFailureRetrievalTests
         Assert.Equal(DiagnosticCodes.UnresolvedTestCase, diagnostic.Code);
         Assert.Equal(1011, diagnostic.WorkItemId);
         // Both IDs travel in one reconciled batch request.
-        Assert.Equal("POST", handler.Requests[^1].Method);
-        Assert.EndsWith("/_apis/wit/workitemsbatch", handler.Requests[^1].Uri.AbsolutePath, StringComparison.Ordinal);
+        RequestSnapshot batch = Assert.Single(handler.Requests, static request =>
+            request.Body?.Contains(TestRunFixture.TestCaseBatch, StringComparison.Ordinal) == true);
+        Assert.Equal("POST", batch.Method);
+        Assert.Contains("\"ids\":[1010,1011]", batch.Body!, StringComparison.Ordinal);
     }
 
     // Test results fixture 12.
@@ -206,7 +213,8 @@ public sealed class TestFailureRetrievalTests
             .Route("results-run-201.json", "/Runs/401/results", "%24skip=0&")
             .Route("result-detail-201-1.json", "/Runs/401/results/1?")
             .Route("attachments-empty.json", "/attachments")
-            .Route("workitems-testcases.json", "workitemsbatch");
+            .RouteBugs()
+        .Route("workitems-testcases.json", "workitemsbatch");
         using FakeHttpMessageHandler handler = fixture.Handler();
         using HttpClient client = new(handler);
         AdoBuildTestFailureSet set = await TestRunFixture.Service(client).GetAsync(
@@ -319,7 +327,8 @@ public sealed class TestFailureRetrievalTests
             .Route("result-detail-202-11.json", "/Runs/202/results/11?")
             .RouteBody(RoundingDetail, "/Runs/202/results/13?")
             .Route("attachments-empty.json", "/attachments")
-            .Route("workitems-testcases.json", "workitemsbatch");
+            .RouteBugs()
+        .Route("workitems-testcases.json", "workitemsbatch");
         using FakeHttpMessageHandler handler = fixture.Handler();
         using HttpClient client = new(handler);
         AdoBuildTestFailureSet set = await TestRunFixture.Service(client).GetAsync(TestRunFixture.Build(), NoHistory,
@@ -343,7 +352,7 @@ public sealed class TestFailureRetrievalTests
             .RouteBody(SameIdDetail("Passed", "not-a-number"), "/Runs/302/results/100000?")
             .RouteBody(AttachmentPage(7, "run-301.png"), "/Runs/301/Results/100000/attachments")
             .RouteBody(AttachmentPage(8, "run-302.json"), "/Runs/302/Results/100000/attachments")
-            .Route("workitems-testcases.json", "workitemsbatch");
+        .Route("workitems-testcases.json", "workitemsbatch");
         using FakeHttpMessageHandler handler = fixture.Handler();
         using HttpClient client = new(handler);
         AdoBuildTestFailureSet set = await TestRunFixture.Service(client).GetAsync(TestRunFixture.Build(), NoHistory,
@@ -380,6 +389,7 @@ public sealed class TestFailureRetrievalTests
         .Route("result-detail-202-11.json", "/Runs/202/results/11?")
         .Route("attachments-result.json", "/Runs/201/Results/1/attachments")
         .Route("attachments-empty.json", "/Runs/202/Results/11/attachments")
+        .RouteBugs()
         .Route("workitems-testcases.json", "workitemsbatch");
 
     private static string Detail(int id) =>

@@ -46,7 +46,7 @@ public static class TestFailureReportModelBuilder
             {
                 Ordinal = index + 1, Classification = f.Classification, TestName = f.TestName, ShortName = f.ShortName,
                 Storage = f.Storage, Title = f.Title, Attempts = Array.AsReadOnly(f.Attempts.OrderBy(a => a.Number).Select(Windowed).ToArray()),
-                TestCase = f.TestCase, History = Array.AsReadOnly(f.History.ToArray()), Owner = f.Owner, Priority = f.Priority, CollectionUri = collection,
+                TestCase = f.TestCase, Bugs = Array.AsReadOnly(f.Bugs.OrderBy(b => b.Id).ToArray()), History = Array.AsReadOnly(f.History.ToArray()), Owner = f.Owner, Priority = f.Priority, CollectionUri = collection,
             }).ToArray();
         return new TestFailureReportModel
         {

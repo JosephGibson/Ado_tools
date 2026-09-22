@@ -41,6 +41,8 @@ public sealed class TestAdoConnectionCommand : AdoCmdletBase
         });
     });
 
-    // PowerShell single-quoted literal, so the suggested command can be pasted as shown.
-    private static string Quote(string value) => "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";
+    // PowerShell single-quoted literal, so the suggested command can be pasted as shown. The escaper
+    // also doubles typographic quotes, which PowerShell reads as single quotes.
+    private static string Quote(string value) =>
+        "'" + System.Management.Automation.Language.CodeGeneration.EscapeSingleQuotedStringContent(value) + "'";
 }

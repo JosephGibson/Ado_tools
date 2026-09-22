@@ -69,9 +69,12 @@ public abstract class AdoCmdletBase : PSCmdlet
     {
         ArgumentNullException.ThrowIfNull(connection);
         string? project = string.IsNullOrWhiteSpace(supplied) ? connection.DefaultProject : supplied;
-        return string.IsNullOrWhiteSpace(project)
-            ? throw new AdoConfigurationException(Messages.Get(AdoMessage.ProjectRequired, MessageCulture))
-            : project;
+        if (string.IsNullOrWhiteSpace(project))
+            throw new AdoConfigurationException(Messages.Get(AdoMessage.ProjectRequired, MessageCulture));
+        // A URL path collapses these names, so the request would leave the collection (Core refuses them too).
+        if (project is "." or "..")
+            throw new AdoConfigurationException(Messages.Get(AdoMessage.InvalidProjectName, MessageCulture, project));
+        return project;
     }
 
     protected void EnsureSameCollection(Uri input, AdoConnection connection)

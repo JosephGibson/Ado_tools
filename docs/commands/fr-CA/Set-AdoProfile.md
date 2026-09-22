@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 09-21-2026
 PlatyPS schema version: 2024-05-01
 title: Set-AdoProfile
 ---
@@ -152,7 +152,7 @@ HelpMessage: ''
 
 ### -Name
 
-Nom du profil. Get-AdoProfile accepte les caractères génériques sans distinction de casse ; les écritures utilisent le nom littéral.
+Nom du profil; il ne peut pas être vide. Get-AdoProfile accepte les caractères génériques sans distinction de casse ; les écritures utilisent le nom littéral.
 
 ```yaml
 Type: System.String

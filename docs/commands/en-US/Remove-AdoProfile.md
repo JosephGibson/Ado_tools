@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 09-21-2026
 PlatyPS schema version: 2024-05-01
 title: Remove-AdoProfile
 ---
@@ -94,7 +94,7 @@ HelpMessage: ''
 
 ### -Name
 
-Profile name. Get-AdoProfile accepts case-insensitive wildcard patterns; writes use the literal name.
+Profile name; it can't be blank. Get-AdoProfile accepts case-insensitive wildcard patterns; writes use the literal name.
 
 ```yaml
 Type: System.String

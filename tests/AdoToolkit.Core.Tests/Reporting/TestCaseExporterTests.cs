@@ -140,6 +140,42 @@ public sealed class TestCaseExporterTests
         Assert.Empty(launcher.Paths);
     }
 
+    // -Open hands the file to the shell, which would run a .cmd, .bat, .js, .vbs or .hta file whose
+    // text comes from Test Cases. Only document extensions open; any other name is still written,
+    // with a warning instead.
+    [Theory]
+    [InlineData("report.cmd", false)]
+    [InlineData("report.hta", false)]
+    [InlineData("report.js", false)]
+    [InlineData("report", false)]
+    [InlineData("report.HTM", true)]
+    [InlineData("report.json", true)]
+    [InlineData("notes.txt", true)]
+    public void OpenLaunchesOnlyDocumentExtensions(string name, bool opened)
+    {
+        using TestDirectory directory = new();
+        RecordingLauncher launcher = new();
+        List<string> warnings = [];
+        string path = Path.Combine(directory.Root, name);
+        FileInfo? file = new TestCaseExporter(launcher).Export([ReportFixture.Case("nested")], Connection(), Options(path, ReportFormat.Json),
+            _ => true, warnings.Add, TestContext.Current.CancellationToken);
+        Assert.NotNull(file);
+        Assert.True(File.Exists(path));
+        if (opened)
+        {
+            Assert.Equal(path, Assert.Single(launcher.Paths));
+            Assert.Empty(warnings);
+        }
+        else
+        {
+            Assert.Empty(launcher.Paths);
+            Assert.Contains(path, Assert.Single(warnings), StringComparison.Ordinal);
+        }
+        // The shell launcher refuses such a name itself; this path does not exist, so nothing can run.
+        Assert.Equal(opened, ShellDocumentLauncher.CanOpen(path));
+        if (!opened) Assert.Throws<ArgumentException>(() => new ShellDocumentLauncher().Open(Path.Combine(directory.Root, "absent-" + name)));
+    }
+
     private static AdoConnection Connection() => new() { CollectionUri = ReportFixture.Collection };
     private static TestCaseExportOptions Options(string? path, ReportFormat format = ReportFormat.Html) => new()
     {

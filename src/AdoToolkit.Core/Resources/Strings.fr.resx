@@ -41,6 +41,7 @@
   <data name="WorkItemNotFound" xml:space="preserve"><value>L’élément de travail {0} est introuvable ou inaccessible.</value></data>
   <data name="FieldRelationsConflict" xml:space="preserve"><value>La sélection de champs et le développement des relations ne peuvent pas être combinés dans cette boîte à outils.</value></data>
   <data name="ProjectRequired" xml:space="preserve"><value>Indiquez un projet avec -Project ou connectez-vous avec un projet par défaut.</value></data>
+  <data name="InvalidProjectName" xml:space="preserve"><value>{0} n’est pas un nom de projet valide.</value></data>
   <data name="TestPlanNotFound" xml:space="preserve"><value>Le plan de test {0} est introuvable ou inaccessible.</value></data>
   <data name="TestSuiteNotFound" xml:space="preserve"><value>La suite de tests {0} est introuvable dans le plan de test {1}.</value></data>
   <data name="WiqlNotFlat" xml:space="preserve"><value>Seules les requêtes plates d’éléments de travail sont prises en charge ; les requêtes de liens et d’arborescence ne le sont pas.</value></data>
@@ -102,6 +103,7 @@
   <data name="IncludeSourceJsonOnly" xml:space="preserve"><value>IncludeSource nécessite le format de rapport JSON.</value></data>
   <data name="NoTestCasesToExport" xml:space="preserve"><value>Aucun cas de test n’a été reçu ; aucun rapport n’a été écrit.</value></data>
   <data name="ExportReport" xml:space="preserve"><value>Exporter le rapport du cas de test</value></data>
+  <data name="ExportNotOpened" xml:space="preserve"><value>Le rapport a été écrit dans {0}, mais n’a pas été ouvert : seuls les fichiers .html, .htm, .md, .markdown, .json et .txt sont ouverts.</value></data>
   <data name="FileSystemPathRequired" xml:space="preserve"><value>Le chemin du rapport doit utiliser le fournisseur FileSystem.</value></data>
   <data name="ReportOverview" xml:space="preserve"><value>Vue d’ensemble</value></data>
   <data name="ReportSteps" xml:space="preserve"><value>Étapes</value></data>
@@ -128,6 +130,9 @@
   <data name="UngroupedTestResult" xml:space="preserve"><value>Le résultat {0} de la série {1} n’a pas de nom de test automatisé; ses tentatives ne peuvent pas être regroupées.</value></data>
   <data name="InvalidTestCaseReference" xml:space="preserve"><value>Le résultat {0} de la série {1} a une référence de cas de test qui n’est pas un entier positif.</value></data>
   <data name="UnresolvedTestCase" xml:space="preserve"><value>Le cas de test {0} est introuvable ou inaccessible; le lien vers son ID est conservé.</value></data>
+  <data name="BugLookupFailed" xml:space="preserve"><value>Les bogues des tests de la build {0} n’ont pas pu être lus; les ID de bogues des résultats de test restent des liens, sans titre, état ni indication de bogue ouvert.</value></data>
+  <data name="UnresolvedBug" xml:space="preserve"><value>Le bogue {0} est introuvable ou inaccessible; le lien vers son ID est conservé.</value></data>
+  <data name="BugMetadataUnavailable" xml:space="preserve"><value>Les types de bogues ou les catégories d’états du projet {0} n’ont pas pu être lus : un élément de travail lié compte comme bogue seulement si son type est Bug, et un bogue est ouvert sauf si son état est Closed, Done ou Removed.</value></data>
   <data name="HistoryUnavailable" xml:space="preserve"><value>La build {0} n’a pas pu être lue; sa barre et ses cellules d’historique sont indisponibles.</value></data>
   <data name="HistoryLimitExceeded" xml:space="preserve"><value>Le maximum de {0} requête(s) d’historique est atteint; les entrées d’historique plus anciennes sont indisponibles.</value></data>
   <data name="ProgressTestFailureActivity" xml:space="preserve"><value>Récupération des tests en échec</value></data>
@@ -250,6 +255,10 @@
   <data name="TestReportNotInlinedSize" xml:space="preserve"><value>Trop volumineuse pour être affichée ici; ouvrez la copie locale.</value></data>
   <data name="TestReportNotInlinedBudget" xml:space="preserve"><value>Non affichée ici : le rapport a atteint sa limite de pièces jointes affichées; ouvrez la copie locale.</value></data>
   <data name="TestReportText" xml:space="preserve"><value>Texte</value></data>
+  <data name="TestReportBugList" xml:space="preserve"><value>Bogues</value></data>
+  <data name="TestReportOpen" xml:space="preserve"><value>Ouvert</value></data>
+  <data name="TestReportOpenBug" xml:space="preserve"><value>Bogue ouvert</value></data>
+  <data name="TestReportWithoutOpenBug" xml:space="preserve"><value>Sans bogue ouvert</value></data>
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Exporter le rapport des tests en échec</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Exporter le rapport des tests en échec et télécharger les pièces jointes dans {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Téléchargement des pièces jointes : {0} de {1}</value></data>

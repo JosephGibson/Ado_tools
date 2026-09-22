@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 09-21-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoTestCase
 ---
@@ -179,7 +179,7 @@ HelpMessage: ''
 
 ### -Open
 
-Ouvre le rapport validé et enregistré dans l’application par défaut.
+Ouvre le rapport validé et enregistré dans l’application par défaut. Seuls les fichiers .html, .htm, .md, .markdown, .json et .txt sont ouverts, car Windows exécute certains autres types de fichiers au lieu de les afficher; avec une autre extension, le rapport est tout de même écrit et un avertissement indique qu’il n’a pas été ouvert.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter

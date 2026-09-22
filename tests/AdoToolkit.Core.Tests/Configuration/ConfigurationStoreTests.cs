@@ -91,6 +91,20 @@ public sealed class ConfigurationStoreTests
         Assert.Throws<AdoConfigurationException>(() => ConfigurationStore.Parse(json, English));
     }
 
+    // A hand-edited file with a repeated name must fail as configuration, not as an unhandled
+    // ArgumentException that every command and the profile completer would surface raw.
+    [Theory]
+    [InlineData("{\"defaultProfile\":\"a\",\"defaultProfile\":\"b\"}")]
+    [InlineData("{\"profiles\":{\"work\":{\"collectionUrl\":\"https://ado.example.test/Collection\"},\"work\":{\"collectionUrl\":\"https://ado.example.test/Other\"}}}")]
+    [InlineData("{\"testResults\":{\"historyCount\":5,\"historyCount\":6}}")]
+    public void DuplicatePropertyNamesAreAConfigurationError(string json)
+    {
+        Assert.Throws<AdoConfigurationException>(() => ConfigurationStore.Parse(json, English));
+        using TestDirectory directory = new();
+        File.WriteAllText(directory.ConfigPath, json);
+        Assert.Throws<AdoConfigurationException>(() => new ConfigurationStore(directory.ConfigPath).Load(English));
+    }
+
     [Fact]
     [Trait("Acceptance", "S0-5")]
     public void FailedValidationPreservesExistingBytesAndRemovesTemporaryFile()

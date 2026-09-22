@@ -193,6 +193,7 @@ public sealed class RunHistoryTests
         .Route("result-detail-201-1.json", "/Runs/201/results/1?")
         .RouteBody(TotalsDetail, "/Runs/201/results/11?")
         .Route("attachments-empty.json", "/attachments")
+        .RouteBugs()
         .Route("workitems-testcases.json", "workitemsbatch")
         .Route("runs-history-400.json", "/test/runs", "Build%2F400", "%24skip=0&")
         .Route("results-history-400.json", "/Runs/261/results", "%24skip=0&")

@@ -41,7 +41,7 @@ public sealed class TestCaseLinkResolutionTests
     }
 
     [Fact]
-    public async Task OnlyTheDistinctValidIdsTravelInOneBatchRequestWithTheDocumentedFields()
+    public async Task OnlyTheDistinctValidIdsTravelInOneBatchRequestWithRelationsExpanded()
     {
         TestRunFixture fixture = Links();
         using FakeHttpMessageHandler handler = fixture.Handler();
@@ -50,14 +50,9 @@ public sealed class TestCaseLinkResolutionTests
             CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
         RequestSnapshot batch = Assert.Single(handler.Requests, request =>
             request.Uri.AbsolutePath.EndsWith("/_apis/wit/workitemsbatch", StringComparison.Ordinal));
-        string body = batch.Body!;
-        Assert.Contains("\"ids\":[1010,1011]", body, StringComparison.Ordinal);
-        Assert.Contains("\"errorPolicy\":\"omit\"", body, StringComparison.Ordinal);
-        Assert.Contains("\"System.Rev\"", body, StringComparison.Ordinal);
-        Assert.Contains("\"System.Title\"", body, StringComparison.Ordinal);
-        Assert.Contains("\"System.State\"", body, StringComparison.Ordinal);
-        Assert.Contains("\"System.WorkItemType\"", body, StringComparison.Ordinal);
-        Assert.DoesNotContain("TC-1012", body, StringComparison.Ordinal);
+        // Relations feed the bug lookup. The API cannot combine them with a field list, so every
+        // field comes back and only the title and state are read.
+        Assert.Equal("{\"ids\":[1010,1011],\"errorPolicy\":\"omit\",\"$expand\":\"relations\"}", batch.Body);
     }
 
     [Theory]

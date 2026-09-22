@@ -1,7 +1,7 @@
 using System.Net.Http;
-using System.Text.Json;
 using AdoToolkit.Core.Connections;
 using AdoToolkit.Core.Http;
+using AdoToolkit.Core.WorkItems;
 
 namespace AdoToolkit.Core.TestManagement;
 
@@ -28,23 +28,8 @@ public sealed class TestCapabilityDetector
         {
             List<string> members = [];
             foreach (string category in new[] { "Microsoft.TestCaseCategory", "Microsoft.SharedStepCategory" })
-            {
-                IReadOnlyList<string> found = await pipeline.ExecuteAsync(EndpointRegistry.WorkItemTypeCategory,
-                    new Dictionary<string, string> { ["project"] = project, ["category"] = category }, null, null, culture,
-                    async (response, token) =>
-                    {
-                        try
-                        {
-                            using JsonDocument document = JsonDocument.Parse(await ResponseJson.ReadAsync(response, token).ConfigureAwait(false));
-                            JsonElement values = document.RootElement.GetProperty("workItemTypes");
-                            return (IReadOnlyList<string>)Array.AsReadOnly(values.EnumerateArray().Select(value =>
-                                value.GetProperty("name").GetString() ?? throw new JsonException()).ToArray());
-                        }
-                        catch (Exception error) when (error is JsonException or InvalidOperationException or KeyNotFoundException)
-                        { throw new AdoResponseFormatException(Messages.Get(AdoMessage.ResponseFormat, culture), error) { Operation = "WorkItemTypeCategory" }; }
-                    }, cancellationToken).ConfigureAwait(false);
-                members.AddRange(found);
-            }
+                members.AddRange(await WorkItemTypeCategories.ReadAsync(pipeline, project, category, culture, cancellationToken)
+                    .ConfigureAwait(false));
             types = Array.AsReadOnly(members.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
             cache.Set(key, types);
         }

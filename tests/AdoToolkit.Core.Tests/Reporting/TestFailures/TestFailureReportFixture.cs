@@ -83,6 +83,8 @@ internal static class TestFailureReportFixture
             new() { Ordinal = 1, Classification = AdoTestFailureClassification.Failed, TestName = "Synthetic.CheckoutTests.SubmitOrder", ShortName = "SubmitOrder",
                 Storage = "Synthetic.Tests.dll", CollectionUri = Collection,
                 TestCase = new AdoTestCaseLink { Id = 901, Title = "Valider la commande", State = "Ready", IsResolved = true, WebUrl = Untrusted },
+                // Resolved is not a Completed category, so the bug is still open.
+                Bugs = [Bug(804, "Libellé « Confirmée » absent", "Resolved", "Resolved", true, associated: false, linked: true)],
                 Attempts = [Attempt(1, 200, "Timed out waiting for #submit", File(61, 200, 11, "old-run.txt")), Attempt(2, 201, null),
                     Attempt(3, 202, French, File(62, 202, 13, "Details.json"), File(63, 202, 13, "console.log")), Attempt(4, 203, French)] },
             new() { Ordinal = 2, Classification = AdoTestFailureClassification.Failed, TestName = "Synthetic.HomeTests.ShowBanner", ShortName = "ShowBanner",
@@ -110,6 +112,11 @@ internal static class TestFailureReportFixture
         Owner = new AdoIdentityRef { DisplayName = "Fictional Tester", UniqueName = "tester@example.test" }, Priority = 2,
         TestCase = new AdoTestCaseLink { Id = unresolved || hostile ? 902 : 901, Title = hostile ? Hostile : "Valider la commande", State = "Ready", Rev = 4,
             IsResolved = !unresolved && !hostile, WebUrl = Untrusted },
+        // An open bug found on both sources and a closed one; the flaky test has only the closed bug,
+        // and in the partial report the closed bug could not be read.
+        Bugs = flaky ? [Closed()]
+            : [Bug(801, hostile ? Hostile : "Le total ignore la remise", hostile ? Hostile : "Active", "InProgress", true, linked: true),
+                unresolved ? new AdoTestBug { Id = 802, IsAssociatedWithResult = true, WebUrl = Untrusted } : Closed()],
         Attempts = flaky ? [Attempt(1, false, hostile), Attempt(2, true, hostile)] : [Attempt(1, false, hostile)],
         History = [History(398, AdoTestHistoryOutcome.Unavailable), History(399, AdoTestHistoryOutcome.NotRun), History(400, AdoTestHistoryOutcome.Failed),
             History(401, flaky ? AdoTestHistoryOutcome.Flaky : AdoTestHistoryOutcome.Failed)], CollectionUri = Collection,
@@ -136,6 +143,14 @@ internal static class TestFailureReportFixture
         CustomFields = new Dictionary<string, object?>(StringComparer.Ordinal) { ["SyntheticFlag"] = true, ["SyntheticNumber"] = 1234.5m },
         AdditionalFields = new Dictionary<string, object?>(StringComparer.Ordinal) { ["futureField"] = hostile ? Hostile : "Forward-compatible value" }, WebUrl = Untrusted,
     };
+
+    private static AdoTestBug Bug(int id, string title, string state, string category, bool open, bool associated = true, bool linked = false) => new()
+    {
+        Id = id, Title = title, State = state, WorkItemType = "Bug", TeamProject = Project, StateCategory = category, IsOpen = open, IsResolved = true,
+        IsAssociatedWithResult = associated, IsLinkedToTestCase = linked, WebUrl = Untrusted,
+    };
+
+    private static AdoTestBug Closed() => Bug(802, "Ancien délai d’expiration", "Closed", "Completed", false);
 
     private static AdoTestHistoryEntry History(int build, AdoTestHistoryOutcome outcome) => new()
     { BuildId = build, BuildNumber = "20260916." + (build - 398).ToString(CultureInfo.InvariantCulture), Outcome = outcome, IsCurrent = build == 401, WebUrl = Untrusted };

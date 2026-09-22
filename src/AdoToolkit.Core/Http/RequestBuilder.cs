@@ -14,8 +14,11 @@ internal static class RequestBuilder
         for (int i = 0; i < segments.Length; i++)
         {
             string segment = segments[i];
-            if (segment.StartsWith('{') && segment.EndsWith('}'))
-                segments[i] = Uri.EscapeDataString(routeValues?[segment[1..^1]] ?? throw new ArgumentException(segment, nameof(routeValues)));
+            if (!segment.StartsWith('{') || !segment.EndsWith('}')) continue;
+            string value = routeValues?[segment[1..^1]] ?? throw new ArgumentException(segment, nameof(routeValues));
+            // Uri collapses "." and ".." even after escaping, which would leave the collection.
+            if (!IsPathSegment(value)) throw new ArgumentException(segment, nameof(routeValues));
+            segments[i] = Uri.EscapeDataString(value);
         }
         List<string> query = [];
         if (queryValues is not null)
@@ -42,4 +45,7 @@ internal static class RequestBuilder
         }
         return request;
     }
+
+    // A route value names exactly one path segment below the collection: not blank, "." or "..".
+    internal static bool IsPathSegment(string? value) => !string.IsNullOrWhiteSpace(value) && value is not ("." or "..");
 }

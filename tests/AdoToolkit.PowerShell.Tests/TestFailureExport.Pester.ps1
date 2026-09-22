@@ -24,7 +24,7 @@ BeforeAll {
             Replace('2026-09-14T10:00:00Z', $start.ToString($format, [cultureinfo]::InvariantCulture)).
             Replace('2026-09-14T10:10:00Z', $start.AddMinutes(10).ToString($format, [cultureinfo]::InvariantCulture))
     }
-    # One two-run retrieval without history; result 201-1 lists attachments 5001–5005.
+    # One two-run retrieval without history; result 201-1 lists attachments 5001–5005 and bugs 2001–2002.
     function Get-TwoRunResponses {
         param([switch] $LatestAttachments, [int] $AgeHours = 2)
         @(
@@ -38,7 +38,9 @@ BeforeAll {
             @{ Body = Get-TestRunFixture 'result-detail-201-1.json' },
             @{ Body = Get-TestRunFixture $(if ($LatestAttachments) { 'attachments-result.json' } else { 'attachments-empty.json' }) },
             @{ Body = Get-TestRunFixture 'attachments-result.json' },
-            @{ Body = Get-TestRunFixture 'workitems-testcases.json' }
+            @{ Body = Get-TestRunFixture 'workitems-testcases.json' },
+            @{ Body = Get-TestRunFixture 'workitems-bugs.json' },
+            @{ Body = Get-TestRunFixture 'workitemtype-states-bug.json' }
         )
     }
     # Of 5001 PNG, 5002 JSON, 5003 HTML, 5004 and 5005 other bytes, only the JSON is ever requested.
@@ -67,11 +69,11 @@ Describe 'Failed-test report export' {
         try {
             Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
             $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
-            $server.Requests.Count | Should -Be 12
+            $server.Requests.Count | Should -Be 14
             @($set | Export-AdoBuildTestFailure -Path $outputDirectory -WhatIf).Count | Should -Be 0
             @($set | Export-AdoBuildTestFailure -Path (Join-Path $outputDirectory 'one.html') -WhatIf).Count | Should -Be 0
             @($set | Export-AdoBuildTestFailure -Path (Join-Path $outputDirectory 'missing') -AllRunAttachments -WhatIf).Count | Should -Be 0
-            $server.Requests.Count | Should -Be 12
+            $server.Requests.Count | Should -Be 14
             Get-OutputEntry -Path $outputDirectory | Should -BeNullOrEmpty
         }
         finally { Stop-FakeAdoServer -Server $server }
@@ -87,7 +89,7 @@ Describe 'Failed-test report export' {
             $failure = { $set | Export-AdoBuildTestFailure -Path $outputDirectory -NoClobber -ErrorAction Stop } | Should -Throw -PassThru
             $failure.FullyQualifiedErrorId | Should -Match '^AdoFileOutput'
             [IO.File]::ReadAllText($existing) | Should -Be 'original'
-            $server.Requests.Count | Should -Be 12
+            $server.Requests.Count | Should -Be 14
             Get-OutputEntry -Path $outputDirectory | Should -Be @('Build-401-TestFailures.html')
         }
         finally { Stop-FakeAdoServer -Server $server }
@@ -110,9 +112,9 @@ Describe 'Failed-test report export' {
             $entries | Should -Be (@('Build-401-TestFailures.html', $folderName, "$folderName/r201-1-a5002.json") | Sort-Object)
             [IO.File]::ReadAllBytes((Join-Path $folder 'r201-1-a5002.json')) | Should -Be (Get-AttachmentBytes 'valid.json')
             $requests = $server.Requests.ToArray()
-            $requests.Count | Should -Be 13
-            $requests[12].Line | Should -Be 'GET /Collection/%C3%89quipe%20Web/_apis/test/Runs/201/Results/1/attachments/5002?api-version=6.0-preview.1 HTTP/1.1'
-            $requests[12].Headers['Accept'] | Should -Be 'application/octet-stream'
+            $requests.Count | Should -Be 15
+            $requests[14].Line | Should -Be 'GET /Collection/%C3%89quipe%20Web/_apis/test/Runs/201/Results/1/attachments/5002?api-version=6.0-preview.1 HTTP/1.1'
+            $requests[14].Headers['Accept'] | Should -Be 'application/octet-stream'
             $html = [IO.File]::ReadAllText($file.FullName)
             $html | Should -Match '<html lang="fr-CA"'
             $html | Should -Not -Match '<img'
@@ -139,7 +141,7 @@ Describe 'Failed-test report export' {
             $file = $set | Export-AdoBuildTestFailure -Path $outputDirectory -SkipAttachments -AllRunAttachments
             $file.PSObject.Properties['AttachmentDirectory'] | Should -BeNullOrEmpty
             Get-OutputEntry -Path $outputDirectory | Should -Be @('Build-401-TestFailures.html')
-            $server.Requests.Count | Should -Be 12
+            $server.Requests.Count | Should -Be 14
             $html = [IO.File]::ReadAllText($file.FullName)
             $html | Should -Not -Match 'data-local-file'
             $html | Should -Match 'screenshot\.PNG <span role="img"'
@@ -157,8 +159,8 @@ Describe 'Failed-test report export' {
             Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
             $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
             $file = $set | Export-AdoBuildTestFailure -Path $outputDirectory -Culture en-US -AllRunAttachments:$AllRuns
-            $server.Requests.Count | Should -Be (12 + $Downloads)
-            $contentRequests = @($server.Requests.ToArray() | Select-Object -Skip 12)
+            $server.Requests.Count | Should -Be (14 + $Downloads)
+            $contentRequests = @($server.Requests.ToArray() | Select-Object -Skip 14)
             @($contentRequests | Where-Object Line -Match '/Runs/202/').Count | Should -Be 1
             @($contentRequests | Where-Object Line -Match '/Runs/201/').Count | Should -Be ($Downloads - 1)
             # PNG, HTML and other kinds are never requested, whatever the switches.
@@ -182,7 +184,7 @@ Describe 'Failed-test report export' {
             Disconnect-Ado
             $file = $set | Export-AdoBuildTestFailure -Path $outputDirectory
             $file.PSObject.Properties['AttachmentDirectory'] | Should -BeNullOrEmpty
-            $server.Requests.Count | Should -Be 12
+            $server.Requests.Count | Should -Be 14
             Get-OutputEntry -Path $outputDirectory | Should -Be @('Build-401-TestFailures.html')
             [IO.File]::ReadAllText($file.FullName) | Should -Match 'screenshot\.PNG <span role="img"'
         }
@@ -225,7 +227,7 @@ Describe 'Failed-test report export' {
             $errors[0].CategoryInfo.Category | Should -Be 'InvalidArgument'
             [string] $errors[0] | Should -Match '400'
             [IO.File]::ReadAllText($single) | Should -Match 'buildId=401'
-            $server.Requests.Count | Should -Be 23
+            $server.Requests.Count | Should -Be 27
         }
         finally { Stop-FakeAdoServer -Server $server }
     }
@@ -244,7 +246,7 @@ Describe 'Failed-test report export' {
             $literal = Join-Path $outputDirectory 'rapport-[été].html'
             $file = $set | Export-AdoBuildTestFailure -Connection $connection -Path $literal -SkipAttachments
             $file.FullName | Should -Be $literal
-            $server.Requests.Count | Should -Be 12
+            $server.Requests.Count | Should -Be 14
             Get-OutputEntry -Path $outputDirectory | Should -Be @('rapport-[été].html')
         }
         finally { Stop-FakeAdoServer -Server $server }

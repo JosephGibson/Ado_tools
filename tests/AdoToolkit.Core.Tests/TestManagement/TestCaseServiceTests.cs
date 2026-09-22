@@ -47,6 +47,32 @@ public sealed class TestCaseServiceTests
         Assert.Equal(0, result.StepCount);
     }
 
+    // System.TeamProject is server data. On the Test Case a blank or dot-segment value is a format
+    // error; on a Shared Step it only drops that step's project and link. Neither may escape as an
+    // ArgumentException or build a link outside the collection.
+    [Theory]
+    [InlineData("   ")]
+    [InlineData("..")]
+    public async Task UnusableTeamProjectIsAFormatErrorForTheCaseAndDropsASharedStepLink(string project)
+    {
+        JsonObject root = ExpansionFixture.Item(1, "<steps><compref ref=\"2\"/></steps>");
+        root["fields"]!["System.TeamProject"] = project;
+        using (FakeHttpMessageHandler handler = ExpansionFixture.Handler(root, ExpansionFixture.Item(2, ExpansionFixture.Xml("01-direct.xml"))))
+        {
+            AdoResponseFormatException error = await Assert.ThrowsAsync<AdoResponseFormatException>(() => ExpansionFixture.Retrieve(handler));
+            Assert.Equal("WorkItemsBatch", error.Operation);
+        }
+        JsonObject shared = ExpansionFixture.Item(2, ExpansionFixture.Xml("01-direct.xml"));
+        shared["fields"]!["System.TeamProject"] = project;
+        using FakeHttpMessageHandler sharedHandler = ExpansionFixture.Handler(ExpansionFixture.Item(1, "<steps><compref ref=\"2\"/></steps>"), shared);
+        AdoTestCase result = await ExpansionFixture.Retrieve(sharedHandler);
+        AdoSharedStepInfo info = Assert.Single(result.SharedSteps);
+        Assert.Equal(2, info.Id);
+        Assert.Null(info.TeamProject);
+        Assert.Null(info.WebUrl);
+        Assert.Equal("https://ado.example.test/Collection/%C3%89quipe%20%2F%20Web/_workitems/edit/1", result.WebUrl.AbsoluteUri);
+    }
+
     [Fact]
     public async Task MalformedSharedDocumentPreservesGroupAndFollowingRootStep()
     {

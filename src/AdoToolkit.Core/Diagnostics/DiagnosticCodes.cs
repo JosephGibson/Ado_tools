@@ -24,6 +24,9 @@ public static class DiagnosticCodes
     public const string UngroupedTestResult = nameof(UngroupedTestResult);
     public const string InvalidTestCaseReference = nameof(InvalidTestCaseReference);
     public const string UnresolvedTestCase = nameof(UnresolvedTestCase);
+    public const string BugLookupFailed = nameof(BugLookupFailed);
+    public const string UnresolvedBug = nameof(UnresolvedBug);
+    public const string BugMetadataUnavailable = nameof(BugMetadataUnavailable);
     public const string HistoryUnavailable = nameof(HistoryUnavailable);
     public const string HistoryLimitExceeded = nameof(HistoryLimitExceeded);
     public const string TestTextTruncated = nameof(TestTextTruncated);
@@ -37,7 +40,8 @@ public static class DiagnosticCodes
         EmptySteps or NestedEncodingDecoded or NoTestRuns or TestTextTruncated => AdoDiagnosticSeverity.Info,
         UnknownStepElement or UnknownStepType or UnexpectedComprefChildren or SharedStepHasNoSteps
             or MalformedParameterData or UnresolvedSharedParameter or TestRunInProgress or UngroupedTestResult
-            or InvalidTestCaseReference or UnresolvedTestCase or HistoryUnavailable
+            or InvalidTestCaseReference or UnresolvedTestCase or BugLookupFailed or UnresolvedBug
+            or BugMetadataUnavailable or HistoryUnavailable
             or HistoryLimitExceeded or AttachmentTooLarge or AttachmentBudgetExceeded
             or AttachmentDownloadFailed or AttachmentContentMismatch => AdoDiagnosticSeverity.Warning,
         NotAStepContainer or MalformedStepsXml or InvalidSharedStepReference or UnresolvedSharedStep

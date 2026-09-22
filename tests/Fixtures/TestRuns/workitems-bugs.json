@@ -1,0 +1,29 @@
+{
+  "count": 2,
+  "value": [
+    {
+      "id": 2001,
+      "rev": 3,
+      "fields": {
+        "System.Id": 2001,
+        "System.Title": "Le panier perd un article",
+        "System.State": "Active",
+        "System.WorkItemType": "Bug",
+        "System.TeamProject": "Équipe Web"
+      },
+      "url": "https://ado.example.test/Collection/_apis/wit/workItems/2001"
+    },
+    {
+      "id": 2002,
+      "rev": 9,
+      "fields": {
+        "System.Id": 2002,
+        "System.Title": "Ancien délai d’expiration",
+        "System.State": "Closed",
+        "System.WorkItemType": "Bug",
+        "System.TeamProject": "Équipe Web"
+      },
+      "url": "https://ado.example.test/Collection/_apis/wit/workItems/2002"
+    }
+  ]
+}

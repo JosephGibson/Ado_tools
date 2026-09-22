@@ -33,11 +33,15 @@ Renders each `AdoBuildTestFailureSet` from `Get-AdoBuildTestFailure` as one dark
 report in the report culture. The report has four views, plus a fifth for diagnostics
 when there are any. Overview is a table with one row per failed test: its Test Case
 number linked to the work item, the status of each stage or job that ran it, and the
-first line of its latest error. By error groups the same rows under their latest error.
-Details has one card per test. Runs and history lists the build's test runs, the run
+first line of its latest error. A test with at least one open bug shows an Open bug mark
+after its name. By error groups the same rows under their latest error. Details has one
+card per test, which lists its bugs, each with its ID linked to the work item, its title
+and state, and an Open mark when it is open. A bug is open unless its state is in the
+Completed or Removed state category. Runs and history lists the build's test runs, the run
 history chart and the report details. Every group, attempt and attachment preview starts
 collapsed, and an error message or stack trace repeated from an earlier attempt of the
-same test is referenced instead of repeated.
+same test is referenced instead of repeated. Every date and time is shown in the time zone
+of the computer that runs the export, like the report's generation time.
 
 When the build's test runs carry different stage or job names, for example one stage per
 language, each card groups its attempts by them and the overview shows one status column
@@ -49,7 +53,9 @@ them. The report is complete with scripts blocked. A small static script, allowe
 hash-based Content Security Policy, adds view switching, search, keyboard navigation and
 copy. Search matches every word you type against the whole card, including collapsed
 attempts: error messages, stack traces, inline JSON and text attachments, stage and job
-names, and run and attempt fields. A Test Case ID matches with or without `#`.
+names, run and attempt fields, and bug titles and states. A Test Case ID matches with or
+without `#`. When at least one test has an open bug, the Without an open bug filter shows
+only the tests that no open bug tracks yet.
 
 Attachments appear only for test runs that started within `-AttachmentWindowDays` days
 of the export, 7 by default; a run without a start date counts as outside. Older runs keep

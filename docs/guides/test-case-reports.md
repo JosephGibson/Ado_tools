@@ -52,6 +52,10 @@ Get-AdoTestCase -Id 1234 | Export-AdoTestCase -Format Json -IncludeSource -Path 
   to your Downloads folder as `TestCase-<id>-Steps.<ext>`.
 - An existing file is replaced atomically. Use `-NoClobber` to refuse instead, or
   `-WhatIf` to see the target path.
+- `-Open` opens the written report with its default program. Only `.html`, `.htm`,
+  `.md`, `.markdown`, `.json` and `.txt` files are opened, because Windows runs some
+  other file types instead of showing them. With any other extension the report is
+  still written, and a warning says it was not opened.
 - Report labels use `-Culture`, then the configured report culture, then your
   session UI culture. Azure DevOps content is never translated.
 - Export makes no server requests. The report links back to Azure DevOps.

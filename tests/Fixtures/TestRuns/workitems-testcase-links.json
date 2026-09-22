@@ -1,0 +1,67 @@
+{
+  "count": 1,
+  "value": [
+    {
+      "id": 1010,
+      "rev": 8,
+      "fields": {
+        "System.Id": 1010,
+        "System.Rev": 8,
+        "System.Title": "Vérifier le panier",
+        "System.State": "Design",
+        "System.WorkItemType": "Test Case",
+        "System.TeamProject": "Équipe Web",
+        "System.ChangedDate": "2026-09-14T10:00:00Z",
+        "Microsoft.VSTS.TCM.Steps": "<steps id=\"0\" last=\"1\"><step id=\"1\" type=\"ActionStep\"><parameterizedString isformatted=\"true\">Ouvrir le panier</parameterizedString><parameterizedString isformatted=\"true\" /></step></steps>"
+      },
+      "relations": [
+        {
+          "rel": "Microsoft.VSTS.Common.TestedBy-Reverse",
+          "url": "https://ado.example.test/Collection/_apis/wit/workItems/3001",
+          "attributes": { "isLocked": false, "name": "Tests" }
+        },
+        {
+          "rel": "System.LinkTypes.Related",
+          "url": "https://ado.example.test/Collection/_apis/wit/workItems/3002",
+          "attributes": { "isLocked": false, "name": "Related" }
+        },
+        {
+          "rel": "Microsoft.VSTS.Common.TestedBy-Reverse",
+          "url": "https://ado.example.test/Collection/_apis/wit/workItems/3050",
+          "attributes": { "isLocked": false, "name": "Tests" }
+        },
+        {
+          "rel": "Microsoft.VSTS.TestCase.SharedStepReferencedBy-Forward",
+          "url": "https://ado.example.test/Collection/_apis/wit/workItems/3060",
+          "attributes": { "isLocked": false, "name": "Shared Steps" }
+        },
+        {
+          "rel": "Contoso.LinkTypes.Blocks-Forward",
+          "url": "https://ado.example.test/Collection/_apis/wit/workItems/3080",
+          "attributes": { "isLocked": false, "name": "Blocks" }
+        },
+        {
+          "rel": "Hyperlink",
+          "url": "https://wiki.example.test/_apis/wit/workItems/3070",
+          "attributes": { "comment": "Looks like a work item URL but is a hyperlink" }
+        },
+        {
+          "rel": "ArtifactLink",
+          "url": "vstfs:///TestManagement/TcmResult/201.101",
+          "attributes": { "name": "Test Result" }
+        },
+        {
+          "rel": "AttachedFile",
+          "url": "https://ado.example.test/Collection/_apis/wit/attachments/0f1e2d3c-0000-4000-8000-000000000001",
+          "attributes": { "name": "capture.png" }
+        },
+        {
+          "rel": "System.LinkTypes.Related",
+          "url": "not a url",
+          "attributes": { "name": "Related" }
+        }
+      ],
+      "url": "https://ado.example.test/Collection/_apis/wit/workItems/1010"
+    }
+  ]
+}

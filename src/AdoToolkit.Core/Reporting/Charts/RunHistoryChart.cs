@@ -6,6 +6,11 @@ namespace AdoToolkit.Core.Reporting.Charts;
 public static class RunHistoryChart
 {
     public static void Write(TextWriter writer, IReadOnlyList<AdoBuildTestSummary> history, Uri collectionUri, string teamProject, CultureInfo culture)
+        => Write(writer, history, collectionUri, teamProject, culture, null);
+
+    // offset, when given, is the offset finish times are shown in, such as the report's export time.
+    public static void Write(TextWriter writer, IReadOnlyList<AdoBuildTestSummary> history, Uri collectionUri, string teamProject, CultureInfo culture,
+        TimeSpan? offset)
     {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(history);
@@ -23,7 +28,7 @@ public static class RunHistoryChart
             writer.Write("<a rel=\"noreferrer\" href=\""); writer.Write(E(AdoWebLinks.BuildTestResult(collectionUri, teamProject, item.BuildId).AbsoluteUri)); writer.Write("\" data-build-id=\"");
             writer.Write(N(item.BuildId)); writer.Write('"');
             if (item.IsCurrent) writer.Write(" aria-current=\"true\"");
-            writer.Write("><title>"); writer.Write(E(Title(item, culture))); writer.Write("</title>");
+            writer.Write("><title>"); writer.Write(E(Title(item, culture, offset))); writer.Write("</title>");
             if (!item.IsAvailable)
             {
                 top = 40;
@@ -56,15 +61,18 @@ public static class RunHistoryChart
             writer.Write("</a>");
         }
         writer.Write("</svg></div>");
-        Table(writer, history, collectionUri, teamProject, culture);
+        Table(writer, history, collectionUri, teamProject, culture, offset);
     }
 
     private static long Total(AdoBuildTestSummary item) => (long)item.Passed + item.Failed + item.Other;
     private static string N(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
     private static string E(string value) => SinkEncoding.Attribute(value);
 
-    private static string Title(AdoBuildTestSummary item, CultureInfo culture) => Messages.Get(AdoMessage.TestReportHistoryTitle, culture,
-        item.BuildNumber, item.SourceBranch ?? "–", item.FinishTime?.ToString("g", culture) ?? "–",
+    private static string? Date(DateTimeOffset? value, CultureInfo culture, TimeSpan? offset) =>
+        (offset is TimeSpan shift ? value?.ToOffset(shift) : value)?.ToString("g", culture);
+
+    private static string Title(AdoBuildTestSummary item, CultureInfo culture, TimeSpan? offset) => Messages.Get(AdoMessage.TestReportHistoryTitle, culture,
+        item.BuildNumber, item.SourceBranch ?? "–", Date(item.FinishTime, culture, offset) ?? "–",
         item.Passed, item.Failed, item.Flaky, item.Other,
         item.IsAvailable ? Messages.Get(AdoMessage.TestReportAvailable, culture) : StatusPresentation.Label(AdoTestHistoryOutcome.Unavailable, culture),
         Messages.Get(AdoMessage.TestReportOpenAdo, culture));
@@ -94,7 +102,8 @@ public static class RunHistoryChart
         writer.Write("\">"); writer.Write(E(text)); writer.Write("</text>");
     }
 
-    private static void Table(TextWriter writer, IReadOnlyList<AdoBuildTestSummary> history, Uri collectionUri, string teamProject, CultureInfo culture)
+    private static void Table(TextWriter writer, IReadOnlyList<AdoBuildTestSummary> history, Uri collectionUri, string teamProject, CultureInfo culture,
+        TimeSpan? offset)
     {
         writer.Write("<details class=\"history-data\"><summary>"); writer.Write(E(Messages.Get(AdoMessage.TestReportHistoryData, culture)));
         writer.Write("</summary><div class=\"table-scroll\"><table><caption>"); writer.Write(E(Messages.Get(AdoMessage.TestReportHistory, culture)));
@@ -111,7 +120,7 @@ public static class RunHistoryChart
             writer.Write('>'); writer.Write(E(item.BuildNumber)); StatusPresentation.ExternalGlyph(writer, culture); writer.Write("</a>");
             if (item.IsCurrent) { writer.Write(' '); writer.Write(E(Messages.Get(AdoMessage.TestReportThisRun, culture))); }
             writer.Write("</th>");
-            foreach (string value in new[] { item.SourceBranch ?? "–", item.FinishTime?.ToString("g", culture) ?? "–",
+            foreach (string value in new[] { item.SourceBranch ?? "–", Date(item.FinishTime, culture, offset) ?? "–",
                 item.Passed.ToString(culture), item.Failed.ToString(culture), item.Flaky.ToString(culture), item.Other.ToString(culture) })
             { writer.Write("<td>"); writer.Write(E(value)); writer.Write("</td>"); }
             writer.Write("<td>");

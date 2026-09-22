@@ -8,12 +8,16 @@ namespace AdoToolkit.Core.TestRuns;
 
 // One WorkItemsBatch pass over the distinct valid Test Case IDs, reconciled by ID (§9.1).
 // Requested IDs are never matched to response positions; an absent ID keeps its link.
+// Relations are expanded so the bug lookup knows every linked work item; the API returns all
+// fields with them, of which only the title and state are read.
 internal sealed class TestCaseLinkResolver
 {
-    private static readonly string[] Fields = ["System.Id", "System.Rev", "System.Title", "System.State", "System.WorkItemType"];
+    // Relations that are not work item links, whatever their URL.
+    private static readonly string[] ResourceRelations = ["ArtifactLink", "Hyperlink", "AttachedFile"];
     private readonly AdoConnection connection;
     private readonly AdoHttpPipeline pipeline;
     private readonly Dictionary<int, AdoTestCaseLink> cache = [];
+    private readonly Dictionary<int, IReadOnlyList<int>> linked = [];
 
     internal TestCaseLinkResolver(HttpClient client, AdoConnection connection, IAdoLog? log, RequestCounter? counter)
     {
@@ -41,7 +45,7 @@ internal sealed class TestCaseLinkResolver
         IReadOnlyList<WorkItemDto> returned = await IdChunks.FetchAsync(missing, endpoint.ChunkSize,
             async (chunk, token) =>
             {
-                byte[] body = JsonSerializer.SerializeToUtf8Bytes(new WorkItemBatchRequestDto { Ids = chunk, Fields = Fields },
+                byte[] body = JsonSerializer.SerializeToUtf8Bytes(new WorkItemBatchRequestDto { Ids = chunk, Expand = "relations" },
                     AdoJsonContext.Default.WorkItemBatchRequestDto);
                 IReadOnlyList<WorkItemDto> page = await pipeline.ExecuteAsync(endpoint, null, null, body, culture,
                     async (response, requestToken) =>
@@ -76,8 +80,8 @@ internal sealed class TestCaseLinkResolver
                 cache[id] = new AdoTestCaseLink { Id = id, WebUrl = webUrl, IsResolved = false };
                 continue;
             }
-            IReadOnlyDictionary<string, object?> fields = FieldValueMapper.MapFields(item.Fields
-                ?? throw new AdoResponseFormatException(Messages.Get(AdoMessage.ResponseFormat, culture)) { Operation = endpoint.Name });
+            Dictionary<string, JsonElement> fields = item.Fields
+                ?? throw new AdoResponseFormatException(Messages.Get(AdoMessage.ResponseFormat, culture)) { Operation = endpoint.Name };
             cache[id] = new AdoTestCaseLink
             {
                 Id = id,
@@ -87,10 +91,40 @@ internal sealed class TestCaseLinkResolver
                 WebUrl = webUrl,
                 IsResolved = true,
             };
+            linked[id] = LinkedIds(id, item.Relations);
         }
         return cache;
     }
 
-    private static string? Text(IReadOnlyDictionary<string, object?> fields, string name) =>
-        fields.TryGetValue(name, out object? value) ? value as string : null;
+    // The work items linked to a resolved Test Case by any link type; empty for any other ID.
+    internal IReadOnlyList<int> LinkedWorkItems(int id) => linked.TryGetValue(id, out IReadOnlyList<int>? ids) ? ids : [];
+
+    // Only the title and state are read, so no other field of the expanded response can fail the lookup.
+    internal static string? Text(Dictionary<string, JsonElement> fields, string name)
+    {
+        foreach ((string key, JsonElement value) in fields)
+            if (string.Equals(key, name, StringComparison.OrdinalIgnoreCase))
+                return value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+        return null;
+    }
+
+    // A work item link names its target as <collection>/_apis/wit/workItems/<id> whatever the link type,
+    // including custom types; artifact links, hyperlinks and attachments are skipped. Relations are
+    // untrusted data: an unexpected shape is ignored, never followed.
+    internal static IReadOnlyList<int> LinkedIds(int self, List<WorkItemRelationDto>? relations)
+    {
+        SortedSet<int> ids = [];
+        foreach (WorkItemRelationDto relation in relations ?? [])
+        {
+            if (relation?.Rel is not { Length: > 0 } rel || ResourceRelations.Contains(rel, StringComparer.OrdinalIgnoreCase)
+                || !Uri.TryCreate(relation.Url, UriKind.Absolute, out Uri? url)) continue;
+            string[] segments = url.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length >= 4 && string.Equals(segments[^4], "_apis", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(segments[^3], "wit", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(segments[^2], "workItems", StringComparison.OrdinalIgnoreCase)
+                && TryParseReference(segments[^1], out int id) && id != self)
+                ids.Add(id);
+        }
+        return Array.AsReadOnly(ids.ToArray());
+    }
 }

@@ -46,7 +46,7 @@ Describe 'Release module selection' {
 Describe 'Release workflow external contracts without network calls' {
     BeforeEach {
         $savedEnvironment = @{}
-        foreach ($name in @('RUNNER_TEMP', 'GITHUB_PATH', 'GITHUB_OUTPUT', 'GITHUB_REF_NAME', 'GITHUB_WORKSPACE', 'POWERSHELL_VERSION', 'VERSION')) {
+        foreach ($name in @('RUNNER_TEMP', 'GITHUB_PATH', 'GITHUB_OUTPUT', 'GITHUB_REF_NAME', 'GITHUB_WORKSPACE', 'POWERSHELL_VERSION', 'POWERSHELL_SHA256', 'VERSION')) {
             $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
         }
         $env:RUNNER_TEMP = $TestDrive
@@ -90,6 +90,8 @@ Describe 'Release workflow external contracts without network calls' {
             else { [IO.File]::WriteAllBytes($OutFile, [byte[]]@(1, 2, 3, 4)) }
         }
         Mock Expand-Archive { }
+        # The job pins the runtime hash, as it pins the version; here the pin names the synthetic archive.
+        $env:POWERSHELL_SHA256 = (Get-FileHash -InputStream ([IO.MemoryStream]::new([byte[]]@(1, 2, 3, 4))) -Algorithm SHA256).Hash.ToLowerInvariant()
         $step = Get-ReleaseStep -Name 'Install PowerShell '
         if ($Valid) {
             & $step
@@ -99,6 +101,38 @@ Describe 'Release workflow external contracts without network calls' {
             { & $step } | Should -Throw '*does not match its published hash*'
             Should -Invoke Expand-Archive -Exactly -Times 0
         }
+    }
+
+    # The published hashes file comes from the same release as the archive, so it cannot catch a
+    # replaced upstream asset; the workflow pins the SHA-256 of the runtime it bundles.
+    It 'refuses a runtime that matches its published hash but not the pinned hash' {
+        Mock Invoke-WebRequest {
+            if ($Uri.AbsolutePath.EndsWith('/hashes.sha256', [StringComparison]::Ordinal)) {
+                $zip = Join-Path $env:RUNNER_TEMP "PowerShell-$env:POWERSHELL_VERSION-win-x64.zip"
+                $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
+                [IO.File]::WriteAllText($OutFile, "$hash *PowerShell-$env:POWERSHELL_VERSION-win-x64.zip`n")
+            }
+            else { [IO.File]::WriteAllBytes($OutFile, [byte[]]@(9, 9, 9)) }
+        }
+        Mock Expand-Archive { }
+        $env:POWERSHELL_SHA256 = '0' * 64
+        { & (Get-ReleaseStep -Name 'Install PowerShell ') } | Should -Throw '*pinned*'
+        $env:POWERSHELL_SHA256 = ''
+        { & (Get-ReleaseStep -Name 'Install PowerShell ') } | Should -Throw '*pinned*'
+        Should -Invoke Expand-Archive -Exactly -Times 0
+        $pinned = [regex]::Match((Get-Content -LiteralPath $workflowPath -Raw), "(?m)^\s+POWERSHELL_SHA256: '([0-9a-f]{64})'\s*$")
+        $pinned.Success | Should -BeTrue
+        # The SHA-256 published in hashes.sha256 of PowerShell 7.6.6, as recorded in the previous portable bundle.
+        $pinned.Groups[1].Value | Should -Be '02fe458be20493fbdf43f61ea20610b811ee6c738ab1676c61b9cfcd1a33c860'
+    }
+
+    # Third-party modules, packages and tests run in this job; the write token must not sit in .git/config.
+    It 'checks out without persisting the write-scoped token' {
+        $text = Get-Content -LiteralPath $workflowPath -Raw
+        $checkout = [regex]::Match($text, '(?ms)^      - uses: actions/checkout@[^\r\n]+\r?\n((?:        [^\r\n]*\r?\n)*)')
+        $checkout.Success | Should -BeTrue
+        $checkout.Groups[1].Value | Should -Match '(?m)^        with:\s*$'
+        $checkout.Groups[1].Value | Should -Match '(?m)^          persist-credentials: false\s*$'
     }
 
     It 'passes the previously verified runtime archive and checksums into portable packaging' {

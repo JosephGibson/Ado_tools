@@ -225,6 +225,38 @@ Describe 'Approved live-check audit regressions with synthetic data only' {
         $lines -join "`n" | Should -Not -Match 'CustomerEpsilon'
     }
 
+    It 'F17 reports the V-30 bug lookup as <Verdict> with counts only' -TestCases @(
+        @{ Categories = @('InProgress', 'Completed'); Bugs = 2; Codes = @(); Verdict = 'PASS V-30 BUG_ROUTES_AND_LOOKUP_AGREE' },
+        @{ Categories = @('InProgress', 'CustomerKappa'); Bugs = 2; Codes = @(); Verdict = 'FAIL V-30 STATE_CATEGORIES_DIFFER' },
+        @{ Categories = @('Completed'); Bugs = 1; Codes = @('BugMetadataUnavailable'); Verdict = 'FAIL V-30 MODULE_LOOKUP_DEGRADED' },
+        @{ Categories = @('Completed'); Bugs = 0; Codes = @(); Verdict = 'INCONCLUSIVE V-30 NO_BUGS_ON_REPORTED_TESTS' }
+    ) {
+        param($Categories, $Bugs, $Codes, $Verdict)
+        $detail = [pscustomobject]@{ id = 2; testCase = [pscustomobject]@{ id = '1010' } }
+        $connection = [pscustomobject]@{ CollectionUri = [uri] 'https://ado.example.test/Collection'; RequestTimeoutSeconds = 30 }
+        Mock Invoke-AdoTestRequest {
+            param($Uri)
+            $content = if ($Uri -match 'workitemtypecategories') { '{"workItemTypes":[{"name":"CustomerTheta"}]}' }
+            else { '{"value":[' + (@($Categories | ForEach-Object { '{"name":"CustomerIota","category":"' + $_ + '"}' }) -join ',') + ']}' }
+            [pscustomobject]@{ Content = $content }
+        }
+        Mock Invoke-AdoTestBatch { [pscustomobject]@{ Content = '{"value":[{"id":1010,"relations":[' +
+                '{"rel":"System.LinkTypes.Related","url":"https://ado.example.test/Collection/_apis/wit/workItems/3001"},' +
+                '{"rel":"Hyperlink","url":"https://ado.example.test/CustomerLambda"}]}]}' } }
+        # Stub the product command as well: no installed module is loaded by these tests.
+        function Get-AdoBuildTestFailure {
+            $list = @(for ($index = 0; $index -lt $Bugs; $index++) {
+                    [pscustomobject]@{ Id = 3001 + $index; Title = 'CustomerMu'; State = 'CustomerNu'; IsOpen = $true; IsLinkedToTestCase = $true } })
+            [pscustomobject]@{ Failures = @([pscustomobject]@{ Bugs = $list }); Diagnostics = @($Codes | ForEach-Object { [pscustomobject]@{ Code = $_ } }) }
+        }
+        $lines = @(. (Get-LiveSection 'TestFailures' 'BUG_CATEGORY_EMPTY'))
+        $text = $lines -join "`n"
+        $text | Should -Match ('^' + [regex]::Escape($Verdict) + ' ')
+        $text | Should -Match 'WORKITEM_LINKS=1$'
+        $text | Should -Not -Match 'Customer'
+        Should -Invoke Invoke-AdoTestRequest -Exactly -Times 2 -ParameterFilter { $Uri -match '6\.0-preview\.1$' -or $Uri -match 'Microsoft\.BugCategory' }
+    }
+
     It 'F16 omits dynamic keys from smoke exception paths too' {
         Get-AdoSafeJsonPath '$.customFields[0].value.CustomerZeta' | Should -Be 'UNPRINTABLE'
         Get-AdoSafeJsonPath '$.fields.SystemTitle' | Should -Be 'UNPRINTABLE'

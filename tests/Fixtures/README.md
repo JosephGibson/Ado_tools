@@ -215,7 +215,7 @@ inputs are generated inside the tests.
 | `../AdoToolkit.Core.Tests/TestRuns/RetrievalRequestBoundTests.cs` | S5-1: exact request counts against the §15.9 bound, and that history builds cost only run and result pages | Rerun fixture: 2 run pages + 3 result pages + 3 details + 11 attachment lists = 19 | [V-19]–[V-23] |
 | `../AdoToolkit.Core.Tests/TestRuns/AttemptClassificationTests.cs` | S5-2: fixtures 3–6, both flaky sources, a pass-only identity that is counted but not reported, and data-driven sub-results that never become attempts | Fixtures above | [V-22] |
 | `../AdoToolkit.Core.Tests/TestRuns/RunHistoryTests.cs` | S5-3: window parameters and both scopes, `maxTime` from finish or queue time, oldest-first order with the current build last, `NotRun`, `HistoryUnavailable`, the request budget, and bars equal to the tally of their cells | Fixtures above plus a synthetic 500 body | [V-25], [V-19], [V-20] |
-| `../AdoToolkit.Core.Tests/TestRuns/TestCaseLinkResolutionTests.cs` | S5-8: valid, missing and invalid references; exactly the five documented fields in one batch body; reference parsing rejects zero, negatives, padding, decimals and overflow | Fixtures above | [V-21], V-05 |
+| `../AdoToolkit.Core.Tests/TestRuns/TestCaseLinkResolutionTests.cs` | S5-8: valid, missing and invalid references; one batch body with the distinct valid IDs and `$expand: relations` (changed 2026-09-21 for the bug lookup); reference parsing rejects zero, negatives, padding, decimals and overflow | Fixtures above | [V-21], V-05 |
 | `../AdoToolkit.Core.Tests/TestRuns/RetrievalCancellationTests.cs` | Cancellation during pass 2 stops before the next request; an authorization failure in a history build still fails the whole retrieval | Scripted fake responses | — |
 | `../AdoToolkit.PowerShell.Tests/TestRuns.Pester.ps1` | S5-1/S5-3 through the cmdlets: BuildGet then runs, typed pipeline binding, foreign-collection rejection, local range validation, one set per piped build, history cells, and the configured failure maximum giving one warning and `Partial` | Loopback fake server only; the configuration override writes to `$TestDrive` | [V-19]–[V-25] |
 
@@ -363,3 +363,40 @@ is synthetic.
 | `../AdoToolkit.Core.Tests/Reporting/TestFailures/CompactReportTests.cs` | Groups by stage, job and job instance, one list without distinct names, collapsed details, searchable card text, flaky exclusion, and a generated 100-failure by 14-attempt report checked against a size budget | Generated inside the test | V-19 |
 | `../AdoToolkit.Core.Tests/Reporting/TestFailures/LatestRunAttachmentTests.cs` | Attachment window boundaries and the JSON/text-only download rule, with and without `-AllRunAttachments` | Generated inside the test | [V-23] |
 | `../AdoToolkit.PowerShell.Tests/TestFailureExport.Pester.ps1` | `runs-two.json` start dates are rewritten relative to the current time, because the cmdlet measures the attachment window from the export time | Loopback fake server only | — |
+
+## Bugs of reported tests (2026-09-21)
+
+Each reported test lists the bugs associated with its results and the Bug-category work items
+linked to its Test Case. Shapes follow the Server 2020 REST 6.0 documentation for
+`workitemsbatch`, `workitemtypecategories` and `workitemtypes/{type}/states`
+(`6.0-preview.1`); none of them has been confirmed at work. The opt-in V-30 check in
+`tests/Live/TestFailures.Live.ps1` covers them. All data is synthetic.
+
+| Fixture or source | Represents | Source or assumption | V-item |
+| --- | --- | --- | --- |
+| `TestRuns/workitems-bugs.json` | The bug read for `result-detail-201-1.json`: 2001 Active and 2002 Closed, both of type Bug | REST 6.0 `workitemsbatch` with a field list | V-30 |
+| `TestRuns/workitems-testcase-links.json` | Test Case 1010 read with `$expand: relations`: every field including Steps, and links to a bug (Tested By), a closed bug (Related), a User Story, Shared Steps, a custom-type bug through a custom link type, plus a hyperlink with a work-item-like URL, an artifact link, an attachment and an unreadable URL that are never requested | REST 6.0 relation shape `rel`/`url`/`attributes`; link names from the Server 2020 link type reference | V-30 |
+| `TestRuns/workitems-linked.json` | The linked work items: 3001 Bug Active, 3002 Bug Closed, 3050 User Story, 3060 Shared Steps and 3080 of the custom type `Défaut de production` | Tests filter it to the requested IDs | — |
+| `TestRuns/workitemtypecategory-bug.json` | `Microsoft.BugCategory` holding Bug and the custom type | REST 6.0 `workitemtypecategories` | V-30 |
+| `TestRuns/workitemtype-states-bug.json` | Bug states New, Active, Resolved and Closed with their categories | REST 6.0 `workitemtypes/{type}/states` sample shape | V-30 |
+| `../AdoToolkit.Core.Tests/TestRuns/TestBugResolutionTests.cs` | A bug linked only to the Test Case, a bug only on the result, Completed and Removed categories under custom state names, a failed lookup that still renders, the metadata fallback, an unreadable bug, one batch for every test, a bug in another project, empty, blank and `..` projects that fall back to the build's project, and the Without an open bug filter in both languages | Generated details, state lists and 404/500 bodies | V-30 |
+| `../AdoToolkit.Core.Tests/TestRuns/TestRunFixture.cs` | Batch routes chosen by a request body fragment, because the Test Case and bug reads share one URL | — | — |
+| `Reports/testfailures-*.en-US.html`, `.fr-CA.html` | Regenerated: bug lists in cards (open, closed and unreadable bugs, and a hostile title), the open-bug mark in Overview and By error rows, no bug links in card headers, the `data-open-bug` card marker and the Without an open bug filter. The fixture clock is UTC, so the report times are unchanged | `TestFailureReportFixture.cs` | — |
+| `../AdoToolkit.PowerShell.Tests/TestRuns.Pester.ps1`, `TestFailureExport.Pester.ps1`, `Usability.Pester.ps1` | Each two-run retrieval now answers the bug read and one state list after the Test Case read; `TestRuns.Pester.ps1` also checks the `AdoTestBug` table view | Loopback fake server | — |
+| `../../tools/tests/LiveAudit.Tests.ps1`, F17 | The V-30 section with a custom Bug type, unknown and known state categories, a work item link and a hyperlink, and module results with and without bugs or warnings; no type, state or title is ever printed | Offline mocks; a stub `Get-AdoBuildTestFailure` | V-30 |
+
+## Version 0.4.0 review regressions (2026-09-21)
+
+Each test below fails without its fix. All inputs are synthetic and generated inside the
+tests; nothing contacts a server or runs a launched file.
+
+| Fixture or source | Represents | Source or assumption | V-item |
+| --- | --- | --- | --- |
+| `../AdoToolkit.Core.Tests/Http/HttpPipelineContractTests.cs` | Empty, blank, `.` and `..` route values are refused, because a URI collapses dot segments even when escaped; `...` stays a segment | .NET `Uri` path normalization | — |
+| `../AdoToolkit.Core.Tests/Configuration/ConfigurationStoreTests.cs` | A property named twice at the root, in `profiles` and in `testResults` is a configuration error from `Parse` and `Load` | Hand-written JSON | — |
+| `../AdoToolkit.Core.Tests/TestManagement/TestCaseServiceTests.cs` | A blank or `..` `System.TeamProject` is a format error on the Test Case and only drops the project and link of a Shared Step | `ExpansionFixture` items | — |
+| `../AdoToolkit.Core.Tests/Reporting/TestCaseExporterTests.cs` | `-Open` launches `.html`, `.htm`, `.json` and `.txt` reports but not `.cmd`, `.hta`, `.js` or extensionless ones, which get a warning; the shell launcher refuses them too, tested on a path that does not exist | Recording launcher; no process is started | — |
+| `../AdoToolkit.Core.Tests/Reporting/TestFailures/ReportTimeTests.cs` | An export at UTC−04:00 shows the UTC build, run, attempt and history times in that offset, in English and French | `TestFailureReportFixture.cs` with a shifted clock | — |
+| `../AdoToolkit.PowerShell.Tests/Projects.Pester.ps1`, `Profiles.Pester.ps1`, `Usability.Pester.ps1` | Project and profile names with a typographic apostrophe complete, and are suggested by `Test-AdoConnection`, as commands that parse; `-Project '..'` and `'.'` fail before any request; a repeated configuration property and a blank profile name are reported as configuration and parameter errors | Loopback fake server; configuration under `$TestDrive` | — |
+| `../../tools/tests/ReleaseWorkflow.Tests.ps1` | A runtime that matches its published hash but not the pinned SHA-256 is refused before extraction, and checkout keeps no credentials | Mocked downloads; the pinned hash is the published PowerShell 7.6.6 value | — |
+| `../../tools/tests/Portable.Tests.ps1` | The launcher greets French consoles with `est prêt.` and English ones with `is ready.` | Mocked module import and host output | — |

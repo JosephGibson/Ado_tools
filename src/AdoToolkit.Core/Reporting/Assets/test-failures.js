@@ -63,6 +63,7 @@
         || (group.startsWith('g') && !failed.includes(group.slice(1)))
         || (group.startsWith('o') && !(failed.length === 1 && failed[0] === group.slice(1)))
         || toggles.some(toggle => toggle.dataset.toggle === 'attachments' ? toggle.checked && +card.dataset.attachmentCount === 0 :
+          toggle.dataset.toggle === 'untracked' ? toggle.checked && card.dataset.openBug !== undefined :
           !toggle.checked && toggle.dataset.toggle === card.dataset.classification);
       card.hidden = hidden;
       rows.get(card).forEach(row => { row.hidden = hidden; });
@@ -132,7 +133,7 @@
     if (event.key === 'Escape' && event.target === filter) {
       filter.value = '';
       if (failing) failing.value = '';
-      toggles.forEach(toggle => { toggle.checked = toggle.dataset.toggle !== 'attachments'; });
+      toggles.forEach(toggle => { toggle.checked = toggle.defaultChecked; });
       apply();
     }
     if (event.ctrlKey || event.metaKey || event.altKey ||

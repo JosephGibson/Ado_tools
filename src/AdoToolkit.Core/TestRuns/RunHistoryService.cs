@@ -123,7 +123,7 @@ internal sealed class RunHistoryService
     }
 
     // Authentication, authorization and cancellation still fail the whole retrieval (§15.12).
-    private static bool IsRecoverable(Exception error, CancellationToken cancellationToken) =>
+    internal static bool IsRecoverable(Exception error, CancellationToken cancellationToken) =>
         !cancellationToken.IsCancellationRequested
         && error is AdoException and not AdoAuthenticationException and not AdoAuthorizationException;
 

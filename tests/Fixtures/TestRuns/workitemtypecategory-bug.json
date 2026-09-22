@@ -1,0 +1,19 @@
+{
+  "name": "Bug Category",
+  "referenceName": "Microsoft.BugCategory",
+  "defaultWorkItemType": {
+    "name": "Bug",
+    "url": "https://ado.example.test/Collection/_apis/wit/workItemTypes/Bug"
+  },
+  "workItemTypes": [
+    {
+      "name": "Bug",
+      "url": "https://ado.example.test/Collection/_apis/wit/workItemTypes/Bug"
+    },
+    {
+      "name": "Défaut de production",
+      "url": "https://ado.example.test/Collection/_apis/wit/workItemTypes/D%C3%A9faut%20de%20production"
+    }
+  ],
+  "url": "https://ado.example.test/Collection/_apis/wit/workItemTypeCategories/Microsoft.BugCategory"
+}

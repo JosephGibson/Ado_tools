@@ -75,7 +75,8 @@ public sealed class TestCaseService
         List<AdoDiagnostic> inputDiagnostics = [];
         foreach (TestWorkItem item in items)
         {
-            string project = Required(item, "System.TeamProject", culture);
+            string project = item.Project ?? throw new AdoResponseFormatException(Messages.Get(AdoMessage.ResponseFormat, culture))
+            { Operation = "WorkItemsBatch" };
             string type = Required(item, "System.WorkItemType", culture);
             if (!await detector.IsStepContainerAsync(item.Fields.ContainsKey("Microsoft.VSTS.TCM.Steps"), project, type, culture, cancellationToken).ConfigureAwait(false))
             {
@@ -107,11 +108,11 @@ public sealed class TestCaseService
             cases.Add(new()
             {
                 Id = item.Id, Rev = item.Rev, Title = Required(item, "System.Title", culture), WorkItemType = Required(item, "System.WorkItemType", culture),
-                TeamProject = Required(item, "System.TeamProject", culture), State = Required(item, "System.State", culture),
+                TeamProject = item.Project!, State = Required(item, "System.State", culture),
                 Priority = priority is long value ? (int)value : null, AutomationStatus = item.Text("Microsoft.VSTS.TCM.AutomationStatus"),
                 AreaPath = item.Text("System.AreaPath"), IterationPath = item.Text("System.IterationPath"),
                 AssignedTo = item.Value("System.AssignedTo") as AdoIdentityRef, ChangedBy = item.Value("System.ChangedBy") as AdoIdentityRef,
-                ChangedDate = changed, CollectionUri = connection.CollectionUri, WebUrl = AdoWebLinks.WorkItem(connection.CollectionUri, item.Text("System.TeamProject")!, item.Id),
+                ChangedDate = changed, CollectionUri = connection.CollectionUri, WebUrl = AdoWebLinks.WorkItem(connection.CollectionUri, item.Project!, item.Id),
                 RetrievedAt = DateTimeOffset.UtcNow, Steps = expanded.Rows.AsReadOnly(), Diagnostics = expanded.Diagnostics.AsReadOnly(), Parameters = joined,
                 SharedSteps = Array.AsReadOnly(expanded.Rows.Where(row => row.SharedStep is not null).GroupBy(row => row.SharedStep!.Id)
                     .Select(group => expander.Info(group.Key, group.Count())).ToArray()),

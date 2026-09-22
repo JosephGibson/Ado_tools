@@ -1,0 +1,65 @@
+{
+  "count": 5,
+  "value": [
+    {
+      "id": 3001,
+      "rev": 2,
+      "fields": {
+        "System.Id": 3001,
+        "System.Title": "Le total ignore la remise",
+        "System.State": "Active",
+        "System.WorkItemType": "Bug",
+        "System.TeamProject": "Équipe Web"
+      },
+      "url": "https://ado.example.test/Collection/_apis/wit/workItems/3001"
+    },
+    {
+      "id": 3002,
+      "rev": 6,
+      "fields": {
+        "System.Id": 3002,
+        "System.Title": "Arrondi du total",
+        "System.State": "Closed",
+        "System.WorkItemType": "Bug",
+        "System.TeamProject": "Équipe Web"
+      },
+      "url": "https://ado.example.test/Collection/_apis/wit/workItems/3002"
+    },
+    {
+      "id": 3050,
+      "rev": 4,
+      "fields": {
+        "System.Id": 3050,
+        "System.Title": "Payer par carte",
+        "System.State": "Active",
+        "System.WorkItemType": "User Story",
+        "System.TeamProject": "Équipe Web"
+      },
+      "url": "https://ado.example.test/Collection/_apis/wit/workItems/3050"
+    },
+    {
+      "id": 3060,
+      "rev": 1,
+      "fields": {
+        "System.Id": 3060,
+        "System.Title": "Se connecter",
+        "System.State": "Active",
+        "System.WorkItemType": "Shared Steps",
+        "System.TeamProject": "Équipe Web"
+      },
+      "url": "https://ado.example.test/Collection/_apis/wit/workItems/3060"
+    },
+    {
+      "id": 3080,
+      "rev": 1,
+      "fields": {
+        "System.Id": 3080,
+        "System.Title": "Remise perdue en production",
+        "System.State": "Nouveau",
+        "System.WorkItemType": "Défaut de production",
+        "System.TeamProject": "Équipe Web"
+      },
+      "url": "https://ado.example.test/Collection/_apis/wit/workItems/3080"
+    }
+  ]
+}

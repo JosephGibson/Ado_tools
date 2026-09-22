@@ -10,7 +10,8 @@ BeforeAll {
         Get-Content -LiteralPath (Join-Path $PSScriptRoot "../Fixtures/TestRuns/$Name") -Raw -Encoding utf8
     }
     $script:EmptyPage = '{"count":0,"value":[]}'
-    # The eleven responses of one two-run retrieval without history, in request order.
+    # The thirteen responses of one two-run retrieval without history, in request order:
+    # result 201-1 lists bugs 2001 and 2002, read in one batch with one state list.
     function Get-TwoRunResponses {
         @(
             @{ Body = Get-TestRunFixture 'runs-two.json' },
@@ -23,7 +24,9 @@ BeforeAll {
             @{ Body = Get-TestRunFixture 'result-detail-201-1.json' },
             @{ Body = Get-TestRunFixture 'attachments-empty.json' },
             @{ Body = Get-TestRunFixture 'attachments-result.json' },
-            @{ Body = Get-TestRunFixture 'workitems-testcases.json' }
+            @{ Body = Get-TestRunFixture 'workitems-testcases.json' },
+            @{ Body = Get-TestRunFixture 'workitems-bugs.json' },
+            @{ Body = Get-TestRunFixture 'workitemtype-states-bug.json' }
         )
     }
 }
@@ -104,6 +107,20 @@ Describe 'Test run listing' -Tag 'S5-1' {
 Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
     AfterEach { Disconnect-Ado }
 
+    It 'prints the bugs of a failure as a table, one row per bug' {
+        $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses))
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
+            $table = @((($set.Failures[1].Bugs | Out-String -Width 200) -split "`r?`n") | Where-Object { $_.Trim() })
+            $table[0] | Should -Match '^\s*Id\s+IsOpen\s+State\s+WorkItemType\s+Title\s*$'
+            # The header, its underline and the two bugs.
+            $table.Count | Should -Be 4
+            $table[2] | Should -Match '^\s*2001\s+True\s+Active\s+Bug\s+Le panier perd un article\s*$'
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
     It 'emits one set with failures, counts, history and Test Case links' {
         $responses = @(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses) + @(
             @{ Body = Get-TestRunFixture 'builds-history.json' },
@@ -128,6 +145,16 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
             $set.Failures.ShortName | Should -Be @('Totals', 'AddsItem')
             $set.Failures[0] | Should -BeOfType ([AdoToolkit.Core.TestRuns.AdoTestFailure])
             $set.Failures[1].TestCase.Title | Should -Be 'Vérifier le panier'
+            $set.Failures[1].Bugs.Id | Should -Be @(2001, 2002)
+            $set.Failures[1].Bugs[0] | Should -BeOfType ([AdoToolkit.Core.TestRuns.AdoTestBug])
+            # PowerShell reads the typographic apostrophe as a quote, so this title needs double quotes.
+            $set.Failures[1].Bugs.Title | Should -Be @('Le panier perd un article', "Ancien délai d’expiration")
+            $set.Failures[1].Bugs.State | Should -Be @('Active', 'Closed')
+            $set.Failures[1].Bugs.StateCategory | Should -Be @('InProgress', 'Completed')
+            $set.Failures[1].Bugs.IsOpen | Should -Be @($true, $false)
+            $set.Failures[1].Bugs[0].IsAssociatedWithResult | Should -BeTrue
+            $set.Failures[1].HasOpenBug | Should -BeTrue
+            $set.Failures[0].HasOpenBug | Should -BeFalse
             $set.Failures[1].Attempts[0].Attachments.Count | Should -Be 5
             $set.Failures[1].Attempts[0].Attachments[0].Kind | Should -Be 'Png'
             $set.Failures[1].Attempts[0].Attachments[0].DownloadStatus | Should -Be 'NotRequested'
@@ -191,7 +218,7 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
                 $set.History[0].IsCurrent | Should -BeTrue
             }
             # One build listing plus eleven retrieval requests per set.
-            $server.Requests.Count | Should -Be 23
+            $server.Requests.Count | Should -Be 27
         }
         finally { Stop-FakeAdoServer -Server $server }
     }

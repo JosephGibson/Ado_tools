@@ -203,6 +203,7 @@ public sealed class TestFailureExporterTests
             .Route("result-detail-202-11.json", "/Runs/202/results/11?")
             .Route("attachments-result.json", "/Runs/201/Results/1/attachments")
             .Route("attachments-empty.json", "/Runs/202/Results/11/attachments")
+            .RouteBugs()
             .Route("workitems-testcases.json", "workitemsbatch");
         FakeHttpMessageHandler handler = fixture.Handler();
         HttpClient client = new(handler);

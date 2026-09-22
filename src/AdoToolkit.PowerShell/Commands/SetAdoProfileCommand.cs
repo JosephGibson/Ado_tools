@@ -8,7 +8,7 @@ namespace AdoToolkit;
 public sealed class SetAdoProfileCommand : AdoCmdletBase
 {
     [Parameter(Mandatory = true, Position = 0)]
-    [ValidateNotNullOrEmpty]
+    [ValidateNotNullOrWhiteSpace]
     [ArgumentCompleter(typeof(ProfileNameCompleter))]
     public string Name { get; set; } = "";
 

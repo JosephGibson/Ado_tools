@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 09-21-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoTestCase
 ---
@@ -179,7 +179,7 @@ HelpMessage: ''
 
 ### -Open
 
-Opens the one committed report with the default application after successful validation and replacement.
+Opens the one committed report with the default application after successful validation and replacement. Only .html, .htm, .md, .markdown, .json and .txt files are opened, because Windows runs some other file types instead of showing them; with any other extension the report is still written and a warning says it was not opened.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter

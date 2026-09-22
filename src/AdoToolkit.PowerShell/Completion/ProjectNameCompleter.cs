@@ -13,6 +13,6 @@ public sealed class ProjectNameCompleter : IArgumentCompleter
             !holder.Projects.TryGet(SessionStateHolder.Key(connection) + ":completion", out IReadOnlyList<AdoProject>? projects)) return [];
         WildcardPattern pattern = new(WildcardPattern.Escape(wordToComplete.Trim('\'')) + "*", WildcardOptions.IgnoreCase | WildcardOptions.CultureInvariant);
         return projects.Select(project => project.Name).Where(pattern.IsMatch).Order(StringComparer.OrdinalIgnoreCase)
-            .Select(name => new CompletionResult("'" + name.Replace("'", "''", StringComparison.Ordinal) + "'", name, CompletionResultType.ParameterValue, name)).ToArray();
+            .Select(name => new CompletionResult("'" + CodeGeneration.EscapeSingleQuotedStringContent(name) + "'", name, CompletionResultType.ParameterValue, name)).ToArray();
     }
 }

@@ -13,6 +13,9 @@ public sealed class AdoTestFailure
     public string? Title { get; init; }
     public IReadOnlyList<AdoTestAttempt> Attempts { get; init; } = Array.Empty<AdoTestAttempt>();
     public AdoTestCaseLink? TestCase { get; init; }
+    // Bugs of its test results and of its Test Case, ordered by ID.
+    public IReadOnlyList<AdoTestBug> Bugs { get; init; } = Array.Empty<AdoTestBug>();
+    public bool HasOpenBug => Bugs.Any(static bug => bug.IsOpen == true);
     // One cell per history entry, oldest first, current last.
     public IReadOnlyList<AdoTestHistoryEntry> History { get; init; } = Array.Empty<AdoTestHistoryEntry>();
     public AdoIdentityRef? Owner { get; init; }
@@ -22,7 +25,7 @@ public sealed class AdoTestFailure
     internal AdoTestFailure WithAttempts(IReadOnlyList<AdoTestAttempt> attempts) => new()
     {
         Ordinal = Ordinal, Classification = Classification, TestName = TestName, ShortName = ShortName,
-        Storage = Storage, Title = Title, Attempts = attempts, TestCase = TestCase, History = History,
+        Storage = Storage, Title = Title, Attempts = attempts, TestCase = TestCase, Bugs = Bugs, History = History,
         Owner = Owner, Priority = Priority, CollectionUri = CollectionUri,
     };
 }

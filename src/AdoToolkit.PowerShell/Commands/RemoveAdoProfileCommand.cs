@@ -8,7 +8,7 @@ namespace AdoToolkit;
 public sealed class RemoveAdoProfileCommand : AdoCmdletBase
 {
     [Parameter(Mandatory = true, Position = 0, ParameterSetName = "ByName")]
-    [ValidateNotNullOrEmpty]
+    [ValidateNotNullOrWhiteSpace]
     [ArgumentCompleter(typeof(ProfileNameCompleter))]
     public string Name { get; set; } = "";
 

@@ -5,7 +5,9 @@ using AdoToolkit.Core.TestRuns;
 namespace AdoToolkit.Core.Tests.TestRuns;
 
 // The §15.9 bound: run pages + result pages (current and history builds) + one detail request per
-// reported result record + attachment lists + ceil(distinct Test Case IDs / 200).
+// reported result record + attachment lists + ceil(distinct Test Case IDs / 200). The bug lookup
+// adds ceil(distinct bug candidates / 200), one Bug category read per project with linked work
+// items and one state list per project and bug type (TestBugResolutionTests).
 [Trait("Acceptance", "S5-1")]
 public sealed class RetrievalRequestBoundTests
 {

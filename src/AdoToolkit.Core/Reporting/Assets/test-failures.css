@@ -93,6 +93,13 @@ a.sq:hover, a.sq:focus-visible { outline: 1px solid var(--link); outline-offset:
 .metadata-grid dd { white-space: pre-wrap; min-width: 0; }
 .card-history { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-2); }
 .strip-label { color: var(--text-muted); font-size: .72rem; font-weight: 600; }
+.card-bugs { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-2); }
+.bug-list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: .78rem; }
+.bug-list > li { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); min-width: 0; }
+.bug-list a { font-weight: 600; }
+.bug-title { overflow-wrap: anywhere; }
+.bug-state { color: var(--text-muted); font-size: .72rem; }
+.bug-open, .open-bug-marker { padding: 0 var(--space-1); border: 1px solid var(--info); border-radius: 4px; color: var(--info); font-size: .7rem; font-weight: 600; white-space: nowrap; }
 .history-strip { margin: 0; gap: var(--space-1); }
 .history-strip > li { display: flex; min-width: 0; }
 .history-cell { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-1); border: 1px solid var(--border); border-radius: 4px; font-size: .7rem; }

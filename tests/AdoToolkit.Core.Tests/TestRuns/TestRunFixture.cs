@@ -65,21 +65,39 @@ internal sealed class TestRunFixture
         return this;
     }
 
+    // The Test Case and bug reads share the WorkItemsBatch URL, so these routes also match a
+    // request body fragment: TestCaseBatch selects the Test Case read, BugBatch the bug read.
+    // Register them before a broader "workitemsbatch" route.
+    internal const string TestCaseBatch = "\"$expand\":\"relations\"";
+    internal const string BugBatch = "\"fields\":";
+
+    internal TestRunFixture RouteBatch(string bodyFragment, string body, int? status = null)
+    {
+        routes.Add(new FixtureRoute(["workitemsbatch"], body, status, BodyFragment: bodyFragment));
+        return this;
+    }
+
+    // The bug lookup of result-detail-201-1.json: bug 2001 is Active (open) and 2002 Closed.
+    internal TestRunFixture RouteBugs() => RouteBatch(BugBatch, Read("workitems-bugs.json"))
+        .Route("workitemtype-states-bug.json", "/workitemtypes/Bug/states");
+
     internal FakeHttpMessageHandler Handler()
     {
         FakeHttpMessageHandler handler = new()
         {
-            Fallback = (request, _) =>
+            Fallback = async (request, token) =>
             {
                 string target = request.RequestUri!.PathAndQuery;
+                string body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(token);
                 foreach (FixtureRoute route in routes)
-                    if (route.Fragments.All(fragment => target.Contains(fragment, StringComparison.Ordinal)))
-                        return Task.FromResult(route.Bytes is null ? FakeHttpMessageHandler.Response(route.Body, route.Status ?? 200)
-                            : new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(route.Bytes) });
+                    if (route.Fragments.All(fragment => target.Contains(fragment, StringComparison.Ordinal))
+                        && (route.BodyFragment is null || body.Contains(route.BodyFragment, StringComparison.Ordinal)))
+                        return route.Bytes is null ? FakeHttpMessageHandler.Response(route.Body, route.Status ?? 200)
+                            : new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(route.Bytes) };
                 // TopSkip stops only on an empty page, so an unrouted later offset terminates it.
                 if (target.Contains("%24skip=", StringComparison.Ordinal)
                     && !target.Contains("%24skip=0&", StringComparison.Ordinal))
-                    return Task.FromResult(FakeHttpMessageHandler.Response(EmptyPage));
+                    return FakeHttpMessageHandler.Response(EmptyPage);
                 throw new InvalidOperationException("No fixture route for " + target);
             },
         };
@@ -89,5 +107,5 @@ internal sealed class TestRunFixture
     internal static TestFailureRetrievalService Service(HttpClient client, FakeClock? clock = null) =>
         new(client, Connection, null, clock ?? new FakeClock());
 
-    private sealed record FixtureRoute(string[] Fragments, string Body, int? Status, byte[]? Bytes = null);
+    private sealed record FixtureRoute(string[] Fragments, string Body, int? Status, byte[]? Bytes = null, string? BodyFragment = null);
 }

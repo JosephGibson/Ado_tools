@@ -33,12 +33,17 @@ Produit, pour chaque `AdoBuildTestFailureSet` reçu de `Get-AdoBuildTestFailure`
 rapport HTML sombre dans la culture du rapport. Le rapport compte quatre vues, et une
 cinquième pour les diagnostics lorsqu’il y en a. Vue d’ensemble est un tableau d’une ligne
 par test en échec : son numéro de cas de test lié à l’élément de travail, l’état de chaque
-phase ou travail qui l’a exécuté et la première ligne de sa dernière erreur. Par erreur
-regroupe les mêmes lignes sous leur dernière erreur. Détails présente une fiche par test.
-Exécutions et historique liste les séries de tests du build, le graphique de l’historique
-et les détails du rapport. Chaque groupe, tentative et aperçu de pièce jointe est d’abord
-réduit, et un message d’erreur ou une arborescence des appels répétés d’une tentative
-antérieure du même test sont référencés au lieu d’être répétés.
+phase ou travail qui l’a exécuté et la première ligne de sa dernière erreur. Un test qui a
+au moins un bogue ouvert porte la mention Bogue ouvert après son nom. Par erreur regroupe
+les mêmes lignes sous leur dernière erreur. Détails présente une fiche par test, qui liste
+ses bogues avec leur ID lié à l’élément de travail, leur titre et leur état, et la mention
+Ouvert pour ceux qui sont ouverts. Un bogue est ouvert sauf si son état appartient à la
+catégorie d’états Completed ou Removed. Exécutions et historique liste les séries de tests
+du build, le graphique de l’historique et les détails du rapport. Chaque groupe, tentative
+et aperçu de pièce jointe est d’abord réduit, et un message d’erreur ou une arborescence
+des appels répétés d’une tentative antérieure du même test sont référencés au lieu d’être
+répétés. Toutes les dates et heures sont affichées dans le fuseau horaire de l’ordinateur
+qui exporte le rapport, comme l’heure de génération du rapport.
 
 Lorsque les séries de tests du build portent des noms de phase ou de travail différents,
 par exemple une phase par langue, chaque fiche regroupe ses tentatives selon ces noms et la
@@ -51,8 +56,10 @@ Le rapport est complet lorsque les scripts sont bloqués. Un petit script statiq
 par une stratégie de sécurité du contenu fondée sur des hachages, ajoute le changement de
 vue, la recherche, la navigation au clavier et la copie. La recherche compare chaque mot
 saisi à toute la fiche, tentatives réduites comprises : messages d’erreur, arborescences
-des appels, pièces jointes JSON et texte affichées, noms de phase et de travail, et champs
-des exécutions et des tentatives. Un ID de cas de test correspond avec ou sans `#`.
+des appels, pièces jointes JSON et texte affichées, noms de phase et de travail, champs
+des exécutions et des tentatives, et titres et états des bogues. Un ID de cas de test
+correspond avec ou sans `#`. Lorsqu’au moins un test a un bogue ouvert, le filtre Sans
+bogue ouvert n’affiche que les tests qu’aucun bogue ouvert ne suit encore.
 
 Les pièces jointes n’apparaissent que pour les séries de tests commencées dans les
 `-AttachmentWindowDays` jours précédant l’exportation, 7 par défaut; une série sans date

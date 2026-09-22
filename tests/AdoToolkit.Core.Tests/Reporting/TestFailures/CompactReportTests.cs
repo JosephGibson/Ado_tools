@@ -57,13 +57,15 @@ public sealed class CompactReportTests
         Assert.Matches("status-failed\">.*1/1</span>.*status-passed\">.*0/1</span>", Section(html, "<tr data-index-for=\"f-2\">", "</tr>"));
     }
 
-    // No names, or the same names on every run, keep today's single list.
+    // No distinct pipeline OR run names keeps one list.
     [Theory]
     [InlineData(null)]
     [InlineData("Tests")]
     public void RunsWithoutDistinctPipelineNamesRenderOneUngroupedList(string? name)
     {
-        TestFailureReportModel model = Model(Named(_ => name, "stage"));
+        AdoBuildTestFailureSet set = Named(_ => name, "stage");
+        TestFailureReportModel model = Model(With(set,
+            [.. set.Runs.Select(run => Copy(run, run.StageName, run.PhaseName, run.JobName, "Same run"))], set.Failures));
         string html = TestFailureReportFixture.Render(model);
         TestFailureReportValidator.Validate(new StringReader(html), model);
         Assert.DoesNotContain("class=\"attempt-group\"", html, StringComparison.Ordinal);

@@ -45,12 +45,12 @@ public sealed class TestFailureRetrievalService
 
     internal int RequestCount => counter.Count;
 
-    internal static TestResultRecord ToRecord(TestResultDto result, AdoTestRun run, int runOrder) => new()
+    internal static TestResultRecord ToRecord(TestResultDto result, AdoTestRun run, int runOrder, PipelineGrouping grouping) => new()
     {
         RunId = run.Id,
         ResultId = result.Id,
         RunOrder = runOrder,
-        PipelineKey = PipelineGrouping.Key(run),
+        PipelineKey = grouping.KeyOf(run.Id),
         Outcome = result.Outcome,
         AutomatedTestName = result.AutomatedTestName,
         AutomatedTestStorage = result.AutomatedTestStorage,
@@ -83,6 +83,7 @@ public sealed class TestFailureRetrievalService
                 arguments: [build.Id.ToString(CultureInfo.InvariantCulture)]));
         // GetRunsAsync already returns runs in attempt order.
         IReadOnlyList<AdoTestRun> ordered = runList;
+        PipelineGrouping grouping = PipelineGrouping.Create(ordered);
         List<TestResultRecord> records = [];
         int runOrder = 0;
         foreach (AdoTestRun run in ordered)
@@ -90,7 +91,7 @@ public sealed class TestFailureRetrievalService
             cancellationToken.ThrowIfCancellationRequested();
             runOrder++;
             foreach (TestResultDto result in await runs.GetResultsAsync(project, run.Id, culture, cancellationToken).ConfigureAwait(false))
-                records.Add(ToRecord(result, run, runOrder));
+                records.Add(ToRecord(result, run, runOrder, grouping));
             progress.Progress(new AdoProgress { Phase = AdoProgressPhase.TestResults, Completed = runOrder, Total = ordered.Count });
         }
         IReadOnlyList<TestIdentityGroup> groups = AttemptGrouper.Group(records, culture, diagnostics, cancellationToken);

@@ -14,6 +14,11 @@ Get-AdoTestSuite -PlanId 812 -Recurse        # root suite and its whole tree, de
 Name filters ignore case but not accents: `'Tâches*'` doesn't match `Taches`.
 A suite's `Id` is a suite ID, and AdoToolkit never treats it as a Test Case ID.
 
+A profile with `defaultTestPlanId` and `defaultTestSuiteId` supplies `-PlanId` and
+`-SuiteId` when you leave both out, so `Get-AdoTestCase -Recurse` reads the default
+suite tree. The default suite is used only with the default plan. See
+[Profiles](configuration.md#profiles).
+
 ## Get Test Cases
 
 ```powershell

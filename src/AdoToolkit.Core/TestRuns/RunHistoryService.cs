@@ -184,6 +184,7 @@ internal sealed class RunHistoryService
         IReadOnlyList<AdoTestRun> buildRuns = await runs
             .GetRunsAsync(project, build.Id, buildUri, culture, cancellationToken).ConfigureAwait(false);
         if (buildRuns.Count == 0) return HistoryBuildData.Unavailable;
+        PipelineGrouping grouping = PipelineGrouping.Create(buildRuns);
         List<TestResultRecord> records = [];
         int order = 0;
         foreach (AdoTestRun run in buildRuns)
@@ -191,7 +192,7 @@ internal sealed class RunHistoryService
             cancellationToken.ThrowIfCancellationRequested();
             order++;
             foreach (TestResultDto result in await runs.GetResultsAsync(project, run.Id, culture, cancellationToken).ConfigureAwait(false))
-                records.Add(TestFailureRetrievalService.ToRecord(result, run, order));
+                records.Add(TestFailureRetrievalService.ToRecord(result, run, order, grouping));
         }
         return HistoryBuildData.FromGroups(AttemptGrouper.Group(records, culture, null, cancellationToken), cancellationToken);
     }

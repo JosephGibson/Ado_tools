@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 09-22-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoTestSuite
 ---
@@ -20,7 +20,7 @@ Retrieves test suites of a test plan.
 ### ByPlanId (Default)
 
 ```
-Get-AdoTestSuite [-PlanId] <int> [-SuiteId <int>] [-Recurse] [-Project <string>] [-Connection <AdoConnection>]
+Get-AdoTestSuite [[-PlanId] <int>] [-SuiteId <int>] [-Recurse] [-Project <string>] [-Connection <AdoConnection>]
 ```
 
 ### ByPlan
@@ -35,7 +35,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Reads every page of the plan's suite listing with the testplan area at API version 6.0-preview.1, builds the suite tree from parent references, and computes each SuitePath from the root suite to the suite. Returns the suite given by SuiteId, or the plan's root suite, alone. With Recurse, returns that suite and its whole subtree depth-first, keeping sibling order as returned by the server. A missing SuiteId produces a non-terminating ObjectNotFound error. Piped plans from another collection produce ConnectionMismatch before any request.
+Reads every page of the plan's suite listing with the testplan area at API version 6.0-preview.1, builds the suite tree from parent references, and computes each SuitePath from the root suite to the suite. Returns the suite given by SuiteId, or the plan's root suite, alone. With Recurse, returns that suite and its whole subtree depth-first, keeping sibling order as returned by the server. A missing SuiteId produces a non-terminating ObjectNotFound error. Piped plans from another collection produce ConnectionMismatch before any request. Without PlanId or a piped plan, the defaultTestPlanId of the connected profile is used, and without SuiteId, the profile's defaultTestSuiteId is the start. The profile's suite applies only together with the profile's plan: with an explicit PlanId or a piped plan, the plan's root suite is the start unless SuiteId is given. Without a plan from either source, the command fails with a configuration error before any request.
 
 ## EXAMPLES
 
@@ -55,21 +55,29 @@ Get-AdoTestPlan -Name 'Release*' | Get-AdoTestSuite
 
 Lists the root suite of each matching plan, using each plan's project.
 
+### Example 3
+
+```powershell
+Get-AdoTestSuite -Recurse
+```
+
+Lists the default test suite saved in the connection profile and its descendants.
+
 ## PARAMETERS
 
 ### -PlanId
 
-Positive test plan ID.
+Positive test plan ID. Defaults to the defaultTestPlanId of the connected profile, and is required when the profile has none.
 
 ```yaml
-Type: System.Int32
+Type: System.Nullable`1[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
 ParameterSets:
 - Name: ByPlanId
   Position: 0
-  IsRequired: true
+  IsRequired: false
   ValueFromPipeline: false
   ValueFromPipelineByPropertyName: false
   ValueFromRemainingArguments: false
@@ -101,7 +109,7 @@ HelpMessage: ''
 
 ### -SuiteId
 
-Positive suite ID to start from. Without it, the plan's root suite is the start.
+Positive suite ID to start from. Without it, the defaultTestSuiteId of the connected profile is the start when the plan also comes from the profile; otherwise the plan's root suite is the start.
 
 ```yaml
 Type: System.Nullable`1[System.Int32]

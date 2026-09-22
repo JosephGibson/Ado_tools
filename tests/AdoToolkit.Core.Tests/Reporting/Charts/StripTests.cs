@@ -25,7 +25,7 @@ public sealed class StripTests
     [Theory]
     [InlineData("en-US")]
     [InlineData("fr-CA")]
-    public void HistoryHasAllSixStatesLegendCurrentMarkerAndToolkitLinks(string cultureName)
+    public void HistoryKeepsAllSixStatesTitlesCurrentMarkerAndToolkitLinksWithoutALegend(string cultureName)
     {
         CultureInfo culture = CultureInfo.GetCultureInfo(cultureName);
         AdoTestHistoryEntry[] entries = Enum.GetValues<AdoTestHistoryOutcome>().Select((status, i) => new AdoTestHistoryEntry
@@ -42,7 +42,9 @@ public sealed class StripTests
             Assert.Contains(StatusPresentation.Label(status, culture), html, StringComparison.Ordinal);
         }
         Assert.Contains("aria-current=\"true\"", html, StringComparison.Ordinal);
-        Assert.Contains("class=\"status-legend\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("status-legend", html, StringComparison.Ordinal);
+        Assert.Equal(entries.Length, System.Text.RegularExpressions.Regex.Count(html, " title=\""));
+        Assert.Contains("title=\"&lt;build&gt;0: " + StatusPresentation.Label(entries[0].Outcome, culture) + "\"", html, StringComparison.Ordinal);
         Assert.Contains("ms.vss-test-web.build-test-results-tab", html, StringComparison.Ordinal);
         Assert.Contains("&lt;build&gt;", html, StringComparison.Ordinal);
         Assert.DoesNotContain("javascript:", html, StringComparison.Ordinal);

@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-21-2026
+ms.date: 09-22-2026
 PlatyPS schema version: 2024-05-01
 title: Connect-Ado
 ---
@@ -41,7 +41,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Creates a session connection using an explicit collection URL, a named profile, or the default profile, in that order. Uses your Windows identity. This command does not contact the server; use Test-AdoConnection to check access. Project overrides the profile default. Azure DevOps Services URLs are rejected. When no connection exists, other AdoToolkit commands connect with the default profile in the same way, without contacting the server.
+Creates a session connection using an explicit collection URL, a named profile, or the default profile, in that order. Uses your Windows identity. This command does not contact the server; use Test-AdoConnection to check access. Project overrides the profile default. A profile connection also carries the profile's default branch, build definition, test plan and test suite, which commands use when the matching parameters are omitted; a connection from a collection URL has none. The values are copied when the connection is made, so connect again after changing the profile. Azure DevOps Services URLs are rejected. When no connection exists, other AdoToolkit commands connect with the default profile in the same way, without contacting the server.
 
 ## EXAMPLES
 

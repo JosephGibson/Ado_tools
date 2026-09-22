@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-21-2026
+ms.date: 09-22-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoBuildTestFailure
 ---
@@ -17,7 +17,14 @@ Gathers the failed and flaky tests of one pipeline run.
 
 ## SYNTAX
 
-### ByBuildId (Default)
+### ByDefinition (Default)
+
+```
+Get-AdoBuildTestFailure [-Definition <Object>] [-Branch <string>] [-Result <BuildResult>] [-HistoryCount <int>]
+    [-HistoryScope <AdoTestHistoryScope>] [-Project <string>] [-Connection <AdoConnection>]
+```
+
+### ByBuildId
 
 ```
 Get-AdoBuildTestFailure [-BuildId] <int> [-HistoryCount <int>] [-HistoryScope <AdoTestHistoryScope>]
@@ -31,20 +38,13 @@ Get-AdoBuildTestFailure -InputObject <AdoBuild> [-HistoryCount <int>] [-HistoryS
     [-Connection <AdoConnection>]
 ```
 
-### ByDefinition
-
-```
-Get-AdoBuildTestFailure -Definition <Object> [-Branch <string>] [-Result <BuildResult>] [-HistoryCount <int>]
-    [-HistoryScope <AdoTestHistoryScope>] [-Project <string>] [-Connection <AdoConnection>]
-```
-
 ## ALIASES
 
 No aliases.
 
 ## DESCRIPTION
 
-Emits one AdoBuildTestFailureSet per input build. Retrieval runs in two passes. The first lists every test result of every run of the build, groups results into test identities by automated test storage and name, and classifies each identity. The second reads full details only for identities with a failing attempt, in report order, so every attempt, message, stack trace and attachment listing is available. A test is reported when any attempt failed. Attempts are grouped by the stage, job and job instance names of their test runs: an identity is Flaky when the last attempt of every group passed, otherwise Failed, so a failure in one stage is never hidden by a later pass in another. Runs without distinct names form one group, where the last attempt decides. Every attempt is kept, including passing ones. In-task rerun groups, job or stage re-attempts and single results are all treated as attempt sources; data-driven and other non-rerun groups are nested inside their attempt instead. Test Case references are resolved in one batch, which also lists each Test Case's links. Each reported test then lists its bugs in Bugs: every work item associated with one of its test results, and every work item linked to its Test Case by any link type whose type is in the project's Bug category (Microsoft.BugCategory). Their title, state, type and project are read in batches of up to 200, never one request per test. A bug is open (IsOpen) unless its state is in the Completed or Removed state category, which is read once per project and work item type, so a Resolved bug is still open; HasOpenBug is true when at least one bug is open. When a project's Bug category or state categories cannot be read, only the type named Bug counts and the states Closed, Done and Removed count as closed, with a BugMetadataUnavailable warning. A bug that cannot be read keeps its ID link with an UnresolvedBug warning, and when the bug lookup fails, the associated bug IDs stay as links with a BugLookupFailed warning; none of these fail the retrieval. Run history adds the current build plus earlier builds of the same definition, with summary counts and one cell per reported identity; history problems never fail the report. Tests that only passed or did not run are counted in the summary and history but never detailed. Attachment metadata is listed here; bytes are downloaded only by Export-AdoBuildTestFailure. Status is Partial when an error diagnostic exists, for example when more identities failed than the configured maximum. With -Definition, the latest completed build of the definition is selected, as Get-AdoBuild -Latest does, optionally filtered by branch and result.
+Emits one AdoBuildTestFailureSet per input build. Retrieval runs in two passes. The first lists every test result of every run of the build, groups results into test identities by automated test storage and name, and classifies each identity. The second reads full details only for identities with a failing attempt, in report order, so every attempt, message, stack trace and attachment listing is available. A test is reported when any attempt failed. Attempts are grouped by the stage, job and job instance names and the name of their test runs; a run named like another run of the same job plus " (attempt N)", where N is its job attempt, is a retry of that run and stays in its group. An identity is Flaky when the last attempt of every group passed, otherwise Failed, so a failure in one stage or named run is never hidden by a later pass in another. Runs without distinct names form one group, where the last attempt decides. Every attempt is kept, including passing ones. In-task rerun groups, job or stage re-attempts and single results are all treated as attempt sources; data-driven and other non-rerun groups are nested inside their attempt instead. Test Case references are resolved in one batch, which also lists each Test Case's links. Each reported test then lists its bugs in Bugs: every work item associated with one of its test results, and every work item linked to its Test Case by any link type whose type is in the project's Bug category (Microsoft.BugCategory). Their title, state, type and project are read in batches of up to 200, never one request per test. A bug is open (IsOpen) unless its state is in the Completed or Removed state category, which is read once per project and work item type, so a Resolved bug is still open; HasOpenBug is true when at least one bug is open. When a project's Bug category or state categories cannot be read, only the type named Bug counts and the states Closed, Done and Removed count as closed, with a BugMetadataUnavailable warning. A bug that cannot be read keeps its ID link with an UnresolvedBug warning, and when the bug lookup fails, the associated bug IDs stay as links with a BugLookupFailed warning; none of these fail the retrieval. Run history adds the current build plus earlier builds of the same definition, with summary counts and one cell per reported identity; history problems never fail the report. Tests that only passed or did not run are counted in the summary and history but never detailed. Attachment metadata is listed here; bytes are downloaded only by Export-AdoBuildTestFailure. Status is Partial when an error diagnostic exists, for example when more identities failed than the configured maximum. With -Definition, the latest completed build of the definition is selected, as Get-AdoBuild -Latest does, optionally filtered by branch and result. ByDefinition is the default parameter set: without BuildId, a piped build or Definition, the defaultBuildDefinition of the connected profile is used, and without that the command fails with a configuration error before any request. Without Branch, the defaultBranch of the connected profile limits the selection.
 
 ## EXAMPLES
 
@@ -80,6 +80,14 @@ Gathers the failed tests of the latest failed build on main, writes the report i
 ```
 
 Selects the reported tests that no open bug tracks yet.
+
+### Example 5
+
+```powershell
+Get-AdoBuildTestFailure -Result Failed | Export-AdoBuildTestFailure -Open
+```
+
+Reports the latest failed build of the default build definition and branch saved in the connection profile.
 
 ## PARAMETERS
 
@@ -127,7 +135,7 @@ HelpMessage: ''
 
 ### -Definition
 
-Positive integer ID or exact build definition name. The latest completed build of that definition is used. A numeric string is a name; use an integer for an ID.
+Positive integer ID or exact build definition name. The latest completed build of that definition is used. A numeric string is a name; use an integer for an ID. Defaults to the defaultBuildDefinition of the connected profile.
 
 ```yaml
 Type: System.Object
@@ -137,7 +145,7 @@ Aliases: []
 ParameterSets:
 - Name: ByDefinition
   Position: Named
-  IsRequired: true
+  IsRequired: false
   ValueFromPipeline: false
   ValueFromPipelineByPropertyName: false
   ValueFromRemainingArguments: false
@@ -148,7 +156,7 @@ HelpMessage: ''
 
 ### -Branch
 
-Branch name or fully qualified refs/ path that limits the latest-build selection. For example, main becomes refs/heads/main.
+Branch name or fully qualified refs/ path that limits the latest-build selection. For example, main becomes refs/heads/main. Defaults to the defaultBranch of the connected profile; without one, builds of every branch are considered.
 
 ```yaml
 Type: System.String

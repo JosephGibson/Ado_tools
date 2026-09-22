@@ -240,4 +240,8 @@ public enum AdoMessage
     ConnectionProjectHint,
     AutoConnectProfile,
     NoLatestBuild,
+    BuildDefinitionRequired,
+    TestPlanRequired,
+    TestSuiteRequired,
+    ProfileIdRange,
 }

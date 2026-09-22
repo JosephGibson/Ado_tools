@@ -4,8 +4,10 @@ using AdoToolkit.Core.WorkItems;
 
 namespace AdoToolkit;
 
-// BySuite is the default because none of its mandatory parameters come from the pipeline: PowerShell
-// drops it for piped input, so no default-set preference lets an Id property bind by name first.
+// BySuite is the default, and none of its parameters come from the pipeline: piped input can only
+// bind in another set, so no default-set preference lets an Id property bind by name first. PlanId
+// and SuiteId are optional so that the connected profile can supply them; a call without
+// arguments therefore still selects BySuite.
 [Cmdlet(VerbsCommon.Get, "AdoTestCase", DefaultParameterSetName = BySuite)]
 [OutputType(typeof(AdoTestCase))]
 public sealed class GetAdoTestCaseCommand : AdoCmdletBase
@@ -25,13 +27,13 @@ public sealed class GetAdoTestCaseCommand : AdoCmdletBase
     [ValidateNotNullOrEmpty]
     public int[] Id { get; set; } = [];
 
-    [Parameter(Mandatory = true, ParameterSetName = BySuite)]
+    [Parameter(ParameterSetName = BySuite)]
     [ValidateRange(1, int.MaxValue)]
-    public int PlanId { get; set; }
+    public int? PlanId { get; set; }
 
-    [Parameter(Mandatory = true, ParameterSetName = BySuite)]
+    [Parameter(ParameterSetName = BySuite)]
     [ValidateRange(1, int.MaxValue)]
-    public int SuiteId { get; set; }
+    public int? SuiteId { get; set; }
 
     // Typed objects bind by value only. Scalars match exactly in the first binding stage, before
     // any Id property could bind by name, so a suite ID never becomes a test case ID.
@@ -107,7 +109,13 @@ public sealed class GetAdoTestCaseCommand : AdoCmdletBase
                 foreach (int id in WiqlResult.Ids) inputs.Add((id, null));
                 break;
             case BySuite:
-                inputs.Add((0, new TestSuiteSelection { Project = ResolveProject(Project, resolved), PlanId = PlanId, SuiteId = SuiteId, Recurse = Recurse }));
+                string project = ResolveProject(Project, resolved);
+                (int planId, int? suiteId) = ResolveTestPlan(PlanId, SuiteId, resolved);
+                inputs.Add((0, new TestSuiteSelection
+                {
+                    Project = project, PlanId = planId, Recurse = Recurse,
+                    SuiteId = suiteId ?? throw new AdoConfigurationException(Messages.Get(AdoMessage.TestSuiteRequired, MessageCulture)),
+                }));
                 break;
             case BySuiteObject:
                 EnsureSameCollection(Suite!.CollectionUri, resolved);

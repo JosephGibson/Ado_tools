@@ -1,4 +1,5 @@
 using AdoToolkit.Completion;
+using AdoToolkit.Core.Builds;
 using AdoToolkit.Resources;
 
 namespace AdoToolkit;
@@ -18,6 +19,21 @@ public sealed class SetAdoProfileCommand : AdoCmdletBase
     [Parameter]
     [ArgumentCompleter(typeof(ProjectNameCompleter))]
     public string? DefaultProject { get; set; }
+
+    // The four defaults below are removed from the profile with $null; the text ones also with a blank value.
+    [Parameter]
+    public string? DefaultBranch { get; set; }
+
+    [Parameter]
+    public object? DefaultBuildDefinition { get; set; }
+
+    [Parameter]
+    [ValidateOptionalId(AdoMessage.ProfileIdRange)]
+    public int? DefaultTestPlanId { get; set; }
+
+    [Parameter]
+    [ValidateOptionalId(AdoMessage.ProfileIdRange)]
+    public int? DefaultTestSuiteId { get; set; }
 
     [Parameter]
     [ValidateSet("WindowsIntegrated")]
@@ -43,10 +59,24 @@ public sealed class SetAdoProfileCommand : AdoCmdletBase
         {
             Name = Name, CollectionUri = normalized.CollectionUri,
             DefaultProject = MyInvocation.BoundParameters.ContainsKey(nameof(DefaultProject)) ? DefaultProject : previous?.DefaultProject,
+            DefaultBranch = MyInvocation.BoundParameters.ContainsKey(nameof(DefaultBranch))
+                ? (string.IsNullOrWhiteSpace(DefaultBranch) ? null : DefaultBranch) : previous?.DefaultBranch,
+            DefaultBuildDefinition = MyInvocation.BoundParameters.ContainsKey(nameof(DefaultBuildDefinition))
+                ? SuppliedDefinition() : previous?.DefaultBuildDefinition,
+            DefaultTestPlanId = MyInvocation.BoundParameters.ContainsKey(nameof(DefaultTestPlanId)) ? DefaultTestPlanId : previous?.DefaultTestPlanId,
+            DefaultTestSuiteId = MyInvocation.BoundParameters.ContainsKey(nameof(DefaultTestSuiteId)) ? DefaultTestSuiteId : previous?.DefaultTestSuiteId,
             Authentication = MyInvocation.BoundParameters.ContainsKey(nameof(Authentication)) ? Authentication : previous?.Authentication ?? Authentication,
             RequestTimeoutSeconds = MyInvocation.BoundParameters.ContainsKey(nameof(RequestTimeoutSeconds)) ? RequestTimeoutSeconds : previous?.RequestTimeoutSeconds ?? RequestTimeoutSeconds,
         };
         if (ShouldProcess(Name, ShellMessages.Get(AdoMessage.SetProfile, MessageCulture)))
             WriteObject(store.SetProfile(profile, DefaultProfile.IsPresent, MessageCulture));
     });
+
+    private BuildDefinitionSelector? SuppliedDefinition() =>
+        (DefaultBuildDefinition is PSObject wrapped ? wrapped.BaseObject : DefaultBuildDefinition) switch
+        {
+            null => null,
+            string text when string.IsNullOrWhiteSpace(text) => null,
+            _ => ToDefinitionSelector(DefaultBuildDefinition!),
+        };
 }

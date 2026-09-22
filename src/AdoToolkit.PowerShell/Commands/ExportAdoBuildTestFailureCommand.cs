@@ -13,6 +13,7 @@ namespace AdoToolkit;
 public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
 {
     private const int ProgressActivityId = 1;
+    private static readonly string[] ReportInformationTags = ["PSHOST"];
     private ClientLease? lease;
     private AdoConnection? resolved;
     private AdoConfiguration? configuration;
@@ -100,6 +101,9 @@ public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposabl
         PSObject output = PSObject.AsPSObject(result.Report);
         if (result.AttachmentDirectory is not null)
             output.Properties.Add(new PSNoteProperty("AttachmentDirectory", result.AttachmentDirectory.FullName));
+        // PSHOST makes the information record visible by default, like Write-Host, while keeping
+        // the success stream exclusively FileInfo. The URI escapes spaces, accents, '#' and '%'.
+        WriteInformation(new HostInformationMessage { Message = FileUris.FromPath(result.Report.FullName) }, ReportInformationTags);
         WriteObject(output);
     });
 

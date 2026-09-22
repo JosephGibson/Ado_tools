@@ -48,6 +48,21 @@ public static class AdoWebLinks
         return new Uri(Prefix(collectionUri, teamProject) + "/_build/results" + query);
     }
 
+    // Server 2020 REST 6.0 attachment content, also used by the local downloader. A sub-result
+    // shares its parent's route and is distinguished by the testSubResultId query parameter.
+    public static Uri TestResultAttachment(Uri collectionUri, string teamProject, int runId, int resultId, int attachmentId, int? subResultId = null)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(runId);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(resultId);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(attachmentId);
+        if (subResultId.HasValue) ArgumentOutOfRangeException.ThrowIfNegativeOrZero(subResultId.Value);
+        string url = Prefix(collectionUri, teamProject) + "/_apis/test/Runs/" + runId.ToString(CultureInfo.InvariantCulture)
+            + "/Results/" + resultId.ToString(CultureInfo.InvariantCulture) + "/attachments/" + attachmentId.ToString(CultureInfo.InvariantCulture)
+            + "?api-version=6.0-preview.1";
+        if (subResultId.HasValue) url += "&testSubResultId=" + subResultId.Value.ToString(CultureInfo.InvariantCulture);
+        return new Uri(url);
+    }
+
     private static string Prefix(Uri collectionUri, string teamProject)
     {
         ArgumentNullException.ThrowIfNull(collectionUri);

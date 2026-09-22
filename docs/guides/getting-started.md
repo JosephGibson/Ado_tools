@@ -40,7 +40,7 @@ it before extraction, run this in Windows PowerShell or PowerShell 7 and compare
 the result with the published checksum:
 
 ```powershell
-(Get-FileHash .\AdoToolkit-0.4.0-win-x64.zip -Algorithm SHA256).Hash
+(Get-FileHash .\AdoToolkit-0.5.0-win-x64.zip -Algorithm SHA256).Hash
 ```
 
 The launcher uses `RemoteSigned` for its process only. It does not change your
@@ -59,7 +59,7 @@ script is blocked, unblock the original ZIP in Properties and extract it again.
 
    ```powershell
    Unblock-File .\Install-AdoToolkit.ps1
-   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.4.0.zip
+   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.5.0.zip
    ```
 
    The script checks the zip against the `.sha256` file and checks that it contains
@@ -87,9 +87,9 @@ To install without the script, check the hash yourself, then unblock the zip bef
 extracting it so that no extracted file carries the download mark:
 
 ```powershell
-(Get-FileHash .\AdoToolkit-0.4.0.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
-Unblock-File .\AdoToolkit-0.4.0.zip
-Expand-Archive .\AdoToolkit-0.4.0.zip `
+(Get-FileHash .\AdoToolkit-0.5.0.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
+Unblock-File .\AdoToolkit-0.5.0.zip
+Expand-Archive .\AdoToolkit-0.5.0.zip `
     -DestinationPath (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell\Modules')
 ```
 
@@ -103,7 +103,7 @@ PowerShell 7:
 ```powershell
 & .\tools\package\Publish-AdoToolkitPackage.ps1    # restores, builds and stages the package
 & .\tools\package\New-AdoToolkitRelease.ps1        # writes artifacts\release
-& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.4.0.zip
+& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.5.0.zip
 ```
 
 The package script lists every missing prerequisite before it starts. Restore uses
@@ -122,7 +122,10 @@ other cultures get English.
 
 A profile stores a collection URL, an optional default project and a request
 timeout in the local [configuration file](configuration.md). It never stores
-credentials: AdoToolkit uses your Windows identity.
+credentials: AdoToolkit uses your Windows identity. It can also store a default
+branch, build definition, test plan and test suite, so that you don't have to pass
+`-Branch`, `-Definition`, `-PlanId` and `-SuiteId` to every command; see
+[Profiles](configuration.md#profiles).
 
 ```powershell
 Set-AdoProfile -Name work -CollectionUrl 'https://ado.example.test/tfs/DefaultCollection' `

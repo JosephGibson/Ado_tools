@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 09-22-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoTestCase
 ---
@@ -20,7 +20,7 @@ Récupère les cas de test par identifiant, suite, résultat WIQL ou élément d
 ### BySuite (Default)
 
 ```
-Get-AdoTestCase -PlanId <int> -SuiteId <int> [-Recurse] [-Project <string>] [-MaximumSharedStepDepth <int>] [-MaximumExpandedSteps <int>] [-Strict] [-Connection <AdoConnection>]
+Get-AdoTestCase [-PlanId <int>] [-SuiteId <int>] [-Recurse] [-Project <string>] [-MaximumSharedStepDepth <int>] [-MaximumExpandedSteps <int>] [-Strict] [-Connection <AdoConnection>]
 ```
 
 ### ById
@@ -53,7 +53,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Regroupe toutes les entrées de l’invocation, puis récupère une seule fois chaque cas de test distinct : éléments de travail racines par lots de 200, une seule résolution des étapes partagées pour toutes les racines avec un cache commun, et un seul développement par cas. Les suites sont lues avec SuiteTestCaseList; avec Recurse, les suites enfants sont parcourues en profondeur et les cas suivent le champ order de la suite. Un cas présent dans plusieurs suites est produit une fois par suite; chaque copie a sa propriété Suite et partage les étapes développées. Les identifiants conservent l’ordre d’entrée et sont dédoublonnés; un cas est aussi produit au plus une fois par suite. Les identifiants absents produisent des erreurs ObjectNotFound; les autres types produisent des erreurs NotAStepContainer; un plan ou une suite introuvable produit une erreur ObjectNotFound pour cette entrée. Les diagnostics d’erreur produisent un objet Partial et un avertissement indiquant le nombre de diagnostics. Strict remplace chaque objet partiel par une erreur non bloquante contenant ses diagnostics. La progression est signalée pour la lecture des suites, les lots d’éléments de travail et le développement. Les suites, résultats WIQL et éléments de travail typés se lient à leur propre jeu de paramètres par valeur depuis le pipeline; un identifiant de suite n’est jamais utilisé comme identifiant de cas de test.
+Regroupe toutes les entrées de l’invocation, puis récupère une seule fois chaque cas de test distinct : éléments de travail racines par lots de 200, une seule résolution des étapes partagées pour toutes les racines avec un cache commun, et un seul développement par cas. Les suites sont lues avec SuiteTestCaseList; avec Recurse, les suites enfants sont parcourues en profondeur et les cas suivent le champ order de la suite. Un cas présent dans plusieurs suites est produit une fois par suite; chaque copie a sa propriété Suite et partage les étapes développées. Les identifiants conservent l’ordre d’entrée et sont dédoublonnés; un cas est aussi produit au plus une fois par suite. Les identifiants absents produisent des erreurs ObjectNotFound; les autres types produisent des erreurs NotAStepContainer; un plan ou une suite introuvable produit une erreur ObjectNotFound pour cette entrée. Les diagnostics d’erreur produisent un objet Partial et un avertissement indiquant le nombre de diagnostics. Strict remplace chaque objet partiel par une erreur non bloquante contenant ses diagnostics. La progression est signalée pour la lecture des suites, les lots d’éléments de travail et le développement. Les suites, résultats WIQL et éléments de travail typés se lient à leur propre jeu de paramètres par valeur depuis le pipeline; un identifiant de suite n’est jamais utilisé comme identifiant de cas de test. BySuite est le jeu de paramètres par défaut : sans PlanId, la valeur defaultTestPlanId du profil connecté est utilisée, et sans SuiteId, sa valeur defaultTestSuiteId. La suite du profil n’est utilisée qu’avec le plan du profil; un PlanId explicite exige donc un SuiteId explicite. Un plan ou une suite manquant produit une erreur de configuration avant toute requête.
 
 ## EXAMPLES
 
@@ -81,6 +81,14 @@ Invoke-AdoWiql -Query "SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemT
 
 Récupère, dans l’ordre de la requête, les cas renvoyés par une requête WIQL plate.
 
+### Exemple 4
+
+```powershell
+Get-AdoTestCase -Recurse | Export-AdoTestCase -Open
+```
+
+Exporte tous les cas de l’arborescence de la suite de tests par défaut enregistrée dans le profil de connexion.
+
 ## PARAMETERS
 
 ### -Id
@@ -106,17 +114,17 @@ HelpMessage: ''
 
 ### -PlanId
 
-Identifiant du plan de test qui contient la suite.
+Identifiant du plan de test qui contient la suite. Par défaut, la valeur defaultTestPlanId du profil connecté; obligatoire si le profil n’en a pas.
 
 ```yaml
-Type: System.Int32
+Type: System.Nullable`1[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
 ParameterSets:
 - Name: BySuite
   Position: Named
-  IsRequired: true
+  IsRequired: false
   ValueFromPipeline: false
   ValueFromPipelineByPropertyName: false
   ValueFromRemainingArguments: false
@@ -127,17 +135,17 @@ HelpMessage: ''
 
 ### -SuiteId
 
-Identifiant de la suite de tests. La suite doit appartenir au plan; sinon une erreur ObjectNotFound est écrite pour cette entrée.
+Identifiant de la suite de tests. La suite doit appartenir au plan; sinon une erreur ObjectNotFound est écrite pour cette entrée. Si PlanId est aussi omis, la valeur par défaut est defaultTestSuiteId du profil connecté; sinon il est obligatoire.
 
 ```yaml
-Type: System.Int32
+Type: System.Nullable`1[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
 ParameterSets:
 - Name: BySuite
   Position: Named
-  IsRequired: true
+  IsRequired: false
   ValueFromPipeline: false
   ValueFromPipelineByPropertyName: false
   ValueFromRemainingArguments: false

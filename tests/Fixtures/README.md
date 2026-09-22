@@ -3,6 +3,18 @@
 Fixtures are hand-written from the spec or public documentation. Hosts use `.test`
 and names are fictional. No work data enters this directory (DD-010, DD-022).
 
+The build-test report refinements add generated inputs in
+`../AdoToolkit.Core.Tests/TestRuns/NamedRunGroupingTests.cs`: two synthetic named
+runs with identical pipeline metadata and seven rerun attempts each, mixed final
+outcomes, history, missing names, and confirmed versus unconfirmed retry suffixes.
+`../AdoToolkit.Core.Tests/Reporting/TestFailures/ReportRefinementTests.cs` covers
+localized history cells without a legend, title-line chips, lowest-ID open bug
+links, and result/sub-result download links for text and non-text attachments.
+`../AdoToolkit.PowerShell.Tests/TestFailureExport.Pester.ps1` checks escaped report
+URIs on the information stream separately from FileInfo output, including failure
+and WhatIf, for report names with brackets, `#`, accents, `%41`, `%20` and a lone `%`.
+All fixtures use fictional names and IDs; live payloads are not stored.
+
 | Fixture | Represents | Source or assumption | V-item |
 | --- | --- | --- | --- |
 | `Rest/success.json`, `Rest/projects-second.json`, `Rest/projects-empty.json` | Success and short/empty TopSkip pages; also reused for continuation-header scenarios | Spec §6.4, §19.3 HTTP 1, 12, 13; hand-written project GUIDs and names | V-14 projects |

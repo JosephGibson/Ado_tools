@@ -19,6 +19,7 @@ public static class HistoryStrip
             writer.Write("<li><a class=\"history-cell\" rel=\"noreferrer\" href=\"");
             writer.Write(SinkEncoding.Attribute(AdoWebLinks.BuildTestResult(collectionUri, teamProject, entry.BuildId).AbsoluteUri));
             writer.Write("\" data-build-id=\""); writer.Write(entry.BuildId.ToString(CultureInfo.InvariantCulture)); writer.Write("\"");
+            writer.Write(" title=\""); writer.Write(SinkEncoding.Attribute(entry.BuildNumber + ": " + StatusPresentation.Label(entry.Outcome, culture))); writer.Write("\"");
             if (entry.IsCurrent) writer.Write(" aria-current=\"true\"");
             writer.Write("><span class=\"history-build\">"); writer.Write(SinkEncoding.Attribute(entry.BuildNumber)); writer.Write("</span> ");
             StatusPresentation.Write(writer, entry.Outcome, culture);
@@ -26,11 +27,6 @@ public static class HistoryStrip
             StatusPresentation.ExternalGlyph(writer, culture);
             writer.Write("</a></li>");
         }
-        writer.Write("</ol><ul class=\"status-legend\">");
-        foreach (AdoTestHistoryOutcome status in Enum.GetValues<AdoTestHistoryOutcome>())
-        {
-            writer.Write("<li>"); StatusPresentation.Write(writer, status, culture); writer.Write("</li>");
-        }
-        writer.Write("</ul>");
+        writer.Write("</ol>");
     }
 }

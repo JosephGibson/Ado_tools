@@ -7,7 +7,8 @@ namespace AdoToolkit;
 [OutputType(typeof(AdoBuild))]
 public sealed class GetAdoBuildCommand : AdoCmdletBase
 {
-    [Parameter(Mandatory = true, Position = 0, ParameterSetName = "ByDefinition")]
+    // Optional so the connected profile's default definition can apply.
+    [Parameter(Position = 0, ParameterSetName = "ByDefinition")]
     [ValidateNotNull]
     public object? Definition { get; set; }
 
@@ -55,9 +56,13 @@ public sealed class GetAdoBuildCommand : AdoCmdletBase
         else
         {
             project = ResolveProject(Project, connection);
-            (id, name) = ResolveDefinition(Definition);
+            (id, name) = ResolveDefinition(Definition, connection);
         }
-        BuildQuery query = new() { DefinitionId = id, DefinitionName = name, Branch = Branch, Latest = Latest, Status = Status, Result = Result, Top = Top };
+        BuildQuery query = new()
+        {
+            DefinitionId = id, DefinitionName = name, Branch = Branch ?? connection.DefaultBranch, Latest = Latest, Status = Status,
+            Result = Result, Top = Top,
+        };
         using ClientLease lease = SessionStateRegistry.Current.Acquire(connection);
         IReadOnlyList<AdoBuild> builds = RunWorker((log, token) => new BuildService(lease.Client, connection, log)
             .GetBuildsAsync(project, query, MessageCulture, token));

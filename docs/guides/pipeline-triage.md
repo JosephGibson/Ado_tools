@@ -20,6 +20,9 @@ $build = Get-AdoBuild -Definition 42 -Branch main -Latest -Result Failed   # use
 - `main` becomes `refs/heads/main`. Full `refs/...` names are used as given.
 - `-Latest` returns the most recently finished build. It defaults `-Status` to
   `Completed`.
+- A profile with `defaultBuildDefinition` and `defaultBranch` supplies `-Definition` and
+  `-Branch` when you leave them out, so `Get-AdoBuild -Latest -Result Failed` is enough.
+  See [Profiles](configuration.md#profiles).
 
 ## See what failed
 
@@ -65,6 +68,10 @@ Get-AdoBuildTestFailure -Definition 'Web CI' -Branch main -Result Failed |
     Export-AdoBuildTestFailure -Path .\reports\nightly -Open
 ```
 
+With a default build definition and branch in the profile, `Get-AdoBuildTestFailure`
+without a build ID or `-Definition` reports the latest completed build of that
+definition and branch.
+
 `Get-AdoTestRun` shows each run's `TotalTests`. Azure DevOps Server 2020 also returns
 the run totals `PassedTests`, `NotApplicableTests`, `UnanalyzedTests` and
 `IncompleteTests`. These are the server's own categories, not result outcomes:
@@ -75,11 +82,13 @@ the run totals `PassedTests`, `NotApplicableTests`, `UnanalyzedTests` and
 
 | Classification | Meaning |
 | --- | --- |
-| `Failed` | The last attempt did not pass, in at least one stage or job |
-| `Flaky` | The test failed, then passed on a later attempt, in every stage or job |
+| `Failed` | The last attempt did not pass, in at least one stage, job or named test run |
+| `Flaky` | The test failed, then passed on a later attempt, in every stage, job or named test run |
 
-When the test runs carry stage or job names, attempts are grouped by them, so a test that
-fails in every French attempt stays `Failed` even if an English retry passes last.
+When the test runs carry different stage, job or run names, attempts are grouped by them, so
+a test that fails in every French attempt stays `Failed` even if an English retry passes
+last. A run whose name only adds the job retry suffix, such as `UI tests (attempt 2)` on
+job attempt 2, stays in the group of the run it retries.
 
 Each failure keeps all its attempts, with error messages, stack traces,
 attachment metadata, any linked Test Case and its bugs. Run history covers the current build
@@ -117,11 +126,13 @@ where it was found. The lookup never fails the retrieval:
 `Export-AdoBuildTestFailure` writes one dark HTML report per build, by default to your
 Downloads folder as `Build-<id>-TestFailures.html`. Its views are an overview table, the
 same rows grouped by error, one card per test with every attempt, the build's runs with the
-run history, and diagnostics when something could not be retrieved. Tests with an open bug
-are marked in both tables, each card lists the test's bugs, and **Without an open bug**
-shows only the tests that still need one. Flaky tests are left out unless you add
-`-IncludeFlaky`. Times are shown in the time zone of the computer that exported the
-report.
+run history, and diagnostics when something could not be retrieved. In both tables, a test
+with an open bug has an **Open bug** link to the lowest-numbered one, each card lists the
+test's bugs, and **Without an open bug** shows only the tests that still need one. Flaky
+tests are left out unless you add `-IncludeFlaky`. Times are shown in the time zone of the
+computer that exported the report. The command returns the report as a `FileInfo` and
+shows its `file:///` address in the console, like `Write-Host`; `-InformationAction Ignore`
+hides it.
 
 The report is complete even when scripts are blocked. A small built-in script adds views,
 search, filtering, keyboard navigation (`/`, `j`, `k`, `o`) and copying of names, messages
@@ -129,9 +140,11 @@ and stack traces.
 
 Only JSON and text attachments are downloaded, into a `<report name>.files-<UTC timestamp>`
 folder beside the report: by default those of the build's latest test run, if it started
-within the last 7 days. PNG, HTML and other attachments are listed with their name, size
-and a link to the result in Azure DevOps. A file that fails its content check is saved as
-`.bin` and linked without a preview. Size limits and failed downloads produce warnings.
+within the last 7 days. Every attachment is listed with its name and size, and the name
+links to the file in Azure DevOps: the browser downloads it with your Windows sign-in.
+PNG, HTML and other attachments are never downloaded by the export. A file that fails its
+content check is saved as `.bin` and linked without a preview. Size limits and failed
+downloads produce warnings.
 See [Configuration](configuration.md#settings) for the limits.
 
 | Option | Effect |

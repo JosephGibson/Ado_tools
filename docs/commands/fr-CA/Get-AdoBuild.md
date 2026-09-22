@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 09-22-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoBuild
 ---
@@ -20,7 +20,7 @@ Recherche les builds d’un pipeline par définition, branche, état et résulta
 ### ByDefinition (Default)
 
 ```
-Get-AdoBuild [-Definition] <Object> [-Branch <string>] [-Latest] [-Status <BuildStatus>] [-Result <BuildResult>] [-Top <int>] [-Project <string>] [-Connection <AdoConnection>]
+Get-AdoBuild [[-Definition] <Object>] [-Branch <string>] [-Latest] [-Status <BuildStatus>] [-Result <BuildResult>] [-Top <int>] [-Project <string>] [-Connection <AdoConnection>]
 ```
 
 ### ByDefinitionObject
@@ -35,7 +35,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Une Definition entière désigne un identifiant. Une chaîne recherche un nom exact dans toutes les définitions, sans tenir compte de la casse et avec normalisation NFC des accents. Zéro ou plusieurs correspondances produisent une erreur indiquant le nombre et recommandant un identifiant. Les branches sans préfixe refs/ reçoivent refs/heads/. Latest demande un seul build, trié par date de fin décroissante, avec Status à Completed par défaut ; sinon Status vaut All. Top limite les résultats indépendamment de la taille des pages. Les jetons de continuation sont suivis même après une page vide. Une définition reçue du pipeline fournit son projet et doit appartenir à la collection sélectionnée. Les builds comprennent les métadonnées de source et de dépôt, l’identité, les dates UTC et un WebUrl reconstruit.
+Sans Definition, la valeur defaultBuildDefinition du profil connecté s’applique ; sans elle non plus, la commande échoue avec une erreur de configuration avant toute requête. Sans Branch, la valeur defaultBranch du profil connecté s’applique, y compris aux définitions reçues du pipeline ; sans elle, les builds de toutes les branches sont retournés. Une Definition entière désigne un identifiant. Une chaîne recherche un nom exact dans toutes les définitions, sans tenir compte de la casse et avec normalisation NFC des accents. Zéro ou plusieurs correspondances produisent une erreur indiquant le nombre et recommandant un identifiant. Les branches sans préfixe refs/ reçoivent refs/heads/. Latest demande un seul build, trié par date de fin décroissante, avec Status à Completed par défaut ; sinon Status vaut All. Top limite les résultats indépendamment de la taille des pages. Les jetons de continuation sont suivis même après une page vide. Une définition reçue du pipeline fournit son projet et doit appartenir à la collection sélectionnée. Les builds comprennent les métadonnées de source et de dépôt, l’identité, les dates UTC et un WebUrl reconstruit.
 
 ## EXAMPLES
 
@@ -47,11 +47,19 @@ Get-AdoBuild -Definition 42 -Branch main -Latest -Result Failed | Get-AdoBuildFa
 
 Recherche le dernier build terminé en échec sur main et détermine les échecs de sa chronologie.
 
+### Exemple 2
+
+```powershell
+Get-AdoBuild -Latest -Result Failed
+```
+
+Recherche le dernier build en échec de la définition de build et de la branche par défaut enregistrées dans le profil de connexion.
+
 ## PARAMETERS
 
 ### -Definition
 
-Identifiant entier positif ou nom exact de définition. Une chaîne numérique est un nom ; utilisez un entier pour un identifiant.
+Identifiant entier positif ou nom exact de définition. Une chaîne numérique est un nom ; utilisez un entier pour un identifiant. Par défaut, la valeur defaultBuildDefinition du profil connecté ; obligatoire si le profil n’en a pas.
 
 ```yaml
 Type: System.Object
@@ -61,7 +69,7 @@ Aliases: []
 ParameterSets:
 - Name: ByDefinition
   Position: 0
-  IsRequired: true
+  IsRequired: false
   ValueFromPipeline: false
   ValueFromPipelineByPropertyName: false
   ValueFromRemainingArguments: false
@@ -93,7 +101,7 @@ HelpMessage: ''
 
 ### -Branch
 
-Nom de branche ou chemin complet refs/. Par exemple, main devient refs/heads/main.
+Nom de branche ou chemin complet refs/. Par exemple, main devient refs/heads/main. Par défaut, la valeur defaultBranch du profil connecté ; sans elle, aucun filtre de branche n’est appliqué.
 
 ```yaml
 Type: System.String

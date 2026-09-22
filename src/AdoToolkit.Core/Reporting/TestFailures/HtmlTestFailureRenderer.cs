@@ -120,7 +120,7 @@ public static partial class HtmlTestFailureRenderer
             }
             if (model.Build.Result is not null) { W("<span>"); T(model.Build.Result); W("</span>"); }
             if (model.Build.FinishTime is not null) { W("<span>"); T(L("Finished") + " " + Date(model.Build.FinishTime)); W("</span>"); }
-            W("<span class=\"results-link\">"); Link(model.ResultsUrl, L("Result")); W("</span></div>\n<div class=\"count-line\">");
+            W("<span class=\"results-link\">"); Link(model.ResultsUrl, L("Result")); W("</span>");
             Chip("failed", "✕ " + L("Failed"), model.FailedCount, null);
             Chip("flaky", "≈ " + L("Flaky"), model.FlakyCount, model.FlakyExcluded ? L("NotShown") : null);
             Chip("attachments", L("Attachments"), model.Failures.Sum(Attachments), null);
@@ -219,7 +219,12 @@ public static partial class HtmlTestFailureRenderer
             W("<tr data-index-for=\"" + anchor + "\"><td class=\"col-number\">"); Glyph(Status(failure)); W(" " + N(failure.Ordinal) + "</td><td class=\"col-test\"><a href=\"#" + anchor + "\">");
             T(failure.ShortName); W("</a>");
             // Before the class name, so a long name that is cut off never hides it.
-            if (failure.HasOpenBug) { W(" <span class=\"open-bug-marker\">"); T(L("OpenBug")); W("</span>"); }
+            if (failure.Bugs.Where(bug => bug.Id > 0 && bug.IsOpen == true).MinBy(bug => bug.Id) is { } openBug)
+            {
+                W(" <a class=\"open-bug-marker\" rel=\"noreferrer\" href=\"");
+                T(AdoWebLinks.WorkItem(Collection, openBug.TeamProject ?? Project, openBug.Id).AbsoluteUri);
+                W("\">"); T(L("OpenBug")); W("</a>");
+            }
             // The class name only; the card shows the full name.
             if (AttemptGrouper.ClassName(failure.TestName) is { } type) { W(" <span class=\"text-muted\">"); T(type); W("</span>"); }
             W("</td><td class=\"col-case\">");
@@ -432,8 +437,8 @@ public static partial class HtmlTestFailureRenderer
                 if (attachment.DownloadStatus != AdoTestAttachmentStatus.NotRequested)
                     W(" data-download-status=\"" + attachment.DownloadStatus.ToString().ToLowerInvariant() + "\"");
                 W(">");
-                // The ADO name and size always show and link to the result, so the original stays reachable.
-                Link(Result(attachment.RunId, attachment.ResultId), attachment.FileName);
+                // Browser navigation uses Windows authentication to download the original, for every file type.
+                Link(AdoWebLinks.TestResultAttachment(Collection, Project, attachment.RunId, attachment.ResultId, attachment.Id, attachment.SubResultId), attachment.FileName);
                 if (attachment.Size.HasValue) { W(" <span class=\"attachment-size\">"); T(F(AdoMessage.TestReportBytes, attachment.Size.Value)); W("</span>"); }
                 // GeneralAttachment is the default type of nearly every attachment, so only other types show.
                 string? type = string.Equals(attachment.AttachmentType, "GeneralAttachment", StringComparison.OrdinalIgnoreCase) ? null : attachment.AttachmentType;

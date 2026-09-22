@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-21-2026
+ms.date: 09-22-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -33,11 +33,11 @@ Produit, pour chaque `AdoBuildTestFailureSet` reçu de `Get-AdoBuildTestFailure`
 rapport HTML sombre dans la culture du rapport. Le rapport compte quatre vues, et une
 cinquième pour les diagnostics lorsqu’il y en a. Vue d’ensemble est un tableau d’une ligne
 par test en échec : son numéro de cas de test lié à l’élément de travail, l’état de chaque
-phase ou travail qui l’a exécuté et la première ligne de sa dernière erreur. Un test qui a
-au moins un bogue ouvert porte la mention Bogue ouvert après son nom. Par erreur regroupe
-les mêmes lignes sous leur dernière erreur. Détails présente une fiche par test, qui liste
-ses bogues avec leur ID lié à l’élément de travail, leur titre et leur état, et la mention
-Ouvert pour ceux qui sont ouverts. Un bogue est ouvert sauf si son état appartient à la
+groupe de tentatives qui l’a exécuté et la première ligne de sa dernière erreur. Un test
+qui a au moins un bogue ouvert porte après son nom un lien Bogue ouvert vers le bogue ouvert
+de plus petit numéro. Par erreur regroupe les mêmes lignes sous leur dernière erreur.
+Détails présente une fiche par test, qui liste ses bogues avec leur ID lié à l’élément de
+travail, leur titre et leur état, et la mention Ouvert pour ceux qui sont ouverts. Un bogue est ouvert sauf si son état appartient à la
 catégorie d’états Completed ou Removed. Exécutions et historique liste les séries de tests
 du build, le graphique de l’historique et les détails du rapport. Chaque groupe, tentative
 et aperçu de pièce jointe est d’abord réduit, et un message d’erreur ou une arborescence
@@ -45,11 +45,14 @@ des appels répétés d’une tentative antérieure du même test sont référen
 répétés. Toutes les dates et heures sont affichées dans le fuseau horaire de l’ordinateur
 qui exporte le rapport, comme l’heure de génération du rapport.
 
-Lorsque les séries de tests du build portent des noms de phase ou de travail différents,
-par exemple une phase par langue, chaque fiche regroupe ses tentatives selon ces noms et la
-vue d’ensemble affiche une colonne d’état par groupe. L’étiquette utilise le nom le plus
-court qui distingue les groupes : le nom de la phase, puis celui du travail, puis celui de
-l’instance du travail. Les séries sans noms distincts gardent une seule liste.
+Lorsque les séries de tests du build portent des noms de phase, de travail ou de série
+différents, par exemple une phase par langue, chaque fiche regroupe ses tentatives selon ces
+noms et la vue d’ensemble affiche une colonne d’état par groupe. L’étiquette utilise le nom
+le plus court qui distingue les groupes : le nom de la phase, puis celui du travail, puis
+celui de l’instance du travail, puis celui de la série. Une série nommée comme une autre
+série du même travail suivie de ` (attempt N)`, où N est sa tentative de travail, est une
+nouvelle tentative de cette série et reste dans son groupe. Les séries sans noms distincts
+gardent une seule liste.
 
 Les tests instables sont omis sauf avec `-IncludeFlaky`; l’en-tête les compte quand même.
 Le rapport est complet lorsque les scripts sont bloqués. Un petit script statique, autorisé
@@ -64,11 +67,12 @@ bogue ouvert n’affiche que les tests qu’aucun bogue ouvert ne suit encore.
 Les pièces jointes n’apparaissent que pour les séries de tests commencées dans les
 `-AttachmentWindowDays` jours précédant l’exportation, 7 par défaut; une série sans date
 de début est considérée hors de la fenêtre. Les séries plus anciennes conservent toutes
-leurs tentatives, mais leurs pièces jointes sont omises. Seules les pièces jointes JSON
-(`.json`) et texte (`.txt`, `.log`) sont téléchargées. Les pièces jointes PNG, HTML et
-autres restent des liens vers leur résultat Azure DevOps, quels que soient les paramètres.
-Par défaut, seule l’exécution de tests la plus récente est téléchargée, et seulement si elle
-est dans la fenêtre. Cette exécution est la dernière dans l’ordre des tentatives : étape,
+leurs tentatives, mais leurs pièces jointes sont omises. Le nom de chaque pièce jointe est
+un lien vers la pièce jointe dans Azure DevOps, que le navigateur télécharge avec votre
+connexion Windows. Seules les pièces jointes JSON (`.json`) et texte (`.txt`, `.log`) sont
+téléchargées par l’exportation; les pièces jointes PNG, HTML et autres restent des liens,
+quels que soient les paramètres. Par défaut, seule l’exécution de tests la plus récente est
+téléchargée, et seulement si elle est dans la fenêtre. Cette exécution est la dernière dans l’ordre des tentatives : étape,
 phase et travail, puis date de début et ID d’exécution. Si elle n’a aucune pièce jointe JSON
 ou texte, l’exportation ne télécharge rien d’une exécution précédente et ne crée aucun
 dossier de pièces jointes.
@@ -89,7 +93,7 @@ pour les fichiers d’au plus `maximumInlineJsonBytes` et tant que le total affi
 rapport reste sous `maximumInlineTotalBytes`; les fichiers plus volumineux sont seulement
 liés. Les limites de taille (`maximumAttachmentBytes`, `maximumTotalAttachmentBytes`) et
 les téléchargements en échec produisent des avertissements; les pièces jointes concernées
-conservent leur nom Azure DevOps, leur taille et le lien vers le résultat. Les erreurs
+conservent leur nom Azure DevOps, leur taille et le lien de téléchargement. Les erreurs
 d’authentification ou d’autorisation et l’annulation interrompent l’exportation. Une build
 d’historique illisible ne l’interrompt pas.
 
@@ -198,7 +202,7 @@ HelpMessage: ''
 
 ### -SkipAttachments
 
-Ne télécharge rien et ne crée aucun dossier; les pièces jointes des exécutions de la fenêtre sont répertoriées avec leur nom, leur taille et un lien vers le résultat Azure DevOps. A priorité sur -AllRunAttachments.
+Ne télécharge rien et ne crée aucun dossier; les pièces jointes des exécutions de la fenêtre sont répertoriées avec leur nom, leur taille et un lien de téléchargement. A priorité sur -AllRunAttachments.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -258,7 +262,7 @@ HelpMessage: ''
 ```
 ### -IncludeFlaky
 
-Inclut les tests instables, qui ont échoué puis réussi dans chaque phase ou travail. Sans ce paramètre, ils sont omis du rapport et seulement comptés dans son en-tête.
+Inclut les tests instables, qui ont échoué puis réussi dans chaque phase, travail ou série de tests nommée. Sans ce paramètre, ils sont omis du rapport et seulement comptés dans son en-tête.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -393,11 +397,11 @@ Prend en charge les paramètres communs, notamment ErrorAction, ErrorVariable, W
 
 ### System.IO.FileInfo
 
-Le rapport validé et enregistré. Lorsque des pièces jointes ont été téléchargées, sa propriété de note AttachmentDirectory contient le chemin du dossier. Aucun objet avec WhatIf.
+Le rapport validé et enregistré. Lorsque des pièces jointes ont été téléchargées, sa propriété de note AttachmentDirectory contient le chemin du dossier. Aucun objet avec WhatIf. L’adresse file:/// du rapport est aussi écrite dans le flux d’information avec la balise PSHOST, de sorte qu’elle s’affiche dans la console comme une sortie de Write-Host; -InformationAction Ignore la masque. Rien n’est écrit avec WhatIf ni lorsque l’exportation échoue.
 
 ## NOTES
 
-Nécessite PowerShell 7.6 sur Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase et de travail utilisés pour le regroupement (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27).
+Nécessite PowerShell 7.6 sur Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase, de travail et de série utilisés pour le regroupement et le suffixe de nouvelle tentative des noms de série (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27).
 
 ## RELATED LINKS
 

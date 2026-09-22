@@ -123,18 +123,19 @@
     <View>
       <Name>AdoToolkit.Core.Configuration.AdoProfile</Name>
       <ViewSelectedBy><TypeName>AdoToolkit.Core.Configuration.AdoProfile</TypeName></ViewSelectedBy>
-      <TableControl>
-        <TableHeaders>
-          <TableColumnHeader><Label>Name</Label></TableColumnHeader>
-          <TableColumnHeader><Label>CollectionUri</Label></TableColumnHeader>
-          <TableColumnHeader><Label>DefaultProject</Label></TableColumnHeader>
-        </TableHeaders>
-        <TableRowEntries><TableRowEntry><TableColumnItems>
-          <TableColumnItem><PropertyName>Name</PropertyName></TableColumnItem>
-          <TableColumnItem><PropertyName>CollectionUri</PropertyName></TableColumnItem>
-          <TableColumnItem><PropertyName>DefaultProject</PropertyName></TableColumnItem>
-        </TableColumnItems></TableRowEntry></TableRowEntries>
-      </TableControl>
+      <!-- A list, so that the profile defaults stay visible in a narrow console. -->
+      <ListControl>
+        <ListEntries><ListEntry><ListItems>
+          <ListItem><PropertyName>Name</PropertyName></ListItem>
+          <ListItem><PropertyName>CollectionUri</PropertyName></ListItem>
+          <ListItem><PropertyName>DefaultProject</PropertyName></ListItem>
+          <ListItem><PropertyName>DefaultBranch</PropertyName></ListItem>
+          <ListItem><PropertyName>DefaultBuildDefinition</PropertyName></ListItem>
+          <ListItem><PropertyName>DefaultTestPlanId</PropertyName></ListItem>
+          <ListItem><PropertyName>DefaultTestSuiteId</PropertyName></ListItem>
+          <ListItem><PropertyName>RequestTimeoutSeconds</PropertyName></ListItem>
+        </ListItems></ListEntry></ListEntries>
+      </ListControl>
     </View>
     <View>
       <Name>AdoToolkit.Core.Connections.AdoProject</Name>

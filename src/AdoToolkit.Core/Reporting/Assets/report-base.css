@@ -97,7 +97,7 @@ code .framework-frame, code .framework-frame > span { color: var(--tok-framework
 .chart-zero { stroke: var(--other); stroke-width: 2; }
 .chart-count { fill: var(--chart-label); font-size: 12px; text-anchor: middle; }
 .chart-caption { fill: var(--text); font-size: 12px; text-anchor: middle; }
-.history-strip, .attempt-strip, .status-legend { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; padding: 0; }
+.history-strip, .attempt-strip { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; padding: 0; }
 [aria-current="true"].history-cell { outline: 2px solid var(--current); outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 [hidden] { display: none !important; }

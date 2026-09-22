@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using AdoToolkit.Core.Builds;
 using AdoToolkit.Core.Connections;
 using AdoToolkit.Core.IO;
 
@@ -56,7 +57,8 @@ public sealed class ConfigurationStore
             foreach ((string name, JsonNode? value) in Object(root, "profiles"))
             {
                 JsonObject profile = value?.AsObject() ?? throw new JsonException("profiles");
-                WarnUnknown(profile, ["collectionUrl", "defaultProject", "authentication", "requestTimeoutSeconds"], "profiles." + name + ".", culture, warnings);
+                WarnUnknown(profile, ["collectionUrl", "defaultProject", "defaultBranch", "defaultBuildDefinition", "defaultTestPlanId",
+                    "defaultTestSuiteId", "authentication", "requestTimeoutSeconds"], "profiles." + name + ".", culture, warnings);
                 CollectionUrlNormalizationResult normalized = CollectionUrlNormalizer.Normalize(profile["collectionUrl"]?.GetValue<string>() ?? "", culture);
                 warnings.AddRange(normalized.Warnings);
                 string authentication = profile["authentication"]?.GetValue<string>() ?? "WindowsIntegrated";
@@ -66,6 +68,10 @@ public sealed class ConfigurationStore
                     Name = name,
                     CollectionUri = normalized.CollectionUri,
                     DefaultProject = profile["defaultProject"]?.GetValue<string>(),
+                    DefaultBranch = OptionalText(profile, "defaultBranch"),
+                    DefaultBuildDefinition = OptionalDefinition(profile, "defaultBuildDefinition"),
+                    DefaultTestPlanId = OptionalId(profile, "defaultTestPlanId"),
+                    DefaultTestSuiteId = OptionalId(profile, "defaultTestSuiteId"),
                     Authentication = "WindowsIntegrated",
                     RequestTimeoutSeconds = checked((int)Positive(profile, "requestTimeoutSeconds", 100,
                         AdoConnection.MaximumRequestTimeoutSeconds)),
@@ -165,6 +171,16 @@ public sealed class ConfigurationStore
             JsonObject node = originalProfiles[name]?.DeepClone().AsObject() ?? [];
             node["collectionUrl"] = profile.CollectionUri.AbsoluteUri;
             node["defaultProject"] = profile.DefaultProject;
+            // Unset defaults are removed, not written as null, so files without them stay unchanged.
+            SetOrRemove(node, "defaultBranch", profile.DefaultBranch);
+            SetOrRemove(node, "defaultBuildDefinition", profile.DefaultBuildDefinition switch
+            {
+                { Id: int id } => id,
+                { Name: string definition } => definition,
+                _ => null,
+            });
+            SetOrRemove(node, "defaultTestPlanId", profile.DefaultTestPlanId);
+            SetOrRemove(node, "defaultTestSuiteId", profile.DefaultTestSuiteId);
             node["authentication"] = profile.Authentication;
             node["requestTimeoutSeconds"] = profile.RequestTimeoutSeconds;
             profiles[name] = node;
@@ -206,6 +222,34 @@ public sealed class ConfigurationStore
     {
         long value = root[name]?.GetValue<long>() ?? fallback;
         return value > 0 && value <= maximum ? value : throw new JsonException(name);
+    }
+
+    // Optional profile defaults: absent or null means unset; anything else must be usable.
+    private static string? OptionalText(JsonObject node, string name)
+    {
+        string? value = node[name]?.GetValue<string>();
+        return value is null || !string.IsNullOrWhiteSpace(value) ? value : throw new JsonException(name);
+    }
+
+    private static int? OptionalId(JsonObject node, string name)
+    {
+        int? value = node[name]?.GetValue<int>();
+        return value is null or > 0 ? value : throw new JsonException(name);
+    }
+
+    // A number is a definition ID and a string a definition name, as for -Definition.
+    private static BuildDefinitionSelector? OptionalDefinition(JsonObject node, string name) => node[name]?.GetValueKind() switch
+    {
+        null => null,
+        JsonValueKind.Number => BuildDefinitionSelector.FromId(OptionalId(node, name)!.Value),
+        JsonValueKind.String => BuildDefinitionSelector.FromName(OptionalText(node, name)!),
+        _ => throw new JsonException(name),
+    };
+
+    private static void SetOrRemove(JsonObject node, string name, JsonNode? value)
+    {
+        if (value is null) node.Remove(name);
+        else node[name] = value;
     }
 
     private static void WarnUnknown(JsonObject node, string[] known, string prefix, CultureInfo culture, List<string> warnings)

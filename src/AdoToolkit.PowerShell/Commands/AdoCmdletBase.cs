@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using AdoToolkit.Core.Builds;
 
 namespace AdoToolkit;
 
@@ -56,13 +57,35 @@ public abstract class AdoCmdletBase : PSCmdlet
         return connection;
     }
 
+    // An omitted -Definition falls back to the connected profile's default definition.
+    private protected (int? Id, string? Name) ResolveDefinition(object? definition, AdoConnection connection)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        BuildDefinitionSelector selector = definition is null
+            ? connection.DefaultBuildDefinition
+                ?? throw new AdoConfigurationException(Messages.Get(AdoMessage.BuildDefinitionRequired, MessageCulture))
+            : ToDefinitionSelector(definition);
+        return (selector.Id, selector.Name);
+    }
+
     // -Definition accepts a positive ID or a definition name.
-    private protected (int? Id, string? Name) ResolveDefinition(object? definition)
+    private protected BuildDefinitionSelector ToDefinitionSelector(object definition)
     {
         object? value = definition is PSObject wrapped ? wrapped.BaseObject : definition;
-        if (value is int number && number > 0) return (number, null);
-        if (value is string text && !string.IsNullOrWhiteSpace(text)) return (null, text);
+        if (value is int number && number > 0) return BuildDefinitionSelector.FromId(number);
+        if (value is string text && !string.IsNullOrWhiteSpace(text)) return BuildDefinitionSelector.FromName(text);
         throw new AdoRequestException(Messages.Get(AdoMessage.InvalidBuildDefinition, MessageCulture));
+    }
+
+    // An omitted -PlanId falls back to the connected profile's plan. The profile's suite belongs to
+    // that plan, so it applies only with it; an explicit plan keeps the suite as supplied.
+    private protected (int PlanId, int? SuiteId) ResolveTestPlan(int? planId, int? suiteId, AdoConnection connection)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        if (planId is int explicitPlan) return (explicitPlan, suiteId);
+        int plan = connection.DefaultTestPlanId
+            ?? throw new AdoConfigurationException(Messages.Get(AdoMessage.TestPlanRequired, MessageCulture));
+        return (plan, suiteId ?? connection.DefaultTestSuiteId);
     }
 
     protected string ResolveProject(string? supplied, AdoConnection connection)

@@ -188,8 +188,8 @@ pwsh -NoProfile -File ./tools/package/New-AdoToolkitRelease.ps1 `
     -PowerShellChecksumPath ./artifacts/runtime-download/hashes.sha256 `
     -PowerShellVersion 7.6.6
 pwsh -NoProfile -File ./tools/package/Test-AdoToolkitPortable.ps1 `
-    -ArchivePath ./artifacts/release/AdoToolkit-0.4.0-win-x64.zip `
-    -ModuleVersion 0.4.0 -PowerShellVersion 7.6.6
+    -ArchivePath ./artifacts/release/AdoToolkit-0.5.0-win-x64.zip `
+    -ModuleVersion 0.5.0 -PowerShellVersion 7.6.6
 ```
 
 The launcher loads only the adjacent AdoToolkit module and opens the bundled host
@@ -204,7 +204,7 @@ them.
 To publish a release:
 
 1. Set `VersionPrefix` in `Directory.Build.props` and run `verify`.
-2. Push a tag named `v<VersionPrefix>`, for example `v0.4.0`.
+2. Push a tag named `v<VersionPrefix>`, for example `v0.5.0`.
 
 `.github/workflows/release.yml` then runs on a Windows runner. It checks out the
 repository without keeping the job's write token in the Git configuration, because

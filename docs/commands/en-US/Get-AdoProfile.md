@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 09-22-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoProfile
 ---
@@ -29,7 +29,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Reads the local configuration without contacting the server. Returns profiles sorted by name; Name supports PowerShell wildcards. ADOTOOLKIT_CONFIG_PATH overrides the default configuration path.
+Reads the local configuration without contacting the server. Returns profiles sorted by name; Name supports PowerShell wildcards. Each profile is shown as a list with its collection, default project, request timeout, and the DefaultBranch, DefaultBuildDefinition, DefaultTestPlanId and DefaultTestSuiteId that build and test plan commands use when those parameters are omitted. An empty value is not set. ADOTOOLKIT_CONFIG_PATH overrides the default configuration path.
 
 ## EXAMPLES
 

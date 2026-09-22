@@ -271,4 +271,8 @@
   <data name="ConnectionProjectHint" xml:space="preserve"><value>L’URL de la collection se termine par le nom du projet. Connectez-vous avec : Connect-Ado -CollectionUrl {0} -Project {1}</value></data>
   <data name="AutoConnectProfile" xml:space="preserve"><value>Connexion établie avec le profil par défaut {0}.</value></data>
   <data name="NoLatestBuild" xml:space="preserve"><value>Aucun build terminé ne correspond à la définition de build {0}.</value></data>
+  <data name="BuildDefinitionRequired" xml:space="preserve"><value>Indiquez une définition de build avec -Definition, ou enregistrez defaultBuildDefinition dans le profil de connexion.</value></data>
+  <data name="TestPlanRequired" xml:space="preserve"><value>Indiquez un plan de test avec -PlanId, ou enregistrez defaultTestPlanId dans le profil de connexion.</value></data>
+  <data name="TestSuiteRequired" xml:space="preserve"><value>Indiquez une suite de tests avec -SuiteId. Sans -PlanId ni -SuiteId, les valeurs defaultTestPlanId et defaultTestSuiteId du profil de connexion s’appliquent.</value></data>
+  <data name="ProfileIdRange" xml:space="preserve"><value>L’identifiant doit être un entier de 1 à 2147483647, ou $null pour supprimer la valeur par défaut.</value></data>
 </root>

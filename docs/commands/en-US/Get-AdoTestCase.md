@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 09-22-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoTestCase
 ---
@@ -20,7 +20,7 @@ Retrieves test cases by ID, suite, WIQL result or work item and expands Shared S
 ### BySuite (Default)
 
 ```
-Get-AdoTestCase -PlanId <int> -SuiteId <int> [-Recurse] [-Project <string>] [-MaximumSharedStepDepth <int>] [-MaximumExpandedSteps <int>] [-Strict] [-Connection <AdoConnection>]
+Get-AdoTestCase [-PlanId <int>] [-SuiteId <int>] [-Recurse] [-Project <string>] [-MaximumSharedStepDepth <int>] [-MaximumExpandedSteps <int>] [-Strict] [-Connection <AdoConnection>]
 ```
 
 ### ById
@@ -53,7 +53,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Collects every input of the invocation, then retrieves each distinct test case once: root work items in batches of 200, one Shared Steps resolution over all roots with a shared cache, and one expansion per case. Suites are read with SuiteTestCaseList; with Recurse, child suites are walked depth-first and cases follow the suite order field. A case that belongs to several suites is emitted once per suite, each copy with Suite set and sharing the expanded steps. IDs keep input order and are deduplicated; a case is also emitted at most once per suite. Missing IDs produce ObjectNotFound errors; other types produce NotAStepContainer errors; a missing plan or suite produces an ObjectNotFound error for that input. Error diagnostics produce a Partial object and one warning with diagnostic counts. Strict replaces each partial object with a non-terminating error carrying its diagnostics. Progress is reported for suite enumeration, work item batches and expansion. Typed suites, WIQL results and work items bind to their own parameter sets by pipeline value; a suite ID is never used as a test case ID.
+Collects every input of the invocation, then retrieves each distinct test case once: root work items in batches of 200, one Shared Steps resolution over all roots with a shared cache, and one expansion per case. Suites are read with SuiteTestCaseList; with Recurse, child suites are walked depth-first and cases follow the suite order field. A case that belongs to several suites is emitted once per suite, each copy with Suite set and sharing the expanded steps. IDs keep input order and are deduplicated; a case is also emitted at most once per suite. Missing IDs produce ObjectNotFound errors; other types produce NotAStepContainer errors; a missing plan or suite produces an ObjectNotFound error for that input. Error diagnostics produce a Partial object and one warning with diagnostic counts. Strict replaces each partial object with a non-terminating error carrying its diagnostics. Progress is reported for suite enumeration, work item batches and expansion. Typed suites, WIQL results and work items bind to their own parameter sets by pipeline value; a suite ID is never used as a test case ID. BySuite is the default parameter set: without PlanId, the defaultTestPlanId of the connected profile is used, and without SuiteId, its defaultTestSuiteId. The profile's suite is used only together with the profile's plan, so an explicit PlanId needs an explicit SuiteId. A missing plan or suite is a configuration error before any request.
 
 ## EXAMPLES
 
@@ -81,6 +81,14 @@ Invoke-AdoWiql -Query "SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemT
 
 Retrieves the cases returned by a flat WIQL query in query order.
 
+### Example 4
+
+```powershell
+Get-AdoTestCase -Recurse | Export-AdoTestCase -Open
+```
+
+Exports every case of the default test suite tree saved in the connection profile.
+
 ## PARAMETERS
 
 ### -Id
@@ -106,17 +114,17 @@ HelpMessage: ''
 
 ### -PlanId
 
-Test plan ID that contains the suite.
+Test plan ID that contains the suite. Defaults to the defaultTestPlanId of the connected profile, and is required when the profile has none.
 
 ```yaml
-Type: System.Int32
+Type: System.Nullable`1[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
 ParameterSets:
 - Name: BySuite
   Position: Named
-  IsRequired: true
+  IsRequired: false
   ValueFromPipeline: false
   ValueFromPipelineByPropertyName: false
   ValueFromRemainingArguments: false
@@ -127,17 +135,17 @@ HelpMessage: ''
 
 ### -SuiteId
 
-Test suite ID. The suite must belong to the plan; otherwise an ObjectNotFound error is written for that input.
+Test suite ID. The suite must belong to the plan; otherwise an ObjectNotFound error is written for that input. When PlanId is also omitted, defaults to the defaultTestSuiteId of the connected profile; otherwise it is required.
 
 ```yaml
-Type: System.Int32
+Type: System.Nullable`1[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
 ParameterSets:
 - Name: BySuite
   Position: Named
-  IsRequired: true
+  IsRequired: false
   ValueFromPipeline: false
   ValueFromPipelineByPropertyName: false
   ValueFromRemainingArguments: false

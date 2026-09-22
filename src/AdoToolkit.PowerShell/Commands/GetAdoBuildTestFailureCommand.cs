@@ -7,7 +7,9 @@ namespace AdoToolkit;
 // One AdoBuildTestFailureSet per input build. The invocation cache is shared across records, so
 // piped builds of one definition reuse the history listings (§17). Session state is touched only
 // on the pipeline thread; the worker gets the leased client and the record's log.
-[Cmdlet(VerbsCommon.Get, "AdoBuildTestFailure", DefaultParameterSetName = "ByBuildId")]
+// ByDefinition is the default so that a call without arguments uses the connected profile's
+// definition and branch; BuildId still binds by position and builds still bind from the pipeline.
+[Cmdlet(VerbsCommon.Get, "AdoBuildTestFailure", DefaultParameterSetName = "ByDefinition")]
 [OutputType(typeof(AdoBuildTestFailureSet))]
 public sealed class GetAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
 {
@@ -25,7 +27,7 @@ public sealed class GetAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
     [ValidateNotNull]
     public AdoBuild? InputObject { get; set; }
 
-    [Parameter(Mandatory = true, ParameterSetName = "ByDefinition")]
+    [Parameter(ParameterSetName = "ByDefinition")]
     [ValidateNotNull]
     public object? Definition { get; set; }
 
@@ -71,8 +73,11 @@ public sealed class GetAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
         string? definitionText = null;
         if (ParameterSetName == "ByDefinition")
         {
-            (int? id, string? name) = ResolveDefinition(Definition);
-            latest = new BuildQuery { DefinitionId = id, DefinitionName = name, Branch = Branch, Result = Result, Latest = true };
+            (int? id, string? name) = ResolveDefinition(Definition, connection);
+            latest = new BuildQuery
+            {
+                DefinitionId = id, DefinitionName = name, Branch = Branch ?? connection.DefaultBranch, Result = Result, Latest = true,
+            };
             definitionText = name ?? id!.Value.ToString(CultureInfo.InvariantCulture);
         }
         lease ??= SessionStateRegistry.Current.Acquire(connection);

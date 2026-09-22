@@ -104,7 +104,7 @@ public sealed class TestBugResolutionTests
         string html = TestFailureReportFixture.Render(model);
         TestFailureReportValidator.Validate(new StringReader(html), model);
         // The overview and by-error rows mark only the test with an open bug.
-        Assert.Equal(2, Count(html, ">Missing</a> <span class=\"open-bug-marker\">Open bug</span>"));
+        Assert.Equal(2, Count(html, ">Missing</a> <a class=\"open-bug-marker\" rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/4003\">Open bug</a>"));
         Assert.Equal(2, Count(html, "class=\"open-bug-marker\""));
         Assert.Contains("<li data-bug=\"4001\"><a rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/4001\">#4001",
             html, StringComparison.Ordinal);
@@ -289,7 +289,7 @@ public sealed class TestBugResolutionTests
         TestFailureReportValidator.Validate(new StringReader(html), model);
         Assert.Contains("<label><input type=\"checkbox\" data-toggle=\"untracked\">" + label + "</label>", html, StringComparison.Ordinal);
         System.Text.RegularExpressions.Match card = Assert.Single(System.Text.RegularExpressions.Regex.Matches(html,
-            "<article class=\"card failure-card\" id=\"f-([0-9]+)\"[^>]* data-open-bug>"));
+            "<article class=\"card failure-card\" id=\"f-([0-9]+)\"[^>]* data-open-bug(?:\\s[^>]*)?>"));
         Assert.Equal(model.Failures.Single(static failure => failure.HasOpenBug).Ordinal.ToString(CultureInfo.InvariantCulture), card.Groups[1].Value);
 
         TestRunFixture closed = Scenario(Detail(101, null, 2002), Detail(102), Detail(103)).RouteBugs();

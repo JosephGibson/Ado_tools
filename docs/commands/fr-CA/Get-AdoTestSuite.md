@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 09-22-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoTestSuite
 ---
@@ -20,7 +20,7 @@ Récupère les suites de tests d’un plan de test.
 ### ByPlanId (Default)
 
 ```
-Get-AdoTestSuite [-PlanId] <int> [-SuiteId <int>] [-Recurse] [-Project <string>] [-Connection <AdoConnection>]
+Get-AdoTestSuite [[-PlanId] <int>] [-SuiteId <int>] [-Recurse] [-Project <string>] [-Connection <AdoConnection>]
 ```
 
 ### ByPlan
@@ -35,7 +35,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Lit toutes les pages de la liste des suites du plan dans la zone testplan, avec l’API version 6.0-preview.1, construit l’arborescence à partir des références aux suites parentes et calcule chaque SuitePath de la suite racine jusqu’à la suite. Retourne seule la suite indiquée par SuiteId, ou la suite racine du plan. Avec Recurse, retourne cette suite et toute sa sous-arborescence en profondeur d’abord, en conservant l’ordre des suites sœurs retourné par le serveur. Un SuiteId absent produit une erreur ObjectNotFound non bloquante. Les plans d’une autre collection reçus du pipeline produisent ConnectionMismatch avant toute requête.
+Lit toutes les pages de la liste des suites du plan dans la zone testplan, avec l’API version 6.0-preview.1, construit l’arborescence à partir des références aux suites parentes et calcule chaque SuitePath de la suite racine jusqu’à la suite. Retourne seule la suite indiquée par SuiteId, ou la suite racine du plan. Avec Recurse, retourne cette suite et toute sa sous-arborescence en profondeur d’abord, en conservant l’ordre des suites sœurs retourné par le serveur. Un SuiteId absent produit une erreur ObjectNotFound non bloquante. Les plans d’une autre collection reçus du pipeline produisent ConnectionMismatch avant toute requête. Sans PlanId ni plan reçu du pipeline, la valeur defaultTestPlanId du profil connecté est utilisée, et sans SuiteId, la valeur defaultTestSuiteId du profil sert de départ. La suite du profil ne s’applique qu’avec le plan du profil : avec un PlanId explicite ou un plan reçu du pipeline, la suite racine du plan sert de départ, sauf si SuiteId est indiqué. Sans plan d’aucune source, la commande échoue avec une erreur de configuration avant toute requête.
 
 ## EXAMPLES
 
@@ -55,21 +55,29 @@ Get-AdoTestPlan -Name 'Release*' | Get-AdoTestSuite
 
 Liste la suite racine de chaque plan correspondant, dans le projet de chaque plan.
 
+### Example 3
+
+```powershell
+Get-AdoTestSuite -Recurse
+```
+
+Liste la suite de tests par défaut enregistrée dans le profil de connexion et ses descendantes.
+
 ## PARAMETERS
 
 ### -PlanId
 
-Identifiant positif du plan de test.
+Identifiant positif du plan de test. Par défaut, la valeur defaultTestPlanId du profil connecté ; obligatoire si le profil n’en a pas.
 
 ```yaml
-Type: System.Int32
+Type: System.Nullable`1[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
 ParameterSets:
 - Name: ByPlanId
   Position: 0
-  IsRequired: true
+  IsRequired: false
   ValueFromPipeline: false
   ValueFromPipelineByPropertyName: false
   ValueFromRemainingArguments: false
@@ -101,7 +109,7 @@ HelpMessage: ''
 
 ### -SuiteId
 
-Identifiant positif de la suite de départ. Sans lui, la suite racine du plan sert de départ.
+Identifiant positif de la suite de départ. Sans lui, la valeur defaultTestSuiteId du profil connecté sert de départ si le plan vient aussi du profil ; sinon, la suite racine du plan sert de départ.
 
 ```yaml
 Type: System.Nullable`1[System.Int32]

@@ -70,7 +70,8 @@ Describe 'Failed-test report export' {
             Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
             $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
             $server.Requests.Count | Should -Be 14
-            @($set | Export-AdoBuildTestFailure -Path $outputDirectory -WhatIf).Count | Should -Be 0
+            @($set | Export-AdoBuildTestFailure -Path $outputDirectory -WhatIf -InformationVariable reportInformation).Count | Should -Be 0
+            ($reportInformation | Out-String) | Should -Not -Match 'file:///'
             @($set | Export-AdoBuildTestFailure -Path (Join-Path $outputDirectory 'one.html') -WhatIf).Count | Should -Be 0
             @($set | Export-AdoBuildTestFailure -Path (Join-Path $outputDirectory 'missing') -AllRunAttachments -WhatIf).Count | Should -Be 0
             $server.Requests.Count | Should -Be 14
@@ -86,7 +87,11 @@ Describe 'Failed-test report export' {
             $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
             $existing = Join-Path $outputDirectory 'Build-401-TestFailures.html'
             [IO.File]::WriteAllText($existing, 'original')
-            $failure = { $set | Export-AdoBuildTestFailure -Path $outputDirectory -NoClobber -ErrorAction Stop } | Should -Throw -PassThru
+            $failure = $null
+            try { $set | Export-AdoBuildTestFailure -Path $outputDirectory -NoClobber -InformationVariable reportInformation -ErrorAction Stop | Out-Null }
+            catch { $failure = $_ }
+            $failure | Should -Not -BeNullOrEmpty
+            ($reportInformation | Out-String) | Should -Not -Match 'file:///'
             $failure.FullyQualifiedErrorId | Should -Match '^AdoFileOutput'
             [IO.File]::ReadAllText($existing) | Should -Be 'original'
             $server.Requests.Count | Should -Be 14
@@ -131,6 +136,36 @@ Describe 'Failed-test report export' {
         finally { Stop-FakeAdoServer -Server $server }
     }
 
+    # A name with %41 and %20 must stay literal: Uri(path) read %41 as an escaped A and pointed to xAy.
+    It 'prints the report URI on the information stream and pipes only FileInfo (<Culture>, <Name>)' -ForEach @(
+        @{ Culture = 'en-US'; Name = 'rapport [été] #1.html'; Escapes = @('%20', '%23', '%C3%A9', '%5B') },
+        @{ Culture = 'fr-CA'; Name = 'rapport [été] #1.html'; Escapes = @('%20', '%23', '%C3%A9', '%5B') },
+        @{ Culture = 'en-US'; Name = 'x%41y %20 100%.html'; Escapes = @('x%2541y', '%2520', '100%25') }
+    ) {
+        $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses))
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
+            $destination = Join-Path $outputDirectory $Name
+            $InformationPreference = 'SilentlyContinue'
+            $files = @($set | Export-AdoBuildTestFailure -Path $destination -SkipAttachments -Culture $Culture -InformationVariable reportInformation)
+            $files.Count | Should -Be 1
+            $files[0] | Should -BeOfType ([IO.FileInfo])
+            $files[0].FullName | Should -Be $destination
+            @($reportInformation).Count | Should -Be 1
+            $reportInformation[0] | Should -BeOfType ([System.Management.Automation.InformationRecord])
+            # PSHOST records show even with the default SilentlyContinue preference.
+            $reportInformation[0].Tags | Should -Contain 'PSHOST'
+            $message = $reportInformation[0].MessageData.Message
+            $message | Should -Match '^file:///[A-Za-z]:/'
+            $message | Should -Not -Match '[\s\[\]#]'
+            foreach ($escape in $Escapes) { $message.Contains($escape) | Should -BeTrue -Because $escape }
+            [Uri]::new($message).LocalPath | Should -Be $destination
+            Test-Path -LiteralPath ([Uri]::new($message).LocalPath) | Should -BeTrue
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
     It 'SkipAttachments downloads nothing and creates no folder' -Tag 'S5-6' {
         $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses))
         try {
@@ -167,8 +202,8 @@ Describe 'Failed-test report export' {
             @($contentRequests | Where-Object Line -NotMatch '/attachments/5002\?').Count | Should -Be 0
             @(Get-ChildItem -LiteralPath $file.AttachmentDirectory -File).Count | Should -Be $Downloads
             $html = [IO.File]::ReadAllText($file.FullName)
-            $html | Should -Match 'runId=201&amp;resultId=1">screenshot\.PNG'
-            $html | Should -Match 'runId=202&amp;resultId=11">screenshot\.PNG'
+            $html | Should -Match '/_apis/test/Runs/201/Results/1/attachments/5001\?api-version=6\.0-preview\.1">screenshot\.PNG'
+            $html | Should -Match '/_apis/test/Runs/202/Results/11/attachments/5001\?api-version=6\.0-preview\.1">screenshot\.PNG'
             $html | Should -Match '<span class="attachment-size">2,048 bytes</span>'
             $html | Should -Match 'r202-11-a5002.json'
             $html.Contains('r201-1-a5002.json') | Should -Be $AllRuns

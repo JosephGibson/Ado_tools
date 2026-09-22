@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-21-2026
+ms.date: 09-22-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoBuildTestFailure
 ---
@@ -17,7 +17,14 @@ Rassemble les tests en échec et instables d’une exécution de pipeline.
 
 ## SYNTAX
 
-### ByBuildId (Default)
+### ByDefinition (Default)
+
+```
+Get-AdoBuildTestFailure [-Definition <Object>] [-Branch <string>] [-Result <BuildResult>] [-HistoryCount <int>]
+    [-HistoryScope <AdoTestHistoryScope>] [-Project <string>] [-Connection <AdoConnection>]
+```
+
+### ByBuildId
 
 ```
 Get-AdoBuildTestFailure [-BuildId] <int> [-HistoryCount <int>] [-HistoryScope <AdoTestHistoryScope>]
@@ -31,20 +38,13 @@ Get-AdoBuildTestFailure -InputObject <AdoBuild> [-HistoryCount <int>] [-HistoryS
     [-Connection <AdoConnection>]
 ```
 
-### ByDefinition
-
-```
-Get-AdoBuildTestFailure -Definition <Object> [-Branch <string>] [-Result <BuildResult>] [-HistoryCount <int>]
-    [-HistoryScope <AdoTestHistoryScope>] [-Project <string>] [-Connection <AdoConnection>]
-```
-
 ## ALIASES
 
 Aucun alias.
 
 ## DESCRIPTION
 
-Émet un objet AdoBuildTestFailureSet par build reçu. La récupération se fait en deux passes. La première liste tous les résultats de tests de toutes les séries du build, regroupe les résultats en identités de tests d’après le stockage et le nom du test automatisé, puis classe chaque identité. La seconde lit les détails complets uniquement pour les identités ayant une tentative en échec, dans l’ordre du rapport, afin d’obtenir chaque tentative, message, trace de pile et liste de pièces jointes. Un test est signalé dès qu’une tentative a échoué. Les tentatives sont regroupées selon les noms de phase, de travail et d’instance du travail de leurs séries de tests : une identité est instable (Flaky) lorsque la dernière tentative de chaque groupe a réussi, sinon en échec (Failed), de sorte qu’un échec dans une phase n’est jamais masqué par une réussite ultérieure dans une autre. Les séries sans noms distincts forment un seul groupe, où la dernière tentative décide. Toutes les tentatives sont conservées, y compris celles qui ont réussi. Les groupes de réexécution dans la tâche, les nouvelles tentatives de travail ou d’étape et les résultats simples sont tous des sources de tentatives ; les groupes pilotés par les données et les autres groupes qui ne sont pas des réexécutions sont imbriqués dans leur tentative. Les références aux cas de test sont résolues en un seul lot, qui liste aussi les liens de chaque cas de test. Chaque test signalé liste ensuite ses bogues dans Bugs : tout élément de travail associé à l’un de ses résultats de test, et tout élément de travail lié à son cas de test, quel que soit le type de lien, dont le type fait partie de la catégorie Bogue du projet (Microsoft.BugCategory). Leur titre, leur état, leur type et leur projet sont lus par lots d’au plus 200, jamais par une requête par test. Un bogue est ouvert (IsOpen) sauf si son état appartient à la catégorie d’états Completed ou Removed, lue une fois par projet et type d’élément de travail; un bogue Resolved reste donc ouvert. HasOpenBug est vrai lorsqu’au moins un bogue est ouvert. Si la catégorie Bogue ou les catégories d’états d’un projet ne peuvent pas être lues, seul le type nommé Bug compte et les états Closed, Done et Removed sont considérés comme fermés, avec un avertissement BugMetadataUnavailable. Un bogue illisible conserve le lien vers son ID avec un avertissement UnresolvedBug et, si la recherche des bogues échoue, les ID de bogues associés restent des liens avec un avertissement BugLookupFailed; aucun de ces cas ne fait échouer la récupération. L’historique des exécutions ajoute le build courant et des builds antérieurs de la même définition, avec des décomptes et une cellule par identité signalée ; un problème d’historique ne fait jamais échouer le rapport. Les tests qui ont seulement réussi ou qui n’ont pas été exécutés sont comptés dans le sommaire et l’historique, sans détail. Les métadonnées des pièces jointes sont lues ici ; leur contenu n’est téléchargé que par Export-AdoBuildTestFailure. Le statut est Partial lorsqu’un diagnostic d’erreur existe, par exemple lorsque le nombre d’identités en échec dépasse le maximum configuré. Avec -Definition, le dernier build terminé de la définition est choisi, comme avec Get-AdoBuild -Latest, éventuellement filtré par branche et par résultat.
+Émet un objet AdoBuildTestFailureSet par build reçu. La récupération se fait en deux passes. La première liste tous les résultats de tests de toutes les séries du build, regroupe les résultats en identités de tests d’après le stockage et le nom du test automatisé, puis classe chaque identité. La seconde lit les détails complets uniquement pour les identités ayant une tentative en échec, dans l’ordre du rapport, afin d’obtenir chaque tentative, message, trace de pile et liste de pièces jointes. Un test est signalé dès qu’une tentative a échoué. Les tentatives sont regroupées selon les noms de phase, de travail et d’instance du travail et le nom de leurs séries de tests; une série nommée comme une autre série du même travail suivie de « (attempt N) », où N est sa tentative de travail, est une nouvelle tentative de cette série et reste dans son groupe. Une identité est instable (Flaky) lorsque la dernière tentative de chaque groupe a réussi, sinon en échec (Failed), de sorte qu’un échec dans une phase ou une série nommée n’est jamais masqué par une réussite ultérieure dans une autre. Les séries sans noms distincts forment un seul groupe, où la dernière tentative décide. Toutes les tentatives sont conservées, y compris celles qui ont réussi. Les groupes de réexécution dans la tâche, les nouvelles tentatives de travail ou d’étape et les résultats simples sont tous des sources de tentatives ; les groupes pilotés par les données et les autres groupes qui ne sont pas des réexécutions sont imbriqués dans leur tentative. Les références aux cas de test sont résolues en un seul lot, qui liste aussi les liens de chaque cas de test. Chaque test signalé liste ensuite ses bogues dans Bugs : tout élément de travail associé à l’un de ses résultats de test, et tout élément de travail lié à son cas de test, quel que soit le type de lien, dont le type fait partie de la catégorie Bogue du projet (Microsoft.BugCategory). Leur titre, leur état, leur type et leur projet sont lus par lots d’au plus 200, jamais par une requête par test. Un bogue est ouvert (IsOpen) sauf si son état appartient à la catégorie d’états Completed ou Removed, lue une fois par projet et type d’élément de travail; un bogue Resolved reste donc ouvert. HasOpenBug est vrai lorsqu’au moins un bogue est ouvert. Si la catégorie Bogue ou les catégories d’états d’un projet ne peuvent pas être lues, seul le type nommé Bug compte et les états Closed, Done et Removed sont considérés comme fermés, avec un avertissement BugMetadataUnavailable. Un bogue illisible conserve le lien vers son ID avec un avertissement UnresolvedBug et, si la recherche des bogues échoue, les ID de bogues associés restent des liens avec un avertissement BugLookupFailed; aucun de ces cas ne fait échouer la récupération. L’historique des exécutions ajoute le build courant et des builds antérieurs de la même définition, avec des décomptes et une cellule par identité signalée ; un problème d’historique ne fait jamais échouer le rapport. Les tests qui ont seulement réussi ou qui n’ont pas été exécutés sont comptés dans le sommaire et l’historique, sans détail. Les métadonnées des pièces jointes sont lues ici ; leur contenu n’est téléchargé que par Export-AdoBuildTestFailure. Le statut est Partial lorsqu’un diagnostic d’erreur existe, par exemple lorsque le nombre d’identités en échec dépasse le maximum configuré. Avec -Definition, le dernier build terminé de la définition est choisi, comme avec Get-AdoBuild -Latest, éventuellement filtré par branche et par résultat. ByDefinition est le jeu de paramètres par défaut : sans BuildId, build reçu du pipeline ni Definition, la valeur defaultBuildDefinition du profil connecté est utilisée, et sans elle la commande échoue avec une erreur de configuration avant toute requête. Sans Branch, la valeur defaultBranch du profil connecté limite le choix.
 
 ## EXAMPLES
 
@@ -80,6 +80,14 @@ Rassemble les tests en échec du dernier build échoué de la branche main et é
 ```
 
 Sélectionne les tests signalés qu’aucun bogue ouvert ne suit encore.
+
+### Exemple 5
+
+```powershell
+Get-AdoBuildTestFailure -Result Failed | Export-AdoBuildTestFailure -Open
+```
+
+Produit le rapport du dernier build en échec de la définition de build et de la branche par défaut enregistrées dans le profil de connexion.
 
 ## PARAMETERS
 
@@ -127,7 +135,7 @@ HelpMessage: ''
 
 ### -Definition
 
-Identifiant entier positif ou nom exact de définition de build. Le dernier build terminé de cette définition est utilisé. Une chaîne numérique est un nom ; utilisez un entier pour un identifiant.
+Identifiant entier positif ou nom exact de définition de build. Le dernier build terminé de cette définition est utilisé. Une chaîne numérique est un nom ; utilisez un entier pour un identifiant. Par défaut, la valeur defaultBuildDefinition du profil connecté.
 
 ```yaml
 Type: System.Object
@@ -137,7 +145,7 @@ Aliases: []
 ParameterSets:
 - Name: ByDefinition
   Position: Named
-  IsRequired: true
+  IsRequired: false
   ValueFromPipeline: false
   ValueFromPipelineByPropertyName: false
   ValueFromRemainingArguments: false
@@ -148,7 +156,7 @@ HelpMessage: ''
 
 ### -Branch
 
-Nom de branche ou chemin complet refs/ qui limite le choix du dernier build. Par exemple, main devient refs/heads/main.
+Nom de branche ou chemin complet refs/ qui limite le choix du dernier build. Par exemple, main devient refs/heads/main. Par défaut, la valeur defaultBranch du profil connecté ; sans elle, les builds de toutes les branches sont pris en compte.
 
 ```yaml
 Type: System.String

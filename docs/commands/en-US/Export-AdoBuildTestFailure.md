@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-21-2026
+ms.date: 09-22-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -32,21 +32,23 @@ No aliases.
 Renders each `AdoBuildTestFailureSet` from `Get-AdoBuildTestFailure` as one dark HTML
 report in the report culture. The report has four views, plus a fifth for diagnostics
 when there are any. Overview is a table with one row per failed test: its Test Case
-number linked to the work item, the status of each stage or job that ran it, and the
-first line of its latest error. A test with at least one open bug shows an Open bug mark
-after its name. By error groups the same rows under their latest error. Details has one
-card per test, which lists its bugs, each with its ID linked to the work item, its title
-and state, and an Open mark when it is open. A bug is open unless its state is in the
+number linked to the work item, the status of each group of attempts that ran it, and the
+first line of its latest error. A test with at least one open bug shows an Open bug link
+to the lowest-numbered open bug after its name. By error groups the same rows under their
+latest error. Details has one card per test, which lists its bugs, each with its ID linked
+to the work item, its title and state, and an Open mark when it is open. A bug is open unless its state is in the
 Completed or Removed state category. Runs and history lists the build's test runs, the run
 history chart and the report details. Every group, attempt and attachment preview starts
 collapsed, and an error message or stack trace repeated from an earlier attempt of the
 same test is referenced instead of repeated. Every date and time is shown in the time zone
 of the computer that runs the export, like the report's generation time.
 
-When the build's test runs carry different stage or job names, for example one stage per
-language, each card groups its attempts by them and the overview shows one status column
+When the build's test runs carry different stage, job or run names, for example one stage
+per language, each card groups its attempts by them and the overview shows one status column
 per group. The label uses the shortest name that tells the groups apart: the stage name,
-then the job name, then the job instance. Runs without distinct names keep one list.
+then the job name, then the job instance, then the run name. A run named like another run of
+the same job plus ` (attempt N)`, where N is its job attempt, is a retry of that run and
+stays in its group. Runs without distinct names keep one list.
 
 Flaky tests are left out unless `-IncludeFlaky` is supplied; the header still counts
 them. The report is complete with scripts blocked. A small static script, allowed by a
@@ -59,10 +61,11 @@ only the tests that no open bug tracks yet.
 
 Attachments appear only for test runs that started within `-AttachmentWindowDays` days
 of the export, 7 by default; a run without a start date counts as outside. Older runs keep
-every attempt, but their attachments are left out. Only JSON (`.json`) and text (`.txt`,
-`.log`) attachments are ever downloaded. PNG, HTML and other attachments stay links to
-their Azure DevOps result, whatever the switches. By default, only the most recent test run
-is downloaded, and only when it is inside the window. The latest run is the last in attempt
+every attempt, but their attachments are left out. Every attachment name links to the
+attachment in Azure DevOps, which the browser downloads with your Windows sign-in. Only JSON
+(`.json`) and text (`.txt`, `.log`) attachments are ever downloaded by the export; PNG,
+HTML and other attachments stay links, whatever the switches. By default, only the most
+recent test run is downloaded, and only when it is inside the window. The latest run is the last in attempt
 order: stage, phase and job attempt, then start date and run ID. If it has no JSON or text
 attachments, the export does not fall back to an older run and creates no attachment folder.
 
@@ -79,7 +82,7 @@ without a preview. A preview is shown, and searchable, only for files up to
 `maximumInlineJsonBytes` and while the report's inline total stays within
 `maximumInlineTotalBytes`; larger files are linked only. Size limits
 (`maximumAttachmentBytes`, `maximumTotalAttachmentBytes`) and failed downloads produce
-warnings; affected attachments retain their Azure DevOps name, size and result link.
+warnings; affected attachments retain their Azure DevOps name, size and download link.
 Authentication, authorization and cancellation stop the export. An unreadable history
 build does not stop it.
 
@@ -188,7 +191,7 @@ HelpMessage: ''
 
 ### -SkipAttachments
 
-Downloads nothing and creates no folder; attachments of runs inside the window are listed with their Azure DevOps names, sizes and result links. Takes precedence over -AllRunAttachments.
+Downloads nothing and creates no folder; attachments of runs inside the window are listed with their Azure DevOps names, sizes and download links. Takes precedence over -AllRunAttachments.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -248,7 +251,7 @@ HelpMessage: ''
 ```
 ### -IncludeFlaky
 
-Includes flaky tests, which failed and then passed in every stage or job. Without it they are left out of the report and only counted in its header.
+Includes flaky tests, which failed and then passed in every stage, job or named test run. Without it they are left out of the report and only counted in its header.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -383,11 +386,11 @@ Supports ErrorAction, ErrorVariable, WarningVariable, Verbose, and Debug.
 
 ### System.IO.FileInfo
 
-The committed report. When attachments were downloaded, its AttachmentDirectory note property holds the folder path. No object with WhatIf.
+The committed report. When attachments were downloaded, its AttachmentDirectory note property holds the folder path. No object with WhatIf. The report's file:/// address is also written to the information stream with the PSHOST tag, so it shows in the console like Write-Host output; -InformationAction Ignore hides it. Nothing is written with WhatIf or when the export fails.
 
 ## NOTES
 
-Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Downloaded attachments are work data and stay on this machine. Attachment routes, version and fields await server confirmation (V-23), as do the stage and job names used for grouping (V-19), and browser behavior from local files awaits confirmation under the work browser policy (V-27).
+Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Downloaded attachments are work data and stay on this machine. Attachment routes, version and fields await server confirmation (V-23), as do the stage, job and run names used for grouping and the run name retry suffix (V-19), and browser behavior from local files awaits confirmation under the work browser policy (V-27).
 
 ## RELATED LINKS
 

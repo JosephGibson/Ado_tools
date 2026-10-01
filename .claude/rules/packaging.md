@@ -2,7 +2,7 @@
 paths:
   - "tools/package/**"
   - "tools/BuildModules.psd1"
-  - ".github/workflows/**"
+  - ".github/**"
   - "Directory.Build.props"
 ---
 

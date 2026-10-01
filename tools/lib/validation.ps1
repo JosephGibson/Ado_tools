@@ -397,8 +397,51 @@ function Get-ToolingLayoutOutcome {
     }
 }
 
+# The GitHub workflow files, as repository paths.
+function Get-WorkflowFile {
+    param([Parameter(Mandatory = $true)][object] $ProjectProfile)
+
+    @($ProjectProfile.Files |
+            ForEach-Object { Get-RelativeRepositoryPath -Path $_.FullName -Root $ProjectProfile.Root } |
+            Where-Object { $_ -match '^\.github/workflows/[^/]+\.ya?ml$' })
+}
+
+# actionlint checks the YAML, the workflow schema and the expressions of every workflow. Nothing
+# else reads these files before GitHub runs them, and the release workflow runs on the push
+# that publishes.
+function Get-WorkflowLintOutcome {
+    param([Parameter(Mandatory = $true)][object] $ProjectProfile)
+
+    $workflows = @(Get-WorkflowFile -ProjectProfile $ProjectProfile)
+    $command = Get-FirstCommand -Names @('actionlint')
+    if ($null -eq $command) {
+        return [pscustomobject]@{
+            Failures = @()
+            Summary = @('The workflow files could not be linted because actionlint is not installed.')
+            Warnings = @('actionlint is required (run bootstrap -Install).')
+            Unavailable = $true
+        }
+    }
+
+    # shellcheck and pyflakes are switched off: every run block is PowerShell, and the result
+    # must not depend on whether either happens to be installed.
+    $arguments = @('-no-color', '-oneline', '-shellcheck=', '-pyflakes=') + $workflows
+    $result = Invoke-BoundedProcess -Executable $command.Source -Arguments $arguments -WorkingDirectory $ProjectProfile.Root -TimeoutSeconds 120
+    $lines = @($result.Lines | ForEach-Object { ([string] $_).Trim() } | Where-Object { $_ })
+    $failures = @()
+    if ($result.ExitCode -ne 0) {
+        $failures = if ($lines.Count -gt 0) { $lines } else { @("actionlint exited with $($result.ExitCode).") }
+    }
+
+    return [pscustomobject]@{
+        Failures = @($failures)
+        Summary = @("$($workflows.Count) workflow file(s) linted with actionlint")
+        Warnings = @()
+    }
+}
+
 # The in-process stages: tooling lint and tests, configuration syntax, documentation
-# references, and the Claude and Codex layout.
+# references, the Claude and Codex layout, and the workflow lint.
 function Get-BuiltinValidationPlan {
     param(
         [Parameter(Mandatory = $true)][object] $ProjectProfile,
@@ -454,6 +497,14 @@ function Get-BuiltinValidationPlan {
         [void] $plan.Add([pscustomobject]@{
                 Name = 'tooling-layout'
                 Action = { param([object] $ProjectProfile) Get-ToolingLayoutOutcome -ProjectProfile $ProjectProfile }
+                ActionArguments = @{ ProjectProfile = $ProjectProfile }
+            })
+    }
+
+    if (@(Get-WorkflowFile -ProjectProfile $ProjectProfile).Count -gt 0) {
+        [void] $plan.Add([pscustomobject]@{
+                Name = 'workflow-lint'
+                Action = { param([object] $ProjectProfile) Get-WorkflowLintOutcome -ProjectProfile $ProjectProfile }
                 ActionArguments = @{ ProjectProfile = $ProjectProfile }
             })
     }

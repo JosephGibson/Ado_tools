@@ -1,0 +1,95 @@
+# Prepares a runner for verify: the .NET SDK that global.json selects, the pinned PowerShell
+# runtime, the pinned actionlint and the exact build modules. release.yml and verify.yml run it
+# after checkout, so both gates use one toolchain and each pin is declared once, here.
+name: Set up the AdoToolkit toolchain
+description: Installs the .NET SDK, the pinned PowerShell and actionlint, and the exact build modules.
+
+runs:
+  using: composite
+  steps:
+    # Pinned by commit; the comment is the tag that commit carried on 2026-10-01.
+    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      with:
+        global-json-file: global.json
+
+    - name: Install the pinned PowerShell
+      shell: pwsh
+      env:
+        POWERSHELL_VERSION: '7.6.6'
+        # SHA-256 of PowerShell-7.6.6-win-x64.zip as published in that release's hashes.sha256. The
+        # published file comes from the same place as the archive, so the runtime is pinned here.
+        POWERSHELL_SHA256: '02fe458be20493fbdf43f61ea20610b811ee6c738ab1676c61b9cfcd1a33c860'
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $base = "https://github.com/PowerShell/PowerShell/releases/download/v$env:POWERSHELL_VERSION"
+        $name = "PowerShell-$env:POWERSHELL_VERSION-win-x64.zip"
+        $zip = Join-Path $env:RUNNER_TEMP $name
+        $hashes = Join-Path $env:RUNNER_TEMP 'powershell-hashes.sha256'
+        Invoke-WebRequest -Uri "$base/$name" -OutFile $zip
+        Invoke-WebRequest -Uri "$base/hashes.sha256" -OutFile $hashes
+        $line = Get-Content -LiteralPath $hashes | Where-Object { $_ -match ([regex]::Escape($name) + '\s*$') } | Select-Object -First 1
+        $expected = if ($line) { ($line.Trim() -split '\s+')[0] } else { '' }
+        $actual = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
+        if ($expected -notmatch '^[A-Fa-f0-9]{64}$' -or $expected -ne $actual) {
+          throw 'The PowerShell download does not match its published hash.'
+        }
+        if ("$env:POWERSHELL_SHA256" -notmatch '^[A-Fa-f0-9]{64}$' -or $env:POWERSHELL_SHA256 -ne $actual) {
+          throw 'The PowerShell download does not match the pinned hash.'
+        }
+        $target = Join-Path $env:RUNNER_TEMP 'pwsh'
+        Expand-Archive -LiteralPath $zip -DestinationPath $target
+        $target | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        # The release job bundles this archive and names the runtime in the release text.
+        "POWERSHELL_VERSION=$env:POWERSHELL_VERSION" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+    - name: Install the pinned actionlint
+      shell: pwsh
+      env:
+        ACTIONLINT_VERSION: '1.7.12'
+        # SHA-256 of actionlint_1.7.12_windows_amd64.zip as published in that release's checksums file.
+        ACTIONLINT_SHA256: '6e7241b51e6817ea6a047693d8e6fed13b31819c9a0dd6c5a726e1592d22f6e9'
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $name = "actionlint_${env:ACTIONLINT_VERSION}_windows_amd64.zip"
+        $zip = Join-Path $env:RUNNER_TEMP $name
+        Invoke-WebRequest -Uri "https://github.com/rhysd/actionlint/releases/download/v$env:ACTIONLINT_VERSION/$name" -OutFile $zip
+        $actual = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
+        if ("$env:ACTIONLINT_SHA256" -notmatch '^[A-Fa-f0-9]{64}$' -or $env:ACTIONLINT_SHA256 -ne $actual) {
+          throw 'The actionlint download does not match the pinned hash.'
+        }
+        $target = Join-Path $env:RUNNER_TEMP 'actionlint'
+        Expand-Archive -LiteralPath $zip -DestinationPath $target
+        $target | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Install build and test modules
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        if ($PSVersionTable.PSVersion -lt [semver] '7.6.5') { throw "PowerShell 7.6.5 or later is required; found $($PSVersionTable.PSVersion)." }
+        # PSResourceGet reads its repository store while binding parameters, so on a profile that
+        # has never used it the store must exist first. Creating the folder is enough for the
+        # store to be written; the rest is best effort because -TrustRepository is what matters.
+        $store = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PSResourceGet'
+        if (-not (Test-Path -LiteralPath $store)) { [void] (New-Item -ItemType Directory -Path $store -Force) }
+        $gallery = try { Get-PSResourceRepository -Name PSGallery -ErrorAction SilentlyContinue } catch { $null }
+        if (-not $gallery) { try { Register-PSResourceRepository -PSGallery -Trusted } catch { Write-Host "PSGallery registration: $($_.Exception.Message)" } }
+        # Bracketed versions are exact. A bare version is a minimum, which would allow Pester 6.x,
+        # and the verify gate requires Pester 5.x.
+        $modules = Import-PowerShellDataFile -LiteralPath ./tools/BuildModules.psd1
+        foreach ($module in $modules.GetEnumerator()) {
+          $exact = $module.Value
+          try { Install-PSResource -Name $module.Key -Version "[$exact]" -Scope CurrentUser -TrustRepository -Quiet }
+          catch {
+            Write-Host "Install-PSResource failed for $($module.Key): $($_.Exception.Message)"
+            Install-Module -Name $module.Key -RequiredVersion $exact -Scope CurrentUser -Repository PSGallery -Force -AllowClobber
+          }
+        }
+        # @() is required: -Name silently matches nothing when handed a hashtable KeyCollection.
+        $installed = Get-Module -ListAvailable -Name @($modules.Keys) | Sort-Object Name, Version
+        $installed | Select-Object Name, Version | Format-Table -AutoSize | Out-String | Write-Host
+        foreach ($name in $modules.Keys) {
+          $wanted = [version] $modules[$name]
+          if (-not ($installed | Where-Object { $_.Name -eq $name -and $_.Version -eq $wanted })) {
+            throw "$name $wanted is not available after installation."
+          }
+        }

@@ -229,7 +229,7 @@ behavior with a fixture that had no test.
 | Formatted steps | The colors, fonts, sizes and alignment of the editor are not reproduced, and images are placeholders that are never loaded. How Server 2020 stores formatted steps is still V-02 |
 | Attachments and hyperlinks of a Test Case | Attachments are named, not linked or downloaded. A hyperlink is a link only for `http`, `https` and `mailto` |
 | The script of the Test Case report | Exercised in Microsoft Edge only. Copying needs the clipboard permission of the browser; without it the text is selected |
-| Limits carried over | The 0.5.0 [known limitations](release-0.5.0.md#known-limitations) on profile defaults, run names, attachment links and Server 2020 pipeline names still apply |
+| Limits carried over | The 0.5.0 [known limitations](archive/release-0.5.0.md#known-limitations) on profile defaults, run names, attachment links and Server 2020 pipeline names still apply |
 
 ## Work-PC Live checks
 
@@ -249,7 +249,7 @@ still apply: variables stay on the work PC, raw responses are not sent back, and
 | 6 | `Get-AdoTestCase -Id <id> \| Export-AdoTestCase -Open`, then the same with `Export-AdoBuildTestFailure -Open` | The report opens. If the browser is blocked, a warning names the report and the reason, and the `FileInfo` is still returned |
 | 7 | Export a build whose failed tests have custom fields, in English and French | No value reads like a .NET type name; French labels say « Série de tests » and messages say « Le build » |
 | 8 | Export a Test Case with multi-line steps as Markdown and open it in the viewer used at work | The lines of a step are separate |
-| 9 | The [0.5.0 checks](release-0.5.0.md#work-pc-live-checks), including V-30 | Still pending |
+| 9 | The [0.5.0 checks](archive/release-0.5.0.md#work-pc-live-checks), including V-30 | Still pending |
 
 ## Local validation and developer handoff
 

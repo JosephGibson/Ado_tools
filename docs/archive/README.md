@@ -13,6 +13,7 @@ documentation starts at the [README](../../README.md).
 | [release-0.2.0.md](release-0.2.0.md) | 0.2.0 release audit: findings, Server 2020 REST contracts and the rules for work-PC live checks |
 | [release-0.3.0.md](release-0.3.0.md) | 0.3.0 release notes: failed-test report changes and the portable release |
 | [release-0.4.0.md](release-0.4.0.md) | 0.4.0 release notes: bugs of failed tests, security fixes and V-30 |
+| [release-0.5.0.md](release-0.5.0.md) | 0.5.0 release notes: profile defaults for builds and test plans, report grouping by named test run |
 
 Release notes for the current and the previous version are in `docs/`.
 

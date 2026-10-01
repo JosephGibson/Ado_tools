@@ -140,6 +140,10 @@ function Get-RequiredTool {
                 (Get-RelativeRepositoryPath -Path $_.FullName -Root $ProjectProfile.Root) -like 'docs/commands/*' }).Count -gt 0) {
         [pscustomobject]@{ Name = 'Microsoft.PowerShell.PlatyPS'; Module = $true; Commands = @(); MinimumVersion = '1.0'; MaximumVersion = '2.0' }
     }
+    # The workflow-lint stage runs it on the GitHub workflow files.
+    if (@(Get-WorkflowFile -ProjectProfile $ProjectProfile).Count -gt 0) {
+        [pscustomobject]@{ Name = 'actionlint'; Module = $false; Commands = @('actionlint'); MinimumVersion = $null; MaximumVersion = $null }
+    }
 }
 
 function Get-ProjectDiagnostics {

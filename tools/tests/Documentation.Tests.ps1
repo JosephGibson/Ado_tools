@@ -107,12 +107,17 @@ A span: `[text](missing.md)`.
 
     It 'checks links but not paths in a dated document and skips archived documents and fixtures' {
         $root = Join-Path $TestDrive 'history'
+        # An entry of the changelog, like the notes of a release, describes the repository of its day.
+        New-Fixture (Join-Path $root 'CHANGELOG.md') "# Changelog`n`n## 1.0.0 - 2026-01-15`n`n- ``src/Removed.cs`` was deleted. [Notes](docs/release-1.0.0.md) and [gone](docs/gone.md)."
+        New-Fixture (Join-Path $root 'docs/CHANGELOG.md') "``src/Removed.cs``"
         New-Fixture (Join-Path $root 'docs/release-1.0.0.md') "# Notes`n`n``src/Removed.cs`` was deleted. See [gone](gone.md)."
         New-Fixture (Join-Path $root 'docs/archive/old.md') "[gone](gone.md) and ``src/Removed.cs``"
         New-Fixture (Join-Path $root 'docs/archive/README.md') "[old](old.md), [gone](gone.md) and ``src/Removed.cs``"
         # A golden report is test data, not documentation.
         New-Fixture (Join-Path $root 'tests/Fixtures/Reports/golden.md') '[gone](gone.md)'
         (Get-Outcome $root).Failures | Should -Be @(
+            "CHANGELOG.md:5: link 'docs/gone.md' does not resolve.",
+            "docs/CHANGELOG.md:1: path 'src/Removed.cs' does not exist.",
             "docs/archive/README.md:1: link 'gone.md' does not resolve.",
             "docs/archive/README.md:1: path 'src/Removed.cs' does not exist.",
             "docs/release-1.0.0.md:3: link 'gone.md' does not resolve.")

@@ -16,7 +16,7 @@ command prints one compact JSON document.
 | File inventory / NuGet packages | `inspect` / `deps` |
 | Stages that would run | `plan` |
 | Full gate, required before handoff | `verify` |
-| One stage (always exits `2`) | `verify -Stage <name>`: `powershell-lint`, `powershell-test`, `configuration`, `documentation`, `tooling-layout`, or `project-check`, the product gate |
+| One stage (always exits `2`) | `verify -Stage <name>`: `powershell-lint`, `powershell-test`, `configuration`, `documentation`, `tooling-layout`, `workflow-lint`, or `project-check`, the product gate |
 | Tool versions / missing prerequisites | `diagnose` / `bootstrap` |
 
 - Exit codes: `0` pass, `1` failure, `2` incomplete (missing tool, skipped test, `-Stage`, `-SkipTests`).
@@ -34,9 +34,9 @@ command prints one compact JSON document.
 | `tests/Fixtures/` | Synthetic fixtures and report goldens; catalog in its `README.md` | `tests/AGENTS.md` |
 | `tests/Live/` | Opt-in checks against the real server | `tests/Live/AGENTS.md` |
 | `tools/` | `dev.ps1`, product gate `check.ps1`, Claude hooks, tooling tests | `tools/AGENTS.md` |
-| `tools/package/`, `.github/workflows/` | Packaging, installer, release workflow | `tools/package/AGENTS.md` |
+| `tools/package/`, `.github/` | Packaging, installer, release and pull request workflows | `tools/package/AGENTS.md` |
 | `docs/commands/<culture>/` | Cmdlet help sources, shipped as compiled help | `docs/commands/AGENTS.md` |
-| `docs/guides/`, `README.md`, `docs/release-<version>.md` | End-user documentation | `docs/AGENTS.md` |
+| `docs/guides/`, `README.md`, `CHANGELOG.md`, `docs/release-<version>.md` | End-user documentation | `docs/AGENTS.md` |
 | `docs/archive/` | Specification and superseded documents; never edited | `docs/AGENTS.md` |
 | `docs/tooling.md` | Reference for `tools/`; read it only to change tooling | |
 

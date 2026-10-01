@@ -52,10 +52,11 @@ $script:SensitiveFileGlobs = @('.env', '.env.*', 'id_rsa*', 'id_ed25519*', '*.pe
 $script:SensitivePathPattern = '(?:^|[\\/])(?:\.env(?:\.[^\\/]*)?|secrets?)(?:[\\/]|$)|(?:^|[\\/])(?:id_(?:rsa|ed25519)[^\\/]*|[^\\/]*credentials[^\\/]*|[^\\/]*\.local\.[^\\/]*|\.(?:npmrc|pypirc|netrc)|[^\\/]*\.(?:pem|pfx|p12|key|log))$'
 $script:ConfigurationExtensions = @('.json', '.xml', '.config', '.csproj', '.props', '.targets', '.slnx', '.resx', '.ps1xml')
 # Markdown that the documentation stage does not check: archived history, apart from its two
-# index files, and test fixtures, apart from their catalog. In a dated file every link must
-# resolve, but a path may name a file that has since moved or gone.
+# index files, and test fixtures, apart from their catalog. In a dated file, the changelog or
+# the notes of a release, every link must resolve, but a path may name a file that has since
+# moved or gone.
 $script:FrozenDocumentationPattern = '^docs/archive/(?!README\.md$|plans/README\.md$)|^tests/Fixtures/(?!README\.md$)'
-$script:DatedDocumentationPattern = '^docs/release-[^/]+\.md$'
+$script:DatedDocumentationPattern = '^(?:CHANGELOG\.md|docs/release-[^/]+\.md)$'
 # A code span that starts with one of these directories names a repository path.
 $script:RepositoryPathRoots = @('src', 'tests', 'tools', 'docs', '.claude', '.agents', '.github')
 

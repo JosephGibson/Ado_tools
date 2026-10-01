@@ -1,18 +1,29 @@
 # Builds, verifies and publishes an AdoToolkit release when a v<major>.<minor>.<patch> tag is
 # pushed. The tag must match VersionPrefix in Directory.Build.props. Assets: a portable Windows
 # x64 bundle, the module-only zip, their SHA-256 checksums and the standalone module installer.
-# The portable bundle includes the exact PowerShell runtime verified below.
+# The portable bundle includes the exact PowerShell runtime that the setup action verified. The
+# release text is the CHANGELOG.md section of the version, then the installation instructions.
+#
+# A manual run publishes an existing tag whose run did not start, or failed for a reason outside
+# the tagged files. It takes this file from the branch it is started on and everything else,
+# the setup action included, from the tag.
 name: Release
 
 on:
   push:
     tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to publish, in the form v<major>.<minor>.<patch>'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -25,77 +36,21 @@ jobs:
       DOTNET_NOLOGO: '1'
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       POWERSHELL_TELEMETRY_OPTOUT: '1'
-      POWERSHELL_VERSION: '7.6.6'
-      # SHA-256 of PowerShell-7.6.6-win-x64.zip as published in that release's hashes.sha256. The
-      # published file comes from the same place as the archive, so the bundled runtime is pinned here.
-      POWERSHELL_SHA256: '02fe458be20493fbdf43f61ea20610b811ee6c738ab1676c61b9cfcd1a33c860'
       ADOTOOLKIT_RELEASE_BUILD: '1'
+      # The tag being released: the pushed tag, or the one named for a manual run. The steps read
+      # this and never the ref of the run, which is a branch in a manual run.
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       # Each action is pinned by commit; the comment is the tag that commit carried on 2026-10-01.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
           # Third-party modules, packages and tests run in this job; only the publish step gets the token.
           persist-credentials: false
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
-        with:
-          global-json-file: global.json
-
-      - name: Install PowerShell ${{ env.POWERSHELL_VERSION }}
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $base = "https://github.com/PowerShell/PowerShell/releases/download/v$env:POWERSHELL_VERSION"
-          $name = "PowerShell-$env:POWERSHELL_VERSION-win-x64.zip"
-          $zip = Join-Path $env:RUNNER_TEMP $name
-          $hashes = Join-Path $env:RUNNER_TEMP 'powershell-hashes.sha256'
-          Invoke-WebRequest -Uri "$base/$name" -OutFile $zip
-          Invoke-WebRequest -Uri "$base/hashes.sha256" -OutFile $hashes
-          $line = Get-Content -LiteralPath $hashes | Where-Object { $_ -match ([regex]::Escape($name) + '\s*$') } | Select-Object -First 1
-          $expected = if ($line) { ($line.Trim() -split '\s+')[0] } else { '' }
-          $actual = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
-          if ($expected -notmatch '^[A-Fa-f0-9]{64}$' -or $expected -ne $actual) {
-            throw 'The PowerShell download does not match its published hash.'
-          }
-          if ("$env:POWERSHELL_SHA256" -notmatch '^[A-Fa-f0-9]{64}$' -or $env:POWERSHELL_SHA256 -ne $actual) {
-            throw 'The PowerShell download does not match the pinned hash.'
-          }
-          $target = Join-Path $env:RUNNER_TEMP 'pwsh'
-          Expand-Archive -LiteralPath $zip -DestinationPath $target
-          $target | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Install build and test modules
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          if ($PSVersionTable.PSVersion -lt [semver] '7.6.5') { throw "PowerShell 7.6.5 or later is required; found $($PSVersionTable.PSVersion)." }
-          # PSResourceGet reads its repository store while binding parameters, so on a profile that
-          # has never used it the store must exist first. Creating the folder is enough for the
-          # store to be written; the rest is best effort because -TrustRepository is what matters.
-          $store = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PSResourceGet'
-          if (-not (Test-Path -LiteralPath $store)) { [void] (New-Item -ItemType Directory -Path $store -Force) }
-          $gallery = try { Get-PSResourceRepository -Name PSGallery -ErrorAction SilentlyContinue } catch { $null }
-          if (-not $gallery) { try { Register-PSResourceRepository -PSGallery -Trusted } catch { Write-Host "PSGallery registration: $($_.Exception.Message)" } }
-          # Bracketed versions are exact. A bare version is a minimum, which would allow Pester 6.x,
-          # and the verify gate requires Pester 5.x.
-          $modules = Import-PowerShellDataFile -LiteralPath ./tools/BuildModules.psd1
-          foreach ($module in $modules.GetEnumerator()) {
-            $exact = $module.Value
-            try { Install-PSResource -Name $module.Key -Version "[$exact]" -Scope CurrentUser -TrustRepository -Quiet }
-            catch {
-              Write-Host "Install-PSResource failed for $($module.Key): $($_.Exception.Message)"
-              Install-Module -Name $module.Key -RequiredVersion $exact -Scope CurrentUser -Repository PSGallery -Force -AllowClobber
-            }
-          }
-          # @() is required: -Name silently matches nothing when handed a hashtable KeyCollection.
-          $installed = Get-Module -ListAvailable -Name @($modules.Keys) | Sort-Object Name, Version
-          $installed | Select-Object Name, Version | Format-Table -AutoSize | Out-String | Write-Host
-          foreach ($name in $modules.Keys) {
-            $wanted = [version] $modules[$name]
-            if (-not ($installed | Where-Object { $_.Name -eq $name -and $_.Version -eq $wanted })) {
-              throw "$name $wanted is not available after installation."
-            }
-          }
+      # The .NET SDK, the pinned PowerShell and actionlint, and the exact build modules. The
+      # action exports POWERSHELL_VERSION, which the packaging and publishing steps read.
+      - uses: ./.github/actions/setup
 
       - name: Check the tag against the module version
         id: version
@@ -104,7 +59,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $version = (dotnet msbuild src/AdoToolkit.PowerShell/AdoToolkit.PowerShell.csproj -getProperty:Version -nologo | Out-String).Trim()
           if ($LASTEXITCODE -ne 0 -or $version -notmatch '^\d+\.\d+\.\d+$') { throw 'MSBuild did not return a module version.' }
-          if ("v$version" -cne $env:GITHUB_REF_NAME) { throw "Tag $env:GITHUB_REF_NAME does not match VersionPrefix $version." }
+          if ("v$version" -cne $env:RELEASE_TAG) { throw "Tag $env:RELEASE_TAG does not match VersionPrefix $version." }
           "value=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Restore
@@ -144,6 +99,25 @@ jobs:
           VERSION: ${{ steps.version.outputs.value }}
         run: |
           $ErrorActionPreference = 'Stop'
+          # The release text opens with the CHANGELOG.md section of this version: the lines under
+          # its "## <version>" heading, up to the next "## " heading. Without one, nothing is published.
+          $changelog = Join-Path $env:GITHUB_WORKSPACE 'CHANGELOG.md'
+          $heading = '^## \[?' + [regex]::Escape($env:VERSION) + '\]?(?:\s|$)'
+          $section = [Collections.Generic.List[string]]::new()
+          $inSection = $false
+          foreach ($line in @(if (Test-Path -LiteralPath $changelog -PathType Leaf) { Get-Content -LiteralPath $changelog })) {
+            if ($line -match '^## ') {
+              if ($inSection) { break }
+              $inSection = $line -match $heading
+            }
+            elseif ($inSection) { $section.Add($line) }
+          }
+          $changes = ($section -join "`n").Trim()
+          if (-not $changes) { throw "CHANGELOG.md has no section for $env:VERSION; the release was not published." }
+          # A relative link in the changelog names a repository file; the release page is not in the
+          # repository, so the link is rewritten to that file at the tag.
+          $tagged = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/blob/$env:RELEASE_TAG"
+          $changes = $changes -replace '\]\((?![A-Za-z][A-Za-z0-9+.-]*:|#|/)([^()\s]+)\)', "]($tagged/`$1)"
           $release = Join-Path $env:GITHUB_WORKSPACE 'artifacts/release'
           $zip = "AdoToolkit-$env:VERSION.zip"
           $portable = "AdoToolkit-$env:VERSION-win-x64.zip"
@@ -151,6 +125,10 @@ jobs:
           $portableHash = ((Get-Content -LiteralPath (Join-Path $release "$portable.sha256") -TotalCount 1).Trim() -split '\s+')[0]
           $fence = '```'
           $notes = @(
+            '## Changes'
+            ''
+            $changes -split "`n"
+            ''
             '## Portable download (recommended for Windows x64)'
             ''
             "Includes PowerShell $env:POWERSHELL_VERSION and its runtime. No separate PowerShell installation, .NET SDK or administrator rights are needed."
@@ -188,5 +166,5 @@ jobs:
           $notes | Set-Content -LiteralPath $notesFile -Encoding utf8
           $assets = @($portable, "$portable.sha256", $zip, "$zip.sha256", 'Install-AdoToolkit.ps1') | ForEach-Object { Join-Path $release $_ }
           # Only --notes-file: combining it with --generate-notes is not documented behaviour.
-          gh release create $env:GITHUB_REF_NAME @assets --title "AdoToolkit $env:VERSION" --notes-file $notesFile --verify-tag
+          gh release create $env:RELEASE_TAG @assets --title "AdoToolkit $env:VERSION" --notes-file $notesFile --verify-tag
           if ($LASTEXITCODE -ne 0) { throw 'Creating the release failed.' }

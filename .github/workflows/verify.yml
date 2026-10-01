@@ -1,0 +1,43 @@
+# Runs the full verify gate on a pull request to main, with the toolchain of the release workflow:
+# the setup action installs it for both. The token only reads the repository; nothing is published.
+name: Verify
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      DOTNET_NOLOGO: '1'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      POWERSHELL_TELEMETRY_OPTOUT: '1'
+      ADOTOOLKIT_RELEASE_BUILD: '1'
+    steps:
+      # Pinned by commit, the same commit as in release.yml; the comment is its tag.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Third-party modules, packages and tests run in this job; the token stays out of .git/config.
+          persist-credentials: false
+
+      # The .NET SDK, the pinned PowerShell and actionlint, and the exact build modules.
+      - uses: ./.github/actions/setup
+
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore AdoToolkit.slnx --locked-mode
+
+      - name: Verify
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File ./tools/dev.ps1 verify
+          if ($LASTEXITCODE -ne 0) { throw "verify exited with $LASTEXITCODE." }

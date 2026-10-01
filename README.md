@@ -2,7 +2,7 @@
 
 PowerShell toolkit for Azure DevOps Server 2020: compiled C# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 
-**Version 0.6.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.6.5** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
@@ -10,18 +10,16 @@ DevOps. Its cmdlets return typed objects that you can use in pipelines, and it w
 standalone HTML, Markdown or JSON reports when you need a document. All messages,
 report labels and help are available in English and French.
 
-Version 0.6.0 redesigns the HTML Test Case report and fixes the defects found in a review
-of the whole repository. The report now has the theme and the controls of the failed-test
-report, renders formatted steps with their lists, tables and emphasis, and with
-`Export-AdoTestCase -IncludeDetail` adds the description, links and test points of each
-case. An export no longer fails after its report is
-written when `-Open` cannot start an application, and an incomplete object piped into a
-command gets a clear error for that input instead of a .NET exception. Markdown Test Case
-reports keep the line breaks inside a step, the failed-test report shows list, object and
-identity values of custom fields, and the French messages and reports use consistent
-terms. Profiles still hold your default project, branch, build definition, test plan and
-test suite; see the [configuration file](docs/guides/configuration.md#profiles). The
-[release notes](docs/release-0.6.0.md) list every change, the validation evidence and the
+Version 0.6.5 changes how AdoToolkit is released, not what it does: the cmdlets, the
+reports, the help and the configuration file are those of the version before it. Each
+GitHub release now opens with the changes of its version, taken from the new
+[changelog](CHANGELOG.md). The version before it redesigned the HTML Test Case report,
+which has the theme and the controls of the failed-test report, renders formatted steps
+with their lists, tables and emphasis, and with `Export-AdoTestCase -IncludeDetail` adds
+the description, links and test points of each case. Profiles hold your default project,
+branch, build definition, test plan and test suite; see the
+[configuration file](docs/guides/configuration.md#profiles). The
+[release notes](docs/release-0.6.5.md) list every change, the validation evidence and the
 remaining work-PC checks.
 
 > [!NOTE]
@@ -46,7 +44,7 @@ remaining work-PC checks.
 | Use the portable release | Windows x64 and access to an Azure DevOps Server 2020 collection with your Windows account. PowerShell and its runtime are included; no administrator rights, .NET SDK or other modules |
 | Use the module-only release | Windows and PowerShell 7.6 (`pwsh`), plus the same server access |
 | Build it from source | The .NET 10 SDK selected by [global.json](global.json) (a per-user install works) and PlatyPS 1.x (`Microsoft.PowerShell.PlatyPS`) for PowerShell 7 |
-| Develop and verify | The build prerequisites plus PowerShell 7.6.5 or later, Pester 5.x and PSScriptAnalyzer; ripgrep is recommended |
+| Develop and verify | The build prerequisites plus PowerShell 7.6.5 or later, Pester 5.x, PSScriptAnalyzer and actionlint; ripgrep is recommended |
 
 Azure DevOps Services and later Server versions are not supported.
 
@@ -116,7 +114,8 @@ Profiles, connections and the other options are described in
 | Full cmdlet help (also available with `Get-Help <cmdlet> -Full`) | [English](docs/commands/en-US/) · [French](docs/commands/fr-CA/) |
 | Test Case JSON report format | [testcase.v1.schema.json](docs/schemas/testcase.v1.schema.json) |
 | Developer CLI, validation and prerequisites | [Developer tooling](docs/tooling.md) |
-| Release notes | [Version 0.6.0](docs/release-0.6.0.md), with links to the earlier notes |
+| What changes for users in each version | [Changelog](CHANGELOG.md) |
+| Release notes | [Version 0.6.5](docs/release-0.6.5.md), with links to the earlier notes |
 | Original specification, delivery plans, design notes and earlier release notes | [Archive](docs/archive/README.md) |
 | Rules for coding agents | [AGENTS.md](AGENTS.md) |
 
@@ -135,14 +134,17 @@ pwsh -NoProfile -File .\tools\dev.ps1 verify
 all checks pass, `1` when a check fails, and `2` when the run is incomplete, for
 example because a prerequisite is missing. It lints the PowerShell code, runs the
 tooling tests, checks configuration files and the links and paths in the documentation,
-builds the solution, and runs the Core tests under `en-US` and `fr-CA`. It then stages
+lints the GitHub workflows, builds the solution, and runs the Core tests under `en-US` and
+`fr-CA`. It then stages
 the package and runs the product Pester tests against it. All tests run offline against
 synthetic data.
 
 To build release assets locally, run `tools\package\Publish-AdoToolkitPackage.ps1` and
 then `tools\package\New-AdoToolkitRelease.ps1`. Pushing a `v<version>` tag runs the same
-steps in GitHub Actions and publishes the release. For details and the other `dev.ps1`
-commands, see [Developer tooling](docs/tooling.md#packaging-and-releases).
+steps in GitHub Actions and publishes the release, whose text opens with that version's
+section of the [changelog](CHANGELOG.md). A pull request to `main` runs `verify` in GitHub
+Actions. For details and the other `dev.ps1` commands, see
+[Developer tooling](docs/tooling.md#packaging-and-releases).
 
 ## Repository layout
 
@@ -155,6 +157,6 @@ commands, see [Developer tooling](docs/tooling.md#packaging-and-releases).
 | `tests/Fixtures` | Synthetic fixtures, listed in [tests/Fixtures/README.md](tests/Fixtures/README.md) |
 | `tests/Live` | Optional checks against a live server; `verify` never runs them |
 | `tools` | `dev.ps1` developer CLI, product gate, packaging and release scripts, tooling tests |
-| `.github/workflows` | The release workflow |
+| `.github` | The release workflow, the pull request check, their shared setup action and the Dependabot configuration |
 | `docs` | Guides, cmdlet help sources, JSON schema, tooling reference and archive |
 | `Directory.Build.props` | Shared build settings and the module version |

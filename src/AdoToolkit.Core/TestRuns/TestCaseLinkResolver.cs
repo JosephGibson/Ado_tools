@@ -90,16 +90,20 @@ internal sealed class TestCaseLinkResolver
     {
         SortedSet<int> ids = [];
         foreach (WorkItemRelationDto relation in relations ?? [])
-        {
-            if (relation?.Rel is not { Length: > 0 } rel || ResourceRelations.Contains(rel, StringComparer.OrdinalIgnoreCase)
-                || !Uri.TryCreate(relation.Url, UriKind.Absolute, out Uri? url)) continue;
-            string[] segments = url.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            if (segments.Length >= 4 && string.Equals(segments[^4], "_apis", StringComparison.OrdinalIgnoreCase)
-                && string.Equals(segments[^3], "wit", StringComparison.OrdinalIgnoreCase)
-                && string.Equals(segments[^2], "workItems", StringComparison.OrdinalIgnoreCase)
-                && TryParseReference(segments[^1], out int id) && id != self)
-                ids.Add(id);
-        }
+            if (TryLinkedId(self, relation, out int id)) ids.Add(id);
         return Array.AsReadOnly(ids.ToArray());
+    }
+
+    // The work item that one relation of work item self links to.
+    internal static bool TryLinkedId(int self, WorkItemRelationDto? relation, out int id)
+    {
+        id = 0;
+        if (relation?.Rel is not { Length: > 0 } rel || ResourceRelations.Contains(rel, StringComparer.OrdinalIgnoreCase)
+            || !Uri.TryCreate(relation.Url, UriKind.Absolute, out Uri? url)) return false;
+        string[] segments = url.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length >= 4 && string.Equals(segments[^4], "_apis", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(segments[^3], "wit", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(segments[^2], "workItems", StringComparison.OrdinalIgnoreCase)
+            && TryParseReference(segments[^1], out id) && id != self;
     }
 }

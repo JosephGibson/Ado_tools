@@ -21,6 +21,8 @@ namespace AdoToolkit.Core.Http;
 [JsonSerializable(typeof(TestPlanPageDto))]
 [JsonSerializable(typeof(TestSuitePageDto))]
 [JsonSerializable(typeof(SuiteTestCasePageDto))]
+[JsonSerializable(typeof(TestPointsQueryDto))]
+[JsonSerializable(typeof(TestPointsPageDto))]
 [JsonSerializable(typeof(BuildDefinitionPageDto))]
 [JsonSerializable(typeof(BuildPageDto))]
 [JsonSerializable(typeof(TimelineDto))]

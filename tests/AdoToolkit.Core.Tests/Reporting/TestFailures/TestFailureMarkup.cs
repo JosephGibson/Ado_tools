@@ -15,7 +15,8 @@ internal static partial class TestFailureMarkup
     internal static partial Regex Scripts();
     [GeneratedRegex("<meta http-equiv=\"Content-Security-Policy\" content=\"([^\"]*)\">", RegexOptions.CultureInvariant)]
     private static partial Regex Csp();
-    [GeneratedRegex("sha256-[A-Za-z0-9+/=]+", RegexOptions.CultureInvariant)]
+    // In the attribute the encoder writes a "+" of the Base64 hash as a character reference.
+    [GeneratedRegex("sha256-(?:[A-Za-z0-9+/=]|&#x2B;)+", RegexOptions.CultureInvariant)]
     private static partial Regex Hashes();
     [GeneratedRegex("<[^>]*>", RegexOptions.CultureInvariant)]
     internal static partial Regex Tags();

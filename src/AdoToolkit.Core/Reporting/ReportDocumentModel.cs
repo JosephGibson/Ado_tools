@@ -21,4 +21,6 @@ public sealed class ReportDocumentModel
     public bool IsMultiCase => Cases.Count > 1;
     public int CompleteCount => Contents.Count(entry => entry.Status == AdoTestCaseStatus.Complete);
     public int PartialCount => Contents.Count(entry => entry.Status == AdoTestCaseStatus.Partial);
+    // True when the export read the details of its Test Cases.
+    public bool HasDetail => Contents.Any(entry => entry.Detail is not null);
 }

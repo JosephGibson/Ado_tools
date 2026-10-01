@@ -1,0 +1,87 @@
+{
+  "count": 1,
+  "value": [
+    {
+      "id": 3,
+      "rev": 3,
+      "fields": {
+        "System.Id": 3,
+        "System.Rev": 3,
+        "System.Title": "Synthetic 3",
+        "System.WorkItemType": "Cas personnalisé",
+        "System.TeamProject": "Équipe / Web",
+        "System.State": "Ready",
+        "System.ChangedDate": "2026-09-15T12:00:00Z",
+        "System.CreatedDate": "2026-08-01T08:30:00Z",
+        "System.CreatedBy": { "displayName": "Fictional Author", "uniqueName": "author@example.test", "id": "opaque-author", "url": "https://untrusted.example.test/identity" },
+        "System.Tags": "Smoke; Été <b>;  ",
+        "System.Description": "<div><p>Checks the <b>order</b> form.</p><ul><li>Uses the sandbox</li><li><a href=\"javascript:alert(1)\">Unsafe</a></li></ul><script>alert(1)</script></div>",
+        "Microsoft.VSTS.TCM.AutomatedTestName": "Synthetic.Orders.OrderTests.Creates",
+        "Microsoft.VSTS.TCM.AutomatedTestStorage": "Synthetic.Orders.Tests.dll",
+        "Microsoft.VSTS.TCM.AutomatedTestType": "Unit Test",
+        "Microsoft.VSTS.TCM.AutomationStatus": "Automated",
+        "Contoso.Unread": { "nested": [1, 2, { "deep": null }] },
+        "Microsoft.VSTS.TCM.Steps": "<steps><step id=\"1\" type=\"ActionStep\"><parameterizedString>Open @user</parameterizedString><parameterizedString /></step></steps>"
+      },
+      "relations": [
+        {
+          "rel": "Microsoft.VSTS.Common.TestedBy-Reverse",
+          "url": "https://ado.example.test/Collection/_apis/wit/workItems/3050",
+          "attributes": { "isLocked": false, "name": "Tests" }
+        },
+        {
+          "rel": "System.LinkTypes.Related",
+          "url": "https://ado.example.test/Collection/_apis/wit/workItems/3001",
+          "attributes": { "isLocked": false, "name": "Related", "comment": "See <also>" }
+        },
+        {
+          "rel": "System.LinkTypes.Related",
+          "url": "https://ado.example.test/Collection/_apis/wit/workItems/3001",
+          "attributes": { "isLocked": false, "name": "Related" }
+        },
+        {
+          "rel": "Contoso.LinkTypes.Blocks-Forward",
+          "url": "https://ado.example.test/Collection/_apis/wit/workItems/3099",
+          "attributes": { "isLocked": false }
+        },
+        {
+          "rel": "System.LinkTypes.Related",
+          "url": "https://ado.example.test/Collection/_apis/wit/workItems/3",
+          "attributes": { "name": "Related" }
+        },
+        {
+          "rel": "Hyperlink",
+          "url": "https://wiki.example.test/orders",
+          "attributes": { "comment": "Specification" }
+        },
+        {
+          "rel": "Hyperlink",
+          "url": "javascript:alert(1)",
+          "attributes": {}
+        },
+        {
+          "rel": "ArtifactLink",
+          "url": "vstfs:///TestManagement/TcmResult/201.101",
+          "attributes": { "name": "Test Result" }
+        },
+        {
+          "rel": "AttachedFile",
+          "url": "https://untrusted.example.test/_apis/wit/attachments/0f1e2d3c-0000-4000-8000-000000000001",
+          "attributes": { "name": "capture <1>.png", "resourceSize": 20480, "comment": "Screen" }
+        },
+        {
+          "rel": "AttachedFile",
+          "url": "https://untrusted.example.test/_apis/wit/attachments/0f1e2d3c-0000-4000-8000-000000000002",
+          "attributes": { "resourceSize": "large" }
+        },
+        {
+          "rel": "System.LinkTypes.Related",
+          "url": "not a url",
+          "attributes": { "name": "Related" }
+        },
+        null
+      ],
+      "url": "https://untrusted.example.test/_apis/wit/workItems/3"
+    }
+  ]
+}

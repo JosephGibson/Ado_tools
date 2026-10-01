@@ -1,0 +1,58 @@
+{
+  "points": [
+    {
+      "id": 2,
+      "url": "https://untrusted.example.test/Collection/Project/_apis/test/Plans/812/Suites/814/Points/2",
+      "assignedTo": { "displayName": "Fictional Tester", "id": "opaque-tester", "uniqueName": "tester@example.test" },
+      "automated": false,
+      "configuration": { "id": "7", "name": "Windows 11" },
+      "lastTestRun": { "id": "702" },
+      "lastResult": { "id": "100001" },
+      "outcome": "Failed",
+      "state": "Completed",
+      "lastResultState": "Completed",
+      "lastUpdatedDate": "2026-09-14T18:45:00Z",
+      "suite": { "id": "814", "name": "Paiement <b>" },
+      "testCase": { "id": "3" },
+      "testPlan": { "id": "812", "name": "Plan « Été »" }
+    },
+    {
+      "id": 1,
+      "url": "https://untrusted.example.test/Collection/Project/_apis/test/Plans/812/Suites/813/Points/1",
+      "assignedTo": { "displayName": "Fictional Tester", "id": "opaque-tester" },
+      "configuration": { "id": "7", "name": "Windows 11" },
+      "lastTestRun": { "id": "701" },
+      "lastResult": { "id": "100000" },
+      "outcome": "Passed",
+      "state": "Completed",
+      "lastUpdatedDate": "2026-09-13T09:00:00Z",
+      "suite": { "id": "813" },
+      "testCase": { "id": "3" },
+      "testPlan": { "id": "812" }
+    },
+    {
+      "id": 3,
+      "url": "https://untrusted.example.test/Collection/Project/_apis/test/Plans/820/Suites/821/Points/3",
+      "assignedTo": "Fictional Text Tester",
+      "configuration": { "id": 8, "name": "Chrome" },
+      "lastTestRun": { "id": "0" },
+      "lastResult": { "id": "0" },
+      "outcome": "Blocked",
+      "state": "Completed",
+      "lastUpdatedDate": "not a date",
+      "testCase": { "id": 3 }
+    },
+    {
+      "id": 4,
+      "url": "https://untrusted.example.test/Collection/Project/_apis/test/Plans/820/Suites/821/Points/4",
+      "configuration": { "id": "9", "name": "Edge" },
+      "lastTestRun": { "id": "0" },
+      "outcome": "Unspecified",
+      "state": "Ready",
+      "suite": { "id": "821" },
+      "testCase": { "id": "3" },
+      "testPlan": { "id": "820" }
+    }
+  ],
+  "pointsFilter": { "testcaseIds": [3] }
+}

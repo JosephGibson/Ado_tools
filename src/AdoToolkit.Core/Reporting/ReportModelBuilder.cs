@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Resources;
 using AdoToolkit.Core.Connections;
 using AdoToolkit.Core.TestManagement;
 
@@ -6,6 +7,8 @@ namespace AdoToolkit.Core.Reporting;
 
 public static class ReportModelBuilder
 {
+    private static readonly ResourceManager Resources = new("AdoToolkit.Core.Resources.Strings", typeof(Messages).Assembly);
+
     public static ReportDocumentModel Build(AdoTestCase testCase, AdoConnection connection, ReportModelOptions options)
     {
         ArgumentNullException.ThrowIfNull(testCase);
@@ -34,9 +37,11 @@ public static class ReportModelBuilder
 
         CultureInfo culture = CultureInfo.ReadOnly((CultureInfo)options.Culture.Clone());
         Uri collection = connection.CollectionUri;
+        // Labels are the catalog strings as written: a few hold placeholders that the renderer or the page fills.
         IReadOnlyDictionary<string, string> labels = new ReadOnlyDictionary<string, string>(
             Enum.GetValues<AdoMessage>().Where(key => key.ToString().StartsWith("Report", StringComparison.Ordinal))
-                .ToDictionary(key => key.ToString()[6..], key => Messages.Get(key, culture), StringComparer.Ordinal));
+                .ToDictionary(key => key.ToString()[6..],
+                    key => Resources.GetString(key.ToString(), culture) ?? throw new InvalidOperationException(key.ToString()), StringComparer.Ordinal));
         Dictionary<int, int> occurrences = [];
         List<ReportContentsEntry> contents = [];
         foreach (AdoTestCase testCase in cases)
@@ -48,6 +53,7 @@ public static class ReportModelBuilder
             {
                 Id = testCase.Id, Title = testCase.Title, Anchor = anchor, Status = testCase.Status,
                 Suite = BuildSuite(testCase.Suite, collection), RowCount = testCase.Steps.Count, StepCount = testCase.StepCount,
+                State = testCase.State, Priority = testCase.Priority, Detail = options.Details?.GetValueOrDefault(testCase.Id),
             });
         }
         bool multiple = cases.Count > 1;
@@ -97,8 +103,16 @@ public static class ReportModelBuilder
             WorkItemId = diagnostic.WorkItemId, StepNumber = diagnostic.StepNumber,
             ReferenceChain = Array.AsReadOnly(diagnostic.ReferenceChain.ToArray()),
         }).ToArray();
+        AdoTestCaseDetail? detail = options.Details?.GetValueOrDefault(testCase.Id);
         return new TestCaseReportModel
         {
+            Detail = detail,
+            DetailDiagnostics = Array.AsReadOnly((detail?.Diagnostics ?? []).Select(diagnostic => new AdoDiagnostic
+            {
+                Code = diagnostic.Code, Severity = diagnostic.Severity, Arguments = Array.AsReadOnly(diagnostic.Arguments.ToArray()),
+                Message = DiagnosticMessageRenderer.Render(diagnostic.Code, diagnostic.Arguments, culture),
+                WorkItemId = diagnostic.WorkItemId,
+            }).ToArray()),
             Culture = culture, ServerUri = new Uri(collection.GetLeftPart(UriPartial.Authority)),
             CollectionUri = collection, Project = testCase.TeamProject,
             Id = testCase.Id, Rev = testCase.Rev, Title = testCase.Title, WorkItemType = testCase.WorkItemType,

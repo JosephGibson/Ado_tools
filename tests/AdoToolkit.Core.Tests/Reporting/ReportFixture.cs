@@ -18,16 +18,20 @@ internal static class ReportFixture
         Path.Combine(TestDirectory.RepositoryRoot, "docs", "schemas", "testcase.v1.schema.json"),
         new BuildOptions { SchemaRegistry = new SchemaRegistry { Fetch = (_, _) => throw new InvalidOperationException("External schema fetch forbidden") } });
 
+    // "rich" and "detailed" show what only the HTML report renders: formatted steps, and the details of -IncludeDetail.
     internal static ReportDocumentModel Model(string variant = "direct", string culture = "en-US") =>
-        ReportModelBuilder.Build(Case(variant), new AdoConnection { CollectionUri = Collection, DefaultProject = "Wrong" }, Options(culture));
+        ReportModelBuilder.Build(Case(variant), new AdoConnection { CollectionUri = Collection, DefaultProject = "Wrong" },
+            Options(culture, variant == "detailed" ? DetailFixture.Details(10) : null));
 
-    internal static ReportModelOptions Options(string culture = "en-US") => new()
+    internal static ReportModelOptions Options(string culture = "en-US", IReadOnlyDictionary<int, AdoTestCaseDetail>? details = null) => new()
     {
-        Culture = CultureInfo.GetCultureInfo(culture), GeneratedAt = Timestamp, ToolkitVersion = "2.1.0-test",
+        Culture = CultureInfo.GetCultureInfo(culture), GeneratedAt = Timestamp, ToolkitVersion = "2.1.0-test", Details = details,
     };
 
     internal static AdoTestCase Case(string variant = "direct")
     {
+        if (variant == "rich") return RichStepFixture.GoldenCase();
+        if (variant == "detailed") variant = "parameterized";
         AdoSharedStepInfo shared = new() { Id = 20, Rev = 4, Title = "Shared <title>", TeamProject = "Autre / équipe", WebUrl = Untrusted, ReferenceCount = 1 };
         AdoSharedStepInfo inner = new() { Id = 30, Rev = 2, Title = "Nested", TeamProject = Project, WebUrl = Untrusted, ReferenceCount = 1 };
         AdoSharedStepInfo unresolved = new() { Id = 99, ReferenceCount = 1 };

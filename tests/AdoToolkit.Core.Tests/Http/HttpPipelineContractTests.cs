@@ -46,7 +46,7 @@ public sealed class HttpPipelineContractTests
     [Trait("Acceptance", "S0-3")]
     public void RegistryContainsOnlyUniqueExactServer2020Endpoints()
     {
-        Assert.Equal(20, EndpointRegistry.All.Count);
+        Assert.Equal(21, EndpointRegistry.All.Count);
         Assert.Equal(EndpointRegistry.All.Count, EndpointRegistry.All.Select(item => item.Name).Distinct(StringComparer.Ordinal).Count());
         Assert.Equal("6.0", EndpointRegistry.ProjectsList.ApiVersion);
         Assert.Equal(PagingStrategy.TopSkip, EndpointRegistry.ProjectsList.Paging);
@@ -71,6 +71,11 @@ public sealed class HttpPipelineContractTests
         Assert.Equal("6.0-preview.1", EndpointRegistry.WorkItemTypeStates.ApiVersion);
         Assert.Equal(TimeoutClass.Metadata, EndpointRegistry.WorkItemTypeStates.Timeout);
         Assert.Equal("application/octet-stream", EndpointRegistry.TestResultAttachmentContent.Accept);
+        // The test points query is a read sent as POST, in chunks of Test Case IDs, pending V-32.
+        Assert.Equal("{project}/_apis/test/points", EndpointRegistry.TestPointsQuery.RouteTemplate);
+        Assert.Equal("6.0-preview.2", EndpointRegistry.TestPointsQuery.ApiVersion);
+        Assert.Equal(HttpMethod.Post, EndpointRegistry.TestPointsQuery.Method);
+        Assert.Equal(50, EndpointRegistry.TestPointsQuery.ChunkSize);
         Assert.All(EndpointRegistry.All, static item => Assert.True(item.IsSafeToRetry));
     }
 

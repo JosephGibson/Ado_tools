@@ -11,10 +11,13 @@ public static class ReportOutputValidator
         ValidateNonEmpty(path, model.Culture);
         IReadOnlyList<ReportContentsEntry> expected = model.Contents;
         int generator = 0, documents = 0, cases = 0, lists = 0, cards = 0, ended = 0;
-        foreach (string line in LinePrefixes(path))
+        string generatorLine = "<meta name=\"generator\" content=\"AdoToolkit " + SinkEncoding.Attribute(model.ToolkitVersion) + "\">";
+        string documentLine = "<html lang=\"" + SinkEncoding.Attribute(model.Culture.Name) + "\" data-case-count=\"" + model.Cases.Count.ToString(CultureInfo.InvariantCulture) + "\">";
+        foreach (string line in LinePrefixes(path, '<'))
         {
-            if (line == "<meta name=\"generator\" content=\"AdoToolkit " + SinkEncoding.Attribute(model.ToolkitVersion) + "\">") generator++;
-            if (line == "<html lang=\"" + SinkEncoding.Attribute(model.Culture.Name) + "\" data-case-count=\"" + model.Cases.Count.ToString(CultureInfo.InvariantCulture) + "\">") documents++;
+            if (line.Length == 0) continue;
+            if (line == generatorLine) generator++;
+            if (line == documentLine) documents++;
             if (line.StartsWith("<article class=\"test-case\"", StringComparison.Ordinal))
             {
                 cases++;
@@ -45,7 +48,7 @@ public static class ReportOutputValidator
         // A multi-case document starts with one cover heading, and no step headings precede the first case.
         int headings = 0, cases = 0, rows = 0;
         int offset = model.IsMultiCase ? 1 : 0;
-        foreach (string line in LinePrefixes(path))
+        foreach (string line in LinePrefixes(path, '#'))
         {
             if (line.StartsWith("# ", StringComparison.Ordinal))
             {
@@ -71,17 +74,20 @@ public static class ReportOutputValidator
     }
 
     // Only renderer-owned prefixes are needed. Memory stays bounded even for a multi-MiB content line.
-    private static IEnumerable<string> LinePrefixes(string path)
+    // Every marker starts its line with the same character: a tag in HTML, a heading in Markdown.
+    // Other lines, such as those of the embedded styles and script, are read without being kept.
+    private static IEnumerable<string> LinePrefixes(string path, char marker)
     {
         using StreamReader reader = new(path, new System.Text.UTF8Encoding(false, true));
         System.Text.StringBuilder prefix = new(512);
+        string Take() => prefix.Length > 0 && prefix[0] == marker ? prefix.ToString() : string.Empty;
         int character;
         while ((character = reader.Read()) >= 0)
         {
-            if (character == '\n') { yield return prefix.ToString(); prefix.Clear(); }
+            if (character == '\n') { yield return Take(); prefix.Clear(); }
             else if (prefix.Length < 512) prefix.Append((char)character);
         }
-        if (prefix.Length > 0) yield return prefix.ToString();
+        if (prefix.Length > 0) yield return Take();
     }
 
     private static void Invalid(ReportDocumentModel model) => throw new InvalidDataException(Messages.Get(AdoMessage.InvalidReportOutput, model.Culture));

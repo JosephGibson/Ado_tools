@@ -1,0 +1,29 @@
+{
+  "count": 2,
+  "value": [
+    {
+      "id": 3001,
+      "rev": 6,
+      "fields": {
+        "System.Id": 3001,
+        "System.Title": "Le total ignore la remise",
+        "System.State": "Closed",
+        "System.WorkItemType": "Bug",
+        "System.TeamProject": "Autre / équipe"
+      },
+      "url": "https://untrusted.example.test/_apis/wit/workItems/3001"
+    },
+    {
+      "id": 3050,
+      "rev": 4,
+      "fields": {
+        "System.Id": 3050,
+        "System.Title": "Payer par carte <story>",
+        "System.State": "Active",
+        "System.WorkItemType": "User Story",
+        "System.TeamProject": "Équipe / Web"
+      },
+      "url": "https://untrusted.example.test/_apis/wit/workItems/3050"
+    }
+  ]
+}

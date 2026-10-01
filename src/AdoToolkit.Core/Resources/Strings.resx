@@ -277,4 +277,39 @@
   <data name="TestPlanRequired" xml:space="preserve"><value>Specify a test plan with -PlanId, or set defaultTestPlanId in the connection profile.</value></data>
   <data name="TestSuiteRequired" xml:space="preserve"><value>Specify a test suite with -SuiteId. Without -PlanId and -SuiteId, the defaultTestPlanId and defaultTestSuiteId of the connection profile apply.</value></data>
   <data name="ProfileIdRange" xml:space="preserve"><value>The ID must be an integer from 1 to 2147483647, or $null to remove the default.</value></data>
+  <data name="IncludeDetailHtmlOnly" xml:space="preserve"><value>IncludeDetail requires the HTML report format.</value></data>
+  <data name="ReportShowHide" xml:space="preserve"><value>Show or hide</value></data>
+  <data name="ReportStepFilterCount" xml:space="preserve"><value>{0} of {1} steps</value></data>
+  <data name="ReportCaseFilterCount" xml:space="preserve"><value>{0} of {1} test cases</value></data>
+  <data name="ReportNoMatchingSteps" xml:space="preserve"><value>No step matches the search.</value></data>
+  <data name="ReportNoMatchingCases" xml:space="preserve"><value>No test case matches these filters.</value></data>
+  <data name="ReportStepNavigationHint" xml:space="preserve"><value>/ Search · j/k Next/previous step · Esc Clear</value></data>
+  <data name="ReportCaseNavigationHint" xml:space="preserve"><value>/ Search · j/k Next/previous test case · Esc Clear</value></data>
+  <data name="ReportPartialOnly" xml:space="preserve"><value>Partial only</value></data>
+  <data name="ReportParameterValues" xml:space="preserve"><value>Show the values of</value></data>
+  <data name="ReportParameterNames" xml:space="preserve"><value>Parameter names</value></data>
+  <data name="ReportIteration" xml:space="preserve"><value>Iteration {0}</value></data>
+  <data name="ReportRetrievedAt" xml:space="preserve"><value>Retrieved on</value></data>
+  <data name="ReportDescription" xml:space="preserve"><value>Description</value></data>
+  <data name="ReportTags" xml:space="preserve"><value>Tags</value></data>
+  <data name="ReportCreatedBy" xml:space="preserve"><value>Created by</value></data>
+  <data name="ReportCreatedDate" xml:space="preserve"><value>Created on</value></data>
+  <data name="ReportAutomatedTest" xml:space="preserve"><value>Automated test</value></data>
+  <data name="ReportAutomatedTestType" xml:space="preserve"><value>Automated test type</value></data>
+  <data name="ReportLinks" xml:space="preserve"><value>Links</value></data>
+  <data name="ReportLinkType" xml:space="preserve"><value>Link type</value></data>
+  <data name="ReportWorkItem" xml:space="preserve"><value>Work item</value></data>
+  <data name="ReportHyperlinks" xml:space="preserve"><value>Hyperlinks</value></data>
+  <data name="ReportTestPoints" xml:space="preserve"><value>Test points</value></data>
+  <data name="ReportConfiguration" xml:space="preserve"><value>Configuration</value></data>
+  <data name="ReportTester" xml:space="preserve"><value>Tester</value></data>
+  <data name="ReportLastOutcome" xml:space="preserve"><value>Latest outcome</value></data>
+  <data name="ReportLastUpdated" xml:space="preserve"><value>Last updated</value></data>
+  <data name="ReportNoTestPoints" xml:space="preserve"><value>This test case has no test point: it is in no suite of the project.</value></data>
+  <data name="ReportFailedOutcome" xml:space="preserve"><value>Latest outcome failed</value></data>
+  <data name="TestCaseDetailUnavailable" xml:space="preserve"><value>The details of the test cases could not be read; the report leaves out their description, tags, automation fields, links and attachments.</value></data>
+  <data name="UnresolvedTestCaseDetail" xml:space="preserve"><value>Test Case {0} is missing or inaccessible; its details are left out.</value></data>
+  <data name="LinkedWorkItemsUnavailable" xml:space="preserve"><value>The work items linked to the test cases could not be read; they are listed with their IDs only.</value></data>
+  <data name="UnresolvedLinkedWorkItem" xml:space="preserve"><value>Linked work item {0} is missing or inaccessible; its ID link is kept.</value></data>
+  <data name="TestPointsUnavailable" xml:space="preserve"><value>The test points of project {0} could not be read; plans, suites, configurations and latest outcomes are left out.</value></data>
 </root>

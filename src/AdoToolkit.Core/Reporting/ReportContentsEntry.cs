@@ -13,4 +13,7 @@ public sealed class ReportContentsEntry
     public AdoTestSuiteRef? Suite { get; init; }
     public int RowCount { get; init; }
     public int StepCount { get; init; }
+    public string State { get; init; } = string.Empty;
+    public int? Priority { get; init; }
+    public AdoTestCaseDetail? Detail { get; init; }
 }

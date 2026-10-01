@@ -9,7 +9,7 @@
     <EmbeddedResource Include="Reporting/Assets/test-failures.js" />
     <EmbeddedResource Include="Reporting/Assets/testcase-report.css" />
     <EmbeddedResource Include="Reporting/Assets/testcase-document.css" />
-    <EmbeddedResource Include="Reporting/Assets/adotoolkit-mark.svg" />
+    <EmbeddedResource Include="Reporting/Assets/testcase-report.js" />
     <InternalsVisibleTo Include="AdoToolkit.Core.Tests" />
   </ItemGroup>
 </Project>

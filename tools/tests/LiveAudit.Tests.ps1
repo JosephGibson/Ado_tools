@@ -37,6 +37,7 @@ BeforeAll {
     . (Get-LiveDefinitions 'Bulk')
     . (Get-LiveDefinitions 'Shape')
     . (Get-LiveDefinitions 'Triage')
+    . (Get-LiveDefinitions 'TestCaseDetail')
     $common = Join-Path $liveRoot 'Live.Common.ps1'
     if (Test-Path -LiteralPath $common) { . $common }
 }
@@ -303,5 +304,137 @@ Describe 'Approved live-check audit regressions with synthetic data only' {
         Get-AdoSafeJsonPath '$.customFields[0].value.CustomerZeta' | Should -Be 'UNPRINTABLE'
         Get-AdoSafeJsonPath '$.fields.SystemTitle' | Should -Be 'UNPRINTABLE'
         Get-AdoSafeJsonPath '$.value[0].testRun.id' | Should -Be '$.value[0].testRun.id'
+    }
+
+    # V-31: the fields and relation attributes that Export-AdoTestCase -IncludeDetail reads.
+    It 'V-31 reads the shapes of a Test Case as <Problem> with counts only' -TestCases @(
+        @{ Problem = ''; Fields = '"System.Description":"<p>CustomerAlpha</p>","System.Tags":"CustomerBeta","System.CreatedBy":{"displayName":"CustomerGamma"},"System.CreatedDate":"2026-08-01T08:30:00Z"' }
+        @{ Problem = ''; Fields = '"System.CreatedBy":"CustomerGamma","System.CreatedDate":"2026-08-01T08:30:00Z"' }
+        @{ Problem = 'FIELD_NOT_TEXT'; Fields = '"System.Description":{"html":"CustomerAlpha"},"System.CreatedBy":"CustomerGamma","System.CreatedDate":"2026-08-01T08:30:00Z"' }
+        @{ Problem = 'CREATED_BY_SHAPE'; Fields = '"System.CreatedBy":{"name":"CustomerGamma"},"System.CreatedDate":"2026-08-01T08:30:00Z"' }
+        @{ Problem = 'CREATED_BY_MISSING'; Fields = '"System.CreatedDate":"2026-08-01T08:30:00Z"' }
+        @{ Problem = 'CREATED_DATE_SHAPE'; Fields = '"System.CreatedBy":"CustomerGamma","System.CreatedDate":"CustomerDelta"' }
+    ) {
+        param($Problem, $Fields)
+        $item = ('{"id":10,"fields":{' + $Fields + '},"relations":[' +
+            '{"rel":"Microsoft.VSTS.Common.TestedBy-Reverse","url":"https://ado.example.test/Collection/_apis/wit/workItems/3050","attributes":{"name":"CustomerEpsilon"}},' +
+            '{"rel":"Microsoft.VSTS.Common.TestedBy-Reverse","url":"https://ado.example.test/Collection/_apis/wit/workItems/3050","attributes":{"name":"CustomerEpsilon"}},' +
+            '{"rel":"System.LinkTypes.Related","url":"https://ado.example.test/Collection/_apis/wit/workItems/3001","attributes":{}},' +
+            '{"rel":"System.LinkTypes.Related","url":"https://ado.example.test/Collection/_apis/wit/workItems/10","attributes":{"name":"CustomerZeta"}},' +
+            '{"rel":"Hyperlink","url":"https://ado.example.test/CustomerEta","attributes":{}},' +
+            '{"rel":"ArtifactLink","url":"vstfs:///CustomerTheta/1","attributes":{"name":"CustomerIota"}},' +
+            '{"rel":"AttachedFile","url":"https://ado.example.test/CustomerKappa","attributes":{"name":"CustomerLambda","resourceSize":20480}}]}') | ConvertFrom-Json
+        $evidence = Get-AdoLiveTestCaseDetailEvidence -Item $item -TestCaseId 10
+        @($evidence.Problems) | Should -Be @(if ($Problem) { $Problem })
+        # A repeated link and a link to the Test Case itself are not counted, as the toolkit does not show them.
+        $evidence.Counts.LINKS | Should -Be 2
+        $evidence.Counts.LINKS_WITH_NAME | Should -Be 1
+        $evidence.Counts.HYPERLINKS | Should -Be 1
+        $evidence.Counts.ATTACHMENTS | Should -Be 1
+        $evidence.Counts.ATTACHMENTS_WITH_SIZE | Should -Be 1
+        (Format-AdoLiveCounts $evidence.Counts) + ' ' + ($evidence.Problems -join ' ') | Should -Not -Match 'Customer'
+    }
+
+    It 'V-31 names an unreadable Test Case and an attachment that the toolkit would skip' {
+        @((Get-AdoLiveTestCaseDetailEvidence -Item $null -TestCaseId 10).Problems) | Should -Be @('TESTCASE_UNREADABLE')
+        $item = '{"id":10,"fields":{"System.CreatedBy":"CustomerGamma","System.CreatedDate":"2026-08-01T08:30:00Z"},"relations":[{"rel":"AttachedFile","url":"https://ado.example.test/CustomerKappa","attributes":{}},{"rel":"Hyperlink","attributes":{}}]}' | ConvertFrom-Json
+        @((Get-AdoLiveTestCaseDetailEvidence -Item $item -TestCaseId 10).Problems) | Should -Be @('ATTACHMENT_WITHOUT_NAME', 'HYPERLINK_WITHOUT_URL')
+    }
+
+    It 'V-31 reports <Verdict> for the installed export and the batch read' -TestCases @(
+        @{ Verdict = 'PASS V-31 FIELDS_AND_RELATIONS_AS_ASSUMED'; Description = '"System.Description":"CustomerAlpha",'; Name = '"name":"CustomerEpsilon"'; Links = 1; Codes = @('UnresolvedLinkedWorkItem') }
+        @{ Verdict = 'INCONCLUSIVE V-31 NO_DESCRIPTION'; Description = ''; Name = '"name":"CustomerEpsilon"'; Links = 1; Codes = @() }
+        @{ Verdict = 'INCONCLUSIVE V-31 NO_NAMED_WORKITEM_LINK'; Description = '"System.Description":"CustomerAlpha",'; Name = ''; Links = 1; Codes = @() }
+        @{ Verdict = 'FAIL V-31 MODULE_LINK_COUNT_DIFFERS'; Description = '"System.Description":"CustomerAlpha",'; Name = '"name":"CustomerEpsilon"'; Links = 0; Codes = @() }
+        @{ Verdict = 'FAIL V-31 MODULE_LOOKUP_DEGRADED'; Description = '"System.Description":"CustomerAlpha",'; Name = '"name":"CustomerEpsilon"'; Links = 1; Codes = @('LinkedWorkItemsUnavailable') }
+        @{ Verdict = 'FAIL V-31 FIELD_NOT_TEXT'; Description = '"System.Description":17,'; Name = '"name":"CustomerEpsilon"'; Links = 1; Codes = @() }
+    ) {
+        param($Verdict, $Description, $Name, $Links, $Codes)
+        $collectionBase = 'https://ado.example.test/Collection'
+        $caseId = 10
+        $caseText = '10'
+        $rendered = [pscustomobject]@{ Links = $Links; Points = 0; Codes = $Codes }
+        Mock Invoke-AdoLivePost {
+            ('{"value":[{"id":10,"fields":{' + $Description + '"System.CreatedBy":"CustomerGamma","System.CreatedDate":"2026-08-01T08:30:00Z"},"relations":[' +
+            '{"rel":"System.LinkTypes.Related","url":"https://ado.example.test/Collection/_apis/wit/workItems/3001","attributes":{' + $Name + '}}]}]}') | ConvertFrom-Json
+        }
+        $text = @(. (Get-LiveSection 'TestCaseDetail' 'FIELDS_AND_RELATIONS_AS_ASSUMED')) -join "`n"
+        $text | Should -Match ('^' + [regex]::Escape($Verdict) + ' DESCRIPTION=[01] TAGS=0 AUTOMATED=0 LINKS=1 LINKS_WITH_NAME=[01] HYPERLINKS=0 ATTACHMENTS=0 ATTACHMENTS_WITH_SIZE=0 RENDERED_LINKS=[01]$')
+        $text | Should -Not -Match 'Customer'
+        Should -Invoke Invoke-AdoLivePost -Exactly -Times 1 -ParameterFilter {
+            $Uri -eq 'https://ado.example.test/Collection/_apis/wit/workitemsbatch?api-version=6.0' -and $Body -eq '{"ids":[10],"errorPolicy":"omit","$expand":"relations"}'
+        }
+    }
+
+    # V-32: the test points query, its point shape and its paging.
+    It 'V-32 reads the answer of the points query as <Problem>' -TestCases @(
+        @{ Problem = ''; Points = 2; Response = '{"points":[{"id":1,"outcome":"CustomerMu","testCase":{"id":"10"},"testPlan":{"id":"812","name":"CustomerNu"},"suite":{"id":"813","name":"CustomerXi"},"configuration":{"name":"CustomerOmicron"},"assignedTo":{"displayName":"CustomerPi"}},{"id":"2","outcome":"Unspecified","url":"https://ado.example.test/Collection/CustomerRho/_apis/test/Plans/812/Suites/814/Points/2","testCase":{"id":10}}]}' }
+        @{ Problem = ''; Points = 0; Response = '{"points":[]}' }
+        @{ Problem = 'POINTS_ARRAY_MISSING'; Points = 0; Response = '{"value":[]}' }
+        @{ Problem = 'POINTS_ARRAY_MISSING'; Points = 0; Response = '{"points":{"count":1}}' }
+        @{ Problem = 'POINT_WITHOUT_ID'; Points = 1; Response = '{"points":[{"outcome":"CustomerMu","testCase":{"id":"10"}}]}' }
+        @{ Problem = 'POINT_FOR_ANOTHER_CASE'; Points = 1; Response = '{"points":[{"id":1,"testCase":{"id":"11"},"testPlan":{"id":"812"},"suite":{"id":"813"}}]}' }
+        @{ Problem = 'POINT_NOT_PLACED'; Points = 1; Response = '{"points":[{"id":1,"testCase":{"id":"10"},"testPlan":{"id":"812"}}]}' }
+        @{ Problem = 'OUTCOME_NOT_TEXT'; Points = 1; Response = '{"points":[{"id":1,"outcome":2,"testCase":{"id":"10"},"testPlan":{"id":"812"},"suite":{"id":"813"}}]}' }
+    ) {
+        param($Problem, $Points, $Response)
+        $evidence = Get-AdoLiveTestPointEvidence -Response ($Response | ConvertFrom-Json) -TestCaseId 10
+        @($evidence.Problems) | Should -Be @(if ($Problem) { $Problem })
+        $evidence.Counts.POINTS | Should -Be $Points
+        if ($Points -eq 2) {
+            (Format-AdoLiveCounts $evidence.Counts) | Should -Be 'POINTS=2 WITH_PLAN_REFERENCE=1 WITH_SUITE_REFERENCE=1 WITH_NAMES=1 WITH_CONFIGURATION=1 RUN=1 NOT_RUN=1 WITH_TESTER=1'
+            @($evidence.Ids) | Should -Be @(1, 2)
+        }
+        @((Get-AdoLiveTestPointEvidence -Response $null -TestCaseId 10).Problems) | Should -Be @('POINTS_ARRAY_MISSING')
+    }
+
+    It 'V-32 calls paging <Expected> for the pages [<First>] and [<Second>]' -TestCases @(
+        @{ First = @(1); Second = @(2); Expected = 'HONORED' }
+        @{ First = @(1); Second = @(1); Expected = 'SKIP_IGNORED' }
+        @{ First = @(1, 2); Second = @(2); Expected = 'TOP_IGNORED' }
+        @{ First = @(1); Second = @(); Expected = 'PAGE_EMPTY' }
+    ) {
+        param($First, $Second, $Expected)
+        Get-AdoLivePagingEvidence -First ([int[]] $First) -Second ([int[]] $Second) | Should -Be $Expected
+    }
+
+    It 'V-32 reports <Verdict> for the installed export and the query' -TestCases @(
+        @{ Verdict = 'PASS V-32 POINTS_QUERY_AS_ASSUMED'; Count = 2; Rendered = 2; Codes = @(); SkipHonored = $true; Requests = 3 }
+        @{ Verdict = 'FAIL V-32 PAGING_SKIP_IGNORED'; Count = 2; Rendered = 2; Codes = @(); SkipHonored = $false; Requests = 3 }
+        @{ Verdict = 'INCONCLUSIVE V-32 TWO_POINTS_REQUIRED_FOR_PAGING'; Count = 1; Rendered = 1; Codes = @(); SkipHonored = $true; Requests = 1 }
+        @{ Verdict = 'INCONCLUSIVE V-32 NO_POINTS_FOR_CASE'; Count = 0; Rendered = 0; Codes = @(); SkipHonored = $true; Requests = 1 }
+        @{ Verdict = 'FAIL V-32 MODULE_POINT_COUNT_DIFFERS'; Count = 2; Rendered = 1; Codes = @(); SkipHonored = $true; Requests = 3 }
+        @{ Verdict = 'FAIL V-32 MODULE_LOOKUP_DEGRADED'; Count = 2; Rendered = 0; Codes = @('TestPointsUnavailable'); SkipHonored = $true; Requests = 3 }
+    ) {
+        param($Verdict, $Count, $Rendered, $Codes, $SkipHonored, $Requests)
+        $pointsBase = 'https://ado.example.test/Collection/Project/_apis/test/points?api-version=6.0-preview.2'
+        $caseId = 10
+        $caseText = '10'
+        $rendered = [pscustomobject]@{ Links = 0; Points = $Rendered; Codes = $Codes }
+        Mock Invoke-AdoLivePost {
+            param($Uri, $Body)
+            $all = @(for ($index = 1; $index -le $Count; $index++) {
+                    '{"id":' + $index + ',"outcome":"CustomerMu","testCase":{"id":"10"},"testPlan":{"id":"812"},"suite":{"id":"813"}}' })
+            $page = if ($Uri -match 'top=1&%24skip=([01])$') { @($all | Select-Object -Skip $(if ($SkipHonored) { [int] $Matches[1] } else { 0 }) -First 1) } else { $all }
+            ('{"points":[' + ($page -join ',') + ']}') | ConvertFrom-Json
+        }
+        $text = @(. (Get-LiveSection 'TestCaseDetail' 'POINTS_QUERY_AS_ASSUMED')) -join "`n"
+        $text | Should -Match ('^' + [regex]::Escape($Verdict) + ' POINTS=[0-2] ')
+        $text | Should -Match ' RENDERED_POINTS=[0-2] PAGING=(HONORED|SKIP_IGNORED|UNOBSERVED)$'
+        $text | Should -Not -Match 'Customer'
+        Should -Invoke Invoke-AdoLivePost -Exactly -Times $Requests -ParameterFilter { $Body -eq '{"pointsFilter":{"testcaseIds":[10]}}' }
+    }
+
+    It 'V-32 reports a rejected query by its status only' {
+        $pointsBase = 'https://ado.example.test/Collection/Project/_apis/test/points?api-version=6.0-preview.2'
+        $caseId = 10
+        $caseText = '10'
+        $rendered = [pscustomobject]@{ Links = 0; Points = 0; Codes = @('TestPointsUnavailable') }
+        Mock Invoke-AdoLivePost {
+            $failure = [System.Exception]::new('CustomerSigma')
+            $failure | Add-Member -NotePropertyName Response -NotePropertyValue ([pscustomobject]@{ StatusCode = 404 })
+            throw $failure
+        }
+        @(. (Get-LiveSection 'TestCaseDetail' 'POINTS_QUERY_AS_ASSUMED')) -join "`n" | Should -Be 'FAIL V-32 QUERY_REJECTED STATUS=404'
     }
 }

@@ -5,12 +5,12 @@ description: Regenerates the golden report files in tests/Fixtures/Reports after
 
 # Update the report goldens
 
-`tests/Fixtures/Reports/` holds 46 golden reports. Three test classes compare rendered
+`tests/Fixtures/Reports/` holds 50 golden reports. Three test classes compare rendered
 bytes with them and rewrite them only when `ADOTOOLKIT_UPDATE_GOLDEN` is `1`.
 
 | Test | Goldens |
 | --- | --- |
-| `GoldenReportTests` | `testcase-<variant>.<culture>.<html\|md\|json>`, 30 files |
+| `GoldenReportTests` | `testcase-<variant>.<culture>.<html\|md\|json>`, 30 files, and `testcase-<rich\|detailed>.<culture>.html`, 4 files |
 | `MultiCaseDocumentTests.MultiCaseDocumentMatchesReviewedGolden` | `testcases-multi.<culture>.<html\|md\|json>`, 6 files |
 | `GoldenTestFailureReportTests` | `testfailures-<variant>.<culture>.html`, 10 files |
 
@@ -43,8 +43,10 @@ bytes with them and rewrite them only when `ADOTOOLKIT_UPDATE_GOLDEN` is `1`.
 
 - Never edit a golden by hand.
 - A golden is exact UTF-8 without a BOM and with LF line ends.
-- In a failed-test golden the script body is `__SCRIPT_ASSET__` and its hash is
+- In an HTML golden the script body is `__SCRIPT_ASSET__` and its hash is
   `sha256-__SCRIPT_SHA256__`; the test puts them into the rendered report before comparing.
+- `rich` and `detailed` are HTML-only variants of `GoldenReportTests`: they show formatted
+  steps and the details of `-IncludeDetail`, which Markdown and JSON do not render.
 - A new variant needs its model in `ReportFixture`, `MultiCaseFixture` or
   `TestFailureReportFixture`, its name in the test's variant list and an entry in
   `tests/Fixtures/README.md`.

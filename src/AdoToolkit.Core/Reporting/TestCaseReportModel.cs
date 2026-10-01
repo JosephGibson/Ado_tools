@@ -36,4 +36,8 @@ public sealed class TestCaseReportModel
     public required AdoTestParameters Parameters { get; init; }
     public required IReadOnlyList<AdoSharedStepInfo> SharedSteps { get; init; }
     public required IReadOnlyDictionary<string, string> Labels { get; init; }
+    // Read with -IncludeDetail and shown by the HTML report only.
+    public AdoTestCaseDetail? Detail { get; init; }
+    // The diagnostics of Detail, with their messages in the report culture.
+    public IReadOnlyList<AdoDiagnostic> DetailDiagnostics { get; init; } = Array.Empty<AdoDiagnostic>();
 }

@@ -47,6 +47,9 @@ HTTP pipeline, work items, WIQL, test plans, builds. Tests add continuation and
 | `Rest/testcase-mixed.json` | A partial case, a root that is not a test and a complete case; a fourth requested ID is omitted | V-01, V-05, V-13 |
 | `Rest/shared-no-steps.json` | A resolved Shared Steps item without a steps field | V-01 |
 | `Rest/shared-expansion-sequence.json` | Four ordered batch responses: the root, then three Shared Steps levels | V-01, V-05 |
+| `Rest/testcase-detail.json` | Test Case 3 read with its relations for `-IncludeDetail`: description markup with a script and an unsafe link, tags, creation and automation fields, a nested field that is never read, links of three types (one repeated, one to the case itself, one with an unreadable URL), a safe and an unsafe hyperlink, an artifact link, attachments with and without a name, a `null` relation and untrusted response URLs | V-31, V-10, V-15 |
+| `Rest/testcase-detail-linked.json` | The linked work items 3001 and 3050, each with its project; 3099 is omitted | V-31, V-05 |
+| `Rest/testpoints.json` | The four test points of Test Case 3: failed and passed with string IDs, one without plan and suite references whose tester is text and whose date is not a date, and one that was never run | V-32 |
 | `Rest/testplans-first.json`, `Rest/testplans-last.json` | Plan pages with accented names and an untrusted `_links` URL | V-04, V-15 |
 | `Rest/testplan-empty-page.json` | Empty page that still carries a token; shared by the three test plan endpoints | V-04 |
 | `Rest/testsuites-first.json`, `Rest/testsuites-last.json` | Suite tree across pages: root, two children, grandchildren listed after later siblings; French names with `’` | V-04, V-15 |
@@ -162,8 +165,9 @@ Attachment content and the download list (§15.13). Only JSON and text are downl
 ## Reports/
 
 Golden reports: exact UTF-8 bytes, LF line ends, no BOM. Each `*` covers both cultures
-(`en-US`, `fr-CA`) and, for Test Case reports, the three formats (`html`, `md`, `json`).
-They change only through the `update-goldens` skill.
+(`en-US`, `fr-CA`) and, for Test Case reports, the three formats (`html`, `md`, `json`);
+`testcase-rich.*` and `testcase-detailed.*` show what only the HTML report renders and
+have no other format. They change only through the `update-goldens` skill.
 
 | File | Represents | V-item |
 | --- | --- | --- |
@@ -172,6 +176,8 @@ They change only through the `update-goldens` skill.
 | `Reports/testcase-partial.*` | Test Case report: partial and truncated expansion with diagnostics | V-15 |
 | `Reports/testcase-parameterized.*` | Test Case report: shared parameters | V-15 |
 | `Reports/testcase-french.*` | Test Case report: French content, U+00A0, U+202F and an emoji | V-15 |
+| `Reports/testcase-rich.*` | Test Case report, HTML only: formatted steps with lists, tables, emphasis, a link, preformatted text, a quote, an image placeholder and markup escaped twice; a step that is not formatted; a parameter with two iterations | V-02, V-15 |
+| `Reports/testcase-detailed.*` | Test Case report, HTML only, with the details of `-IncludeDetail`: description, tags, automation fields, linked work items, hyperlinks, attachments, test points of every outcome and one lookup warning | V-15, V-31, V-32 |
 | `Reports/testcases-multi.*` | One document for three cases in two suites; case 10 is in both, one case is partial | V-15 |
 | `Reports/testfailures-failed.*` | Failed-test report: one failed test with every attempt field, data-driven sub-results, custom fields, a resolved Test Case and attachment metadata | V-16, V-21, V-23, V-26, V-29 |
 | `Reports/testfailures-flaky.*` | Failed and flaky tests, history strips and the history chart | V-16, V-22, V-26 |
@@ -179,5 +185,5 @@ They change only through the `update-goldens` skill.
 | `Reports/testfailures-hostile.*` | Closing script tags, handler text, quoted attributes, traversal names, unsafe response URLs, French spacing, an invalid Test Case reference | V-16, V-26, V-29 |
 | `Reports/testfailures-grouped.*` | English and French stages, a run outside the attachment window, a passing retry, a repeated message and trace, text and JSON attachments | V-19, V-22 |
 
-In a failed-test golden the script body is `__SCRIPT_ASSET__` and its CSP hash is
-`sha256-__SCRIPT_SHA256__`; an exported report carries the real script and hash.
+In an HTML golden, of either report, the script body is `__SCRIPT_ASSET__` and its CSP hash
+is `sha256-__SCRIPT_SHA256__`; an exported report carries the real script and hash.

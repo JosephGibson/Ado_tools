@@ -52,9 +52,14 @@ internal static class EndpointRegistry
     internal static EndpointDefinition TestResultAttachmentContent { get; } = new(
         "TestResultAttachmentContent", HttpMethod.Get, "{project}/_apis/test/Runs/{runId}/Results/{resultId}/attachments/{attachmentId}", "6.0-preview.1",
         PagingStrategy.None, true, TimeoutClass.Download, Accept: "application/octet-stream");
+    // The points of given Test Cases across the plans of a project. A read sent as POST; the route,
+    // its preview version, the filter and the paging are pinned pending V-32.
+    internal static EndpointDefinition TestPointsQuery { get; } = new(
+        "TestPointsQuery", HttpMethod.Post, "{project}/_apis/test/points", "6.0-preview.2", PagingStrategy.TopSkip, true, TimeoutClass.Query, 50);
     internal static IReadOnlyList<EndpointDefinition> All { get; } = Array.AsReadOnly(new[]
     {
         ProjectsList, WorkItemsBatch, WorkItemTypeCategory, WorkItemTypeStates, Wiql, TestPlansList, TestSuitesForPlan, SuiteTestCaseList,
+        TestPointsQuery,
         BuildDefinitionsList, BuildsList, BuildTimeline, BuildLogsList, BuildLog, BuildGet,
         TestRunsList, TestResultsList, TestResultGet, TestResultAttachmentsList, TestSubResultAttachmentsList,
         TestResultAttachmentContent,

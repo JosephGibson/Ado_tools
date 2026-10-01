@@ -20,7 +20,7 @@ Exporte un ou plusieurs cas de test dans un seul rapport HTML, Markdown ou JSON.
 ### Input (Default)
 
 ```
-Export-AdoTestCase [-InputObject] <AdoTestCase[]> [-Format <ReportFormat>] [-Culture <string>] [-Path <string>] [-NoClobber] [-IncludeSource] [-Open] [-Connection <AdoConnection>] [-WhatIf] [-Confirm]
+Export-AdoTestCase [-InputObject] <AdoTestCase[]> [-Format <ReportFormat>] [-Culture <string>] [-Path <string>] [-NoClobber] [-IncludeSource] [-IncludeDetail] [-Open] [-Connection <AdoConnection>] [-WhatIf] [-Confirm]
 ```
 
 ## ALIASES
@@ -29,7 +29,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Collecte les objets du pipeline et écrit exactement un document, quel que soit le nombre de cas de test reçus. Un seul cas utilise la mise en page d’un cas. Plusieurs cas ajoutent un en-tête de couverture (serveur, collection, projet, plan et suite ou source WIQL, date de génération et totaux par état) et une table des matières avec liens, regroupée par chemin de suite; chaque cas conserve son propre en-tête, son ancre tc-<id> (tc-<id>-<k> pour un cas répété) et sa numérotation des étapes. Le contenu des cas est rendu un cas à la fois dans le fichier temporaire. Les libellés et diagnostics suivent la culture du rapport ; le contenu ADO reste inchangé. Le rapport HTML autonome contient des styles intégrés et aucun script. L’écriture utilise un fichier temporaire voisin, une validation du nombre de cas et d’étapes, et un remplacement atomique. Si aucun cas n’est reçu, un avertissement est écrit et aucun fichier n’est créé.
+Collecte les objets du pipeline et écrit exactement un document, quel que soit le nombre de cas de test reçus. Un seul cas utilise la mise en page d’un cas. Plusieurs cas ajoutent un en-tête de couverture (serveur, collection, projet, plan et suite ou source WIQL, date de génération et totaux par état) et une table des matières avec liens, regroupée par chemin de suite; chaque cas conserve son propre en-tête, son ancre tc-<id> (tc-<id>-<k> pour un cas répété) et sa numérotation des étapes. Le contenu des cas est rendu un cas à la fois dans le fichier temporaire. Les libellés et diagnostics suivent la culture du rapport ; le contenu ADO reste inchangé. Le rapport HTML est un seul fichier autonome au thème du rapport des tests en échec, sombre à l’écran et clair à l’impression : une barre supérieure avec des compteurs, des liens de sections, une recherche (étapes d’un cas, cas d’un document), les valeurs des paramètres de l’itération choisie à la place des @noms, des groupes d’étapes partagées et des cas réductibles, des boutons de copie et une navigation au clavier. Les étapes mises en forme conservent leurs listes, leurs tableaux et leur emphase en HTML; Markdown et JSON conservent le texte brut. Un seul script statique intégré s’exécute sous une stratégie de sécurité du contenu limitée à son empreinte, et tout le rapport reste lisible sans lui. Avec IncludeDetail, le rapport HTML montre aussi, pour chaque cas, sa description, ses balises, ses champs de création et d’automatisation, les éléments de travail liés, ses hyperliens, le nom de ses pièces jointes et ses points de test avec le dernier résultat dans chaque plan, suite et configuration. L’écriture utilise un fichier temporaire voisin, une validation du nombre de cas et d’étapes, et un remplacement atomique. Si aucun cas n’est reçu, un avertissement est écrit et aucun fichier n’est créé.
 
 ## EXAMPLES
 
@@ -48,6 +48,14 @@ Get-AdoTestSuite -PlanId 812 -SuiteId 813 -Recurse | Get-AdoTestCase | Export-Ad
 ```
 
 Exporte tous les cas d’une arborescence de suites dans un seul document en français et l’ouvre.
+
+### Exemple 3
+
+```powershell
+Get-AdoTestCase -Id 101 | Export-AdoTestCase -IncludeDetail -Open
+```
+
+Exporte un cas avec sa description, ses liens et ses points de test, puis ouvre le rapport.
 
 ## PARAMETERS
 
@@ -177,6 +185,27 @@ AcceptedValues: []
 HelpMessage: ''
 ```
 
+### -IncludeDetail
+
+Lit davantage d’information sur chaque cas reçu et la montre dans le rapport HTML : description, balises, auteur et date de création, nom, assembly et type du test automatisé, éléments de travail liés avec leur type, leur titre et leur état, hyperliens et noms des pièces jointes, et points de test (plan, suite, configuration, testeur, dernier résultat et série de tests). Ce sont les seules requêtes d’une exportation : les cas avec leurs relations et les éléments de travail liés par lots de 200, et une requête de points de test par projet et par tranche de 50 cas. Elles sont envoyées seulement pour un rapport qui sera écrit, donc pas avec WhatIf. Une recherche qui échoue devient un avertissement et un diagnostic dans le rapport, écrit sans cette partie; un échec d’authentification ou d’autorisation arrête l’exportation avant l’écriture de tout fichier. HTML seulement : un autre format provoque une erreur bloquante InvalidArgument avant l’exportation.
+
+```yaml
+Type: System.Management.Automation.SwitchParameter
+DefaultValue: ''
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
 ### -Open
 
 Ouvre le rapport validé et enregistré dans l’application par défaut. Seuls les fichiers .html, .htm, .md, .markdown, .json et .txt sont ouverts, car Windows exécute certains autres types de fichiers au lieu de les afficher; avec une autre extension, le rapport est tout de même écrit et un avertissement indique qu’il n’a pas été ouvert. Un rapport qui ne peut pas être ouvert produit un avertissement et est quand même retourné.
@@ -200,7 +229,7 @@ HelpMessage: ''
 
 ### -Connection
 
-Connexion explicite, sinon connexion active de l’espace d’exécution. CollectionUri de l’entrée doit correspondre. L’exportation n’envoie aucune requête au serveur.
+Connexion explicite, sinon connexion active de l’espace d’exécution. CollectionUri de l’entrée doit correspondre. L’exportation n’envoie aucune requête au serveur, sauf avec IncludeDetail.
 
 ```yaml
 Type: AdoToolkit.Core.Connections.AdoConnection
@@ -279,7 +308,7 @@ Le fichier validé et enregistré. Aucun objet avec WhatIf.
 
 ## NOTES
 
-IncludeSource est réservé au JSON. Les documents JSON de plusieurs cas ajoutent les totaux et une source TestSuite, Query ou Mixed; la version 1 du schéma reste inchangée.
+IncludeSource est réservé au JSON et IncludeDetail au HTML. Les documents JSON de plusieurs cas ajoutent les totaux et une source TestSuite, Query ou Mixed; la version 1 du schéma reste inchangée. Les noms de champs et les attributs de relations lus par IncludeDetail sont provisoires en attendant V-31, et la requête de points de test en attendant V-32.
 
 ## RELATED LINKS
 

@@ -8,6 +8,7 @@ using AdoToolkit.Core.Reporting.Html;
 using AdoToolkit.Core.Reporting.Json;
 using AdoToolkit.Core.Reporting.Markdown;
 using AdoToolkit.Core.TestManagement;
+using AdoToolkit.Core.Tests.Reporting.TestFailures;
 
 namespace AdoToolkit.Core.Tests.Reporting;
 
@@ -31,16 +32,10 @@ public sealed class MultiCaseDocumentTests
         using TestDirectory directory = new();
         string name = "testcases-multi." + culture + "." + GoldenReportTests.Extension(format);
         string golden = Path.Combine(TestDirectory.RepositoryRoot, "tests", "Fixtures", "Reports", name);
-        string actual = Path.Combine(directory.Root, name);
-        new AtomicFileWriter().Write(actual, writer => TestCaseExporter.Render(model, writer, format),
-            path => TestCaseExporter.Validate(path, model, format), model.Culture, cancellationToken: TestContext.Current.CancellationToken);
-        byte[] bytes = File.ReadAllBytes(actual);
-        Assert.DoesNotContain((byte)'\r', bytes);
-        Assert.False(bytes.AsSpan().StartsWith(Encoding.UTF8.Preamble));
-        if (format == ReportFormat.Json) ReportFixture.AssertValid(File.ReadAllText(actual));
+        byte[] bytes = GoldenReportTests.Written(model, format, Path.Combine(directory.Root, name), TestContext.Current.CancellationToken);
+        if (format == ReportFormat.Json) ReportFixture.AssertValid(Encoding.UTF8.GetString(bytes));
         if (Environment.GetEnvironmentVariable("ADOTOOLKIT_UPDATE_GOLDEN") == "1")
-            new AtomicFileWriter().Write(golden, writer => TestCaseExporter.Render(model, writer, format),
-                path => TestCaseExporter.Validate(path, model, format), model.Culture, cancellationToken: TestContext.Current.CancellationToken);
+            GoldenReportTests.Update(golden, bytes, model.Culture, TestContext.Current.CancellationToken);
         Assert.True(File.Exists(golden), "Missing reviewed golden: " + name);
         Assert.Equal(File.ReadAllBytes(golden), bytes);
     }
@@ -53,22 +48,29 @@ public sealed class MultiCaseDocumentTests
         Assert.Contains("<html lang=\"en-US\" data-case-count=\"4\">", html, StringComparison.Ordinal);
         string[] ids = Regex.Matches(html, "\\sid=\"([^\"]+)\"").Select(match => match.Groups[1].Value).ToArray();
         Assert.Equal(ids.Length, ids.Distinct(StringComparer.Ordinal).Count());
-        string toc = html[html.IndexOf("<nav class=\"toc\"", StringComparison.Ordinal)..html.IndexOf("<main>", StringComparison.Ordinal)];
+        int contents = html.IndexOf("<nav class=\"toc\"", StringComparison.Ordinal);
+        string toc = html[contents..html.IndexOf("</nav>", contents, StringComparison.Ordinal)];
         string[] links = Regex.Matches(toc, "href=\"#([^\"]+)\"").Select(match => match.Groups[1].Value).ToArray();
         Assert.Equal(Anchors, links);
         Assert.All(links, link => Assert.Contains(link, ids));
-        Assert.Equal(Groups, Regex.Matches(toc, "<h3>([^<]*)</h3>").Select(match => match.Groups[1].Value));
+        Assert.Equal(Anchors, Regex.Matches(toc, "<tr data-index-for=\"([^\"]+)\">").Select(match => match.Groups[1].Value));
+        Assert.Equal(Groups, Regex.Matches(toc, "<th scope=\"colgroup\" colspan=\"5\">([^<]*)</th>").Select(match => match.Groups[1].Value));
         Assert.Equal(Anchors, Regex.Matches(html, "<article class=\"test-case\" id=\"([^\"]+)\">").Select(match => match.Groups[1].Value));
         Assert.All(html.Split("<article ")[1..], article =>
             Assert.Equal("1", Regex.Match(article[article.IndexOf("<section class=\"steps\"", StringComparison.Ordinal)..], "<span class=\"outline-number\">([^<]+)</span>").Groups[1].Value));
-        string cover = html[html.IndexOf("<header class=\"document-cover\">", StringComparison.Ordinal)..html.IndexOf("<nav class=\"toc\"", StringComparison.Ordinal)];
-        Assert.Contains("<h1>Azure DevOps Test Case Report</h1>", cover, StringComparison.Ordinal);
+        // The top bar names the document and counts its cases; the overview holds the source and the totals.
+        string bar = html[html.IndexOf("<header class=\"top-bar\">", StringComparison.Ordinal)..html.IndexOf("<main id=\"report-content\">", StringComparison.Ordinal)];
+        Assert.Contains("<h1>Azure DevOps Test Case Report</h1>", bar, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"count-label\">Test cases</span><strong class=\"count-value\">4</strong>", bar, StringComparison.Ordinal);
+        string cover = html[html.IndexOf("<section class=\"document-cover\" id=\"overview\">", StringComparison.Ordinal)..contents];
         Assert.Contains("href=\"https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40\"", cover, StringComparison.Ordinal);
         Assert.Contains("<dt>Test Suite</dt><dd>Racine</dd>", cover, StringComparison.Ordinal);
-        Assert.Contains("<dt>Complete</dt><dd class=\"technical\">3</dd>", cover, StringComparison.Ordinal);
-        Assert.Contains("<dt>Partial</dt><dd class=\"technical\">1</dd>", cover, StringComparison.Ordinal);
+        Assert.Contains("<dt>Complete</dt><dd>3</dd>", cover, StringComparison.Ordinal);
+        Assert.Contains("<dt>Partial</dt><dd>1</dd>", cover, StringComparison.Ordinal);
         Assert.DoesNotContain("untrusted.example.test", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("<script", html, StringComparison.OrdinalIgnoreCase);
+        // The one script is the static asset of the report.
+        Assert.Single(TestFailureMarkup.Scripts().Matches(html));
+        Assert.DoesNotContain("<script", TestFailureMarkup.WithoutScripts(html), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -108,7 +110,7 @@ public sealed class MultiCaseDocumentTests
         {
             string html = GoldenReportTests.Render(model, ReportFormat.Html);
             Assert.Contains("<dt>Source</dt><dd>Requête WIQL ou liste d’ID</dd>", html, StringComparison.Ordinal);
-            Assert.Contains("<h3>Requête WIQL ou liste d’ID</h3>", html, StringComparison.Ordinal);
+            Assert.Contains("<th scope=\"colgroup\" colspan=\"5\">Requête WIQL ou liste d’ID</th>", html, StringComparison.Ordinal);
         }
     }
 
@@ -192,8 +194,8 @@ public sealed class MultiCaseDocumentTests
             {
                 Assert.Contains("data-case-count=\"300\"", text, StringComparison.Ordinal);
                 Assert.Equal(300, Regex.Count(text, "<article class=\"test-case\" id=\"tc-"));
-                Assert.Equal(300, Regex.Count(text, "<li><a href=\"#tc-"));
-                Assert.Equal(3, Regex.Count(text, "<section class=\"toc-group\">"));
+                Assert.Equal(300, Regex.Count(text, "<tr data-index-for=\"tc-[0-9-]+\"><td class=\"col-number\">[^<]+</td><td class=\"col-title\"><a href=\"#tc-"));
+                Assert.Equal(3, Regex.Count(text, "<tbody class=\"toc-group\">"));
                 string[] ids = Regex.Matches(text, "\\sid=\"([^\"]+)\"").Select(match => match.Groups[1].Value).ToArray();
                 Assert.Equal(ids.Length, ids.Distinct(StringComparer.Ordinal).Count());
             }

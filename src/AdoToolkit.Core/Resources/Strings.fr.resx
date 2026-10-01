@@ -277,4 +277,39 @@
   <data name="TestPlanRequired" xml:space="preserve"><value>Indiquez un plan de test avec -PlanId, ou enregistrez defaultTestPlanId dans le profil de connexion.</value></data>
   <data name="TestSuiteRequired" xml:space="preserve"><value>Indiquez une suite de tests avec -SuiteId. Sans -PlanId ni -SuiteId, les valeurs defaultTestPlanId et defaultTestSuiteId du profil de connexion s’appliquent.</value></data>
   <data name="ProfileIdRange" xml:space="preserve"><value>L’identifiant doit être un entier de 1 à 2147483647, ou $null pour supprimer la valeur par défaut.</value></data>
+  <data name="IncludeDetailHtmlOnly" xml:space="preserve"><value>IncludeDetail nécessite le format de rapport HTML.</value></data>
+  <data name="ReportShowHide" xml:space="preserve"><value>Afficher ou masquer</value></data>
+  <data name="ReportStepFilterCount" xml:space="preserve"><value>{0} étape(s) sur {1}</value></data>
+  <data name="ReportCaseFilterCount" xml:space="preserve"><value>{0} cas de test sur {1}</value></data>
+  <data name="ReportNoMatchingSteps" xml:space="preserve"><value>Aucune étape ne correspond à la recherche.</value></data>
+  <data name="ReportNoMatchingCases" xml:space="preserve"><value>Aucun cas de test ne correspond à ces filtres.</value></data>
+  <data name="ReportStepNavigationHint" xml:space="preserve"><value>/ Recherche · j/k Étape suivante/précédente · Échap Effacer</value></data>
+  <data name="ReportCaseNavigationHint" xml:space="preserve"><value>/ Recherche · j/k Cas de test suivant/précédent · Échap Effacer</value></data>
+  <data name="ReportPartialOnly" xml:space="preserve"><value>Partiels seulement</value></data>
+  <data name="ReportParameterValues" xml:space="preserve"><value>Afficher les valeurs de</value></data>
+  <data name="ReportParameterNames" xml:space="preserve"><value>Noms des paramètres</value></data>
+  <data name="ReportIteration" xml:space="preserve"><value>Itération {0}</value></data>
+  <data name="ReportRetrievedAt" xml:space="preserve"><value>Récupéré le</value></data>
+  <data name="ReportDescription" xml:space="preserve"><value>Description</value></data>
+  <data name="ReportTags" xml:space="preserve"><value>Balises</value></data>
+  <data name="ReportCreatedBy" xml:space="preserve"><value>Créé par</value></data>
+  <data name="ReportCreatedDate" xml:space="preserve"><value>Créé le</value></data>
+  <data name="ReportAutomatedTest" xml:space="preserve"><value>Test automatisé</value></data>
+  <data name="ReportAutomatedTestType" xml:space="preserve"><value>Type de test automatisé</value></data>
+  <data name="ReportLinks" xml:space="preserve"><value>Liens</value></data>
+  <data name="ReportLinkType" xml:space="preserve"><value>Type de lien</value></data>
+  <data name="ReportWorkItem" xml:space="preserve"><value>Élément de travail</value></data>
+  <data name="ReportHyperlinks" xml:space="preserve"><value>Hyperliens</value></data>
+  <data name="ReportTestPoints" xml:space="preserve"><value>Points de test</value></data>
+  <data name="ReportConfiguration" xml:space="preserve"><value>Configuration</value></data>
+  <data name="ReportTester" xml:space="preserve"><value>Testeur</value></data>
+  <data name="ReportLastOutcome" xml:space="preserve"><value>Dernier résultat</value></data>
+  <data name="ReportLastUpdated" xml:space="preserve"><value>Dernière mise à jour</value></data>
+  <data name="ReportNoTestPoints" xml:space="preserve"><value>Ce cas de test n’a aucun point de test : il n’est dans aucune suite du projet.</value></data>
+  <data name="ReportFailedOutcome" xml:space="preserve"><value>Dernier résultat en échec</value></data>
+  <data name="TestCaseDetailUnavailable" xml:space="preserve"><value>Les détails des cas de test n’ont pas pu être lus; le rapport omet leur description, leurs balises, leurs champs d’automatisation, leurs liens et leurs pièces jointes.</value></data>
+  <data name="UnresolvedTestCaseDetail" xml:space="preserve"><value>Le cas de test {0} est introuvable ou inaccessible; ses détails sont omis.</value></data>
+  <data name="LinkedWorkItemsUnavailable" xml:space="preserve"><value>Les éléments de travail liés aux cas de test n’ont pas pu être lus; ils sont listés avec leur ID seulement.</value></data>
+  <data name="UnresolvedLinkedWorkItem" xml:space="preserve"><value>L’élément de travail lié {0} est introuvable ou inaccessible; le lien vers son ID est conservé.</value></data>
+  <data name="TestPointsUnavailable" xml:space="preserve"><value>Les points de test du projet {0} n’ont pas pu être lus; les plans, les suites, les configurations et les derniers résultats sont omis.</value></data>
 </root>

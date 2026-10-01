@@ -20,6 +20,7 @@ public sealed class ExportAdoTestCaseCommand : AdoCmdletBase
     [Parameter] [ValidateNotNullOrEmpty] public string? Path { get; set; }
     [Parameter] public SwitchParameter NoClobber { get; set; }
     [Parameter] public SwitchParameter IncludeSource { get; set; }
+    [Parameter] public SwitchParameter IncludeDetail { get; set; }
     [Parameter] public SwitchParameter Open { get; set; }
     [Parameter] public AdoConnection? Connection { get; set; }
 
@@ -29,6 +30,9 @@ public sealed class ExportAdoTestCaseCommand : AdoCmdletBase
         if (IncludeSource && Format != ReportFormat.Json)
             ThrowTerminatingError(new ErrorRecord(new ArgumentException(Messages.Get(AdoMessage.IncludeSourceJsonOnly, MessageCulture)),
                 "IncludeSourceJsonOnly", ErrorCategory.InvalidArgument, Format));
+        if (IncludeDetail && Format != ReportFormat.Html)
+            ThrowTerminatingError(new ErrorRecord(new ArgumentException(Messages.Get(AdoMessage.IncludeDetailHtmlOnly, MessageCulture)),
+                "IncludeDetailHtmlOnly", ErrorCategory.InvalidArgument, Format));
     }
 
     protected override void ProcessRecord() => cases.AddRange(InputObject);
@@ -58,9 +62,23 @@ public sealed class ExportAdoTestCaseCommand : AdoCmdletBase
             SessionCulture = MessageCulture, Path = resolvedPath, NoClobber = NoClobber, IncludeSource = IncludeSource,
             Open = Open, GeneratedAt = DateTimeOffset.Now,
             ToolkitVersion = typeof(ExportAdoTestCaseCommand).Assembly.GetName().Version!.ToString(),
+            ReadDetails = IncludeDetail ? () => ReadDetails(connection) : null,
         };
         FileInfo? output = new TestCaseExporter(new ShellDocumentLauncher()).Export(cases, connection, options,
             target => ShouldProcess(target, Messages.Get(AdoMessage.ExportReport, MessageCulture)), WriteWarning);
         if (output is not null) WriteObject(output);
     });
+
+    // The only requests of an export: the fields, links and test points of the received cases.
+    // A lookup that fails is a warning, and the report is written without that part.
+    private IReadOnlyDictionary<int, AdoTestCaseDetail> ReadDetails(AdoConnection connection)
+    {
+        using ClientLease lease = SessionStateRegistry.Current.Acquire(connection);
+        CultureInfo culture = MessageCulture;
+        TestCaseDetailResult result = RunWorker((log, token) =>
+            new TestCaseDetailService(lease.Client, connection, log).GetAsync(cases, culture, token));
+        foreach (string message in result.Diagnostics.Select(static diagnostic => diagnostic.Message).Distinct(StringComparer.Ordinal))
+            WriteWarning(message);
+        return result.Details;
+    }
 }

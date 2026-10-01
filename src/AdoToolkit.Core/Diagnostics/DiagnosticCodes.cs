@@ -34,6 +34,11 @@ public static class DiagnosticCodes
     public const string AttachmentBudgetExceeded = nameof(AttachmentBudgetExceeded);
     public const string AttachmentDownloadFailed = nameof(AttachmentDownloadFailed);
     public const string AttachmentContentMismatch = nameof(AttachmentContentMismatch);
+    public const string TestCaseDetailUnavailable = nameof(TestCaseDetailUnavailable);
+    public const string UnresolvedTestCaseDetail = nameof(UnresolvedTestCaseDetail);
+    public const string LinkedWorkItemsUnavailable = nameof(LinkedWorkItemsUnavailable);
+    public const string UnresolvedLinkedWorkItem = nameof(UnresolvedLinkedWorkItem);
+    public const string TestPointsUnavailable = nameof(TestPointsUnavailable);
 
     public static AdoDiagnosticSeverity GetSeverity(string code) => code switch
     {
@@ -43,7 +48,8 @@ public static class DiagnosticCodes
             or InvalidTestCaseReference or UnresolvedTestCase or BugLookupFailed or UnresolvedBug
             or BugMetadataUnavailable or HistoryUnavailable
             or HistoryLimitExceeded or AttachmentTooLarge or AttachmentBudgetExceeded
-            or AttachmentDownloadFailed or AttachmentContentMismatch => AdoDiagnosticSeverity.Warning,
+            or AttachmentDownloadFailed or AttachmentContentMismatch or TestCaseDetailUnavailable or UnresolvedTestCaseDetail
+            or LinkedWorkItemsUnavailable or UnresolvedLinkedWorkItem or TestPointsUnavailable => AdoDiagnosticSeverity.Warning,
         NotAStepContainer or MalformedStepsXml or InvalidSharedStepReference or UnresolvedSharedStep
             or CircularSharedStepReference or MaximumDepthExceeded or ExpansionLimitExceeded
             or ResolutionLimitExceeded or FailureLimitExceeded => AdoDiagnosticSeverity.Error,

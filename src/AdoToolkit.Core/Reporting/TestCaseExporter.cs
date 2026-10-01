@@ -32,17 +32,22 @@ public sealed class TestCaseExporter
         ArgumentNullException.ThrowIfNull(warning);
         if (options.IncludeSource && options.Format != ReportFormat.Json)
             throw new ArgumentException(Messages.Get(AdoMessage.IncludeSourceJsonOnly, options.SessionCulture), nameof(options));
+        if (options.ReadDetails is not null && options.Format != ReportFormat.Html)
+            throw new ArgumentException(Messages.Get(AdoMessage.IncludeDetailHtmlOnly, options.SessionCulture), nameof(options));
         if (cases.Count == 0) throw new ArgumentException(Messages.Get(AdoMessage.NoTestCasesToExport, options.SessionCulture), nameof(cases));
         ReportCultureResult culture = ReportCultureResolver.Resolve(options.Culture, options.ConfiguredCulture, options.SessionCulture);
         foreach (string message in culture.Warnings) warning(message);
         // Any number of cases yields exactly one document (§12.5).
-        ReportDocumentModel model = ReportModelBuilder.Build(cases, connection, new ReportModelOptions
+        ReportDocumentModel Build(IReadOnlyDictionary<int, AdoTestCaseDetail>? details) => ReportModelBuilder.Build(cases, connection, new ReportModelOptions
         {
-            Culture = culture.Culture, GeneratedAt = options.GeneratedAt, ToolkitVersion = options.ToolkitVersion,
+            Culture = culture.Culture, GeneratedAt = options.GeneratedAt, ToolkitVersion = options.ToolkitVersion, Details = details,
         });
+        ReportDocumentModel model = Build(null);
         string path = ReportFileNames.Resolve(options.Path, ReportFileNames.ForCases(cases, options.GeneratedAt, options.Format),
             options.SessionCulture, downloads);
         if (!shouldProcess(path)) return null;
+        // The input is valid and the report will be written: only now are the details requested.
+        if (options.ReadDetails is { } read) model = Build(read());
         FileInfo file = writer.Write(path, output => Render(model, output, options.Format, options.IncludeSource),
             temporary => Validate(temporary, model, options.Format), options.SessionCulture, options.NoClobber, cancellationToken);
         if (options.Open)

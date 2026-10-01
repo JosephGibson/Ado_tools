@@ -10,7 +10,11 @@ DevOps. Its cmdlets return typed objects that you can use in pipelines, and it w
 standalone HTML, Markdown or JSON reports when you need a document. All messages,
 report labels and help are available in English and French.
 
-Version 0.6.0 is a correctness release. An export no longer fails after its report is
+Version 0.6.0 redesigns the HTML Test Case report and fixes the defects found in a review
+of the whole repository. The report now has the theme and the controls of the failed-test
+report, renders formatted steps with their lists, tables and emphasis, and with
+`Export-AdoTestCase -IncludeDetail` adds the description, links and test points of each
+case. An export no longer fails after its report is
 written when `-Open` cannot start an application, and an incomplete object piped into a
 command gets a clear error for that input instead of a .NET exception. Markdown Test Case
 reports keep the line breaks inside a step, the failed-test report shows list, object and

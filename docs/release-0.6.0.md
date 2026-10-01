@@ -1,13 +1,14 @@
 # AdoToolkit 0.6.0 release notes
 
-Prepared on 2026-10-01 from the pending changes in `src/`, `tests/`, `tools/`, `docs/` and
-the agent setup. This is an offline review. No Azure DevOps Server connection or
-`tests/Live/*.Live.ps1` run was attempted, so nothing below is confirmed live. The areas
-the README lists as confirmed are still connections, projects, builds and test runs.
+Prepared on 2026-10-01 from the changes since 0.5.0 in `src/`, `tests/`, `tools/`, `docs/`
+and the agent setup, which are committed on the branch `0.6`. This is an offline review. No
+Azure DevOps Server connection or `tests/Live/*.Live.ps1` run was attempted, so nothing
+below is confirmed live. The areas the README lists as confirmed are still connections,
+projects, builds and test runs.
 
 The redesign of the HTML Test Case report was added on the same day, after the repository
-review was committed. The gate results below are from the final state; the release assets
-listed at the end were built before the redesign and must be rebuilt.
+review was committed. The gate results and the release assets listed at the end are from
+the final state, which includes it.
 
 ## What changed
 
@@ -265,11 +266,9 @@ still apply: variables stay on the work PC, raw responses are not sent back, and
 | `tools/package/Test-AdoToolkitPortable.ps1 -ArchivePath ./artifacts/release/AdoToolkit-0.6.0-win-x64.zip -ModuleVersion 0.6.0 -PowerShellVersion 7.6.6` | Passes: AdoToolkit 0.6.0, PowerShell 7.6.6, Windows x64 |
 | Archive checks | The module ZIP holds the seven expected files under `AdoToolkit/0.6.0/`. The portable ZIP has the same seven files under `module/`, the launcher, `README.txt`, `bundle.json` (module 0.6.0, PowerShell 7.6.6, win-x64, PowerShell SHA-256 equal to the pin) and 658 runtime files, 669 files in all. Each `.sha256` file matches its ZIP. The installer is byte-identical to its source. Run with `-Destination` on a scratch folder, it installs the seven files; the module then loads with 22 cmdlets and French help and messages, and the installer refuses the 0.5.0 ZIP |
 
-The four packaging rows above and the assets below date from before the redesign of the
-Test Case report. The final gate staged and inspected a package that contains it
-(`artifacts/verify/AdoToolkit/0.6.0/`, seven files, help for every command), but the
-release assets were not rebuilt: rebuild them before tagging, and expect other sizes and
-hashes.
+Every row above was run on the committed state that contains the redesign of the Test Case
+report, and the assets below were built from it: the installed module has
+`Export-AdoTestCase -IncludeDetail`. The assets built before the redesign were replaced.
 
 The redesigned report was also opened in Microsoft Edge from the rendered fixtures, in
 English and French: one case, a case with details, and a document of four cases. The
@@ -282,8 +281,8 @@ Local assets:
 
 | File | Bytes | SHA-256 |
 | --- | ---: | --- |
-| `AdoToolkit-0.6.0-win-x64.zip` | 110274782 | `1e32001eaa91daa8101514464fc81e36676feb518612e8caad1b54e42d472dbf` |
-| `AdoToolkit-0.6.0.zip` | 667868 | `47c292d335fa76486294cb86b9868333421219ab70aec1b0bb21111ec87a9e33` |
+| `AdoToolkit-0.6.0-win-x64.zip` | 110328520 | `3475c6587bcac0b11ac462a25457289d535941b93e3badbe9f0b05588232b9e8` |
+| `AdoToolkit-0.6.0.zip` | 721606 | `ffbfdfcd707fa51e01571d590281cc69ebf66acc40c11d281a4a980180c397e6` |
 | `Install-AdoToolkit.ps1` | 12880 | Same file as `tools/package/Install-AdoToolkit.ps1` |
 
 The two `.sha256` files hold these hashes.
@@ -292,8 +291,10 @@ The action commits in the release workflow were looked up through the public Git
 2026-10-01: the tags `v7` and `v7.0.1` of `actions/checkout` and `v6` and `v6.0.0` of
 `actions/setup-dotnet` name the pinned commits. The workflow itself was not run.
 
-No Live script, commit, tag, push or GitHub release publication was performed. The
-developer owns the rest of the release:
+No Live script was run, and no tag or GitHub release exists for 0.6.0. The repository
+review and the redesign are both committed and pushed on the branch `0.6`; the only change
+after them is the update of these notes with the results above. The developer owns the
+rest of the release:
 
 1. Review the rendered Test Case reports in English and French, which changed in layout
    and wording: `tests/Fixtures/Reports/testcase-rich.*.html`,
@@ -301,18 +302,10 @@ developer owns the rest of the release:
    (`direct`, `nested`, `partial`, `parameterized`, `french`). A golden holds a placeholder
    in place of the script; to see a report as a browser shows it, export one with
    `Get-AdoTestCase … | Export-AdoTestCase -Open`.
-2. Review the uncommitted diff of the redesign: the HTML renderer with its styles and
-   script, `RichTextHtmlRenderer`, `TestCaseDetailService` and the test points endpoint,
-   `-IncludeDetail` and its help in both cultures, the new live check, the tests and the
-   regenerated goldens. The repository review itself (the input guard, the single string
-   catalog and the seven-file package, the tooling without `init`, the `documentation`
-   stage, the instruction files, rules and skills, the archived notes and the pinned
-   workflow actions) is already committed on the branch `0.6`.
-3. Commit the redesign, including its new files and the deleted `adotoolkit-mark.svg`, and
-   rebuild the release assets.
-4. Create `v0.6.0` on that commit and push the commit and tag when ready to publish.
-5. Watch the release workflow and check its five uploaded assets, version and checksums.
+2. Commit the update of these notes.
+3. Create `v0.6.0` on that commit and push the commit and tag when ready to publish.
+4. Watch the release workflow and check its five uploaded assets, version and checksums.
    CI builds its own assets, so compare each checksum with CI's own `.sha256` files;
    archive metadata can differ from a local build.
-6. Run the work-PC checks above with the published package and record any inconclusive
+5. Run the work-PC checks above with the published package and record any inconclusive
    coverage.

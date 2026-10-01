@@ -42,4 +42,19 @@ public sealed class StepExpanderNumberingTests
         Assert.EndsWith("/%C3%89quipe%20%2F%20Web/_workitems/edit/1", result.WebUrl.AbsoluteUri, StringComparison.Ordinal);
         Assert.Equal(TimeSpan.Zero, result.RetrievedAt.Offset);
     }
+
+    // §19.3 Steps 20: the batch omits the referenced Shared Steps item.
+    [Fact]
+    public async Task MissingReferenceKeepsItsGroupNumberBeforeTheNextStep()
+    {
+        using var handler = ExpansionFixture.Handler(ExpansionFixture.Item(1, ExpansionFixture.Xml("20-missing.xml")));
+        AdoTestCase result = await ExpansionFixture.Retrieve(handler);
+        Assert.Equal(["1", "2"], result.Steps.Select(row => row.Number));
+        Assert.Equal(DiagnosticCodes.UnresolvedSharedStep, result.Steps[0].DiagnosticCode);
+        Assert.False(result.Steps[0].IsExpanded);
+        Assert.Equal("Continue", result.Steps[1].Action);
+        Assert.Equal(2, result.Steps[1].SourceStepId);
+        Assert.Equal(AdoTestCaseStatus.Partial, result.Status);
+        Assert.Equal(99, Assert.Single(result.SharedSteps).Id);
+    }
 }

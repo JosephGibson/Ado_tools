@@ -115,6 +115,175 @@ function Get-ConfigurationOutcome {
     }
 }
 
+# Tracks fenced code blocks line by line. Returns $true for a line that opens, closes or lies
+# inside a block; $State holds the opening marker between calls.
+function Test-MarkdownCodeLine {
+    param([AllowEmptyString()][string] $Text, [Parameter(Mandatory = $true)][hashtable] $State)
+
+    if ($Text -match '^ {0,3}(`{3,}|~{3,})') {
+        $marker = $matches[1]
+        if ($null -eq $State.Fence) { $State.Fence = $marker }
+        elseif ($marker[0] -eq $State.Fence[0] -and $marker.Length -ge $State.Fence.Length) { $State.Fence = $null }
+        return $true
+    }
+    return $null -ne $State.Fence
+}
+
+# The anchors a Markdown file offers: GitHub's heading slugs (lower case, punctuation dropped,
+# spaces to hyphens, repeats numbered) and explicit <a id> or <a name> targets.
+function Get-MarkdownAnchor {
+    param([Parameter(Mandatory = $true)][AllowEmptyCollection()][AllowEmptyString()][string[]] $Line)
+
+    $anchors = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::Ordinal)
+    $repeats = @{}
+    $state = @{ Fence = $null }
+    foreach ($text in $Line) {
+        if (Test-MarkdownCodeLine -Text $text -State $state) { continue }
+        foreach ($match in [regex]::Matches($text, '<a\s+(?:id|name)="([^"]+)"')) { [void] $anchors.Add($match.Groups[1].Value) }
+        if ($text -notmatch '^ {0,3}#{1,6}\s+(.*?)\s*#*\s*$') { continue }
+        $heading = [regex]::Replace($matches[1], '\[([^\]]*)\]\([^)]*\)', '$1')
+        $slug = [regex]::Replace($heading.ToLowerInvariant(), '[^\p{L}\p{N}\p{M} _-]', '').Replace(' ', '-')
+        if ($repeats.ContainsKey($slug)) { $repeats[$slug]++; $slug = "$slug-$($repeats[$slug])" }
+        else { $repeats[$slug] = 0 }
+        [void] $anchors.Add($slug)
+    }
+    return , $anchors
+}
+
+# The links and repository paths that a Markdown file names outside its code blocks. A path is
+# a code span that starts with a repository directory and holds no placeholder.
+function Get-MarkdownReference {
+    param([Parameter(Mandatory = $true)][AllowEmptyCollection()][AllowEmptyString()][string[]] $Line)
+
+    $roots = ($script:RepositoryPathRoots | ForEach-Object { [regex]::Escape($_) }) -join '|'
+    $pathPattern = '^(?:' + $roots + ')/[^\s<>*{}$|?":…]*$'
+    $state = @{ Fence = $null }
+    for ($index = 0; $index -lt $Line.Count; $index++) {
+        $text = $Line[$index]
+        if (Test-MarkdownCodeLine -Text $text -State $state) { continue }
+        $paths = New-Object System.Collections.ArrayList
+        $prose = $text
+        foreach ($span in [regex]::Matches($text, '(`+)(.+?)\1')) {
+            # Blank the span, so that link syntax quoted as code is not read as a link.
+            $prose = $prose.Remove($span.Index, $span.Length).Insert($span.Index, ' ' * $span.Length)
+            $path = $span.Groups[2].Value.Trim().Replace('\', '/') -replace '^\./', ''
+            if ($path -match $pathPattern -and -not $path.Contains('...')) { [void] $paths.Add($path) }
+        }
+        $targets = @([regex]::Matches($prose, '\]\(\s*(<[^>]*>|[^()\s]+)(?:\s+(?:"[^"]*"|''[^'']*''))?\s*\)') | ForEach-Object { $_.Groups[1].Value })
+        # A reference definition; a footnote ([^1]: text) is not one.
+        if ($prose -match '^ {0,3}\[(?!\^)[^\]]+\]:\s*(\S+)') { $targets += $matches[1] }
+        foreach ($target in $targets) {
+            [pscustomobject]@{ Line = $index + 1; Kind = 'link'; Target = $target.Trim('<', '>') }
+        }
+        foreach ($path in $paths) {
+            [pscustomobject]@{ Line = $index + 1; Kind = 'path'; Target = $path }
+        }
+    }
+}
+
+# Every relative link, heading anchor and repository path in maintained Markdown must resolve,
+# so that instructions and guides cannot point an agent or a reader at a file that is gone.
+function Get-DocumentationOutcome {
+    param([Parameter(Mandatory = $true)][object] $ProjectProfile)
+
+    $root = $ProjectProfile.Root
+    $failures = New-Object System.Collections.ArrayList
+    $anchors = @{}
+    $links = 0
+    $paths = 0
+    $documents = @(
+        $ProjectProfile.Files | Where-Object { $_.Extension -eq '.md' } |
+            ForEach-Object { [pscustomobject]@{ File = $_; Path = Get-RelativeRepositoryPath -Path $_.FullName -Root $root } } |
+            Where-Object { $_.Path -notmatch $script:FrozenDocumentationPattern }
+    )
+    [array]::Sort($documents, [System.Comparison[object]] { param($left, $right) [string]::CompareOrdinal($left.Path, $right.Path) })
+    foreach ($document in $documents) {
+        $dated = $document.Path -match $script:DatedDocumentationPattern
+        foreach ($reference in Get-MarkdownReference -Line @(Get-Content -LiteralPath $document.File.FullName)) {
+            $location = "$($document.Path):$($reference.Line)"
+            if ($reference.Kind -eq 'path') {
+                if ($dated) { continue }
+                $paths++
+                if (-not (Test-Path -LiteralPath (Join-Path $root $reference.Target.TrimEnd('/')))) {
+                    [void] $failures.Add("${location}: path '$($reference.Target)' does not exist.")
+                }
+                continue
+            }
+            # A scheme means an external target (https, mailto, file), which is not fetched.
+            if ($reference.Target -match '^[A-Za-z][A-Za-z0-9+.-]*:') { continue }
+            $links++
+            $target, $anchor = $reference.Target -split '#', 2
+            $resolved = $document.File.FullName
+            if ($target) {
+                try { $resolved = [System.IO.Path]::GetFullPath((Join-Path $document.File.DirectoryName ([uri]::UnescapeDataString($target)))) }
+                catch { $resolved = $null }
+                if (-not $resolved -or -not (Test-IsRepositoryPath -Path $resolved -Root $root) -or
+                    -not (Test-IsAgentSafePath -Path $resolved -Root $root) -or -not (Test-Path -LiteralPath $resolved)) {
+                    [void] $failures.Add("${location}: link '$($reference.Target)' does not resolve.")
+                    continue
+                }
+            }
+            if (-not $anchor -or $resolved -notlike '*.md' -or -not (Test-Path -LiteralPath $resolved -PathType Leaf)) { continue }
+            if (-not $anchors.ContainsKey($resolved)) { $anchors[$resolved] = Get-MarkdownAnchor -Line @(Get-Content -LiteralPath $resolved) }
+            if (-not $anchors[$resolved].Contains([uri]::UnescapeDataString($anchor))) {
+                [void] $failures.Add("${location}: link '$($reference.Target)' names no heading of its target.")
+            }
+        }
+    }
+
+    return [pscustomobject]@{
+        Failures = @($failures)
+        Summary = @("$($documents.Count) Markdown file(s), $links link(s) and $paths path reference(s) checked")
+        Warnings = @()
+    }
+}
+
+# name and description from the front matter of a SKILL.md file.
+function Get-SkillFrontMatter {
+    param([Parameter(Mandatory = $true)][string] $Path)
+
+    $result = @{ name = $null; description = $null }
+    $lines = @(Get-Content -LiteralPath $Path)
+    if ($lines.Count -eq 0 -or $lines[0] -ne '---') { return $result }
+    foreach ($line in $lines | Select-Object -Skip 1) {
+        if ($line -eq '---') { break }
+        if ($line -match '^(name|description):\s*(.*)$') { $result[$matches[1]] = $matches[2].Trim() }
+    }
+    return $result
+}
+
+# A skill has one body, under .agents/skills, and a Claude wrapper with the same name and
+# description under .claude/skills, so both agents select and run the same procedure.
+function Get-SkillLayoutOutcome {
+    param([Parameter(Mandatory = $true)][object] $ProjectProfile)
+
+    $failures = New-Object System.Collections.ArrayList
+    $skills = [ordered]@{}
+    foreach ($file in $ProjectProfile.Files | Where-Object { $_.Name -ceq 'SKILL.md' }) {
+        $relativePath = Get-RelativeRepositoryPath -Path $file.FullName -Root $ProjectProfile.Root
+        if ($relativePath -notmatch '^(\.agents|\.claude)/skills/([^/]+)/SKILL\.md$') { continue }
+        $agent = $matches[1]
+        $name = $matches[2]
+        $frontMatter = Get-SkillFrontMatter -Path $file.FullName
+        if ($frontMatter.name -cne $name) { [void] $failures.Add("${relativePath}: the front matter name must be '$name'.") }
+        if (-not $skills.Contains($name)) { $skills[$name] = @{} }
+        $skills[$name][$agent] = [pscustomobject]@{ Path = $relativePath; Description = $frontMatter.description; File = $file }
+    }
+    foreach ($name in $skills.Keys) {
+        $body = $skills[$name]['.agents']
+        $wrapper = $skills[$name]['.claude']
+        if ($null -eq $body) { [void] $failures.Add("Skill '$name' has no body at .agents/skills/$name/SKILL.md."); continue }
+        if ($null -eq $wrapper) { [void] $failures.Add("Skill '$name' has no Claude wrapper at .claude/skills/$name/SKILL.md."); continue }
+        if ([string]::IsNullOrWhiteSpace($body.Description) -or $body.Description -cne $wrapper.Description) {
+            [void] $failures.Add("Skill '$name' has different descriptions in .agents and .claude.")
+        }
+        if (-not (Get-Content -LiteralPath $wrapper.File.FullName -Raw).Contains(".agents/skills/$name/SKILL.md")) {
+            [void] $failures.Add("$($wrapper.Path): the wrapper must name .agents/skills/$name/SKILL.md.")
+        }
+    }
+    return [pscustomobject]@{ Failures = @($failures); Count = $skills.Count }
+}
+
 function Get-ObjectStringValues {
     param([object] $InputObject)
 
@@ -218,18 +387,22 @@ function Get-ToolingLayoutOutcome {
         }
     }
 
+    $skillLayout = Get-SkillLayoutOutcome -ProjectProfile $ProjectProfile
+    foreach ($failure in $skillLayout.Failures) { [void] $failures.Add($failure) }
+
     return [pscustomobject]@{
         Failures = @($failures)
-        Summary = @("$($hookScripts.Count) configured PowerShell hook helper(s) checked")
+        Summary = @("$($hookScripts.Count) configured PowerShell hook helper(s) checked", "$($skillLayout.Count) skill(s) paired between .agents and .claude")
         Warnings = @()
     }
 }
 
-function Get-StackValidationPlan {
+# The in-process stages: tooling lint and tests, configuration syntax, documentation
+# references, and the Claude and Codex layout.
+function Get-BuiltinValidationPlan {
     param(
         [Parameter(Mandatory = $true)][object] $ProjectProfile,
-        [switch] $SkipTests,
-        [switch] $BuiltinsOnly
+        [switch] $SkipTests
     )
 
     $plan = New-Object System.Collections.ArrayList
@@ -267,6 +440,14 @@ function Get-StackValidationPlan {
             })
     }
 
+    if (@($ProjectProfile.Files | Where-Object { $_.Extension -eq '.md' }).Count -gt 0) {
+        [void] $plan.Add([pscustomobject]@{
+                Name = 'documentation'
+                Action = { param([object] $ProjectProfile) Get-DocumentationOutcome -ProjectProfile $ProjectProfile }
+                ActionArguments = @{ ProjectProfile = $ProjectProfile }
+            })
+    }
+
     $toolingSettings = Join-Path $ProjectProfile.Root '.claude\settings.json'
     $customCheck = Join-Path $ProjectProfile.Root 'tools\check.ps1'
     if ((Test-Path -LiteralPath $toolingSettings -PathType Leaf) -or (Test-Path -LiteralPath $customCheck -PathType Leaf)) {
@@ -276,62 +457,6 @@ function Get-StackValidationPlan {
                 ActionArguments = @{ ProjectProfile = $ProjectProfile }
             })
     }
-
-    if ($BuiltinsOnly) { return @($plan) }
-
-    if ($ProjectProfile.Stack -contains 'dotnet') {
-        $projects = @($ProjectProfile.Files | Where-Object { $_.Extension -in @('.csproj', '.fsproj', '.vbproj') })
-        foreach ($project in $projects) {
-            $relative = Get-RelativeRepositoryPath -Path $project.FullName -Root $ProjectProfile.Root
-            $buildName = "dotnet-build:$relative"
-            [void] $plan.Add([pscustomobject]@{ Name = $buildName; Executable = 'dotnet'; Arguments = @('build', $relative, '--no-restore', '--nologo'); WorkingDirectory = '.' })
-            try {
-                $xml = Get-SafeXmlDocument -Path $project.FullName
-                $isTest = $xml.SelectSingleNode('//*[local-name()="IsTestProject" and translate(normalize-space(text()),"TRUE","true")="true"]') -or
-                    $xml.SelectSingleNode('//*[local-name()="PackageReference" and (@Include="Microsoft.NET.Test.Sdk" or @Include="TUnit")]')
-                if ($isTest -and -not $SkipTests) {
-                    [void] $plan.Add([pscustomobject]@{ Name = "dotnet-test:$relative"; Executable = 'dotnet'; Arguments = @('test', $relative, '--no-build', '--no-restore', '--nologo'); DependsOn = @($buildName); WorkingDirectory = '.' })
-                }
-            }
-            catch { [void] $plan.Add((New-UnavailableStage -Name "dotnet-plan:$relative" -Reason 'Invalid project XML; fix the configuration stage first.')) }
-        }
-        if ($projects.Count -eq 0) { [void] $plan.Add((New-UnavailableStage -Name 'dotnet-plan' -Reason 'No .NET project files found. Add tools/check.ps1 for a solution-only layout.')) }
-    }
-    if ($ProjectProfile.Stack -contains 'node') {
-        foreach ($package in $ProjectProfile.Files | Where-Object { $_.Name -eq 'package.json' }) {
-            $relative = Get-RelativeRepositoryPath -Path $package.FullName -Root $ProjectProfile.Root
-            $data = Get-NodePackageData -PackageFile $package
-            if ($null -eq $data) { [void] $plan.Add((New-UnavailableStage -Name "node-plan:$relative" -Reason 'Invalid package.json.')); continue }
-            $manager = Get-NodeManager -PackageFile $package -Root $ProjectProfile.Root
-            if (-not $manager) { [void] $plan.Add((New-UnavailableStage -Name "node-plan:$relative" -Reason 'Ambiguous or unsupported package manager. Add tools/check.ps1.')); continue }
-            $scripts = $data.PSObject.Properties['scripts']
-            $workingDirectory = Get-RelativeRepositoryPath -Path $package.DirectoryName -Root $ProjectProfile.Root
-            $scriptCount = 0
-            foreach ($task in @('lint', 'build', 'test')) {
-                if ($task -eq 'test' -and $SkipTests) { continue }
-                $entry = if ($null -ne $scripts -and $null -ne $scripts.Value) { $scripts.Value.PSObject.Properties[$task] } else { $null }
-                if ($null -ne $entry -and -not [string]::IsNullOrWhiteSpace([string]$entry.Value)) {
-                    [void] $plan.Add([pscustomobject]@{ Name = "node-${task}:$relative"; Executable = $manager; Arguments = @('run', $task); WorkingDirectory = $workingDirectory })
-                    $scriptCount++
-                }
-                elseif ($task -eq 'test') { [void] $plan.Add((New-UnavailableStage -Name "node-test:$relative" -Reason "${relative}: no test script; define one or own the check in tools/check.ps1.")) }
-            }
-            if ($scriptCount -eq 0 -and $SkipTests) { [void] $plan.Add((New-UnavailableStage -Name "node-plan:$relative" -Reason "${relative}: no lint or build script.")) }
-        }
-    }
-    foreach ($stack in @('python', 'rust', 'go', 'java')) {
-        if ($ProjectProfile.Stack -contains $stack) {
-            [void] $plan.Add((New-UnavailableStage -Name "$stack-plan" -Reason "Detected $stack. Define its environment and offline validation in tools/check.ps1; see docs/tooling.md."))
-        }
-    }
-    $sourceStacks = @{ '.cs' = 'dotnet'; '.fs' = 'dotnet'; '.vb' = 'dotnet'; '.js' = 'node'; '.ts' = 'node'; '.tsx' = 'node'; '.jsx' = 'node'; '.py' = 'python'; '.rs' = 'rust'; '.go' = 'go'; '.java' = 'java' }
-    $unconfigured = @(
-        foreach ($file in $ProjectProfile.Files) {
-            $relative = Get-RelativeRepositoryPath -Path $file.FullName -Root $ProjectProfile.Root
-            if ($relative -like 'src/*' -and $sourceStacks.ContainsKey($file.Extension) -and $sourceStacks[$file.Extension] -notin $ProjectProfile.Stack) { $sourceStacks[$file.Extension] }
-        }
-    ) | Sort-Object -Unique
-    foreach ($stack in $unconfigured) { [void] $plan.Add((New-UnavailableStage -Name "$stack-manifest" -Reason "Source under src/ needs a $stack manifest or tools/check.ps1.")) }
 
     return @($plan)
 }
@@ -346,55 +471,35 @@ function New-UnavailableStage {
     }
 }
 
-function Get-NodeManager {
-    param([System.IO.FileInfo] $PackageFile, [string] $Root)
-    $directory = $PackageFile.Directory
-    while ($null -ne $directory -and (Test-IsRepositoryPath -Path $directory.FullName -Root $Root)) {
-        $manifest = Join-Path $directory.FullName 'package.json'
-        if (Test-Path -LiteralPath $manifest -PathType Leaf) {
-            $item = Get-Item -LiteralPath $manifest -Force
-            if (-not (Test-IsSafeRepositoryFile -File $item -Root $Root)) { return $null }
-            $data = Get-NodePackageData -PackageFile $item
-            $field = if ($data) { $data.PSObject.Properties['packageManager'] } else { $null }
-            if ($field) {
-                if ($field.Value -match '^(npm|pnpm|yarn)@') { return $matches[1] }
-                return $null
-            }
-        }
-        $managers = @(
-            if (Test-Path -LiteralPath (Join-Path $directory.FullName 'package-lock.json')) { 'npm' }
-            if (Test-Path -LiteralPath (Join-Path $directory.FullName 'pnpm-lock.yaml')) { 'pnpm' }
-            if (Test-Path -LiteralPath (Join-Path $directory.FullName 'yarn.lock')) { 'yarn' }
-        )
-        if ($managers.Count -gt 1) { return $null }
-        if ($managers.Count -eq 1) { return $managers[0] }
-        $directory = $directory.Parent
-    }
-    return 'npm'
-}
-
 function Get-ValidationPlan {
     param(
         [Parameter(Mandatory = $true)][object] $ProjectProfile,
         [switch] $SkipTests
     )
 
-    # The project gate replaces inferred product stages while template checks remain.
+    # The built-in stages check the tooling; tools/check.ps1 is the product gate (build, Core
+    # tests, staged package, product Pester).
+    $builtins = @(Get-BuiltinValidationPlan -ProjectProfile $ProjectProfile -SkipTests:$SkipTests)
     $checkScript = Join-Path $ProjectProfile.Root 'tools\check.ps1'
     if (Test-Path -LiteralPath $checkScript -PathType Leaf) {
         $file = Get-Item -LiteralPath $checkScript -Force
         if (-not (Test-IsSafeRepositoryFile -File $file -Root $ProjectProfile.Root)) { throw 'tools/check.ps1 must be a regular repository file.' }
-        return @(Get-StackValidationPlan -ProjectProfile $ProjectProfile -SkipTests:$SkipTests -BuiltinsOnly) + @([pscustomobject]@{
+        return $builtins + @([pscustomobject]@{
                 Name = 'project-check'
                 Executable = Join-Path $PSHOME 'pwsh.exe'
                 Arguments = @('-NoProfile', '-File', $checkScript) + $(if ($SkipTests) { @('-SkipTests') } else { @() })
-                # A repository-owned gate speaks this command's exit codes: 0 pass,
-                # 1 failure, 2 incomplete.
+                # The gate speaks this command's exit codes: 0 pass, 1 failure, 2 incomplete.
                 ExitCodeContract = 'dev'
+                # Build, two Core test runs, packaging with help, and product Pester.
+                TimeoutSeconds = 900
             })
     }
+    # Product code without its gate cannot be verified; say so instead of passing on the built-ins.
+    if ($ProjectProfile.Stack -contains 'dotnet') {
+        return $builtins + @(New-UnavailableStage -Name 'project-check' -Reason 'tools/check.ps1 is missing, so the product gate cannot run.')
+    }
 
-    return @(Get-StackValidationPlan -ProjectProfile $ProjectProfile -SkipTests:$SkipTests)
+    return $builtins
 }
 
 function Get-ProjectValidationPlan {
@@ -406,14 +511,14 @@ function Get-ProjectValidationPlan {
         Stages = @(
             foreach ($stage in $stages) {
                 $entry = [ordered]@{ Name = $stage.Name }
-                foreach ($key in @('Executable', 'Arguments', 'WorkingDirectory', 'DependsOn', 'Reason')) {
+                foreach ($key in @('Executable', 'Arguments', 'Reason')) {
                     $property = $stage.PSObject.Properties[$key]
                     if ($property) { $entry[$key] = $property.Value }
                 }
                 [pscustomobject]$entry
             }
         )
-        Notes = @('Preview only. verify -Stage <name> includes dependencies and always reports incomplete.', 'Dependencies must already be installed/restored; project scripts must terminate and avoid live services.')
+        Notes = @('Preview only. verify -Stage <name> runs the named stages and always reports incomplete.', 'Dependencies must already be installed and restored; verify never installs them.')
     }
 }
 
@@ -460,15 +565,7 @@ function Invoke-ValidationStage {
         }
     }
 
-    # A stage may name its runner by a repository-relative path, such as a build
-    # wrapper checked in beside the manifest. Resolve it against the repository root
-    # rather than the working directory the command happened to start in.
     $executable = [string] $Stage.Executable
-    if (-not [System.IO.Path]::IsPathRooted($executable) -and ($executable.Contains('/') -or $executable.Contains('\'))) {
-        $rootedExecutable = Join-Path $Root $executable
-        if (Test-Path -LiteralPath $rootedExecutable -PathType Leaf) { $executable = $rootedExecutable }
-    }
-
     $command = Get-FirstCommand -Names @($executable)
     if ($null -eq $command -and -not (Test-Path -LiteralPath $executable -PathType Leaf)) {
         $missingExecutable = "Missing executable: $($Stage.Executable)"
@@ -476,17 +573,11 @@ function Invoke-ValidationStage {
     }
 
     if ($null -ne $command) { $executable = $command.Source }
-    $workingDirectory = $Root
-    $directoryProperty = $Stage.PSObject.Properties['WorkingDirectory']
-    if ($directoryProperty -and $directoryProperty.Value) {
-        $workingDirectory = [System.IO.Path]::GetFullPath((Join-Path $Root $directoryProperty.Value))
-        if (-not (Test-IsRepositoryPath -Path $workingDirectory -Root $Root)) { throw 'Stage working directory must stay in the repository.' }
-    }
     try {
         $timeout = 300
         $timeoutProperty = $Stage.PSObject.Properties['TimeoutSeconds']
         if ($timeoutProperty) { $timeout = [int]$timeoutProperty.Value }
-        $native = Invoke-BoundedProcess -Executable $executable -Arguments $Stage.Arguments -WorkingDirectory $workingDirectory -TimeoutSeconds $timeout
+        $native = Invoke-BoundedProcess -Executable $executable -Arguments $Stage.Arguments -WorkingDirectory $Root -TimeoutSeconds $timeout
         $output = $native.Lines
         $exitCode = $native.ExitCode
     }
@@ -511,8 +602,12 @@ function Invoke-ValidationStage {
 
     $status = if ($exitCode -eq 0) { 'pass' } elseif ($usesDevExitCodes -and $exitCode -eq 2) { 'unavailable' } else { 'fail' }
     $warnings = @($lines | Where-Object { $_ -match '(?i)(^skipped\s*\(|\bnot installed\b|\bmissing\b)' })
+    # The gate marks its own result lines with "check: ". A passing gate is summarized by them,
+    # so the summary names every step that ran instead of the last lines a runner printed.
+    $marked = @($lines | Where-Object { $_ -cmatch '^check: \S' } | ForEach-Object { $_.Substring(7) })
     if ($status -eq 'pass') {
-        $summary = @($lines | Where-Object { $_ -match '(?i)(check passed|tests passed|build succeeded|test run successful)' } | Select-Object -Last 3)
+        $summary = @($marked | Select-Object -Last 12)
+        if ($summary.Count -eq 0) { $summary = @($lines | Where-Object { $_ -match '(?i)(check passed|tests passed|build succeeded|test run successful)' } | Select-Object -Last 3) }
         if ($summary.Count -eq 0) { $summary = @($lines | Select-Object -Last 3) }
     }
     else {
@@ -544,7 +639,6 @@ try {
     Set-Location -LiteralPath $stage.WorkingDirectory
     $env:CI = 'true'
     $env:NO_COLOR = '1'
-    $env:COREPACK_ENABLE_NETWORK = '0'
     $global:LASTEXITCODE = 0
     & $stage.Executable @($stage.Arguments) *>&1 | ForEach-Object { [Console]::Out.WriteLine([string]$_) }
     exit $LASTEXITCODE
@@ -604,22 +698,13 @@ function Invoke-ProjectVerification {
     $projectProfile = Get-ProjectProfile -Root $Root
     $plan = @(Get-ValidationPlan -ProjectProfile $projectProfile -SkipTests:$SkipTests)
     if ($Stage) {
-        $selected = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         foreach ($name in $Stage) {
             if ($name -notin $plan.Name) { throw "Unknown stage '$name'. Run dev.ps1 plan for valid names." }
-            [void]$selected.Add($name)
         }
-        do {
-            $added = $false
-            foreach ($item in $plan | Where-Object { $selected.Contains($_.Name) }) {
-                $dependencies = $item.PSObject.Properties['DependsOn']
-                if ($dependencies) { foreach ($dependency in $dependencies.Value) { if ($selected.Add($dependency)) { $added = $true } } }
-            }
-        } while ($added)
-        $plan = @($plan | Where-Object { $selected.Contains($_.Name) })
+        $plan = @($plan | Where-Object { $_.Name -in $Stage })
     }
     if ($plan.Count -eq 0) {
-        return [pscustomobject]@{ Status = 'unavailable'; Stages = @(); Warnings = @('No validation command could be inferred. Add a project check script or supported build metadata.') }
+        return [pscustomobject]@{ Status = 'unavailable'; Stages = @(); Warnings = @('Nothing to validate: no PowerShell, configuration or product files were found.') }
     }
 
     # Load the supported Pester before any stage runs. Linting a test file makes
@@ -635,18 +720,10 @@ function Invoke-ProjectVerification {
     }
 
     $stages = @(
-        $outcomes = @{}
         foreach ($item in $plan) {
             $watch = [System.Diagnostics.Stopwatch]::StartNew()
-            $dependencies = $item.PSObject.Properties['DependsOn']
-            $blocked = @()
-            if ($dependencies) { $blocked = @($dependencies.Value | Where-Object { -not $outcomes.ContainsKey($_) -or $outcomes[$_].Status -ne 'pass' }) }
-            $result = if ($blocked.Count -gt 0) {
-                Invoke-ValidationStage -Stage (New-UnavailableStage -Name $item.Name -Reason "Prerequisite did not pass: $($blocked -join ', ')") -Root $projectProfile.Root
-            }
-            else { Invoke-ValidationStage -Stage $item -Root $projectProfile.Root }
+            $result = Invoke-ValidationStage -Stage $item -Root $projectProfile.Root
             $result | Add-Member -NotePropertyName DurationMs -NotePropertyValue $watch.ElapsedMilliseconds
-            $outcomes[$item.Name] = $result
             $result
         }
     )
@@ -664,7 +741,7 @@ function Invoke-ProjectVerification {
         }
     }
     if ($SkipTests) { [void] $warnings.Add('Tests were skipped by request.') }
-    if ($Stage) { [void] $warnings.Add('Only selected stages and their prerequisites ran; run verify for the full gate.') }
+    if ($Stage) { [void] $warnings.Add('Only the selected stages ran; run verify for the full gate.') }
 
     $failed = @($stages | Where-Object { $_.Status -eq 'fail' })
     $unavailable = @($stages | Where-Object { $_.Status -eq 'unavailable' })

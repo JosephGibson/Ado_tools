@@ -62,6 +62,27 @@ Describe 'Local profiles' -Tag 'S0-5' {
         $ast.EndBlock.Statements[0].PipelineElements[0].CommandElements[2].Value | Should -Be $name
     }
 
+    # -Name is a wildcard filter (§11.5): composed and decomposed accents match, and an accent
+    # stays significant.
+    It 'filters profile names with wildcards, matching decomposed accents' {
+        $composed = "$([char]0x00C9)quipe"
+        Set-AdoProfile -Name $composed -CollectionUrl 'https://ado.example.test/Collection' | Out-Null
+        Set-AdoProfile -Name 'Equipe' -CollectionUrl 'https://ado.example.test/Collection' | Out-Null
+        @(Get-AdoProfile -Name ('E' + [char]0x0301 + 'qui*')).Name | Should -Be @($composed)
+        @(Get-AdoProfile -Name 'Equi*').Name | Should -Be @('Equipe')
+        @((Get-Command Get-AdoProfile).Parameters['Name'].Attributes |
+            Where-Object { $_ -is [System.Management.Automation.SupportsWildcardsAttribute] }).Count | Should -Be 1
+    }
+
+    It 'removes the default project with a blank value, like the other text defaults' {
+        Set-AdoProfile -Name sample -CollectionUrl 'https://ado.example.test/Collection' -DefaultProject 'Équipe Web' -DefaultProfile | Out-Null
+        $cleared = Set-AdoProfile -Name sample -DefaultProject ' '
+        $cleared.DefaultProject | Should -BeNullOrEmpty
+        # The file keeps the property with a null value, as it does for a profile saved without a project.
+        (Get-Content -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Raw | ConvertFrom-Json).profiles.sample.defaultProject | Should -BeNullOrEmpty
+        (Connect-Ado).DefaultProject | Should -BeNullOrEmpty
+    }
+
     It 'rejects a blank profile name as a parameter error without writing' {
         { Set-AdoProfile -Name ' ' -CollectionUrl 'https://ado.example.test/Collection' } |
             Should -Throw -ErrorId 'ParameterArgumentValidationError,AdoToolkit.SetAdoProfileCommand'

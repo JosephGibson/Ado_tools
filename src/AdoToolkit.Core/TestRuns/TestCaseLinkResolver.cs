@@ -40,35 +40,11 @@ internal sealed class TestCaseLinkResolver
     {
         int[] missing = ids.Distinct().Where(id => !cache.ContainsKey(id)).OrderBy(static id => id).ToArray();
         if (missing.Length == 0) return cache;
-        EndpointDefinition endpoint = EndpointRegistry.WorkItemsBatch;
         int batches = 0;
-        IReadOnlyList<WorkItemDto> returned = await IdChunks.FetchAsync(missing, endpoint.ChunkSize,
-            async (chunk, token) =>
-            {
-                byte[] body = JsonSerializer.SerializeToUtf8Bytes(new WorkItemBatchRequestDto { Ids = chunk, Expand = "relations" },
-                    AdoJsonContext.Default.WorkItemBatchRequestDto);
-                IReadOnlyList<WorkItemDto> page = await pipeline.ExecuteAsync(endpoint, null, null, body, culture,
-                    async (response, requestToken) =>
-                    {
-                        try
-                        {
-                            string bytes = await ResponseJson.ReadAsync(response, requestToken).ConfigureAwait(false);
-                            return (IReadOnlyList<WorkItemDto>)(JsonSerializer.Deserialize(bytes, AdoJsonContext.Default.WorkItemBatchDto)?.Value
-                                ?? throw new JsonException());
-                        }
-                        catch (JsonException error)
-                        {
-                            throw new AdoResponseFormatException(Messages.Get(AdoMessage.ResponseFormat, culture), error)
-                            { Operation = endpoint.Name };
-                        }
-                    }, token).ConfigureAwait(false);
-                progress.Progress(new AdoProgress { Phase = AdoProgressPhase.TestCaseLinks, Completed = ++batches });
-                return page;
-            }, static item => item.Id, culture, cancellationToken).ConfigureAwait(false);
-        Dictionary<int, WorkItemDto> resolved = [];
-        foreach (WorkItemDto item in returned)
-            if (!resolved.TryAdd(item.Id, item))
-                throw new AdoResponseFormatException(Messages.Get(AdoMessage.ResponseFormat, culture)) { Operation = endpoint.Name };
+        IReadOnlyList<WorkItemDto> returned = await WorkItemBatchReader.ReadAsync(pipeline, missing, null, true, culture, cancellationToken,
+            () => progress.Progress(new AdoProgress { Phase = AdoProgressPhase.TestCaseLinks, Completed = ++batches })).ConfigureAwait(false);
+        // The batch reader rejects duplicate and unrequested IDs, so the result is keyed safely.
+        Dictionary<int, WorkItemDto> resolved = returned.ToDictionary(static item => item.Id);
         foreach (int id in missing)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -80,8 +56,7 @@ internal sealed class TestCaseLinkResolver
                 cache[id] = new AdoTestCaseLink { Id = id, WebUrl = webUrl, IsResolved = false };
                 continue;
             }
-            Dictionary<string, JsonElement> fields = item.Fields
-                ?? throw new AdoResponseFormatException(Messages.Get(AdoMessage.ResponseFormat, culture)) { Operation = endpoint.Name };
+            Dictionary<string, JsonElement> fields = item.Fields ?? throw WorkItemBatchReader.FormatError(culture);
             cache[id] = new AdoTestCaseLink
             {
                 Id = id,

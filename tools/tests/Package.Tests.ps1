@@ -6,7 +6,8 @@ BeforeAll {
     $expected = 'A' * 40
     $wrong = 'B' * 40
     $assemblyFixtures = Join-Path $TestDrive 'assembly-fixtures'
-    foreach ($name in @('AdoToolkit.Core.dll', 'AdoToolkit.PowerShell.dll', 'fr/AdoToolkit.Core.resources.dll', 'fr/AdoToolkit.PowerShell.resources.dll')) {
+    $assemblyNames = @('AdoToolkit.Core.dll', 'AdoToolkit.PowerShell.dll', 'fr/AdoToolkit.Core.resources.dll')
+    foreach ($name in $assemblyNames) {
         $file = Join-Path $assemblyFixtures $name
         [void] [IO.Directory]::CreateDirectory((Split-Path -Parent $file))
         $identity = [Reflection.AssemblyName]::new([IO.Path]::GetFileNameWithoutExtension($name))
@@ -27,7 +28,7 @@ CmdletsToExport = @('Connect-Ado','Disconnect-Ado','Get-AdoConnection','Test-Ado
 "@
         Set-Content -LiteralPath (Join-Path $Path 'AdoToolkit.psd1') -Value $manifest
         Set-Content -LiteralPath (Join-Path $Path 'AdoToolkit.Format.ps1xml') -Value '<Configuration><ViewDefinitions /></Configuration>'
-        foreach ($name in @('AdoToolkit.Core.dll', 'AdoToolkit.PowerShell.dll', 'fr/AdoToolkit.Core.resources.dll', 'fr/AdoToolkit.PowerShell.resources.dll')) {
+        foreach ($name in $assemblyNames) {
             $file = Join-Path $Path $name
             [void] [System.IO.Directory]::CreateDirectory((Split-Path -Parent $file))
             [IO.File]::Copy((Join-Path $assemblyFixtures $name), $file)
@@ -129,12 +130,18 @@ Describe 'Package validation and deployment boundaries' {
         @(Get-ChildItem -LiteralPath $output -Force).Count | Should -Be 2
     }
 
-    It 'enumerates the exact package and all six signable files including satellites' {
+    It 'enumerates the exact package and all five signable files including the satellite' {
         Assert-AdoPackage -PackagePath $package | Should -Be '0.1.0'
-        @(Get-AdoPackageFile -PackagePath $package).Count | Should -Be 8
+        @(Get-AdoPackageFile -PackagePath $package).Count | Should -Be 7
         $signable = @(Get-AdoSignableFile -PackagePath $package)
-        $signable.Count | Should -Be 6
-        @($signable | Where-Object Name -like '*.resources.dll').Count | Should -Be 2
+        $signable.Count | Should -Be 5
+        @($signable | Where-Object Name -like '*.resources.dll').Name | Should -Be @('AdoToolkit.Core.resources.dll')
+    }
+
+    # Core holds the only string catalog, so the PowerShell assembly has no satellite to ship.
+    It 'rejects a package that still carries the PowerShell satellite assembly' {
+        [IO.File]::Copy((Join-Path $package 'fr/AdoToolkit.Core.resources.dll'), (Join-Path $package 'fr/AdoToolkit.PowerShell.resources.dll'))
+        { Assert-AdoPackage -PackagePath $package } | Should -Throw '*required layout*'
     }
 
     It 'rejects extra host or runtime assets' {
@@ -182,12 +189,12 @@ $Probe.Checks++
                 & $Script -PackagePath $Package -ExpectedThumbprint $Probe.Thumbprint -WhatIf
                 $Probe.Checks
             }).AddArgument((Join-Path $packageTools 'Install-AdoToolkitPackage.ps1')).AddArgument($package).AddArgument($probe)
-            $shell.Invoke()[0] | Should -Be 6
+            $shell.Invoke()[0] | Should -Be 5
             $shell.HadErrors | Should -BeFalse
         }
         finally { $shell.Dispose(); $runspace.Dispose() }
         @(Get-AdoPackageFile -PackagePath $package | Get-FileHash | Select-Object -ExpandProperty Hash) | Should -Be $before
-        Should -Invoke Get-AuthenticodeSignature -Times 6 -Exactly
+        Should -Invoke Get-AuthenticodeSignature -Times 5 -Exactly
         Should -Invoke Copy-Item -Times 0 -Exactly
         Should -Invoke Move-AdoPackageDirectory -Times 0 -Exactly
     }
@@ -211,7 +218,7 @@ $Probe.Checks++
         Mock Set-AuthenticodeSignature -RemoveParameterType Certificate { [pscustomobject]@{ Status = 'Valid' } }
         Mock Get-AuthenticodeSignature { [pscustomobject]@{ Status = 'Valid'; SignerCertificate = [pscustomobject]@{ Thumbprint = $expected } } }
         & (Join-Path $packageTools 'Set-AdoToolkitPackageSignature.ps1') -PackagePath $package -CertificateThumbprint $expected -TimestampServer 'https://timestamp.example.test' -Confirm:$false
-        Should -Invoke Set-AuthenticodeSignature -Times 6 -Exactly -ParameterFilter { $HashAlgorithm -eq 'SHA256' -and $TimestampServer -eq 'https://timestamp.example.test/' }
+        Should -Invoke Set-AuthenticodeSignature -Times 5 -Exactly -ParameterFilter { $HashAlgorithm -eq 'SHA256' -and $TimestampServer -eq 'https://timestamp.example.test/' }
     }
 
     It 'rejects a path outside the allowed root' {
@@ -275,7 +282,7 @@ Describe 'Release archive and standalone installer' {
         (Get-FileHash -LiteralPath $release.Archive -Algorithm SHA256).Hash | Should -Be $release.Sha256.ToUpperInvariant()
         $archive = [System.IO.Compression.ZipFile]::OpenRead($release.Archive)
         try {
-            $archive.Entries.Count | Should -Be 8
+            $archive.Entries.Count | Should -Be 7
             @($archive.Entries.FullName | Where-Object { $_ -notlike 'AdoToolkit/0.1.0/*' }).Count | Should -Be 0
         }
         finally { $archive.Dispose() }
@@ -349,12 +356,12 @@ Describe 'Release archive and standalone installer' {
         Should -Invoke Get-AuthenticodeSignature -Times 1 -Exactly
     }
 
-    It 'checks all six signable files against the expected signer' {
+    It 'checks all five signable files against the expected signer' {
         $release = New-AdoReleaseArchive -PackagePath $package -OutputRoot (Join-Path $work 'release')
         # A literal: mock bodies resolve variables through the calling script's scopes.
         Mock Get-AuthenticodeSignature { [pscustomobject]@{ Status = 'Valid'; SignerCertificate = [pscustomobject]@{ Thumbprint = 'a' * 40 } } }
         (& $installer -Path $release.Archive -Destination $modules -ExpectedThumbprint $expected -WarningAction SilentlyContinue).Signed | Should -BeTrue
-        Should -Invoke Get-AuthenticodeSignature -Times 6 -Exactly
+        Should -Invoke Get-AuthenticodeSignature -Times 5 -Exactly
     }
 
     It 'keeps the installer layout in step with the package layout' {

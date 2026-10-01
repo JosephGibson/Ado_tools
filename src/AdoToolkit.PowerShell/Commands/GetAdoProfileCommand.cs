@@ -7,6 +7,7 @@ namespace AdoToolkit;
 public sealed class GetAdoProfileCommand : AdoCmdletBase
 {
     [Parameter(Position = 0)]
+    [SupportsWildcards]
     [ArgumentCompleter(typeof(ProfileNameCompleter))]
     public string? Name { get; set; }
 
@@ -14,8 +15,8 @@ public sealed class GetAdoProfileCommand : AdoCmdletBase
     {
         AdoConfiguration configuration = new ConfigurationStore().Load(MessageCulture);
         foreach (string warning in configuration.Warnings) WriteWarning(warning);
-        WildcardPattern? pattern = Name is null ? null : new(Name, WildcardOptions.IgnoreCase | WildcardOptions.CultureInvariant);
+        NameFilter filter = new(Name);
         foreach (AdoProfile profile in configuration.Profiles.Values.OrderBy(profile => profile.Name, StringComparer.OrdinalIgnoreCase))
-            if (pattern is null || pattern.IsMatch(profile.Name)) WriteObject(profile);
+            if (filter.IsMatch(profile.Name)) WriteObject(profile);
     });
 }

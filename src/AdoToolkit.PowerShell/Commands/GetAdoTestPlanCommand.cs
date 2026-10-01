@@ -1,4 +1,3 @@
-using System.Text;
 using AdoToolkit.Completion;
 using AdoToolkit.Core.TestManagement;
 
@@ -32,15 +31,13 @@ public sealed class GetAdoTestPlanCommand : AdoCmdletBase
         using ClientLease lease = SessionStateRegistry.Current.Acquire(connection);
         IReadOnlyList<AdoTestPlan> plans = RunWorker((log, token) => new TestPlanService(lease.Client, connection, log)
             .GetPlansAsync(project, MessageCulture, token));
-        // Accents are significant and composed/decomposed forms match (§11.5); output keeps the original text.
-        WildcardPattern? pattern = Name is null ? null
-            : new(Name.Normalize(NormalizationForm.FormC), WildcardOptions.IgnoreCase | WildcardOptions.CultureInvariant);
+        NameFilter filter = new(Name);
         bool found = false;
         foreach (AdoTestPlan plan in plans)
         {
             if (Id.HasValue && plan.Id != Id.Value) continue;
             found = true;
-            if (pattern is not null && !pattern.IsMatch(plan.Name.Normalize(NormalizationForm.FormC))) continue;
+            if (!filter.IsMatch(plan.Name)) continue;
             WriteObject(plan);
         }
         if (Id.HasValue && !found)

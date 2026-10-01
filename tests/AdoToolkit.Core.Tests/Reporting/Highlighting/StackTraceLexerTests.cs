@@ -43,6 +43,20 @@ public sealed class StackTraceLexerTests
         Assert.False(StackTraceLexer.Lex("at system.Runner.Go()")[0].IsFrameworkFrame);
     }
 
+    // A constructor frame reads Type..ctor(): the second dot belongs to the method name.
+    [Theory]
+    [InlineData("   at Demo.Tests.Cart..ctor(String name)", "Demo.Tests.", "Cart.", ".ctor")]
+    [InlineData("   at Demo.Tests.Cart..cctor()", "Demo.Tests.", "Cart.", ".cctor")]
+    [InlineData("   at Cart..ctor()", "", "Cart.", ".ctor")]
+    public void ConstructorFramesKeepTheirTypeAndName(string frame, string ns, string type, string method)
+    {
+        IReadOnlyList<CodeToken> tokens = StackTraceLexer.Lex(frame);
+        Assert.Equal(type, Assert.Single(tokens, static token => token.Kind == CodeTokenKind.Type).Text);
+        Assert.Equal(method, Assert.Single(tokens, static token => token.Kind == CodeTokenKind.Method).Text);
+        Assert.Equal(ns, string.Concat(tokens.Where(static token => token.Kind == CodeTokenKind.Namespace).Select(static token => token.Text)));
+        Assert.Equal(frame, string.Concat(tokens.Select(static token => token.Text)));
+    }
+
     [Theory]
     [InlineData("unknown <List<int>> text")]
     [InlineData("at incomplete(no close")]

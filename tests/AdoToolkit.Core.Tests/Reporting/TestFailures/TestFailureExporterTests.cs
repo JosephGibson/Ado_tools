@@ -166,6 +166,28 @@ public sealed class TestFailureExporterTests
         }
     }
 
+    // The report and its attachment folder are already committed when the shell cannot open the
+    // report. That is a warning; the result still names what was written.
+    [Fact]
+    public async Task LaunchFailureAfterCommitIsAWarningAndStillReturnsTheResult()
+    {
+        using TestDirectory directory = new();
+        (AdoBuildTestFailureSet set, FakeHttpMessageHandler handler, HttpClient client) = await Retrieve();
+        using (handler)
+        using (client)
+        {
+            TestFailureExporter exporter = new(new FailingLauncher());
+            CapturingLog log = new();
+            TestFailureExportPlan plan = exporter.Prepare(set, Options(directory.Root, skip: true, open: true));
+            TestFailureExportResult result = await exporter.ExportAsync(plan, null, log, TestContext.Current.CancellationToken);
+            Assert.Equal(plan.ReportPath, result.Report.FullName);
+            Assert.True(result.Report.Exists);
+            string warning = Assert.Single(log.Messages);
+            Assert.Contains(result.Report.FullName, warning, StringComparison.Ordinal);
+            Assert.Contains(FailingLauncher.Reason, warning, StringComparison.Ordinal);
+        }
+    }
+
     private static TestFailureExportOptions Options(string? path, bool skip = false, bool noClobber = false, bool open = false,
         string culture = "en-US", DateTimeOffset? generated = null, bool createDirectory = false, bool allRuns = false) => new()
         {
@@ -217,5 +239,11 @@ public sealed class TestFailureExporterTests
     {
         internal List<string> Opened { get; } = [];
         public void Open(string path) => Opened.Add(path);
+    }
+
+    private sealed class FailingLauncher : IDocumentLauncher
+    {
+        internal const string Reason = "No application is associated with the specified file for this operation.";
+        public void Open(string path) => throw new System.ComponentModel.Win32Exception(1155, Reason);
     }
 }

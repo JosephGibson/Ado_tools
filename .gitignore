@@ -30,15 +30,6 @@ build/
 artifacts/
 coverage/
 TestResults/
-node_modules/
-__pycache__/
-.venv/
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
 .cache/
-.next/
-.nuxt/
-venv/
 .vs/
 *.user

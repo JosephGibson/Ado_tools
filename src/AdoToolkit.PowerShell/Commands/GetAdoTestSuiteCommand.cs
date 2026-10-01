@@ -40,7 +40,7 @@ public sealed class GetAdoTestSuiteCommand : AdoCmdletBase
         string project;
         if (InputObject is not null)
         {
-            EnsureSameCollection(InputObject.CollectionUri, connection);
+            EnsureInput(InputObject, InputObject.CollectionUri, connection);
             planId = InputObject.Id;
             project = InputObject.TeamProject;
         }

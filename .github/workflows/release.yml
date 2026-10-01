@@ -31,12 +31,13 @@ jobs:
       POWERSHELL_SHA256: '02fe458be20493fbdf43f61ea20610b811ee6c738ab1676c61b9cfcd1a33c860'
       ADOTOOLKIT_RELEASE_BUILD: '1'
     steps:
-      - uses: actions/checkout@v7
+      # Each action is pinned by commit; the comment is the tag that commit carried on 2026-10-01.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Third-party modules, packages and tests run in this job; only the publish step gets the token.
           persist-credentials: false
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
 

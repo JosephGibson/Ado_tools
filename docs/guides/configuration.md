@@ -72,7 +72,7 @@ Where a cmdlet parameter exists, it overrides the setting for that call.
 | --- | --- | --- |
 | `defaultProfile` | none | Profile used by `Connect-Ado` without `-Profile` or `-CollectionUrl`, and by any command that runs before a connection exists; set with `Set-AdoProfile -DefaultProfile` |
 | `profiles.<name>.collectionUrl` | required | Azure DevOps Server collection URL |
-| `profiles.<name>.defaultProject` | none | Project used when `-Project` is omitted; `Connect-Ado -Project` overrides it |
+| `profiles.<name>.defaultProject` | none | Project used when `-Project` is omitted; `Connect-Ado -Project` overrides it. `Set-AdoProfile -DefaultProject ''` removes it |
 | `profiles.<name>.defaultBranch` | none | Branch used by `Get-AdoBuild` and `Get-AdoBuildTestFailure` when `-Branch` is omitted. `develop` becomes `refs/heads/develop`; full `refs/...` names are used as given. Without it, builds of every branch are returned |
 | `profiles.<name>.defaultBuildDefinition` | none | Build definition used by `Get-AdoBuild` and `Get-AdoBuildTestFailure` when `-Definition` is omitted. A number is a definition ID and a string an exact definition name, as for `-Definition`. Without it, `-Definition` is required |
 | `profiles.<name>.defaultTestPlanId` | none | Test plan ID used by `Get-AdoTestCase` and `Get-AdoTestSuite` when `-PlanId` is omitted. Without it, `-PlanId` is required |

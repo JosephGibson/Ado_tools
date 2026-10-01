@@ -8,6 +8,5 @@
 # Binary fixtures are stored byte for byte.
 *.png binary
 
-# Keep dependency changes reviewable even when hosting UIs mark lockfiles generated.
-*.lock linguist-generated
-package-lock.json linguist-generated
+# NuGet lock files stay visible in review: a dependency change must be read.
+packages.lock.json linguist-generated=false

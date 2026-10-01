@@ -27,9 +27,9 @@ Identify, from the draft and from this conversation when the draft refers to it:
 ## 2. Ground references
 
 When the draft concerns this repository, spend a few cheap lookups (file search, grep)
-turning vague references into exact ones: "the auth module" becomes
-`src/auth/session.ts`; "run the tests" becomes the project's real test command. Stop
-there. Diagnosing the problem or designing the solution is the next session's job, and a
+turning vague references into exact ones: "the exporter" becomes
+`src/AdoToolkit.Core/Reporting/TestCaseExporter.cs`; "run the tests" becomes
+`pwsh -NoProfile -File .\tools\dev.ps1 verify`. Stop there. Diagnosing the problem or designing the solution is the next session's job, and a
 guess written into the prompt reads as fact.
 
 Leave out what the target session already loads: AGENTS.md, CLAUDE.md, and other
@@ -126,67 +126,68 @@ No summary of the rules applied and no restatement of the draft.
 ## Examples
 
 <example>
-Draft: `fix the login bug, it logs people out randomly. i think its the refresh token thing`
-Grounding: found `src/auth/refresh.ts`; tests run with `npm test`.
+Draft: `fix the open switch, the export blows up when the browser cant start. i think its the launcher`
+Grounding: found `src/AdoToolkit.Core/IO/DocumentOpener.cs`; the gate is
+`pwsh -NoProfile -File .\tools\dev.ps1 verify`.
 
 ```text
-Fix users being logged out unexpectedly during active sessions.
+Fix `Export-AdoTestCase -Open` failing after the report is written when the default application cannot start.
 
 Context:
-- Suspected, unconfirmed: token refresh in `src/auth/refresh.ts`.
+- Suspected, unconfirmed: the launch in `src/AdoToolkit.Core/IO/DocumentOpener.cs`.
 
 Requirements:
-- Write a failing test that reproduces the logout before changing code.
+- Write a failing test that reproduces the failure before changing code.
 - Fix the root cause.
 
 Done when:
-- The new test passes and `npm test` is green.
+- The new test passes and `pwsh -NoProfile -File .\tools\dev.ps1 verify` exits `0`.
 ```
 </example>
 
 <example>
-Draft: `add caching to the api so its faster`
-Grounding: `src/api/rest/` and `src/api/graphql/` both exist; no cache dependency.
-Asked in one round: which API layer; in-process memory or Redis; acceptable staleness.
-Answers: REST only; in-process; 60 seconds.
+Draft: `make the report export faster for big suites`
+Grounding: `src/AdoToolkit.Core/Reporting/TestCaseExporter.cs` and
+`src/AdoToolkit.Core/Reporting/TestFailures/TestFailureExporter.cs` both exist; no test measures time.
+Asked in one round: which report; which size counts as big; how much faster.
+Answers: the Test Case report; 300 cases; half the time.
 
 ```text
-Add in-process response caching to the REST API in `src/api/rest/` to cut latency on repeated reads.
+Halve the time `Export-AdoTestCase` takes to write one HTML document for a suite of 300 Test Cases.
 
 Requirements:
-- Cache GET responses, keyed by path and query string.
-- Entries expire after 60 seconds.
-- No new external services.
+- Measure before changing code, and report the time before and after.
+- The rendered bytes stay identical: no file in `tests/Fixtures/Reports/` changes.
 
 Out of scope:
-- `src/api/graphql/`.
+- `src/AdoToolkit.Core/Reporting/TestFailures/`.
 
 Done when:
-- A test shows a repeated GET within 60 seconds is served from cache and one after expiry is not.
-- The existing test suite passes.
+- The measured time is at most half of the first measurement.
+- `pwsh -NoProfile -File .\tools\dev.ps1 verify` exits `0`.
 ```
 
-Assumed: only GET responses are cached, keyed by path and query string.
+Assumed: the HTML format, since the draft did not name one.
 </example>
 
 <example>
-Draft: `why is CI so slow now? dont change anything yet`
-Conversation: the user earlier pasted a step timing table from the slow run.
+Draft: `why is verify so slow now? dont change anything yet`
+Conversation: the user earlier pasted the stage timings of the slow run.
 
 ```text
-Investigate why CI became slower and report the cause. Do not edit files.
+Investigate why `pwsh -NoProfile -File .\tools\dev.ps1 verify` became slower and report the cause. Do not edit files.
 
 Context:
-- Step timings from the slow run are below.
+- Stage timings from the slow run are below.
 
 Output:
 - The likely cause, with evidence: a file and line, a commit, or a log line.
 - A proposed fix, not applied.
 
 <log>
-restore-cache   9m12s
-build           2m03s
-test            4m40s
+powershell-lint   0m09s
+powershell-test   1m52s
+project-check     0m58s
 </log>
 ```
 </example>

@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoTestPlan
 ---
@@ -33,7 +33,7 @@ Lit toutes les pages de la liste des plans de test du projet dans la zone testpl
 
 ## EXAMPLES
 
-### Example 1
+### Exemple 1
 
 ```powershell
 Get-AdoTestPlan -Project 'Équipe Web' -Name 'Tâches*'
@@ -41,7 +41,7 @@ Get-AdoTestPlan -Project 'Équipe Web' -Name 'Tâches*'
 
 Liste les plans dont le nom commence par Tâches, mais pas par Taches.
 
-### Example 2
+### Exemple 2
 
 ```powershell
 Get-AdoTestPlan -Id 812 | Get-AdoTestSuite -Recurse

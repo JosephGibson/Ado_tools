@@ -135,6 +135,15 @@ Describe 'Release workflow external contracts without network calls' {
         $checkout.Groups[1].Value | Should -Match '(?m)^          persist-credentials: false\s*$'
     }
 
+    # A tag can be moved to other code; a commit cannot. The job holds a token that can publish.
+    It 'pins every action to a commit and names its version' {
+        $uses = @(Get-Content -LiteralPath $workflowPath | Where-Object { $_ -match '^\s*-?\s*uses:' })
+        $uses.Count | Should -BeGreaterThan 0
+        foreach ($line in $uses) {
+            $line | Should -MatchExactly '^\s+- uses: [A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+$'
+        }
+    }
+
     It 'passes the previously verified runtime archive and checksums into portable packaging' {
         $script:packagingCalls = [Collections.Generic.List[object]]::new()
         Mock pwsh { $script:packagingCalls.Add(@($args)); $global:LASTEXITCODE = 0 }

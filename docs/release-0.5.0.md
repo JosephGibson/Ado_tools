@@ -112,7 +112,7 @@ input still reach the same parameter sets or errors as in 0.4.0.
 | Finding | Reason |
 | --- | --- |
 | `[pscustomobject]@{ Id = 44 } \| Get-AdoBuild` and the same object piped to `Get-AdoTestSuite` stop with a raw `System.ArgumentNullException`. PowerShell converts the object to an `AdoBuildDefinition` or `AdoTestPlan` whose `CollectionUri` is null | Present in 0.4.0: the `InputObject` binding and its collection check are not part of this release's changes |
-| The advisory `What if:` line in the `verify` output | Unchanged from the [0.4.0 findings](release-0.4.0.md#findings-not-fixed) |
+| The advisory `What if:` line in the `verify` output | Unchanged from the [0.4.0 findings](archive/release-0.4.0.md#findings-not-fixed) |
 
 ### Known limitations
 
@@ -131,7 +131,7 @@ input still reach the same parameter sets or errors as in 0.4.0.
 ## Work-PC Live checks
 
 Install the candidate 0.5.0 package on the work PC and run each check in a fresh
-PowerShell process. The rules from the [0.2.0 audit](release-0.2.0.md#work-pc-live-checks-least-confirmed-areas-first)
+PowerShell process. The rules from the [0.2.0 audit](archive/release-0.2.0.md#work-pc-live-checks-least-confirmed-areas-first)
 still apply: variables stay on the work PC, raw responses are not sent back, and
 `INCONCLUSIVE` is not a pass. Checks 1 to 4 and 9 use the profile without the new defaults.
 
@@ -145,13 +145,13 @@ still apply: variables stay on the work PC, raw responses are not sent back, and
 | 6 | `Connect-Ado`, then `Get-AdoBuild -Latest` and `Get-AdoBuild -Latest -Branch main` | The first returns the latest completed `Test_Plan` build on `develop`, the second on `main`, matching the build pages. `Test_Plan` resolves to exactly one definition |
 | 7 | `Get-AdoBuildTestFailure -Result Failed \| Export-AdoBuildTestFailure -Open` | The report is for the latest failed `Test_Plan` build on `develop` |
 | 8 | Add `-DefaultTestPlanId` and `-DefaultTestSuiteId` for a plan you use, reconnect, then run `Get-AdoTestSuite -Recurse` and `Get-AdoTestCase -Recurse \| Measure-Object` | The suite tree and case count match the suite in Azure DevOps. `Get-AdoTestSuite -PlanId <other plan>` starts from that plan's root suite |
-| 9 | The [previous release's checks](release-0.4.0.md#work-pc-live-checks), including V-30, with `ADOTOOLKIT_LIVE_PROFILE` naming a profile without `defaultBranch` | Still pending |
+| 9 | The [previous release's checks](archive/release-0.4.0.md#work-pc-live-checks), including V-30, with `ADOTOOLKIT_LIVE_PROFILE` naming a profile without `defaultBranch` | Still pending |
 
 ## Local validation and developer handoff
 
 | Check | Result |
 | --- | --- |
-| `pwsh -NoProfile -File .\tools\dev.ps1 verify`, the final run after every change | Exit 0. All five stages pass: 55 PowerShell files linted, 174 tooling Pester tests, 142 configuration files, hook layout and the product check. Its only warning is the advisory `What if:` line described in the [0.4.0 findings](release-0.4.0.md#findings-not-fixed) |
+| `pwsh -NoProfile -File .\tools\dev.ps1 verify`, the final run after every change | Exit 0. All five stages pass: 55 PowerShell files linted, 174 tooling Pester tests, 142 configuration files, hook layout and the product check. Its only warning is the advisory `What if:` line described in the [0.4.0 findings](archive/release-0.4.0.md#findings-not-fixed) |
 | The same with `ADOTOOLKIT_RELEASE_BUILD=1`, as the release workflow runs it | Exit 0 with the exact module pins in `tools/BuildModules.psd1` |
 | Core tests in the final gate | 978 passed under en-US and 978 under fr-CA, with no failures or skips in either TRX report. 24 are new with the report changes: 14 in `NamedRunGroupingTests` and 10 in `ReportRefinementTests`. 25 are new in `ConfigurationStoreTests`: valid, absent and `null` defaults, 19 invalid values, unknown-key warnings, a byte-for-byte save of a file without the new keys, and a round trip that sets, changes and clears the defaults while every other setting stays |
 | Product Pester tests against the staged module | 124, all passed: the gate fails on any failed, skipped or not-run test, and Pester discovery of the same tree finds 124. 12 are new in `Profiles.Pester.ps1`: `Set-AdoProfile` and `Get-AdoProfile`, profile and URL connections, an invalid value in the file, and for each of `Get-AdoBuild`, `Get-AdoBuildTestFailure`, `Get-AdoTestCase` and `Get-AdoTestSuite` an explicit parameter over the profile, the profile value when it is omitted, and the 0.4.0 behavior without it, checked on the request lines of the fake server. 3 are the report address cases in `TestFailureExport.Pester.ps1` |

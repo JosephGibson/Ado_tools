@@ -104,6 +104,7 @@
   <data name="NoTestCasesToExport" xml:space="preserve"><value>No test cases were received; no report was written.</value></data>
   <data name="ExportReport" xml:space="preserve"><value>Export Test Case report</value></data>
   <data name="ExportNotOpened" xml:space="preserve"><value>The report was written to {0} but not opened: only .html, .htm, .md, .markdown, .json and .txt files are opened.</value></data>
+  <data name="ExportOpenFailed" xml:space="preserve"><value>The report was written to {0} but could not be opened: {1}</value></data>
   <data name="FileSystemPathRequired" xml:space="preserve"><value>The report path must use the FileSystem provider.</value></data>
   <data name="ReportOverview" xml:space="preserve"><value>Overview</value></data>
   <data name="ReportSteps" xml:space="preserve"><value>Steps</value></data>
@@ -120,6 +121,7 @@
   <data name="ProgressExpansion" xml:space="preserve"><value>Expanding test cases: {0} of {1}</value></data>
   <data name="ProgressCompleted" xml:space="preserve"><value>Retrieved {0} test case(s).</value></data>
   <data name="InputNotTestCase" xml:space="preserve"><value>Input {0} is a test plan or suite, so its Id is not a test case ID. Pipe AdoTestSuite objects from Get-AdoTestSuite.</value></data>
+  <data name="IncompleteInput" xml:space="preserve"><value>The {0} input is incomplete: {1} has no valid value. Pipe an object returned by an AdoToolkit command.</value></data>
   <data name="BuildDefinitionMatches" xml:space="preserve"><value>The definition name matched {0} definitions. Use -Definition &lt;id&gt;.</value></data>
   <data name="BuildDefinitionNotFound" xml:space="preserve"><value>Build definition {0} was not found.</value></data>
   <data name="BuildNotFound" xml:space="preserve"><value>Build {0} was not found.</value></data>

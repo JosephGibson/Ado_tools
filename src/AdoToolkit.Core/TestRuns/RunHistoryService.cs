@@ -69,14 +69,18 @@ internal sealed class RunHistoryService
         foreach (HistoryBuild build in window)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            // The window holds the earlier builds only; the current build is already read.
             progress.Progress(new AdoProgress
             {
                 Phase = AdoProgressPhase.History,
                 Completed = ++completed,
-                Total = window.Count + 1,
+                Total = window.Count,
             });
-            if (cache.TryGetBuild(build.Id, out HistoryBuildData cached))
+            if (cache.TryGetBuild(build.Id, out HistoryBuildData cached, out bool unreadable))
             {
+                if (unreadable)
+                    diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.HistoryUnavailable, culture,
+                        arguments: [build.Id.ToString(CultureInfo.InvariantCulture)]));
                 earlier.Add(new HistoryEntry(build, false, cached));
                 continue;
             }
@@ -92,7 +96,7 @@ internal sealed class RunHistoryService
                 continue;
             }
             HistoryBuildData data;
-            bool exhausted = false;
+            bool exhausted = false, failed = false;
             try
             {
                 data = await ReadBuildAsync(build, current.TeamProject, culture, cancellationToken).ConfigureAwait(false);
@@ -113,8 +117,9 @@ internal sealed class RunHistoryService
                 diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.HistoryUnavailable, culture,
                     arguments: [build.Id.ToString(CultureInfo.InvariantCulture)]));
                 data = HistoryBuildData.Unavailable;
+                failed = true;
             }
-            if (!exhausted) cache.AddBuild(build.Id, data);
+            if (!exhausted) cache.AddBuild(build.Id, data, failed);
             earlier.Add(new HistoryEntry(build, false, data));
         }
         earlier.Reverse();

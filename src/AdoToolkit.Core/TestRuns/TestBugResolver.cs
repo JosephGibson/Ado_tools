@@ -122,31 +122,10 @@ internal sealed class TestBugResolver
         return result.AsReadOnly();
     }
 
-    private async Task<Dictionary<int, WorkItemDto>> ReadAsync(int[] ids, CultureInfo culture, CancellationToken cancellationToken)
-    {
-        EndpointDefinition endpoint = EndpointRegistry.WorkItemsBatch;
-        // IdChunks rejects duplicate and unrequested IDs, so the result is keyed safely.
-        IReadOnlyList<WorkItemDto> returned = await IdChunks.FetchAsync(ids, endpoint.ChunkSize,
-            async (chunk, token) =>
-            {
-                byte[] body = JsonSerializer.SerializeToUtf8Bytes(new WorkItemBatchRequestDto { Ids = chunk, Fields = Fields },
-                    AdoJsonContext.Default.WorkItemBatchRequestDto);
-                return await pipeline.ExecuteAsync(endpoint, null, null, body, culture, async (response, requestToken) =>
-                {
-                    try
-                    {
-                        string bytes = await ResponseJson.ReadAsync(response, requestToken).ConfigureAwait(false);
-                        return (IReadOnlyList<WorkItemDto>)(JsonSerializer.Deserialize(bytes, AdoJsonContext.Default.WorkItemBatchDto)?.Value
-                            ?? throw new JsonException());
-                    }
-                    catch (JsonException error)
-                    {
-                        throw new AdoResponseFormatException(Messages.Get(AdoMessage.ResponseFormat, culture), error) { Operation = endpoint.Name };
-                    }
-                }, token).ConfigureAwait(false);
-            }, static item => item.Id, culture, cancellationToken).ConfigureAwait(false);
-        return returned.ToDictionary(static item => item.Id);
-    }
+    // The batch reader rejects duplicate and unrequested IDs, so the result is keyed safely.
+    private async Task<Dictionary<int, WorkItemDto>> ReadAsync(int[] ids, CultureInfo culture, CancellationToken cancellationToken) =>
+        (await WorkItemBatchReader.ReadAsync(pipeline, ids, Fields, false, culture, cancellationToken).ConfigureAwait(false))
+            .ToDictionary(static item => item.Id);
 
     private async Task<IReadOnlyList<string>?> BugTypesAsync(string project, CultureInfo culture, CancellationToken cancellationToken)
     {

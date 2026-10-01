@@ -10,7 +10,7 @@ BeforeAll {
 }
 
 Describe 'Command help matches compiled parameters' {
-    It 'matches parameter names, types, aliases and binding in <Culture>' -TestCases @(
+    It 'matches parameter names, types, aliases, wildcard support and binding in <Culture>' -TestCases @(
         @{ Culture = 'en-US' }, @{ Culture = 'fr-CA' }
     ) {
         param($Culture)
@@ -33,10 +33,11 @@ Describe 'Command help matches compiled parameters' {
                 if ([Management.Automation.PSTypeName]::new($parameter.Type).Type -ne $actual.ParameterType) {
                     $issues.Add("${label}: type differs")
                 }
-                if ($parameter.Name -notin @('WhatIf', 'Confirm') -and
-                    (($parameter.Aliases | Sort-Object) -join ',') -cne (($actual.Aliases | Sort-Object) -join ',')) {
+                if ((($parameter.Aliases | Sort-Object) -join ',') -cne (($actual.Aliases | Sort-Object) -join ',')) {
                     $issues.Add("${label}: aliases differ")
                 }
+                $wildcards = @($actual.Attributes | Where-Object { $_ -is [Management.Automation.SupportsWildcardsAttribute] }).Count -gt 0
+                if ($parameter.SupportsWildcards -ne $wildcards) { $issues.Add("${label}: wildcard support differs") }
                 $covered = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
                 foreach ($binding in $parameter.ParameterSets) {
                     $sets = if ($binding.Name -eq '(All)') { @($command.ParameterSets.Name) } else { @($binding.Name) }

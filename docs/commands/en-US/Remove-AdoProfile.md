@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-21-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Remove-AdoProfile
 ---
@@ -146,13 +146,13 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ### AdoToolkit.Core.Configuration.AdoProfile
 
-Object returned by the command.
+A profile from Get-AdoProfile, received from the pipeline.
 
 ## OUTPUTS
 
 ### System.Void
 
-Object returned by the command.
+The command produces no output.
 
 ## NOTES
 
@@ -160,7 +160,7 @@ Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020.
 
 ## RELATED LINKS
 
-[Connect-Ado](Connect-Ado.md)
-[Get-AdoProject](Get-AdoProject.md)
+[Get-AdoProfile](Get-AdoProfile.md)
+[Set-AdoProfile](Set-AdoProfile.md)
 
 

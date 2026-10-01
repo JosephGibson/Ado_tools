@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-21-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Remove-AdoProfile
 ---
@@ -39,7 +39,7 @@ Supprime le profil nommé ou reçu du pipeline par une écriture atomique de la 
 
 ## EXAMPLES
 
-### Example 1
+### Exemple 1
 
 ```powershell
 Get-AdoProfile -Name work | Remove-AdoProfile -WhatIf
@@ -51,7 +51,7 @@ Supprime un profil de connexion local.
 
 ### -Confirm
 
-Prompts you for confirmation before running the cmdlet.
+Demande confirmation avant d’exécuter la commande.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -115,7 +115,7 @@ HelpMessage: ''
 
 ### -WhatIf
 
-Runs the command in a mode that only reports what would happen without performing the actions.
+Exécute la commande dans un mode qui indique seulement ce qui se produirait, sans effectuer les actions.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -145,13 +145,13 @@ Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVar
 
 ### AdoToolkit.Core.Configuration.AdoProfile
 
-Objet retourné par la commande.
+Profil provenant de Get-AdoProfile, reçu du pipeline.
 
 ## OUTPUTS
 
 ### System.Void
 
-Objet retourné par la commande.
+La commande ne produit aucune sortie.
 
 ## NOTES
 
@@ -159,7 +159,7 @@ Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020.
 
 ## RELATED LINKS
 
-[Connect-Ado](Connect-Ado.md)
-[Get-AdoProject](Get-AdoProject.md)
+[Get-AdoProfile](Get-AdoProfile.md)
+[Set-AdoProfile](Set-AdoProfile.md)
 
 

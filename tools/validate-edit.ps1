@@ -1,5 +1,6 @@
 # Claude Code PostToolUse hook: dependency-free syntax gate on files the agent wrote.
-# Catches broken PowerShell and malformed JSON (including .claude/*.json) immediately.
+# Catches broken PowerShell, malformed JSON (including .claude/*.json) and malformed XML
+# (project files, string catalogs, the format file) immediately.
 # Exit 2 returns stderr to Claude so it fixes the file in the same turn.
 [CmdletBinding()]
 param()
@@ -51,7 +52,7 @@ switch -Regex ([System.IO.Path]::GetExtension($path)) {
             exit 2
         }
     }
-    '^\.(csproj|fsproj|vbproj|props|targets|slnx|config|xml)$' {
+    '^\.(csproj|props|targets|slnx|config|xml|resx|ps1xml)$' {
         # A hook that parses agent-written XML must not resolve a DTD or an external
         # entity as part of validation.
         $reader = $null

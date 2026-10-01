@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Disconnect-Ado
 ---
@@ -29,11 +29,11 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Libère les clients HTTP de cet espace d’exécution après la fin des requêtes actives et vide son cache de projets. Les autres espaces conservent leurs connexions. Ne produit aucune sortie.
+Libère les clients HTTP de cet espace d’exécution après la fin des requêtes actives et vide ses caches de projets et de catégories de test. Les autres espaces conservent leurs connexions. Ne produit aucune sortie.
 
 ## EXAMPLES
 
-### Example 1
+### Exemple 1
 
 ```powershell
 Disconnect-Ado
@@ -55,7 +55,7 @@ Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVar
 
 ### System.Void
 
-Objet retourné par la commande.
+La commande ne produit aucune sortie.
 
 ## NOTES
 
@@ -64,6 +64,6 @@ Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020.
 ## RELATED LINKS
 
 [Connect-Ado](Connect-Ado.md)
-[Get-AdoProject](Get-AdoProject.md)
+[Get-AdoConnection](Get-AdoConnection.md)
 
 

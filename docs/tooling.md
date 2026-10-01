@@ -1,100 +1,101 @@
 # Developer tooling
 
-`tools/dev.ps1` is the single entry point for repository discovery, validation and
-prerequisite checks. It requires PowerShell 7.6.5 or later. Run it from the
-repository root:
+Reference for `tools/`. Daily work needs only the command table in `AGENTS.md`; read this
+before changing a command, a stage, the product gate, packaging or the agent setup.
 
 ```powershell
 pwsh -NoProfile -File .\tools\dev.ps1 <command>
 ```
 
-For daily orientation, `context` is enough. Read this reference when you change
-the tooling or the product gate.
+`tools/dev.ps1` requires PowerShell 7.6.5 or later and runs from the repository root.
 
 ## Commands
 
-| Command | Behavior |
+| Command | Returns |
 | --- | --- |
-| `context [-Path <target>]` | Compact orientation. With a target, it also lists the instruction files that apply to that path |
-| `find -Query <literal> [-Limit 20]` | Case-insensitive search of paths, then content, with matching line numbers. `LimitReached` means the result budget filled |
-| `inspect` | Detected manifests, entry points, directories and instruction files |
-| `deps [-Limit 20]` | Declared NuGet, npm and `requirements.txt` dependencies. Other manifests are only listed |
-| `plan` | The stages `verify` would run, with executables, arguments and dependencies. Runs nothing |
-| `verify` | The full gate, with status, concise findings and per-stage duration |
-| `verify -Stage <name>` | The selected stages and their prerequisites. The result is always incomplete |
-| `verify -SkipTests` | All checks except tests. The result is always incomplete |
-| `diagnose` | Availability and versions of local tools |
-| `bootstrap [-Install]` | Lists missing prerequisites. `-Install` installs the supported ones |
-| `init -ProjectName <name> -Description <text>` | Replaces the `project:start`/`project:end` block in `README.md` and `AGENTS.md`. Each file is replaced atomically, and a failed write is rolled back |
+| `context [-Path <target>]` | Project name, stack, test counts, the commands, and up to 40 important paths. With `-Path`, also `ScopedInstructions`: the `AGENTS.md` and `CLAUDE.md` files that apply to the target |
+| `find -Query <literal> [-Limit 20]` | Case-insensitive matches in paths, then in content, with line numbers. `LimitReached` means the limit, 1 to 100, was filled |
+| `inspect` | Project files, test files, top-level directories, configuration and instruction files |
+| `deps [-Limit 20]` | NuGet packages declared in project and props files, and the tools `verify` needs |
+| `plan` | The stages `verify` would run, with the command line of the product gate. Runs nothing |
+| `verify` | The full gate: status, findings and duration per stage |
+| `verify -Stage <name>` | Only the named stages. Always incomplete |
+| `verify -SkipTests` | Every check except tests. Always incomplete |
+| `diagnose` | Presence and version of each required tool and of ripgrep |
+| `bootstrap [-Install]` | The same list. `-Install` installs Pester 5.x, PSScriptAnalyzer and PlatyPS 1.x from PSGallery for the current user, and ripgrep with winget. It does not install the .NET SDK |
 
-The CLI prints one compact JSON document. Exit codes are `0` for ok or pass, `1` for
-failure, and `2` for unavailable or incomplete. Inside PowerShell,
-`& .\tools\dev.ps1 <command> -Format Object` returns objects instead. Arrays stay
-arrays even with zero or one element. To select several stages, pass an array:
-`& .\tools\dev.ps1 verify -Stage @('configuration', 'tooling-layout')`.
+- Output: one compact JSON document. Exit `0` for `ok` or `pass`, `1` for a failure, `2`
+  for `incomplete` or `unavailable`.
+- In PowerShell, `& .\tools\dev.ps1 <command> -Format Object` returns objects.
+- Several stages: `& .\tools\dev.ps1 verify -Stage @('configuration', 'tooling-layout')`.
 
-Discovery uses ripgrep when it is installed and a pruned file walk otherwise. Both
-use the same exclusion list, which is defined in `dev.ps1`, and ignore
-machine-specific ignore settings. Dependency and build output, links, secret paths
-and personal configuration are excluded. Shared hidden configuration is included.
-Content search skips binary files and files over 1 MiB. `find` returns locations,
-not full text, and nothing is indexed or cached.
+## Discovery
+
+- ripgrep lists files when it is installed; a pruned file walk does otherwise. Both apply
+  the lists in `tools/dev.ps1` and ignore `.gitignore` and user ripgrep settings, so the
+  result does not depend on the tool.
+- Excluded: build and output directories (`ExcludedDirectoryNames`), `secret` and
+  `secrets` directories, sensitive file names (`SensitiveFileGlobs`), and links.
+- Hidden shared configuration such as `.claude/` and `.github/` is included.
+- Content search skips binary files and files above 1 MiB. Nothing is indexed or cached.
 
 ## Verification
 
 | Stage | Checks |
 | --- | --- |
-| `powershell-lint` | Parses every PowerShell file and runs PSScriptAnalyzer |
-| `powershell-test` | Runs the tooling tests (`tools/tests/*.Tests.ps1`) with Pester 5.x |
-| `configuration` | Parses JSON, XML and MSBuild files with DTDs and external resolution disabled |
-| `tooling-layout` | Validates Claude hook settings, requires hook scripts to be under `tools/`, and checks instruction imports |
-| `project-check` | Runs the product gate in `tools/check.ps1` |
+| `powershell-lint` | Parses every PowerShell file and runs PSScriptAnalyzer with `PSScriptAnalyzerSettings.psd1` |
+| `powershell-test` | Runs `tools/tests/*.Tests.ps1` with Pester 5.x |
+| `configuration` | Parses JSON strictly and XML (`.xml`, `.config`, `.csproj`, `.props`, `.targets`, `.slnx`, `.resx`, `.ps1xml`) with DTDs prohibited |
+| `documentation` | In every Markdown file: each relative link resolves, each heading anchor exists, and each code span that starts with `src/`, `tests/`, `tools/`, `docs/`, `.claude/`, `.agents/` or `.github/` names an existing path |
+| `tooling-layout` | `.claude/settings.json` is valid, hook scripts live under `tools/`, every `@import` in `CLAUDE.md` and `.claude/rules/*.md` resolves, and every skill has a body and a Claude wrapper with the same name and description |
+| `project-check` | The product gate, `tools/check.ps1` |
 
-Prerequisites must already be installed and packages restored. Verification never
-installs anything. External stages run with `CI=true`, `NO_COLOR=1` and Corepack
-network access disabled. Each one has a five-minute timeout, and on timeout its
-process tree is stopped. Only the last 120 output lines are kept, each truncated to
-2,000 characters. Pass, fail and incomplete come from exit codes and structured
-outcomes, never from console text. An external stage's lines that mention something
-skipped, missing or not installed are also reported as advisory warnings; they never
-change the result.
+- `verify` never installs or restores. A missing tool makes its stage `unavailable` and
+  the result `incomplete`.
+- The `documentation` stage skips files under `docs/archive/` other than the two index
+  files, and files under `tests/Fixtures/` other than the catalog. In
+  `docs/release-<version>.md` it checks links but not paths, because release notes may
+  name a file that has since gone. A code span with a placeholder (`<`, `*`, `{`) is not
+  treated as a path. The three lists are in `tools/dev.ps1`.
+- An external stage runs with `CI=true` and `NO_COLOR=1`, for at most 300 seconds
+  (`project-check`: 900). On timeout its process tree is stopped. The last 120 output
+  lines are kept, 2,000 characters each.
+- Pass, fail and incomplete come from exit codes and structured outcomes, never from
+  console text. Output lines of an external stage that mention something skipped, missing
+  or not installed become advisory warnings; they never change the result.
 
 ### Product gate
 
-Because `tools/check.ps1` exists, it replaces the .NET build and test stages that
-`dev.ps1` would otherwise infer. The other stages still run. The gate:
+`tools/check.ps1` exits `0`, `1` or `2`. Lines that start with `check: ` are its results;
+`verify` shows them as the stage summary.
 
-1. Exits `2` if the .NET SDK, restored package assets, Pester 5.x or PlatyPS 1.x is
+1. Exits `2` when the .NET SDK, restored package assets, Pester 5.x or PlatyPS 1.x is
    missing.
-2. Builds `AdoToolkit.slnx` in the Release configuration without restoring.
-3. Runs the Core tests twice, with `ADOTOOLKIT_TEST_CULTURE` set to `en-US` and then
-   `fr-CA`. Each run writes TRX results to a new folder under `artifacts/verify/`,
-   and `tools/lib/test-results.ps1` checks their counters. Skipped or undiscovered
-   tests and missing counters exit `2`, even when the test runner succeeded.
-4. Stages the package with `Publish-AdoToolkitPackage.ps1 -NoBuild` and checks
-   every published file against an allowlist.
-5. Runs the product Pester tests (`tests/AdoToolkit.PowerShell.Tests/*.Pester.ps1`)
-   against the staged module in a child process. A run with no tests, or with
-   skipped or unrun tests, exits `2`. `ADOTOOLKIT_CONFIG_PATH` points to a
-   configuration file that doesn't exist, so a developer's default profile never
-   connects a test to a real server.
+2. Builds `AdoToolkit.slnx` in Release without restoring.
+3. Runs the Core tests twice, with `ADOTOOLKIT_TEST_CULTURE` set to `en-US`, then `fr-CA`,
+   and `ADOTOOLKIT_UPDATE_GOLDEN` cleared. Each run writes TRX results to a new folder
+   under `artifacts/verify/`; `Get-AdoTestOutcome` reads the counters. A skipped or
+   undiscovered test, or a missing counter, exits `2`.
+4. Stages the package with `tools/package/Publish-AdoToolkitPackage.ps1 -NoBuild` and
+   checks it with `Assert-AdoPackage`: the exact seven files, help for all 22 commands,
+   the manifest and the assembly versions.
+5. Runs `tests/AdoToolkit.PowerShell.Tests/*.Pester.ps1` against the staged module in a
+   child process (`Invoke-AdoReportingChild`). The child writes its result lines to the
+   file named by `ADOTOOLKIT_GATE_REPORT`, so nothing a cmdlet prints reaches the gate's
+   output. No tests, a skipped test or a test that did not run exits `2`.
+   `ADOTOOLKIT_CONFIG_PATH` names a file that does not exist.
 
 With `-SkipTests`, the gate builds and stages the package only.
 
 ### Changing checks
 
-- Put product checks in `tools/check.ps1`. Call executables with explicit argument
-  arrays, check their exit codes immediately, and exit `0`, `1` or `2`. Print short
-  diagnostic lines. Never call `dev.ps1 verify` from the gate, because that
-  recurses.
-- Add a reusable built-in stage in `tools/lib/validation.ps1`, with fixture-based
-  tests in `tools/tests/`. An external stage has `Name`, `Executable`, `Arguments`,
-  and optionally `WorkingDirectory`, `DependsOn` and `TimeoutSeconds` (1–3600). An
-  in-process stage returns `Failures`, `Summary`, `Warnings` and optionally
-  `Unavailable`.
-- Without a product gate, `dev.ps1` builds and tests .NET projects and runs existing
-  `package.json` scripts. Python, Rust, Go and Java are detected but reported as
-  incomplete until `tools/check.ps1` covers them.
+- Product checks go into `tools/check.ps1`: call executables with argument arrays, test
+  the exit code at once, print a `check: ` line per result, and never call `verify`.
+- A built-in stage goes into `tools/lib/validation.ps1`, with fixture-based tests in
+  `tools/tests/`. An in-process stage has `Name`, `Action` and `ActionArguments` and
+  returns `Failures`, `Summary`, `Warnings` and optionally `Unavailable`. An external
+  stage has `Name`, `Executable`, `Arguments` and optionally `TimeoutSeconds` (1 to 3600)
+  and `ExitCodeContract = 'dev'`, which reads exit `2` as incomplete.
 
 ## Prerequisites
 
@@ -102,172 +103,162 @@ Install tools only as an explicit, authorized step.
 
 | Tool | Used for | Installation |
 | --- | --- | --- |
-| PowerShell 7.6.5+ | `dev.ps1` and agent hooks | `winget install --id Microsoft.PowerShell --exact --source winget` |
-| .NET SDK | Build and tests; the version is selected by `global.json` | [Microsoft installer](https://dotnet.microsoft.com/download/dotnet), then `dotnet restore AdoToolkit.slnx --locked-mode` |
+| PowerShell 7.6.5+ | `tools/dev.ps1`, the hooks, the packaging scripts | `winget install --id Microsoft.PowerShell --exact --source winget` |
+| .NET SDK | Build and tests; `global.json` selects the version | [Microsoft installer](https://dotnet.microsoft.com/download/dotnet), then `dotnet restore AdoToolkit.slnx --locked-mode` |
 | Pester 5.x | Tooling and product tests | `Install-Module Pester -MinimumVersion 5.0 -MaximumVersion 5.999.999 -Scope CurrentUser -Repository PSGallery` |
-| PSScriptAnalyzer | PowerShell lint | `Install-Module PSScriptAnalyzer -Scope CurrentUser -Repository PSGallery` |
-| PlatyPS 1.x | Compiled help in the product gate and packaging | `Install-Module Microsoft.PowerShell.PlatyPS -MinimumVersion 1.0 -MaximumVersion 1.999.999 -Scope CurrentUser -Repository PSGallery` |
+| PSScriptAnalyzer | `powershell-lint` | `Install-Module PSScriptAnalyzer -Scope CurrentUser -Repository PSGallery` |
+| PlatyPS 1.x | Compiled help in the gate and in packaging | `Install-Module Microsoft.PowerShell.PlatyPS -MinimumVersion 1.0 -MaximumVersion 1.999.999 -Scope CurrentUser -Repository PSGallery` |
 | ripgrep (recommended) | Faster discovery | `winget install --id BurntSushi.ripgrep.MSVC --exact --source winget` |
-| ast-grep (optional) | Structural search; `diagnose` only reports it | `cargo install ast-grep --locked` |
 
-`bootstrap -Install` installs only ripgrep, Pester and PSScriptAnalyzer. Pester is
-limited to 5.x because the tooling depends on its result format. Upgrading it
-requires regression tests.
+- Pester stays on 5.x because the tooling depends on its result format.
+- `ADOTOOLKIT_RELEASE_BUILD=1`, set by the release workflow, makes the gate, the product
+  tests and help generation require the exact versions in `tools/BuildModules.psd1`. A
+  newer installed version does not satisfy a missing pin.
+- `nuget.config` clears inherited package sources and maps every package to nuget.org.
+  Where nuget.org is blocked, restore fails; the prebuilt release needs no build.
+- Without administrator rights, install the .NET SDK for the account with Microsoft's
+  `dotnet-install.ps1` and put it first on `PATH` in each session that builds:
 
-The release workflow sets `ADOTOOLKIT_RELEASE_BUILD=1`. In that mode, verification,
-product tests and help generation require the exact versions in
-`tools/BuildModules.psd1`, which also supplies the workflow's installation versions.
-A newer installed version cannot substitute for a missing pin. Local development
-continues to accept Pester 5.x and PlatyPS 1.x. `diagnose` includes PlatyPS when
-command help sources are present.
+  ```powershell
+  $dotnet = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'
+  & .\dotnet-install.ps1 -JsonFile .\global.json -InstallDir $dotnet -NoPath
+  $env:DOTNET_ROOT = $dotnet
+  $env:PATH = "$dotnet;$env:PATH"
+  dotnet --version    # from the repository root; it must succeed
+  ```
 
-Without administrator rights, install the .NET SDK for your account only, with
-Microsoft's `dotnet-install.ps1` script, and put it first on `PATH` in every session
-that builds:
-
-```powershell
-$dotnet = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'
-& .\dotnet-install.ps1 -JsonFile .\global.json -InstallDir $dotnet -NoPath
-$env:DOTNET_ROOT = $dotnet
-$env:PATH = "$dotnet;$env:PATH"
-dotnet --version    # run from the repository root; it must succeed
-```
-
-Run every repository script in PowerShell 7 (`pwsh`), not Windows PowerShell 5.1.
-The package scripts declare `#Requires -Version 7.6`, so 5.1 stops with a clear
-message. If a downloaded copy of the repository refuses to run scripts because they
-aren't signed, remove the download mark once:
-`Get-ChildItem -Recurse -File -Include *.ps1, *.psm1, *.psd1 | Unblock-File`.
-
-The repository `nuget.config` clears inherited package sources and maps every package
-to nuget.org. Feeds from your user or machine configuration, and their credential
-prompts, are not used. If nuget.org is blocked on your network, restore fails; the
-prebuilt release avoids the need to build.
+- Run every script in PowerShell 7 (`pwsh`). If a downloaded copy refuses to run unsigned
+  scripts, remove the download mark once:
+  `Get-ChildItem -Recurse -File -Include *.ps1, *.psm1, *.psd1 | Unblock-File`.
 
 ## Packaging and releases
 
+Rules for these scripts are in `tools/package/AGENTS.md`; the `release` skill is the
+procedure.
+
 | Script | Purpose |
 | --- | --- |
-| `tools/package/Publish-AdoToolkitPackage.ps1` | Checks prerequisites, restores in locked mode, builds the Release configuration and stages `artifacts/AdoToolkit/<version>/` with compiled English and French help. `-NoBuild` packages the existing build without restoring, as the product gate and the release workflow do; `-NoRestore` skips only the restore |
-| `tools/package/New-AdoToolkitRelease.ps1` | Writes the module ZIP, checksum and installer to `artifacts/release/`. With `-PowerShellArchivePath`, `-PowerShellChecksumPath` and `-PowerShellVersion`, also writes `AdoToolkit-<version>-win-x64.zip` and its checksum |
-| `tools/package/Test-AdoToolkitPortable.ps1` | Extracts the finished portable ZIP and runs its actual CMD launcher offline, with empty `PATH` and `PSModulePath`; verifies the module, PowerShell version, architecture and loaded paths |
-| `tools/package/Install-AdoToolkit.ps1` | Standalone end-user installer. Checks the zip against its checksum, requires exactly the module layout in one `AdoToolkit/<version>/` folder, and installs it for the current user. The previous copy of that version is replaced only after the new copy is complete. `-ExpectedThumbprint` also requires valid signatures |
-| `tools/package/Set-AdoToolkitPackageSignature.ps1`, `Install-AdoToolkitPackage.ps1` | Optional signed flow for a staged package when a code-signing certificate is available |
+| `tools/package/Publish-AdoToolkitPackage.ps1` | Checks prerequisites, restores in locked mode, builds Release and stages `artifacts/AdoToolkit/<version>/` with compiled English and French help. `-NoBuild` packages the existing build without restoring; `-NoRestore` skips only the restore |
+| `tools/package/New-AdoToolkitRelease.ps1` | Writes the module zip, its checksum and the installer to `artifacts/release/`. With `-PowerShellArchivePath`, `-PowerShellChecksumPath` and `-PowerShellVersion`, also writes `AdoToolkit-<version>-win-x64.zip` and its checksum |
+| `tools/package/Test-AdoToolkitPortable.ps1` | Extracts the portable zip and starts its launcher offline, with empty `PATH` and `PSModulePath`; checks the module, the PowerShell version, the architecture and the loaded paths |
+| `tools/package/Install-AdoToolkit.ps1` | End-user installer: checks the zip against its checksum, requires exactly the module layout under one `AdoToolkit/<version>/` folder, installs for the current user and replaces the same version only when the new copy is complete. `-ExpectedThumbprint` also requires valid signatures |
+| `tools/package/Set-AdoToolkitPackageSignature.ps1`, `tools/package/Install-AdoToolkitPackage.ps1` | The signed flow for a staged package, when a code-signing certificate exists |
 
-Files are written to a temporary name beside their target, validated, and then moved
-into place. Symbolic links and junctions are rejected on every package and install
-path. Cloud-file placeholders, such as a OneDrive-redirected Documents folder, are
-reparse points without a link target and are allowed. `Install-AdoToolkit.ps1` carries
-its own copy of the module layout because it ships without the repository. A tooling
-test keeps that copy identical to `Assert-AdoPackage`.
-
-Package validation reads each DLL's assembly identity and version without loading
-its code. All four DLLs must match the manifest version; `-NoBuild` rejects stale
-binaries and requires a rebuild before packaging.
-
-Release generation stages and validates all requested archives, checksums and the
-installer before replacing any asset. A failed replacement restores the previous
-set; backups are retained if recovery itself fails. This is rollback on failure,
-not a filesystem transaction: a process crash can leave `.previous-*` files for
-manual recovery. Relative package/output paths follow the PowerShell location,
-including after `Set-Location`, and must stay inside the permitted repository root.
-
-Portable packaging takes an explicitly downloaded, unmodified official Windows x64
-PowerShell ZIP and its published `hashes.sha256`. It never downloads dependencies
-itself. The version must be an exact supported 7.6 patch version, matching the
-filename and release workflow pin. The checksum is checked again before packaging.
-All runtime files, including `LICENSE.txt` and `ThirdPartyNotices.txt`, are retained.
-Unsafe paths, links, duplicate entries and incomplete runtime layouts are rejected.
-The bundle records the module/runtime versions and source archive hash in `bundle.json`.
-
-For a local portable build, first stage the module, then use downloaded inputs:
+- Files are written beside their target, validated, then moved. Symbolic links and
+  junctions are rejected on every package and install path; cloud-file placeholders, such
+  as a OneDrive-redirected Documents folder, are allowed.
+- Package validation reads each assembly's identity and version without loading it. The
+  three DLLs must match the manifest version, so `-NoBuild` rejects stale binaries.
+- Release generation validates every archive, checksum and the installer before replacing
+  an asset, and restores the previous set when a replacement fails. A crash can leave
+  `.previous-*` files for manual recovery.
+- Relative package and output paths follow the PowerShell location and must stay inside
+  the repository.
+- The portable zip is built from an official, unmodified Windows x64 PowerShell zip and
+  its published `hashes.sha256`, both already on disk; nothing is downloaded. The version
+  must be a 7.6 patch version that matches the file name. Unsafe paths, links, duplicate
+  entries and incomplete runtimes are rejected. `bundle.json` records the module version,
+  the runtime version and the runtime hash.
 
 ```powershell
-pwsh -NoProfile -File ./tools/package/New-AdoToolkitRelease.ps1 `
-    -PowerShellArchivePath ./artifacts/runtime-download/PowerShell-7.6.6-win-x64.zip `
-    -PowerShellChecksumPath ./artifacts/runtime-download/hashes.sha256 `
-    -PowerShellVersion 7.6.6
-pwsh -NoProfile -File ./tools/package/Test-AdoToolkitPortable.ps1 `
-    -ArchivePath ./artifacts/release/AdoToolkit-0.5.0-win-x64.zip `
-    -ModuleVersion 0.5.0 -PowerShellVersion 7.6.6
+pwsh -NoProfile -File .\tools\package\Publish-AdoToolkitPackage.ps1 -NoRestore
+pwsh -NoProfile -File .\tools\package\New-AdoToolkitRelease.ps1 `
+    -PowerShellArchivePath .\artifacts\runtime-download\PowerShell-<runtime>-win-x64.zip `
+    -PowerShellChecksumPath .\artifacts\runtime-download\hashes.sha256 `
+    -PowerShellVersion <runtime>
+pwsh -NoProfile -File .\tools\package\Test-AdoToolkitPortable.ps1 `
+    -ArchivePath .\artifacts\release\AdoToolkit-<version>-win-x64.zip `
+    -ModuleVersion <version> -PowerShellVersion <runtime>
 ```
 
-The launcher loads only the adjacent AdoToolkit module and opens the bundled host
-without user profiles. It sets `RemoteSigned` for that process, respects Group
-Policy, and does not persist execution-policy or `PATH` changes. Users unblock the
-downloaded ZIP in Explorer before extraction. New releases carry runtime updates;
-the private runtime does not update itself. Keep the workflow's `POWERSHELL_VERSION`
-and `POWERSHELL_SHA256` pins current together, taking the hash from that PowerShell
-release's `hashes.sha256`, and rerun the gate and portable smoke check when updating
-them.
+The launcher loads only the module beside it, without user profiles, and sets
+`RemoteSigned` for its own process. It respects Group Policy and persists no execution
+policy or `PATH` change.
 
-To publish a release:
+### Release workflow
 
-1. Set `VersionPrefix` in `Directory.Build.props` and run `verify`.
-2. Push a tag named `v<VersionPrefix>`, for example `v0.5.0`.
+`.github/workflows/release.yml` runs when a tag `v<VersionPrefix>` is pushed:
 
-`.github/workflows/release.yml` then runs on a Windows runner. It checks out the
-repository without keeping the job's write token in the Git configuration, because
-third-party modules, packages and tests run in the same job; only the publishing step
-receives the token. It installs the pinned PowerShell 7.6 after checking the download
-against both its published `hashes.sha256` and the SHA-256 pinned in the workflow,
-installs Pester, PSScriptAnalyzer and PlatyPS, and checks the tag against the module
-version. It then restores in locked mode, runs `verify`, packages the verified build,
-and creates the GitHub release with five assets and portable-first install notes. Before publication it
-checks the finished portable ZIP with `Test-AdoToolkitPortable.ps1`; the check uses
-a fresh folder containing spaces and shell metacharacters. AdoToolkit scripts and
-modules are unsigned by decision. Checksums detect download corruption; they are
-not a substitute for code signatures or a trusted release source.
+1. Checks out without keeping the write token in the Git configuration.
+2. Downloads the PowerShell version in `POWERSHELL_VERSION` and checks it against its
+   published `hashes.sha256` and against `POWERSHELL_SHA256`.
+3. Installs the exact module versions in `tools/BuildModules.psd1`.
+4. Requires the tag to equal the module version.
+5. Restores in locked mode, runs `verify`, and packages the verified build with
+   `-NoBuild`.
+6. Checks the portable zip with `tools/package/Test-AdoToolkitPortable.ps1`.
+7. Creates the GitHub release with five assets. Only this step receives the token.
+
+- Update `POWERSHELL_VERSION` and `POWERSHELL_SHA256` together, taking the hash from that
+  PowerShell release's `hashes.sha256`.
+- Scripts and modules are unsigned by decision. Checksums detect a corrupted download;
+  they do not replace signatures or a trusted source.
 
 ## Live checks
 
-`tests/Live/*.Live.ps1` run only when you start them, on a machine that can reach the
-server, against the newest release installed for your account. Signed and unsigned
-releases are both accepted, but a signed release must verify completely. The
-checks print `PASS`, `FAIL` or `INCONCLUSIVE` lines with structural notes, and the
-shape check also prints `SHAPE` lines. No work values are printed. Exit codes are
-`0`, `1` and `2`, respectively.
+Rules are in `tests/Live/AGENTS.md`. The developer runs a check in a new PowerShell
+window at work, for example `pwsh -NoProfile -File .\tests\Live\Smoke.Live.ps1`. Every
+check needs `ADOTOOLKIT_LIVE_PROFILE`, a profile with a default project. A signed release
+must verify completely; an unsigned one is accepted.
 
-| Script | Checks | Environment variables |
+| Script | Checks | Further variables |
 | --- | --- | --- |
-| `Connection.Live.ps1` | Installation, access and project listing | `ADOTOOLKIT_LIVE_PROFILE` |
-| `Smoke.Live.ps1` | The user workflow through the cmdlets: connection, test runs, failed-test retrieval, report rendering, and optionally a Test Case report. Failures show the error code, operation and JSON path. Reports are rendered to a temporary folder that is deleted | `ADOTOOLKIT_LIVE_PROFILE`, then `ADOTOOLKIT_LIVE_TEST_BUILD_ID` or `ADOTOOLKIT_LIVE_DEFINITION`, and optionally `ADOTOOLKIT_LIVE_PLAN_ID` with `ADOTOOLKIT_LIVE_SUITE_ID` |
-| `Shape.Live.ps1` | Samples projects, BuildGet, build logs/timeline, test runs/results/detail, result/sub-result attachments and test plans/suites/cases. Prints allowlisted property paths and JSON kinds. Unknown keys become `<unknown>`; dynamic bags, including `customFields[].value`, are opaque. Samples do not establish complete enumeration | `ADOTOOLKIT_LIVE_PROFILE`, and optionally `ADOTOOLKIT_LIVE_TEST_BUILD_ID`, `ADOTOOLKIT_LIVE_PLAN_ID` and `ADOTOOLKIT_LIVE_SUITE_ID` |
-| `TestFailures.Live.ps1` | V-19–V-25 and V-30. Optional fields may be absent. V-22 requires observed rerun details and distinct nested retry attempts, with complete paging; supplying build IDs alone does not pass. V-30 checks the bug lookup added in 0.4.0: the Bug category, the state categories of its first type on the `6.0-preview.1` states route, the Test Case read with relations, and the installed module's own lookup for the build, printing counts only | `ADOTOOLKIT_LIVE_PROFILE`, `ADOTOOLKIT_LIVE_TEST_BUILD_ID`; retry checks also need `ADOTOOLKIT_LIVE_RERUN_BUILD_ID` and `ADOTOOLKIT_LIVE_REATTEMPT_BUILD_ID` |
-| `Triage.Live.ps1` | V-11/V-14: timeline retries, continuation headers and log range semantics, including 64-bit line counts. This file exists in the repository | `ADOTOOLKIT_LIVE_PROFILE`, `ADOTOOLKIT_LIVE_DEFINITION`, `ADOTOOLKIT_LIVE_BUILD_ID`; optionally `ADOTOOLKIT_LIVE_RETRIED_BUILD_ID` |
-| `TestCase.Live.ps1` | V-01/02/03/05/10/13. V-10 acceptance contradicts the exclusion assumption; rejection is confirmed only if separate fields/expand control requests succeed. V-02 needs visual comparison; markup presence alone cannot prove formatting semantics | `ADOTOOLKIT_LIVE_PROFILE`, `ADOTOOLKIT_LIVE_TESTCASE_ID`; shared parameters also need `ADOTOOLKIT_LIVE_SHARED_PARAM_CASE_ID` |
-| `Bulk.Live.ps1` | V-04/V-06. Repeated continuation tokens or the 50-page ceiling yield incomplete enumeration and cannot pass V-04 | `ADOTOOLKIT_LIVE_PROFILE`, `ADOTOOLKIT_LIVE_PLAN_ID`, `ADOTOOLKIT_LIVE_SUITE_ID` |
+| `tests/Live/Connection.Live.ps1` | Installation, access and the project listing | — |
+| `tests/Live/Smoke.Live.ps1` | The user workflow through the cmdlets: connection, test runs, failed-test retrieval, report rendering and optionally a Test Case report. A failure shows the error code, operation and JSON path | `ADOTOOLKIT_LIVE_TEST_BUILD_ID` or `ADOTOOLKIT_LIVE_DEFINITION`; optionally `ADOTOOLKIT_LIVE_PLAN_ID` with `ADOTOOLKIT_LIVE_SUITE_ID` |
+| `tests/Live/Shape.Live.ps1` | Samples projects, a build, its logs and timeline, test runs, results, details, attachments, and test plans, suites and cases. Prints allowlisted property paths and JSON kinds; an unknown key becomes `<unknown>` and dynamic bags are opaque. A sample does not prove that a path never occurs | Optionally `ADOTOOLKIT_LIVE_TEST_BUILD_ID`, `ADOTOOLKIT_LIVE_PLAN_ID`, `ADOTOOLKIT_LIVE_SUITE_ID` |
+| `tests/Live/TestFailures.Live.ps1` | V-19 to V-25 and V-30. V-22 passes only with observed rerun details and distinct retry attempts under complete paging. V-30 checks the Bug category, the state categories, the Test Case relations and the module's own bug lookup, printing counts only | `ADOTOOLKIT_LIVE_TEST_BUILD_ID`; retries also need `ADOTOOLKIT_LIVE_RERUN_BUILD_ID` and `ADOTOOLKIT_LIVE_REATTEMPT_BUILD_ID` |
+| `tests/Live/Triage.Live.ps1` | V-11 and V-14: timeline retries, continuation headers, log ranges and 64-bit line counts | `ADOTOOLKIT_LIVE_DEFINITION`, `ADOTOOLKIT_LIVE_BUILD_ID`; optionally `ADOTOOLKIT_LIVE_RETRIED_BUILD_ID` |
+| `tests/Live/TestCase.Live.ps1` | V-01, V-02, V-03, V-05, V-10 and V-13. V-01 passes when a shared-step reference has no child steps, or children that repeat the shared steps; children that are other steps are a `FAIL`, because the toolkit skips them. V-02 needs a visual comparison | `ADOTOOLKIT_LIVE_TESTCASE_ID`; shared parameters also need `ADOTOOLKIT_LIVE_SHARED_PARAM_CASE_ID` |
+| `tests/Live/Bulk.Live.ps1` | V-04 and V-06. A repeated continuation token or the 50-page ceiling makes the enumeration incomplete, which cannot pass V-04 | `ADOTOOLKIT_LIVE_PLAN_ID`, `ADOTOOLKIT_LIVE_SUITE_ID` |
 
-The profile must have a default project. Run a check in a new PowerShell window,
-for example `pwsh -NoProfile -File .\tests\Live\Smoke.Live.ps1`.
+- Repeat `tests/Live/Shape.Live.ps1` with `ADOTOOLKIT_LIVE_TEST_BUILD_ID` set to each
+  retry build to see its `pipelineReference` and sub-results.
+- Not covered by a script: V-07 and V-18 need controlled failing requests; V-15 and V-26
+  links, V-16 terminology, V-27 browser policy and V-29 runner text need manual
+  acceptance; V-28 has no probe.
+- `tools/tests/LiveAudit.Tests.ps1` tests the helpers in `tests/Live/Live.Common.ps1` and
+  single validation blocks offline. The findings behind those tests are in the
+  [audit fix record](archive/plans/server-2020-audit-fixes.md).
 
-With the corresponding variables set **at work**, run:
+## Agent setup
 
-```powershell
-pwsh -NoProfile -File .\tests\Live\Connection.Live.ps1
-pwsh -NoProfile -File .\tests\Live\Shape.Live.ps1
-pwsh -NoProfile -File .\tests\Live\Smoke.Live.ps1
-pwsh -NoProfile -File .\tests\Live\TestFailures.Live.ps1
-pwsh -NoProfile -File .\tests\Live\Triage.Live.ps1
-pwsh -NoProfile -File .\tests\Live\TestCase.Live.ps1
-pwsh -NoProfile -File .\tests\Live\Bulk.Live.ps1
-```
+| File | Holds |
+| --- | --- |
+| `AGENTS.md` | The always-loaded contract; `CLAUDE.md` imports it |
+| `src/AGENTS.md`, `tests/AGENTS.md`, `tests/Live/AGENTS.md`, `tools/AGENTS.md`, `tools/package/AGENTS.md`, `docs/AGENTS.md`, `docs/commands/AGENTS.md` | Rules for one subtree. Codex reads them by directory |
+| `.claude/rules/*.md` | One import per nested file, scoped by `paths`, so Claude loads the same rules when it touches matching files |
+| `.agents/skills/<name>/SKILL.md` | The body of a skill; Codex reads it |
+| `.claude/skills/<name>/SKILL.md` | A wrapper with the same name and description that tells Claude to read the body |
+| `.claude/settings.json` | Permissions and hooks for Claude |
 
-Repeat `Shape.Live.ps1` with `ADOTOOLKIT_LIVE_TEST_BUILD_ID` set to each retry build
-to observe its `pipelineReference` and sub-results. It samples the first run and an
-unsuccessful result, so an absent path does not prove that the server never sends it.
-V-07/V-18 still need controlled failing requests at work; the connection success
-check cannot confirm error bodies or error-language behavior. V-15/V-26 links,
-V-16 terminology, V-27 browser policy and V-29 runner text need manual acceptance.
-There is no existing live probe for the optional V-28 alternative endpoints.
+| Rule file | Loads | When Claude touches |
+| --- | --- | --- |
+| `.claude/rules/product-src.md` | `src/AGENTS.md` | `src/**` |
+| `.claude/rules/product-tests.md` | `tests/AGENTS.md` | `tests/**` |
+| `.claude/rules/live-checks.md` | `tests/Live/AGENTS.md` | `tests/Live/**` |
+| `.claude/rules/tooling.md` | `tools/AGENTS.md` | `tools/**`, `PSScriptAnalyzerSettings.psd1` |
+| `.claude/rules/packaging.md` | `tools/package/AGENTS.md` | `tools/package/**`, `tools/BuildModules.psd1`, `.github/workflows/**`, `Directory.Build.props` |
+| `.claude/rules/docs.md` | `docs/AGENTS.md` | `docs/**`, `README.md` |
+| `.claude/rules/help-sources.md` | `docs/commands/AGENTS.md` | `docs/commands/**`, the cmdlet files `src/AdoToolkit.PowerShell/Commands/*Command.cs` |
 
-`Live.Common.ps1` contains pure schema/validation helpers. `tools/tests/LiveAudit.Tests.ps1`
-tests them and isolated validation blocks using synthetic responses; `verify` never
-runs any `*.Live.ps1` script. See the [approved audit fix evidence](archive/plans/server-2020-audit-fixes.md).
+| Skill | Use | Invoked by |
+| --- | --- | --- |
+| `fix-bug` | Fix a defect with a test that fails first | The agent or the user |
+| `update-goldens` | Regenerate and review the report goldens | The agent or the user |
+| `release` | Bump the version, archive old notes, write release notes, validate the package | The user only |
+| `rewrite` | Turn a draft into a prompt for another session | The user only |
 
-## Agent hooks
+| Hook | Event | Behavior |
+| --- | --- | --- |
+| `tools/guard-git.ps1` | Before a shell command | Blocks every Git command except `status`, `diff`, `log`, `show` and `blame`, and those with an option that runs a program. It reads the command text, so it is a speed bump, not a boundary |
+| `tools/validate-edit.ps1` | After an edit | Parses the edited PowerShell, JSON or XML file and reports a syntax error. The file is already written; the hook cannot undo it |
 
-`.claude/settings.json` runs `tools/guard-git.ps1` before shell commands and
-`tools/validate-edit.ps1` after file edits. The edit hook runs after the file is
-written: it reports problems but cannot undo the change. Hooks and file permissions
-reduce mistakes, but they are not a sandbox. Codex uses its own permissions.
+- `.claude/settings.json` denies reading and editing secret-like paths, and allows the
+  `tools/dev.ps1` commands, the Release build, Core test runs and the five Git commands
+  without a prompt. Every other command follows the user's permission mode.
+- Hooks and permissions reduce mistakes; they are not a sandbox. Codex uses its own
+  permissions.
+- To add a rule: write it into the nested `AGENTS.md` of the subtree. A new nested file
+  also needs a `.claude/rules/` import and a row in the map of `AGENTS.md`.
+- To add a skill: write the body, then the wrapper. `tooling-layout` fails when one is
+  missing or the descriptions differ.

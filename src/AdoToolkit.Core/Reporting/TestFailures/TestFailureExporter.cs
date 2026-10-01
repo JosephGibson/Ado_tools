@@ -87,7 +87,7 @@ public sealed class TestFailureExporter
             writer => HtmlTestFailureRenderer.Render(model, writer),
             (report, folder) => TestFailureReportValidator.Validate(report, model, folder),
             output.Warning, culture, cancellationToken).ConfigureAwait(false);
-        if (plan.Options.Open) launcher.Open(result.Report.FullName);
+        if (plan.Options.Open) DocumentOpener.Open(launcher, result.Report.FullName, culture, output.Warning);
         return new TestFailureExportResult { Report = result.Report, AttachmentDirectory = result.AttachmentDirectory, Diagnostics = diagnostics };
     }
 }

@@ -46,6 +46,15 @@ public abstract class AdoCmdletBase : PSCmdlet
     // runspace as Connect-Ado would. No request is sent; a missing default keeps the error.
     protected AdoConnection ResolveConnection(AdoConnection? supplied)
     {
+        // -Connection accepts any property bag; one without a usable collection or timeout stops here.
+        if (supplied is not null)
+        {
+            (string Type, string Member)? missing = InputGuard.FindMissing(supplied);
+            if (missing is null && supplied.RequestTimeoutSeconds is < 1 or > AdoConnection.MaximumRequestTimeoutSeconds)
+                missing = (nameof(AdoConnection), nameof(AdoConnection.RequestTimeoutSeconds));
+            if (missing is { } invalid)
+                throw new AdoConfigurationException(Messages.Get(AdoMessage.IncompleteInput, MessageCulture, invalid.Type, invalid.Member));
+        }
         AdoConnection? connection = supplied ?? SessionStateRegistry.Current.Connection;
         if (connection is not null) return connection;
         AdoConfiguration configuration = new ConfigurationStore().Load(MessageCulture);
@@ -106,6 +115,22 @@ public abstract class AdoCmdletBase : PSCmdlet
         ArgumentNullException.ThrowIfNull(connection);
         if (!input.Equals(connection.CollectionUri))
             throw new AdoConnectionMismatchException(Messages.Get(AdoMessage.ConnectionMismatch, MessageCulture));
+    }
+
+    // A typed pipeline input must be a complete toolkit object. A hand-made one is reported for
+    // that input, like an object from another collection, instead of failing on a null member.
+    private protected void EnsureComplete(object input)
+    {
+        if (InputGuard.FindMissing(input) is { } missing)
+            throw new AdoRequestException(Messages.Get(AdoMessage.IncompleteInput, MessageCulture, missing.Type, missing.Member));
+    }
+
+    private protected void EnsureInput(object input, Uri? collection, AdoConnection connection)
+    {
+        EnsureComplete(input);
+        if (collection is null)
+            throw new AdoRequestException(Messages.Get(AdoMessage.IncompleteInput, MessageCulture, input.GetType().Name, nameof(AdoConnection.CollectionUri)));
+        EnsureSameCollection(collection, connection);
     }
 
     protected void Report(AdoException error)

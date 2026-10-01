@@ -101,11 +101,11 @@ public sealed class GetAdoTestCaseCommand : AdoCmdletBase
                 foreach (int id in Id) inputs.Add((id, null));
                 break;
             case ByWorkItem:
-                EnsureSameCollection(WorkItem!.CollectionUri, resolved);
+                EnsureInput(WorkItem!, WorkItem!.CollectionUri, resolved);
                 inputs.Add((WorkItem.Id, null));
                 break;
             case ByWiql:
-                EnsureSameCollection(WiqlResult!.CollectionUri, resolved);
+                EnsureInput(WiqlResult!, WiqlResult!.CollectionUri, resolved);
                 foreach (int id in WiqlResult.Ids) inputs.Add((id, null));
                 break;
             case BySuite:
@@ -118,7 +118,7 @@ public sealed class GetAdoTestCaseCommand : AdoCmdletBase
                 }));
                 break;
             case BySuiteObject:
-                EnsureSameCollection(Suite!.CollectionUri, resolved);
+                EnsureInput(Suite!, Suite!.CollectionUri, resolved);
                 inputs.Add((0, new TestSuiteSelection { Project = Suite.TeamProject, PlanId = Suite.PlanId, SuiteId = Suite.Id, Recurse = Recurse, Suite = Suite }));
                 break;
         }

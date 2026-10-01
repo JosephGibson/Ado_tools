@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Invoke-AdoWiql
 ---
@@ -33,7 +33,7 @@ Envoie la requête au point de terminaison WIQL du projet, avec l’API version 
 
 ## EXAMPLES
 
-### Example 1
+### Exemple 1
 
 ```powershell
 Invoke-AdoWiql -Query "SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = 'Test Case' ORDER BY [System.Id]"
@@ -41,7 +41,7 @@ Invoke-AdoWiql -Query "SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemT
 
 Retourne les identifiants des éléments de travail correspondants dans le projet par défaut.
 
-### Example 2
+### Exemple 2
 
 ```powershell
 Invoke-AdoWiql -Project 'Équipe Web' -Query "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [System.State] = 'Active'" -Top 50 -Hydrate

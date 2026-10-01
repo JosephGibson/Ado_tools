@@ -10,76 +10,36 @@ function Get-DependencyInventory {
     $manifests = New-Object System.Collections.ArrayList
     $errors = New-Object System.Collections.ArrayList
 
-    foreach ($file in $projectProfile.Files) {
+    # NuGet is the only package source: project files and the central props files declare it.
+    foreach ($file in $projectProfile.Files | Where-Object { $_.Extension -in @('.csproj', '.props', '.targets') }) {
         $relative = Get-RelativeRepositoryPath -Path $file.FullName -Root $Root
-        if ($file.Name -eq 'package.json') {
-            [void] $manifests.Add($relative)
-            $data = Get-NodePackageData -PackageFile $file
-            if ($null -eq $data) {
-                [void] $errors.Add("${relative}: invalid package.json")
-                continue
-            }
-            foreach ($kind in @('dependencies', 'devDependencies', 'peerDependencies')) {
-                $property = $data.PSObject.Properties[$kind]
-                if ($null -eq $property -or $null -eq $property.Value) { continue }
-                foreach ($entry in $property.Value.PSObject.Properties | Sort-Object Name) {
-                    [void] $packages.Add([pscustomobject]@{ Manager = 'npm'; Name = $entry.Name; Version = [string] $entry.Value; Scope = $kind; Manifest = $relative })
-                }
-            }
-        }
-        elseif ($file.Extension -in @('.csproj', '.fsproj', '.vbproj', '.props', '.targets')) {
-            [void] $manifests.Add($relative)
-            try {
-                $project = Get-SafeXmlDocument -Path $file.FullName
-                foreach ($reference in @($project.SelectNodes('//*[local-name()="PackageReference" or local-name()="PackageVersion"]'))) {
-                    # GetAttribute rather than property access: a reference that omits
-                    # Version — the normal shape under central package management — would
-                    # otherwise throw under Set-StrictMode and lose the whole manifest.
-                    $name = [string] $reference.GetAttribute('Include')
-                    if ([string]::IsNullOrWhiteSpace($name)) { $name = [string] $reference.GetAttribute('Update') }
-                    if ([string]::IsNullOrWhiteSpace($name)) { continue }
+        [void] $manifests.Add($relative)
+        try {
+            $project = Get-SafeXmlDocument -Path $file.FullName
+            foreach ($reference in @($project.SelectNodes('//*[local-name()="PackageReference" or local-name()="PackageVersion"]'))) {
+                # GetAttribute rather than property access: a reference that omits
+                # Version — the normal shape under central package management — would
+                # otherwise throw under Set-StrictMode and lose the whole manifest.
+                $name = [string] $reference.GetAttribute('Include')
+                if ([string]::IsNullOrWhiteSpace($name)) { $name = [string] $reference.GetAttribute('Update') }
+                if ([string]::IsNullOrWhiteSpace($name)) { continue }
 
-                    $version = [string] $reference.GetAttribute('Version')
-                    if ([string]::IsNullOrWhiteSpace($version)) {
-                        $versionNode = $reference.SelectSingleNode('./*[local-name()="Version"]')
-                        if ($null -ne $versionNode) { $version = [string] $versionNode.InnerText }
-                    }
-                    if ([string]::IsNullOrWhiteSpace($version)) { $version = $null }
-                    $scope = if ($reference.LocalName -eq 'PackageVersion') { 'central' } else { 'project' }
-                    [void] $packages.Add([pscustomobject]@{ Manager = 'NuGet'; Name = $name; Version = $version; Scope = $scope; Manifest = $relative })
+                $version = [string] $reference.GetAttribute('Version')
+                if ([string]::IsNullOrWhiteSpace($version)) {
+                    $versionNode = $reference.SelectSingleNode('./*[local-name()="Version"]')
+                    if ($null -ne $versionNode) { $version = [string] $versionNode.InnerText }
                 }
-            }
-            catch {
-                [void] $errors.Add("${relative}: $($_.Exception.Message)")
-                continue
+                if ([string]::IsNullOrWhiteSpace($version)) { $version = $null }
+                $scope = if ($reference.LocalName -eq 'PackageVersion') { 'central' } else { 'project' }
+                [void] $packages.Add([pscustomobject]@{ Manager = 'NuGet'; Name = $name; Version = $version; Scope = $scope; Manifest = $relative })
             }
         }
-        elseif ($file.Name -eq 'requirements.txt') {
-            [void] $manifests.Add($relative)
-            foreach ($line in Get-Content -LiteralPath $file.FullName) {
-                $clean = ($line -replace '\s*#.*$', '').Trim()
-                if ([string]::IsNullOrWhiteSpace($clean) -or $clean.StartsWith('-')) { continue }
-                if ($clean -match '^([A-Za-z0-9_.-]+)\s*([<>=!~].+)?$') {
-                    $version = if ([string]::IsNullOrWhiteSpace($matches[2])) { $null } else { $matches[2].Trim() }
-                    [void] $packages.Add([pscustomobject]@{ Manager = 'pip'; Name = $matches[1]; Version = $version; Scope = 'project'; Manifest = $relative })
-                }
-            }
-        }
-        elseif ($file.Name -in @('Cargo.toml', 'go.mod', 'pyproject.toml', 'pom.xml', 'build.gradle', 'build.gradle.kts')) {
-            [void] $manifests.Add($relative)
+        catch {
+            [void] $errors.Add("${relative}: $($_.Exception.Message)")
         }
     }
 
-    $validationTools = New-Object System.Collections.ArrayList
-    if ($projectProfile.Stack -contains 'powershell') {
-        if (@($projectProfile.TestFiles | Where-Object { $_ -match '\.Tests\.ps1$' }).Count -gt 0) { [void] $validationTools.Add('Pester') }
-        [void] $validationTools.Add('PSScriptAnalyzer')
-    }
-    if ($projectProfile.Stack -contains 'dotnet') { [void] $validationTools.Add('dotnet') }
-    if ($projectProfile.Stack -contains 'node') { [void] $validationTools.Add($projectProfile.NodePackageManager) }
-    if ($projectProfile.Stack -contains 'python') { [void] $validationTools.Add('pytest') }
-    if ($projectProfile.Stack -contains 'rust') { [void] $validationTools.Add('cargo') }
-    if ($projectProfile.Stack -contains 'go') { [void] $validationTools.Add('go') }
+    $validationTools = @((Get-RequiredTool -ProjectProfile $projectProfile).Name | Where-Object { $_ -ne 'PowerShell' })
 
     $allPackages = @($packages | Sort-Object Manager, Name, Manifest)
     return [pscustomobject]@{
@@ -121,7 +81,7 @@ function Get-ToolState {
         [AllowEmptyCollection()][string[]] $Commands = @(),
         [string] $MinimumVersion,
         [string] $MaximumVersion,
-        [ValidateSet('required', 'recommended', 'optional')][string] $Level = 'recommended',
+        [ValidateSet('required', 'recommended')][string] $Level = 'recommended',
         [switch] $Module
     )
 
@@ -161,33 +121,38 @@ function Get-ToolState {
     }
 }
 
+# The tools verify needs for this repository's content. One list feeds diagnose, deps and bootstrap.
+function Get-RequiredTool {
+    param([Parameter(Mandatory = $true)][object] $ProjectProfile)
+
+    [pscustomobject]@{ Name = 'PowerShell'; Module = $false; Commands = @('pwsh'); MinimumVersion = '7.6.5'; MaximumVersion = $null }
+    if ($ProjectProfile.Stack -contains 'powershell') {
+        if (@($ProjectProfile.TestFiles | Where-Object { $_ -match '\.(?:Tests|Pester)\.ps1$' }).Count -gt 0) {
+            [pscustomobject]@{ Name = 'Pester'; Module = $true; Commands = @(); MinimumVersion = '5.0'; MaximumVersion = '6.0' }
+        }
+        [pscustomobject]@{ Name = 'PSScriptAnalyzer'; Module = $true; Commands = @(); MinimumVersion = $null; MaximumVersion = $null }
+    }
+    if ($ProjectProfile.Stack -contains 'dotnet') {
+        [pscustomobject]@{ Name = 'dotnet'; Module = $false; Commands = @('dotnet'); MinimumVersion = $null; MaximumVersion = $null }
+    }
+    # Command help is compiled from docs/commands at packaging time.
+    if (@($ProjectProfile.Files | Where-Object { $_.Extension -eq '.md' -and
+                (Get-RelativeRepositoryPath -Path $_.FullName -Root $ProjectProfile.Root) -like 'docs/commands/*' }).Count -gt 0) {
+        [pscustomobject]@{ Name = 'Microsoft.PowerShell.PlatyPS'; Module = $true; Commands = @(); MinimumVersion = '1.0'; MaximumVersion = '2.0' }
+    }
+}
+
 function Get-ProjectDiagnostics {
     param([string] $Root = $script:RepositoryRoot)
 
     $projectProfile = Get-ProjectProfile -Root $Root
     $tools = New-Object System.Collections.ArrayList
-    [void] $tools.Add((Get-ToolState -Name 'PowerShell' -Commands @('pwsh') -MinimumVersion '7.6.5' -Level 'required'))
+    foreach ($tool in Get-RequiredTool -ProjectProfile $projectProfile) {
+        $state = if ($tool.Module) { Get-ToolState -Name $tool.Name -MinimumVersion $tool.MinimumVersion -MaximumVersion $tool.MaximumVersion -Level 'required' -Module }
+        else { Get-ToolState -Name $tool.Name -Commands $tool.Commands -MinimumVersion $tool.MinimumVersion -Level 'required' }
+        [void] $tools.Add($state)
+    }
     [void] $tools.Add((Get-ToolState -Name 'ripgrep' -Commands @('rg') -Level 'recommended'))
-    [void] $tools.Add((Get-ToolState -Name 'ast-grep' -Commands @('ast-grep', 'sg') -Level 'optional'))
-
-    if ($projectProfile.Stack -contains 'powershell') {
-        if (@($projectProfile.TestFiles | Where-Object { $_ -match '\.Tests\.ps1$' }).Count -gt 0) {
-            [void] $tools.Add((Get-ToolState -Name 'Pester' -Commands @() -MinimumVersion '5.0' -MaximumVersion '6.0' -Level 'required' -Module))
-        }
-        [void] $tools.Add((Get-ToolState -Name 'PSScriptAnalyzer' -Commands @() -Level 'required' -Module))
-    }
-    if ($projectProfile.Stack -contains 'dotnet') { [void] $tools.Add((Get-ToolState -Name 'dotnet' -Commands @('dotnet') -Level 'required')) }
-    if (@($projectProfile.Files | Where-Object { $_.Extension -eq '.md' -and
-                (Get-RelativeRepositoryPath -Path $_.FullName -Root $Root) -like 'docs/commands/*' }).Count -gt 0) {
-        [void] $tools.Add((Get-ToolState -Name 'Microsoft.PowerShell.PlatyPS' -Commands @() -MinimumVersion '1.0' -MaximumVersion '2.0' -Level 'required' -Module))
-    }
-    if ($projectProfile.Stack -contains 'node') {
-        $managers = @($projectProfile.Files | Where-Object Name -eq 'package.json' | ForEach-Object { Get-NodeManager -PackageFile $_ -Root $projectProfile.Root } | Where-Object { $_ } | Sort-Object -Unique)
-        foreach ($manager in $managers) { [void] $tools.Add((Get-ToolState -Name $manager -Commands @($manager) -Level 'required')) }
-    }
-    if ($projectProfile.Stack -contains 'python') { [void] $tools.Add((Get-ToolState -Name 'python' -Commands @('python', 'py') -Level 'required')) }
-    if ($projectProfile.Stack -contains 'rust') { [void] $tools.Add((Get-ToolState -Name 'cargo' -Commands @('cargo') -Level 'required')) }
-    if ($projectProfile.Stack -contains 'go') { [void] $tools.Add((Get-ToolState -Name 'go' -Commands @('go') -Level 'required')) }
 
     $requiredProblems = @($tools | Where-Object { $_.Level -eq 'required' -and $_.State -ne 'present' })
     return [pscustomobject]@{

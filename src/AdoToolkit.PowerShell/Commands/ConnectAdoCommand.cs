@@ -1,5 +1,4 @@
 using AdoToolkit.Completion;
-using AdoToolkit.Resources;
 
 namespace AdoToolkit;
 
@@ -39,7 +38,7 @@ public sealed class ConnectAdoCommand : AdoCmdletBase
             connection = ProfileConnections.Create(profile, Project);
         }
         SessionStateRegistry.Current.Connect(connection);
-        WriteVerbose(ShellMessages.Get(AdoMessage.Connect, MessageCulture));
+        WriteVerbose(Messages.Get(AdoMessage.Connect, MessageCulture));
         WriteObject(connection);
     });
 }

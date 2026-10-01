@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-22-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -104,7 +104,7 @@ Get-AdoBuild -Definition 'Main Build' -Branch main -Latest -Result Failed |
 ```
 
 Writes `.\triage\Build-<id>-TestFailures.html` in French with its attachment folder,
-then opens the report. The `triage` directory must already exist.
+then opens the report. The `triage` directory is created when it does not exist.
 
 ### Example 2
 
@@ -124,6 +124,7 @@ Get-AdoBuildTestFailure -BuildId 401 | Export-AdoBuildTestFailure -IncludeFlaky 
 
 Includes flaky tests and downloads JSON and text attachments from every test run that
 started in the last 14 days.
+
 ## PARAMETERS
 
 ### -InputObject
@@ -209,6 +210,7 @@ DontShow: false
 AcceptedValues: []
 HelpMessage: ''
 ```
+
 ### -AllRunAttachments
 
 Downloads JSON and text attachments from every run inside the attachment window instead of only the most recent run. PNG and HTML attachments are never downloaded. Existing per-file and total size limits still apply. Has no effect with -SkipAttachments.
@@ -229,6 +231,7 @@ DontShow: false
 AcceptedValues: []
 HelpMessage: ''
 ```
+
 ### -AttachmentWindowDays
 
 Days before the export, from 1 to 365, in which a test run must have started for its attachments to appear and be downloaded. Older runs keep every attempt but lose their attachments; a run without a start date counts as outside. Defaults to 7.
@@ -249,6 +252,7 @@ DontShow: false
 AcceptedValues: []
 HelpMessage: ''
 ```
+
 ### -IncludeFlaky
 
 Includes flaky tests, which failed and then passed in every stage, job or named test run. Without it they are left out of the report and only counted in its header.
@@ -269,6 +273,7 @@ DontShow: false
 AcceptedValues: []
 HelpMessage: ''
 ```
+
 ### -NoClobber
 
 Refuses an existing report before any download and never replaces a report created meanwhile.
@@ -292,7 +297,7 @@ HelpMessage: ''
 
 ### -Open
 
-Opens each committed report with the default handler.
+Opens each committed report with the default handler. A report that cannot be opened produces a warning and is still returned.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -340,7 +345,8 @@ Names the report and the attachment folder without requests, downloads or writes
 Type: System.Management.Automation.SwitchParameter
 DefaultValue: ''
 SupportsWildcards: false
-Aliases: []
+Aliases:
+- wi
 ParameterSets:
 - Name: (All)
   Position: Named
@@ -361,7 +367,8 @@ Asks once per report before downloading attachments and writing.
 Type: System.Management.Automation.SwitchParameter
 DefaultValue: ''
 SupportsWildcards: false
-Aliases: []
+Aliases:
+- cf
 ParameterSets:
 - Name: (All)
   Position: Named

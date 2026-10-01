@@ -176,6 +176,31 @@ public sealed class TestCaseExporterTests
         if (!opened) Assert.Throws<ArgumentException>(() => new ShellDocumentLauncher().Open(Path.Combine(directory.Root, "absent-" + name)));
     }
 
+    // The report is already committed when the shell cannot open it (no application for the file
+    // type, a blocked launch). That is a warning; the written file is still returned.
+    [Theory]
+    [InlineData(ReportFormat.Html, "en-US")]
+    [InlineData(ReportFormat.Markdown, "fr-CA")]
+    [InlineData(ReportFormat.Json, "en-US")]
+    public void LaunchFailureAfterCommitIsAWarningAndStillReturnsTheFile(ReportFormat format, string session)
+    {
+        using TestDirectory directory = new();
+        List<string> warnings = [];
+        TestCaseExportOptions options = new()
+        {
+            Format = format, SessionCulture = CultureInfo.GetCultureInfo(session), Culture = "en-US", Open = true,
+            GeneratedAt = ReportFixture.Timestamp, ToolkitVersion = "2.1.0-test",
+        };
+        FileInfo? file = new TestCaseExporter(new FailingLauncher(), downloads: () => directory.Root).Export([ReportFixture.Case("nested")],
+            Connection(), options, _ => true, warnings.Add, TestContext.Current.CancellationToken);
+        Assert.NotNull(file);
+        TestCaseExporter.Validate(file.FullName, ReportFixture.Model("nested"), format);
+        string warning = Assert.Single(warnings);
+        Assert.Contains(file.FullName, warning, StringComparison.Ordinal);
+        Assert.Contains(FailingLauncher.Reason, warning, StringComparison.Ordinal);
+        Assert.StartsWith(session == "fr-CA" ? "Le rapport" : "The report", warning, StringComparison.Ordinal);
+    }
+
     private static AdoConnection Connection() => new() { CollectionUri = ReportFixture.Collection };
     private static TestCaseExportOptions Options(string? path, ReportFormat format = ReportFormat.Html) => new()
     {
@@ -192,5 +217,11 @@ public sealed class TestCaseExporterTests
             Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, ".*.tmp"));
             Paths.Add(path);
         }
+    }
+
+    private sealed class FailingLauncher : IDocumentLauncher
+    {
+        internal const string Reason = "No application is associated with the specified file for this operation.";
+        public void Open(string path) => throw new System.ComponentModel.Win32Exception(1155, Reason);
     }
 }

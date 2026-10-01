@@ -13,21 +13,8 @@ internal sealed class TestWorkItemReader(HttpClient client, AdoConnection connec
     internal async Task<IReadOnlyList<TestWorkItem>> ReadAsync(IReadOnlyList<int> ids, string[] fields,
         CultureInfo culture, CancellationToken token, Action? batchCompleted = null)
     {
-        IReadOnlyList<WorkItemDto> items = await IdChunks.FetchAsync(ids, 200, async (chunk, cancellation) =>
-        {
-            byte[] body = JsonSerializer.SerializeToUtf8Bytes(new WorkItemBatchRequestDto { Ids = chunk, Fields = fields }, AdoJsonContext.Default.WorkItemBatchRequestDto);
-            IReadOnlyList<WorkItemDto> returned = await pipeline.ExecuteAsync(EndpointRegistry.WorkItemsBatch, null, null, body, culture, async (response, requestToken) =>
-            {
-                try
-                {
-                    string bytes = await ResponseJson.ReadAsync(response, requestToken).ConfigureAwait(false);
-                    return (IReadOnlyList<WorkItemDto>)(JsonSerializer.Deserialize(bytes, AdoJsonContext.Default.WorkItemBatchDto)?.Value ?? throw new JsonException());
-                }
-                catch (JsonException error) { throw FormatError(culture, error); }
-            }, cancellation).ConfigureAwait(false);
-            batchCompleted?.Invoke();
-            return returned;
-        }, item => item.Id, culture, token).ConfigureAwait(false);
+        IReadOnlyList<WorkItemDto> items = await WorkItemBatchReader.ReadAsync(pipeline, ids, fields, false, culture, token, batchCompleted)
+            .ConfigureAwait(false);
         try
         {
             List<TestWorkItem> mapped = [];
@@ -40,9 +27,6 @@ internal sealed class TestWorkItemReader(HttpClient client, AdoConnection connec
             return mapped.AsReadOnly();
         }
         catch (Exception error) when (error is JsonException or InvalidOperationException or FormatException or ArgumentException)
-        { throw FormatError(culture, error); }
+        { throw WorkItemBatchReader.FormatError(culture, error); }
     }
-
-    private static AdoResponseFormatException FormatError(CultureInfo culture, Exception error) =>
-        new(Messages.Get(AdoMessage.ResponseFormat, culture), error) { Operation = "WorkItemsBatch" };
 }

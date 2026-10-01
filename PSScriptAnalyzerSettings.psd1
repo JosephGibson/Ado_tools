@@ -7,7 +7,8 @@
     ExcludeRules = @(
         # Console progress output is intentional in these scripts.
         'PSAvoidUsingWriteHost',
-        # Hook helpers and optional check scripts are single-file tools, not shipped modules.
+        # The scripts are single-file tools and dot-sourced libraries, not modules: a variable
+        # assigned in one of them is often read by another.
         'PSUseDeclaredVarsMoreThanAssignments',
         # Formatting is enforced by .editorconfig/editor tooling rather than this gate.
         'PSPlaceOpenBrace',
@@ -22,8 +23,8 @@
     Rules        = @{
         PSUseCompatibleSyntax = @{
             Enable         = $true
-            # Product runtime compatibility belongs in a product-specific analyzer
-            # configuration and tools/check.ps1, not in the tooling's global rules.
+            # A syntax floor for the 7.x line. The scripts themselves require PowerShell
+            # 7.6.5 or later; tools/dev.ps1 checks that when it starts.
             TargetVersions = @('7.0')
         }
     }

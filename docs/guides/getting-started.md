@@ -40,7 +40,7 @@ it before extraction, run this in Windows PowerShell or PowerShell 7 and compare
 the result with the published checksum:
 
 ```powershell
-(Get-FileHash .\AdoToolkit-0.5.0-win-x64.zip -Algorithm SHA256).Hash
+(Get-FileHash .\AdoToolkit-0.6.0-win-x64.zip -Algorithm SHA256).Hash
 ```
 
 The launcher uses `RemoteSigned` for its process only. It does not change your
@@ -59,7 +59,7 @@ script is blocked, unblock the original ZIP in Properties and extract it again.
 
    ```powershell
    Unblock-File .\Install-AdoToolkit.ps1
-   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.5.0.zip
+   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.6.0.zip
    ```
 
    The script checks the zip against the `.sha256` file and checks that it contains
@@ -87,9 +87,9 @@ To install without the script, check the hash yourself, then unblock the zip bef
 extracting it so that no extracted file carries the download mark:
 
 ```powershell
-(Get-FileHash .\AdoToolkit-0.5.0.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
-Unblock-File .\AdoToolkit-0.5.0.zip
-Expand-Archive .\AdoToolkit-0.5.0.zip `
+(Get-FileHash .\AdoToolkit-0.6.0.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
+Unblock-File .\AdoToolkit-0.6.0.zip
+Expand-Archive .\AdoToolkit-0.6.0.zip `
     -DestinationPath (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell\Modules')
 ```
 
@@ -103,7 +103,7 @@ PowerShell 7:
 ```powershell
 & .\tools\package\Publish-AdoToolkitPackage.ps1    # restores, builds and stages the package
 & .\tools\package\New-AdoToolkitRelease.ps1        # writes artifacts\release
-& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.5.0.zip
+& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.6.0.zip
 ```
 
 The package script lists every missing prerequisite before it starts. Restore uses
@@ -142,7 +142,8 @@ the corrected `Connect-Ado` command. You can use HTTP, but it produces a warning
 because it exposes the Windows authentication exchange.
 
 To change a profile, run `Set-AdoProfile` again with only the values you want to
-change. To delete one, use `Remove-AdoProfile -Name work`.
+change; `-DefaultProject ''` removes the default project. To delete a profile, use
+`Remove-AdoProfile -Name work`.
 
 ## Connect
 
@@ -173,6 +174,9 @@ The collection URL ends with the project name. Connect with: Connect-Ado -Collec
 - Objects remember their collection. Piping one into a cmdlet that uses a different
   collection produces a `ConnectionMismatch` error instead of querying the wrong
   server.
+- Pipe the objects that AdoToolkit commands return. A hand-made object that lacks a
+  required property is refused with an error for that input, and the rest of the input
+  is still processed.
 - AdoToolkit only reads from Azure DevOps. It never creates, changes or queues
   anything.
 

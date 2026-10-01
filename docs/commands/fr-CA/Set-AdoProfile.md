@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-22-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Set-AdoProfile
 ---
@@ -32,11 +32,11 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Écrit le profil de façon atomique et conserve les valeurs non précisées, les autres options et les champs inconnus. CollectionUrl est obligatoire pour un nouveau profil. DefaultProfile choisit ce profil par défaut, que Connect-Ado utilise sans argument et que les autres commandes utilisent en l’absence de connexion. DefaultBranch, DefaultBuildDefinition, DefaultTestPlanId et DefaultTestSuiteId enregistrent les valeurs que les commandes de builds et de plans de test utilisent quand le paramètre correspondant est omis ; passez $null, ou une chaîne vide pour les deux premiers, pour en supprimer une. Les valeurs sont validées avant l’écriture du fichier. Les commandes les lisent dans la connexion ; reconnectez-vous avec Connect-Ado après les avoir modifiées. WhatIf n’effectue aucune écriture. Une version de schéma plus récente est en lecture seule. Le profil ne contient ni mot de passe ni jeton.
+Écrit le profil de façon atomique et conserve les valeurs non précisées, les autres options et les champs inconnus. CollectionUrl est obligatoire pour un nouveau profil. DefaultProfile choisit ce profil par défaut, que Connect-Ado utilise sans argument et que les autres commandes utilisent en l’absence de connexion. DefaultBranch, DefaultBuildDefinition, DefaultTestPlanId et DefaultTestSuiteId enregistrent les valeurs que les commandes de builds et de plans de test utilisent quand le paramètre correspondant est omis ; passez $null, ou une chaîne vide pour les deux premiers, pour en supprimer une. DefaultProject se supprime de la même façon, avec $null ou une chaîne vide. Les valeurs sont validées avant l’écriture du fichier. Les commandes les lisent dans la connexion ; reconnectez-vous avec Connect-Ado après les avoir modifiées. WhatIf n’effectue aucune écriture. Une version de schéma plus récente est en lecture seule. Le profil ne contient ni mot de passe ni jeton.
 
 ## EXAMPLES
 
-### Example 1
+### Exemple 1
 
 ```powershell
 Set-AdoProfile -Name work -CollectionUrl 'https://ado.example.test/Collection' -DefaultProject 'Équipe Web' -DefaultProfile
@@ -44,7 +44,7 @@ Set-AdoProfile -Name work -CollectionUrl 'https://ado.example.test/Collection' -
 
 Crée ou modifie un profil de connexion local.
 
-### Example 2
+### Exemple 2
 
 ```powershell
 Set-AdoProfile -Name work -DefaultBranch develop -DefaultBuildDefinition Test_Plan -DefaultTestPlanId 812 -DefaultTestSuiteId 813
@@ -52,7 +52,7 @@ Set-AdoProfile -Name work -DefaultBranch develop -DefaultBuildDefinition Test_Pl
 
 Enregistre les valeurs par défaut que Get-AdoBuild, Get-AdoBuildTestFailure, Get-AdoTestCase et Get-AdoTestSuite utilisent quand leurs paramètres sont omis.
 
-### Example 3
+### Exemple 3
 
 ```powershell
 Set-AdoProfile -Name work -DefaultBranch '' -DefaultTestSuiteId $null
@@ -106,7 +106,7 @@ HelpMessage: ''
 
 ### -Confirm
 
-Prompts you for confirmation before running the cmdlet.
+Demande confirmation avant d’exécuter la commande.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -191,7 +191,7 @@ HelpMessage: ''
 
 ### -DefaultProject
 
-Nom du projet par défaut à enregistrer dans le profil.
+Nom du projet par défaut à enregistrer dans le profil. Une chaîne vide ou $null le supprime.
 
 ```yaml
 Type: System.String
@@ -296,7 +296,7 @@ HelpMessage: ''
 
 ### -WhatIf
 
-Runs the command in a mode that only reports what would happen without performing the actions.
+Exécute la commande dans un mode qui indique seulement ce qui se produirait, sans effectuer les actions.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -336,6 +336,7 @@ Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020.
 
 ## RELATED LINKS
 
+[Get-AdoProfile](Get-AdoProfile.md)
+[Remove-AdoProfile](Remove-AdoProfile.md)
 [Connect-Ado](Connect-Ado.md)
-[Get-AdoProject](Get-AdoProject.md)
 

@@ -58,6 +58,7 @@ public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposabl
     protected override void ProcessRecord() => RunLocal(() =>
     {
         AdoBuildTestFailureSet set = InputObject!;
+        EnsureComplete(set);
         // A file path names exactly one report; each later set gets a per-input error.
         if (pathIsFile && received++ > 0)
         {

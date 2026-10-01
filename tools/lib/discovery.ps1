@@ -43,7 +43,7 @@ function Test-IsSafeRepositoryFile {
     )
 
     # Never follow file links while discovering a repository. A link can point outside
-    # the workspace, where the template's secret-path exclusions would not protect it.
+    # the workspace, where the secret-path exclusions would not protect it.
     if (($File.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { return $false }
     if (-not (Test-IsRepositoryPath -Path $File.FullName -Root $Root) -or -not (Test-IsAgentSafePath -Path $File.FullName -Root $Root)) { return $false }
     $directory = $File.Directory
@@ -169,17 +169,6 @@ function Get-CommandVersion {
     }
 }
 
-function Get-NodePackageData {
-    param([Parameter(Mandatory = $true)][System.IO.FileInfo] $PackageFile)
-
-    try {
-        return ConvertFrom-StrictJson -Text (Get-Content -LiteralPath $PackageFile.FullName -Raw)
-    }
-    catch {
-        return $null
-    }
-}
-
 function ConvertFrom-StrictJson {
     param([AllowEmptyString()][string] $Text)
     $document = [System.Text.Json.JsonDocument]::Parse($Text)
@@ -224,97 +213,30 @@ function Get-ProjectProfile {
         [void] $fileNames.Add($file.Name)
     }
 
+    # The product is a .NET solution with PowerShell tooling and tests; nothing else is detected.
     $stacks = New-Object System.Collections.ArrayList
     $languages = New-Object System.Collections.ArrayList
-    $projectFiles = New-Object System.Collections.ArrayList
     $solutionFiles = @($files | Where-Object { $_.Extension -in @('.sln', '.slnx') })
-    $dotnetProjects = @($files | Where-Object { $_.Extension -in @('.csproj', '.fsproj', '.vbproj') })
+    $dotnetProjects = @($files | Where-Object { $_.Extension -eq '.csproj' })
     if ($solutionFiles.Count -gt 0 -or $dotnetProjects.Count -gt 0 -or $fileNames.Contains('global.json')) {
         [void] $stacks.Add('dotnet')
-        foreach ($project in $dotnetProjects) {
-            switch ($project.Extension.ToLowerInvariant()) {
-                '.csproj' { if (-not $languages.Contains('C#')) { [void] $languages.Add('C#') } }
-                '.fsproj' { if (-not $languages.Contains('F#')) { [void] $languages.Add('F#') } }
-                '.vbproj' { if (-not $languages.Contains('Visual Basic')) { [void] $languages.Add('Visual Basic') } }
-            }
-        }
-        foreach ($file in @($solutionFiles) + @($dotnetProjects)) { [void] $projectFiles.Add($relative[$file.FullName]) }
+        if ($dotnetProjects.Count -gt 0) { [void] $languages.Add('C#') }
     }
-
-    $packageFiles = @($files | Where-Object { $_.Name -eq 'package.json' })
-    $nodePackageManager = $null
-    if ($packageFiles.Count -gt 0) {
-        [void] $stacks.Add('node')
-        if (-not $languages.Contains('JavaScript')) { [void] $languages.Add('JavaScript') }
-        foreach ($package in $packageFiles) { [void] $projectFiles.Add($relative[$package.FullName]) }
-        if ($fileNames.Contains('pnpm-lock.yaml')) { $nodePackageManager = 'pnpm' }
-        elseif ($fileNames.Contains('yarn.lock')) { $nodePackageManager = 'yarn' }
-        else { $nodePackageManager = 'npm' }
-    }
-
-    $pythonFiles = @($files | Where-Object { $_.Name -in @('pyproject.toml', 'requirements.txt', 'setup.py', 'setup.cfg') })
-    if ($pythonFiles.Count -gt 0) {
-        [void] $stacks.Add('python')
-        if (-not $languages.Contains('Python')) { [void] $languages.Add('Python') }
-        foreach ($file in $pythonFiles) { [void] $projectFiles.Add($relative[$file.FullName]) }
-    }
-
-    $cargoFiles = @($files | Where-Object { $_.Name -eq 'Cargo.toml' })
-    if ($cargoFiles.Count -gt 0) {
-        [void] $stacks.Add('rust')
-        if (-not $languages.Contains('Rust')) { [void] $languages.Add('Rust') }
-        foreach ($file in $cargoFiles) { [void] $projectFiles.Add($relative[$file.FullName]) }
-    }
-
-    $goFiles = @($files | Where-Object { $_.Name -eq 'go.mod' })
-    if ($goFiles.Count -gt 0) {
-        [void] $stacks.Add('go')
-        if (-not $languages.Contains('Go')) { [void] $languages.Add('Go') }
-        foreach ($file in $goFiles) { [void] $projectFiles.Add($relative[$file.FullName]) }
-    }
-
-    $javaFiles = @($files | Where-Object { $_.Name -in @('pom.xml', 'build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts') })
-    if ($javaFiles.Count -gt 0) {
-        [void] $stacks.Add('java')
-        if (-not $languages.Contains('Java')) { [void] $languages.Add('Java') }
-        foreach ($file in $javaFiles) { [void] $projectFiles.Add($relative[$file.FullName]) }
-    }
-
-    $powerShellFiles = @($files | Where-Object { $_.Extension -in @('.ps1', '.psm1', '.psd1') })
-    if ($powerShellFiles.Count -gt 0) {
+    $projectFiles = @(@($solutionFiles) + @($dotnetProjects) | ForEach-Object { $relative[$_.FullName] })
+    if (@($files | Where-Object { $_.Extension -in @('.ps1', '.psm1', '.psd1') }).Count -gt 0) {
         [void] $stacks.Add('powershell')
-        if (-not $languages.Contains('PowerShell')) { [void] $languages.Add('PowerShell') }
+        [void] $languages.Add('PowerShell')
     }
 
-    # Living under tests/ is not enough: the directory also holds fixtures, placeholders
-    # such as .gitkeep, and data files. Counting those as tests makes an empty project
-    # look tested and demands a test runner it has no use for.
-    $testExtensions = @('.ps1', '.psm1', '.cs', '.fs', '.vb', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.py', '.go', '.rs', '.java')
+    # Living under tests/ is not enough: the directory also holds fixtures, support scripts and
+    # data files. A PowerShell test is named *.Tests.ps1 or *.Pester.ps1; a C# test is any .cs
+    # file of a test project folder.
     $testFiles = @(
         $files | Where-Object {
-            $path = $relative[$_.FullName]
-            ($_.Extension -notin @('.ps1', '.psm1') -and $path -match '(?:^|/)(?:tests?|spec|__tests__)/' -and $_.Extension -in $testExtensions) -or
-            $_.Name -match '(?i)(?:\.tests?|\.spec|_test|_spec)\.(?:ps1|psm1|cs|fs|vb|js|mjs|cjs|ts|tsx|jsx|py|go|rs|java)$'
+            ($_.Extension -eq '.cs' -and $relative[$_.FullName] -match '(?:^|/)tests?/') -or
+            $_.Name -match '(?i)\.(?:tests|pester)\.ps1$'
         }
     )
-    # A root-level script is an entry point by position; inside src/ the conventional
-    # entry file names stand in for that, since position no longer distinguishes them.
-    $entryPointExtensions = @('.ps1', '.py', '.js', '.mjs', '.cjs', '.ts', '.cs', '.go', '.rs')
-    $entryPointBaseNames = @('main', 'index', 'app', 'program', 'cli', '__main__')
-    $entryPoints = New-Object System.Collections.ArrayList
-    foreach ($file in $files) {
-        if ($file.Extension -notin $entryPointExtensions) { continue }
-        $relativePath = $relative[$file.FullName]
-        $isAtRoot = [string]::Equals($file.DirectoryName, $Root, [System.StringComparison]::OrdinalIgnoreCase)
-        $isNamedEntryPoint = $relativePath -match '^src/' -and
-            [System.IO.Path]::GetFileNameWithoutExtension($file.Name).ToLowerInvariant() -in $entryPointBaseNames
-        if ($isAtRoot -or $isNamedEntryPoint) { [void] $entryPoints.Add($relativePath) }
-    }
-    foreach ($package in $packageFiles) {
-        $data = Get-NodePackageData -PackageFile $package
-        $bin = if ($null -ne $data) { $data.PSObject.Properties['bin'] } else { $null }
-        if ($null -ne $bin -and $null -ne $bin.Value) { [void] $entryPoints.Add($relative[$package.FullName]) }
-    }
 
     $majorDirectories = @(
         Get-ChildItem -LiteralPath $Root -Force -Directory |
@@ -325,7 +247,7 @@ function Get-ProjectProfile {
         $files | Where-Object {
             $relativePath = $relative[$_.FullName]
             $relativePath -notmatch '^\.claude/' -and
-            $_.Name -in @('AGENTS.md', 'CLAUDE.md', 'README.md', '.editorconfig', '.gitattributes', '.gitignore', '.mcp.json', 'global.json', 'Directory.Build.props', 'Directory.Packages.props', 'pyproject.toml', 'package.json', 'Cargo.toml', 'go.mod', 'pom.xml', 'build.gradle', 'build.gradle.kts')
+            $_.Name -in @('AGENTS.md', 'CLAUDE.md', 'README.md', '.editorconfig', '.gitattributes', '.gitignore', '.mcp.json', 'global.json', 'nuget.config', 'Directory.Build.props', 'Directory.Packages.props', 'PSScriptAnalyzerSettings.psd1')
         } | ForEach-Object { $relative[$_.FullName] }
     )
 
@@ -334,9 +256,6 @@ function Get-ProjectProfile {
         Stack = @($stacks | Sort-Object -Unique)
         Languages = @($languages | Sort-Object -Unique)
         ProjectFiles = @($projectFiles | Sort-Object -Unique)
-        SolutionFiles = @($solutionFiles | ForEach-Object { $relative[$_.FullName] })
-        NodePackageManager = $nodePackageManager
-        Entrypoints = @($entryPoints | Sort-Object -Unique)
         TestFiles = @($testFiles | ForEach-Object { $relative[$_.FullName] })
         MajorDirectories = $majorDirectories
         Configuration = @($configuration | Sort-Object -Unique)
@@ -397,7 +316,6 @@ function Get-ProjectInspection {
         Stack = $projectProfile.Stack
         Languages = $projectProfile.Languages
         ProjectFiles = $projectProfile.ProjectFiles
-        Entrypoints = $projectProfile.Entrypoints
         Tests = [pscustomobject]@{ Files = $projectProfile.TestFiles; Count = $projectProfile.TestFiles.Count }
         Directories = $projectProfile.MajorDirectories
         Configuration = $projectProfile.Configuration
@@ -411,17 +329,16 @@ function Get-ProjectContext {
     param([string] $Root = $script:RepositoryRoot, [string] $Path)
 
     $projectProfile = Get-ProjectProfile -Root $Root
-    $workflowPaths = @('tools/dev.ps1', 'tools/check.ps1') |
+    $workflowPaths = @('tools/dev.ps1', 'tools/check.ps1', 'docs/tooling.md') |
         Where-Object { Test-Path -LiteralPath (Join-Path $projectProfile.Root $_) -PathType Leaf }
     # Kept in priority order, not sorted: this list has a budget, and truncating an
     # alphabetical list would drop the workflow and instruction files that matter most.
+    # Test files are counted, not listed: find and the path-scoped rules locate them.
     $importantPaths = @(Select-UniquePath -Path @(
             @($workflowPaths)
             @(Get-AgentInstructionPaths -ProjectProfile $projectProfile)
             @($projectProfile.Configuration)
-            @($projectProfile.Entrypoints)
             @($projectProfile.ProjectFiles)
-            @($projectProfile.TestFiles | Select-Object -First 10)
         ))
     $importantPathBudget = 40
     $scope = if ($Path) { Get-ScopedInstructions -ProjectProfile $projectProfile -Path $Path } else { @() }
@@ -436,8 +353,6 @@ function Get-ProjectContext {
         Project = $projectName
         Stack = $projectProfile.Stack
         Languages = $projectProfile.Languages
-        Entrypoints = @($projectProfile.Entrypoints | Select-Object -First 10)
-        EntrypointCount = $projectProfile.Entrypoints.Count
         Tests = $projectProfile.TestFiles.Count
         ProductTests = @($projectProfile.TestFiles | Where-Object { $_ -notlike 'tools/*' }).Count
         ScopedInstructions = @($scope)

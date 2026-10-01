@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-22-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoBuildTestFailure
 ---
@@ -201,7 +201,7 @@ HelpMessage: ''
 Number of runs in the history window, including the current one, from 1 to 50. Defaults to the testResults.historyCount configuration value, 10.
 
 ```yaml
-Type: System.Nullable[System.Int32]
+Type: System.Nullable`1[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
@@ -222,7 +222,7 @@ HelpMessage: ''
 Branch scope of the history window. SameBranch keeps the current source branch; AllBranches widens it. Defaults to the testResults.historyScope configuration value, SameBranch.
 
 ```yaml
-Type: System.Nullable[AdoToolkit.Core.TestRuns.AdoTestHistoryScope]
+Type: System.Nullable`1[AdoToolkit.Core.TestRuns.AdoTestHistoryScope]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
@@ -304,7 +304,7 @@ Build, Runs, Summary, History, Failures, FailedCount, FlakyCount, Status, Diagno
 
 ## NOTES
 
-Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. History listings are cached for the invocation, so several piped builds of one definition share them. Every test-area route, version and field awaits server confirmation (V-19 to V-25), including how retries are recorded. Web links await confirmation at work (V-26). State categories come from the work item type states route at version 6.0-preview.1, which the Server 2020 REST documentation lists but which has not been confirmed at work.
+Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. The test results of each earlier build are cached for the invocation, so several piped builds of one definition read them once. Every test-area route, version and field awaits server confirmation (V-19 to V-25), including how retries are recorded. Web links await confirmation at work (V-26). State categories come from the work item type states route at version 6.0-preview.1, which the Server 2020 REST documentation lists but which has not been confirmed at work.
 
 ## RELATED LINKS
 

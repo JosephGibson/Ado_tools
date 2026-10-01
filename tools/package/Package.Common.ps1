@@ -73,8 +73,7 @@ function Assert-AdoPackage {
     param([Parameter(Mandatory = $true)][string] $PackagePath)
     $required = @(
         'AdoToolkit.psd1', 'AdoToolkit.Format.ps1xml',
-        'AdoToolkit.Core.dll', 'AdoToolkit.PowerShell.dll',
-        'fr/AdoToolkit.Core.resources.dll', 'fr/AdoToolkit.PowerShell.resources.dll',
+        'AdoToolkit.Core.dll', 'AdoToolkit.PowerShell.dll', 'fr/AdoToolkit.Core.resources.dll',
         'en-US/AdoToolkit.PowerShell.dll-Help.xml', 'fr/AdoToolkit.PowerShell.dll-Help.xml'
     )
     $files = @(Get-AdoPackageFile -PackagePath $PackagePath)

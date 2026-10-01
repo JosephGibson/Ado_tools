@@ -41,7 +41,7 @@ public sealed class ExportAdoTestCaseCommand : AdoCmdletBase
             return;
         }
         AdoConnection connection = ResolveConnection(Connection);
-        foreach (AdoTestCase item in cases) EnsureSameCollection(item.CollectionUri, connection);
+        foreach (AdoTestCase item in cases) EnsureInput(item, item.CollectionUri, connection);
         string? resolvedPath = null;
         if (Path is not null)
         {

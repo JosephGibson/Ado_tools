@@ -1,27 +1,31 @@
 # Archive
 
-These are the planning and design records from AdoToolkit's first development phase.
-They are kept unchanged for reference and are no longer maintained. For current
-documentation, start with the [README](../../README.md).
+Superseded documents, kept for reference. Every file was moved here unedited and is not
+maintained; only this index and [plans/README.md](plans/README.md) change. Relative links
+inside the files that point outside `docs/archive/` no longer resolve. Current
+documentation starts at the [README](../../README.md).
 
 | Document | Contents |
 | --- | --- |
 | [ado-toolkit-spec.md](ado-toolkit-spec.md) | Technical specification v1.0: architecture, behavior, security, testing, packaging, design decisions, open questions and the verification ledger |
-| [plans/](plans/README.md) | Delivery roadmap, implementation plans and offline evidence records |
-| [design.md](design.md) | Design rationale for the developer tooling in `tools/` |
+| [plans/](plans/README.md) | Slice plans, session evidence and the Server 2020 audit fixes |
+| [design.md](design.md) | Design rationale for the first version of the developer tooling in `tools/` |
+| [release-0.2.0.md](release-0.2.0.md) | 0.2.0 release audit: findings, Server 2020 REST contracts and the rules for work-PC live checks |
+| [release-0.3.0.md](release-0.3.0.md) | 0.3.0 release notes: failed-test report changes and the portable release |
+| [release-0.4.0.md](release-0.4.0.md) | 0.4.0 release notes: bugs of failed tests, security fixes and V-30 |
+
+Release notes for the current and the previous version are in `docs/`.
 
 ## Citations in the code
 
-Comments in `src/`, `tests/` and `tools/` cite the specification. All of these
-identifiers refer to [ado-toolkit-spec.md](ado-toolkit-spec.md):
+Comments in `src/`, `tests/` and `tools/`, test tags and cmdlet help notes cite these documents.
 
-| Citation | Meaning |
+| Citation | Resolves to |
 | --- | --- |
-| `§n`, `§n.m` | A numbered section |
-| `DD-0nn` | A [design decision](ado-toolkit-spec.md#23-design-decisions) |
-| `Q-nn` | An [open question](ado-toolkit-spec.md#24-open-questions-for-the-next-pass) and its answer |
-| `V-nn` | A [verification ledger](ado-toolkit-spec.md#25-verification-ledger) entry; cmdlet help notes use these too |
-| `S0-n` to `S5-n` | An [acceptance criterion](ado-toolkit-spec.md#22-delivery-slices-and-acceptance-criteria), also used as test tags |
-
-The archived files were moved here without edits. Some relative links inside them
-point outside `docs/archive/` and no longer resolve.
+| `§n`, `§n.m` | A numbered section of [ado-toolkit-spec.md](ado-toolkit-spec.md) |
+| `DD-0nn` | A [design decision](ado-toolkit-spec.md#23-design-decisions), §23 |
+| `Q-nn` | An [open question](ado-toolkit-spec.md#24-open-questions-for-the-next-pass) and its answer, §24 |
+| `V-01` to `V-29` | A [verification ledger](ado-toolkit-spec.md#25-verification-ledger) entry, §25 |
+| `V-30` | The bug routes on Server 2020, under [Known limitations](release-0.4.0.md#known-limitations) in the 0.4.0 notes |
+| `S0-n` to `S5-n` | An [acceptance criterion](ado-toolkit-spec.md#22-delivery-slices-and-acceptance-criteria), §22; also a test tag |
+| `F01` to `F16` | A finding in [plans/server-2020-audit-fixes.md](plans/server-2020-audit-fixes.md) |

@@ -1,19 +1,16 @@
+using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Xml;
 
 namespace AdoToolkit.Core.Tests.Localization;
 
-public sealed class ResourceParityTests
+public sealed partial class ResourceParityTests
 {
-    [Theory]
+    [Fact]
     [Trait("Acceptance", "S0-7")]
-    [InlineData("Core")]
-    [InlineData("PowerShell")]
-    public void EnglishAndFrenchHaveMatchingKeysAndPlaceholders(string project)
+    public void EnglishAndFrenchHaveMatchingKeysAndPlaceholders()
     {
-        string resources = Path.Combine(TestDirectory.RepositoryRoot, "src", "AdoToolkit." + project, "Resources");
-        Dictionary<string, string> english = Read(Path.Combine(resources, "Strings.resx"));
-        Dictionary<string, string> french = Read(Path.Combine(resources, "Strings.fr.resx"));
+        Dictionary<string, string> english = ResourceCatalog.English();
+        Dictionary<string, string> french = ResourceCatalog.French();
         Assert.Equal(english.Keys.Order(StringComparer.Ordinal), french.Keys.Order(StringComparer.Ordinal));
         foreach ((string key, string value) in english)
         {
@@ -23,21 +20,32 @@ public sealed class ResourceParityTests
         }
     }
 
-    private static string[] Placeholders(string value) => Regex.Matches(value, @"\{\d+(?:[^}]*)\}", RegexOptions.CultureInvariant)
+    // Every message key and diagnostic code has a string, and no string is left without a key.
+    [Fact]
+    public void CatalogHoldsExactlyTheMessageKeysAndDiagnosticCodes()
+    {
+        IEnumerable<string> codes = typeof(DiagnosticCodes).GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Where(static field => field.IsLiteral).Select(static field => (string)field.GetRawConstantValue()!);
+        Assert.Equal(Enum.GetNames<AdoMessage>().Concat(codes).Order(StringComparer.Ordinal),
+            ResourceCatalog.English().Keys.Order(StringComparer.Ordinal));
+    }
+
+    // Core holds the only string catalog. A second one in the PowerShell project repeated Core
+    // strings, so a wording fix had to be made twice and most of its entries were never read.
+    [Fact]
+    public void CoreHoldsTheOnlyStringCatalog()
+    {
+        EnumerationOptions options = new() { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint };
+        string[] catalogs = [.. Directory.EnumerateFiles(Path.Combine(TestDirectory.RepositoryRoot, "src"), "*.resx", options)
+            .Select(static path => Path.GetRelativePath(TestDirectory.RepositoryRoot, path).Replace('\\', '/'))
+            .Where(static path => !path.Split('/').Any(static part => part is "obj" or "bin"))
+            .Order(StringComparer.Ordinal)];
+        Assert.Equal(["src/AdoToolkit.Core/Resources/Strings.fr.resx", "src/AdoToolkit.Core/Resources/Strings.resx"], catalogs);
+    }
+
+    private static string[] Placeholders(string value) => Placeholder().Matches(value)
         .Select(match => match.Value).Order(StringComparer.Ordinal).ToArray();
 
-    private static Dictionary<string, string> Read(string path)
-    {
-        XmlReaderSettings settings = new() { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 1048576 };
-        using XmlReader reader = XmlReader.Create(path, settings);
-        XmlDocument document = new() { XmlResolver = null };
-        document.Load(reader);
-        Dictionary<string, string> result = new(StringComparer.Ordinal);
-        foreach (XmlElement entry in document.SelectNodes("/root/data")!)
-        {
-            Assert.False(entry.HasAttribute("type"));
-            result.Add(entry.GetAttribute("name"), entry["value"]!.InnerText);
-        }
-        return result;
-    }
+    [GeneratedRegex(@"\{\d+(?:[^}]*)\}", RegexOptions.CultureInvariant)]
+    private static partial Regex Placeholder();
 }

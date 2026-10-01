@@ -5,7 +5,7 @@ using AdoToolkit.Core.TestRuns;
 namespace AdoToolkit;
 
 // One AdoBuildTestFailureSet per input build. The invocation cache is shared across records, so
-// piped builds of one definition reuse the history listings (§17). Session state is touched only
+// piped builds of one definition read each earlier build's history once (§17). Session state is touched only
 // on the pipeline thread; the worker gets the leased client and the record's log.
 // ByDefinition is the default so that a call without arguments uses the connected profile's
 // definition and branch; BuildId still binds by position and builds still bind from the pipeline.
@@ -57,7 +57,7 @@ public sealed class GetAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
     protected override void ProcessRecord() => RunLocal(() =>
     {
         AdoConnection connection = Resolve();
-        if (InputObject is not null) EnsureSameCollection(InputObject.CollectionUri, connection);
+        if (InputObject is not null) EnsureInput(InputObject, InputObject.CollectionUri, connection);
         string project = InputObject?.TeamProject ?? ResolveProject(Project, connection);
         TestResultOptions options = configuration!.TestResults;
         TestFailureQuery query = new()

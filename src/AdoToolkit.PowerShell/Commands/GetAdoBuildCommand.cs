@@ -49,7 +49,7 @@ public sealed class GetAdoBuildCommand : AdoCmdletBase
         string project;
         if (InputObject is not null)
         {
-            EnsureSameCollection(InputObject.CollectionUri, connection);
+            EnsureInput(InputObject, InputObject.CollectionUri, connection);
             id = InputObject.Id;
             project = InputObject.TeamProject;
         }

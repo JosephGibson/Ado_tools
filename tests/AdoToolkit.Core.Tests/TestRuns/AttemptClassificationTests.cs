@@ -192,6 +192,23 @@ public sealed class AttemptClassificationTests
         Assert.Equal(className, AttemptGrouper.ClassName(name));
     }
 
+    // A result without an automated name shows its title whole. A free-text automated name (a
+    // display name with spaces) is not a qualified name, so a version number or a sentence dot
+    // does not cut it and it has no class.
+    [Theory]
+    [InlineData(null, "Checkout v2.0 smoke", "Checkout v2.0 smoke")]
+    [InlineData(null, "Sign in. Then sign out", "Sign in. Then sign out")]
+    [InlineData("", "Title only", "Title only")]
+    [InlineData("should handle the v1.2 format", "Title", "should handle the v1.2 format")]
+    [InlineData("Given a cart. When paid", null, "Given a cart. When paid")]
+    [InlineData("C++ parser accepts a+b", null, "C++ parser accepts a+b")]
+    [InlineData(null, null, "")]
+    public void TitlesAndFreeTextNamesAreNotSplit(string? name, string? title, string expected)
+    {
+        Assert.Equal(expected, AttemptGrouper.ShortName(name, title));
+        Assert.Null(AttemptGrouper.ClassName(name));
+    }
+
     private static async Task<AdoBuildTestFailureSet> RerunSetAsync()
     {
         TestRunFixture fixture = new();

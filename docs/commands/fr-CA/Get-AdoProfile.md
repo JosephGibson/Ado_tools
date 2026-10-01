@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-22-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoProfile
 ---
@@ -33,7 +33,7 @@ Lit la configuration locale sans contacter le serveur. Retourne les profils tri�
 
 ## EXAMPLES
 
-### Example 1
+### Exemple 1
 
 ```powershell
 Get-AdoProfile -Name 'work*'
@@ -50,7 +50,7 @@ Nom du profil. Get-AdoProfile accepte les caractères génériques sans distinct
 ```yaml
 Type: System.String
 DefaultValue: ''
-SupportsWildcards: false
+SupportsWildcards: true
 Aliases: []
 ParameterSets:
 - Name: (All)
@@ -84,7 +84,8 @@ Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020.
 
 ## RELATED LINKS
 
+[Set-AdoProfile](Set-AdoProfile.md)
+[Remove-AdoProfile](Remove-AdoProfile.md)
 [Connect-Ado](Connect-Ado.md)
-[Get-AdoProject](Get-AdoProject.md)
 
 

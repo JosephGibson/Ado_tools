@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-22-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoBuildTestFailure
 ---
@@ -201,7 +201,7 @@ HelpMessage: ''
 Nombre d’exécutions dans la fenêtre d’historique, y compris l’exécution courante, de 1 à 50. Par défaut, la valeur de configuration testResults.historyCount, soit 10.
 
 ```yaml
-Type: System.Nullable[System.Int32]
+Type: System.Nullable`1[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
@@ -222,7 +222,7 @@ HelpMessage: ''
 Portée de branche de la fenêtre d’historique. SameBranch conserve la branche source courante ; AllBranches l’élargit. Par défaut, la valeur de configuration testResults.historyScope, soit SameBranch.
 
 ```yaml
-Type: System.Nullable[AdoToolkit.Core.TestRuns.AdoTestHistoryScope]
+Type: System.Nullable`1[AdoToolkit.Core.TestRuns.AdoTestHistoryScope]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
@@ -304,7 +304,7 @@ Build, Runs, Summary, History, Failures, FailedCount, FlakyCount, Status, Diagno
 
 ## NOTES
 
-Nécessite PowerShell 7.6 sur Windows et Azure DevOps Server 2020. Les listes d’historique sont mises en cache pour l’invocation, de sorte que plusieurs builds d’une même définition reçus du pipeline les partagent. Toutes les routes, versions et champs de la zone de tests restent à confirmer sur le serveur (V-19 à V-25), y compris la façon dont les nouvelles tentatives sont enregistrées. Les liens Web restent à confirmer au travail (V-26). Les catégories d’états proviennent de la route des états des types d’éléments de travail en version 6.0-preview.1, que la documentation REST de Server 2020 mentionne, mais qui n’a pas encore été confirmée au travail.
+Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les résultats de tests de chaque build antérieur sont mis en cache pour l’invocation, de sorte que plusieurs builds d’une même définition reçus du pipeline ne les lisent qu’une fois. Toutes les routes, versions et champs de la zone de tests restent à confirmer sur le serveur (V-19 à V-25), y compris la façon dont les nouvelles tentatives sont enregistrées. Les liens Web restent à confirmer au travail (V-26). Les catégories d’états proviennent de la route des états des types d’éléments de travail en version 6.0-preview.1, que la documentation REST de Server 2020 mentionne, mais qui n’a pas encore été confirmée au travail.
 
 ## RELATED LINKS
 

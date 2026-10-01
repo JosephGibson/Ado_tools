@@ -16,21 +16,24 @@ Describe 'tools/dev.ps1' {
         }
     }
 
-    It 'detects supported stacks and only identifies actual test files' {
+    It 'detects the .NET and PowerShell stacks and only identifies actual test files' {
         $repository = Join-Path $TestDrive 'profile-sample'
-        New-TestFile -Path (Join-Path $repository 'app.ps1')
-        New-TestFile -Path (Join-Path $repository 'package.json') -Content '{"scripts":{"test":"node --test"}}'
-        New-TestFile -Path (Join-Path $repository 'pyproject.toml') -Content @'
-[project]
-name = "sample"
-'@
-        New-TestFile -Path (Join-Path $repository 'tests\app.Tests.ps1')
+        New-TestFile -Path (Join-Path $repository 'tools\app.ps1')
+        New-TestFile -Path (Join-Path $repository 'src\App\App.csproj') -Content '<Project Sdk="Microsoft.NET.Sdk" />'
+        New-TestFile -Path (Join-Path $repository 'src\App\Program.cs')
+        New-TestFile -Path (Join-Path $repository 'tests\App.Tests\SampleTests.cs')
+        New-TestFile -Path (Join-Path $repository 'tests\App.Shell.Tests\Sample.Pester.ps1')
+        New-TestFile -Path (Join-Path $repository 'tests\App.Shell.Tests\Support\Server.ps1')
+        New-TestFile -Path (Join-Path $repository 'tools\tests\app.Tests.ps1')
+        # Other ecosystems are not part of this product and are not reported.
+        New-TestFile -Path (Join-Path $repository 'package.json') -Content '{}'
 
         $projectProfile = Get-ProjectProfile -Root $repository
 
-        $projectProfile.Stack | Should -Be @('node', 'powershell', 'python')
-        $projectProfile.TestFiles | Should -Be @('tests/app.Tests.ps1')
-        $projectProfile.Entrypoints | Should -Be @('app.ps1')
+        $projectProfile.Stack | Should -Be @('dotnet', 'powershell')
+        $projectProfile.Languages | Should -Be @('C#', 'PowerShell')
+        $projectProfile.ProjectFiles | Should -Be @('src/App/App.csproj')
+        $projectProfile.TestFiles | Sort-Object | Should -Be @('tests/App.Shell.Tests/Sample.Pester.ps1', 'tests/App.Tests/SampleTests.cs', 'tools/tests/app.Tests.ps1')
     }
 
     It 'does not count placeholders or fixtures under tests/ as tests' {
@@ -84,10 +87,10 @@ name = "sample"
         $result.Results.Match | Should -Be @('path')
     }
 
-    It 'does not enumerate excluded dependency directories' {
+    It 'does not enumerate excluded output directories' {
         $repository = Join-Path $TestDrive 'excluded-sample'
         New-TestFile -Path (Join-Path $repository 'src\worker.ps1')
-        New-TestFile -Path (Join-Path $repository 'node_modules\package\ignored.ps1')
+        New-TestFile -Path (Join-Path $repository 'artifacts\package\ignored.ps1')
         New-TestFile -Path (Join-Path $repository 'bin\generated.ps1')
 
         $files = Get-RepositoryFiles -Root $repository
@@ -99,7 +102,7 @@ name = "sample"
     It 'falls back to pruned filesystem discovery when ripgrep is unavailable' {
         $repository = Join-Path $TestDrive 'fallback-sample'
         New-TestFile -Path (Join-Path $repository 'src\worker.ps1')
-        New-TestFile -Path (Join-Path $repository 'node_modules\package\ignored.ps1')
+        New-TestFile -Path (Join-Path $repository 'obj\package\ignored.ps1')
         Mock Get-FirstCommand { $null } -ParameterFilter { $Names -contains 'rg' }
 
         $files = Get-RepositoryFiles -Root $repository
@@ -115,7 +118,8 @@ name = "sample"
         try { $result = Get-ProjectContext -Root '.\relative-sample' }
         finally { Pop-Location }
 
-        $result.Entrypoints | Should -Be @('app.ps1')
+        $result.Status | Should -Be 'ok'
+        $result.Stack | Should -Be @('powershell')
     }
 
     It 'returns a compact error for a missing source query' {
@@ -124,45 +128,46 @@ name = "sample"
 
     It 'limits dependency output while retaining the total count' {
         $repository = Join-Path $TestDrive 'dependency-sample'
-        New-TestFile -Path (Join-Path $repository 'package.json') -Content @'
-{
-  "dependencies": {
-    "alpha": "1.0.0",
-    "beta": "2.0.0",
-    "gamma": "3.0.0"
-  }
-}
+        New-TestFile -Path (Join-Path $repository 'Directory.Packages.props') -Content @'
+<Project>
+  <ItemGroup>
+    <PackageVersion Include="Alpha" Version="1.0.0" />
+    <PackageVersion Include="Beta" Version="2.0.0" />
+    <PackageVersion Include="Gamma" Version="3.0.0" />
+  </ItemGroup>
+</Project>
 '@
 
         $result = Get-DependencyInventory -Root $repository -Limit 2
 
         $result.PackageCount | Should -Be 3
-        $result.Packages.Count | Should -Be 2
+        $result.Packages.Name | Should -Be @('Alpha', 'Beta')
         $result.Truncated | Should -BeTrue
-    }
-
-    It 'reports unpinned Python requirements without throwing' {
-        $repository = Join-Path $TestDrive 'python-sample'
-        New-TestFile -Path (Join-Path $repository 'requirements.txt') -Content @'
-requests
-urllib3>=2.0
-'@
-
-        $result = Get-DependencyInventory -Root $repository
-
-        $result.PackageCount | Should -Be 2
-        @($result.Packages | Where-Object { $_.Name -eq 'requests' }).Version | Should -BeNullOrEmpty
-        @($result.Packages | Where-Object { $_.Name -eq 'urllib3' }).Version | Should -Be '>=2.0'
     }
 
     It 'reports an invalid dependency manifest without hiding the failure' {
         $repository = Join-Path $TestDrive 'invalid-manifest-sample'
-        New-TestFile -Path (Join-Path $repository 'package.json') -Content '{ invalid json }'
+        New-TestFile -Path (Join-Path $repository 'sample.csproj') -Content '<Project><ItemGroup>'
+        New-TestFile -Path (Join-Path $repository 'Directory.Packages.props') -Content '<Project><ItemGroup><PackageVersion Include="Kept" Version="1.0.0" /></ItemGroup></Project>'
 
         $result = Get-DependencyInventory -Root $repository
 
         $result.Status | Should -Be 'incomplete'
-        $result.Errors | Should -Be @('package.json: invalid package.json')
+        @($result.Errors).Count | Should -Be 1
+        $result.Errors[0] | Should -BeLike 'sample.csproj: *'
+        $result.Packages.Name | Should -Be @('Kept')
+    }
+
+    It 'names the tools verify needs for the repository content' {
+        $repository = Join-Path $TestDrive 'tools-sample'
+        New-TestFile -Path (Join-Path $repository 'src\App\App.csproj') -Content '<Project Sdk="Microsoft.NET.Sdk" />'
+        New-TestFile -Path (Join-Path $repository 'tools\tests\app.Tests.ps1')
+        New-TestFile -Path (Join-Path $repository 'docs\commands\en-US\Get-Sample.md') -Content '# Get-Sample'
+
+        (Get-DependencyInventory -Root $repository).ValidationTools |
+            Should -Be @('dotnet', 'Microsoft.PowerShell.PlatyPS', 'Pester', 'PSScriptAnalyzer')
+        (Get-ProjectDiagnostics -Root $repository).Tools.Name |
+            Should -Be @('PowerShell', 'Pester', 'PSScriptAnalyzer', 'dotnet', 'Microsoft.PowerShell.PlatyPS', 'ripgrep')
     }
 
     It 'prohibits DTDs in dependency manifests' {
@@ -219,46 +224,40 @@ urllib3>=2.0
         finally { $env:ADOTOOLKIT_RELEASE_BUILD = $previous }
     }
 
-    It 'treats a conventional src entry file as an entry point' {
-        $repository = Join-Path $TestDrive 'entrypoint-sample'
-        New-TestFile -Path (Join-Path $repository 'src\main.py')
-        New-TestFile -Path (Join-Path $repository 'src\helpers.py')
-
-        $projectProfile = Get-ProjectProfile -Root $repository
-
-        $projectProfile.Entrypoints | Should -Be @('src/main.py')
-    }
-
-    It 'plans build and test stages for the detected stack' {
-        $repository = Join-Path $TestDrive 'stack-plan-sample'
-        New-TestFile -Path (Join-Path $repository 'package.json') -Content '{"name":"sample","scripts":{"build":"node build.js","test":"node --test"}}'
-        $projectProfile = Get-ProjectProfile -Root $repository
-
-        $plan = @(Get-StackValidationPlan -ProjectProfile $projectProfile)
-        $skipped = @(Get-StackValidationPlan -ProjectProfile $projectProfile -SkipTests)
-
-        $plan.Name | Should -Be @('configuration', 'node-build:package.json', 'node-test:package.json')
-        $skipped.Name | Should -Be @('configuration', 'node-build:package.json')
-    }
-
-    It 'plans lint, test, and configuration stages for a PowerShell repository' {
+    It 'plans lint, test, and configuration stages for PowerShell tooling, and skips tests on request' {
         $repository = Join-Path $TestDrive 'powershell-plan-sample'
         New-TestFile -Path (Join-Path $repository 'tools\dev.ps1')
         New-TestFile -Path (Join-Path $repository 'settings.json') -Content '{}'
-        New-TestFile -Path (Join-Path $repository 'tests\app.Tests.ps1')
+        New-TestFile -Path (Join-Path $repository 'tools\tests\app.Tests.ps1')
+        # Product Pester files run against the staged module in the product gate, not here.
+        New-TestFile -Path (Join-Path $repository 'tests\Shell\Module.Pester.ps1')
         $projectProfile = Get-ProjectProfile -Root $repository
 
-        $plan = @(Get-StackValidationPlan -ProjectProfile $projectProfile)
+        $plan = @(Get-BuiltinValidationPlan -ProjectProfile $projectProfile)
 
         $plan.Name | Should -Be @('powershell-lint', 'powershell-test', 'configuration')
+        ($plan | Where-Object Name -eq 'powershell-test').ActionArguments.TestPath | Should -Be @(Join-Path $repository 'tools\tests\app.Tests.ps1')
+        @(Get-BuiltinValidationPlan -ProjectProfile $projectProfile -SkipTests).Name | Should -Be @('powershell-lint', 'configuration')
     }
 
     It 'plans no stages for a repository with nothing to validate' {
         $repository = Join-Path $TestDrive 'empty-plan-sample'
-        New-TestFile -Path (Join-Path $repository 'notes.md') -Content 'nothing to build'
+        New-TestFile -Path (Join-Path $repository 'notes.txt') -Content 'nothing to build'
         $projectProfile = Get-ProjectProfile -Root $repository
 
-        @(Get-StackValidationPlan -ProjectProfile $projectProfile).Count | Should -Be 0
+        @(Get-ValidationPlan -ProjectProfile $projectProfile).Count | Should -Be 0
+    }
+
+    It 'reports product code without its gate as incomplete instead of passing on the built-in stages' {
+        $repository = Join-Path $TestDrive 'missing-gate-sample'
+        New-TestFile -Path (Join-Path $repository 'src\App\App.csproj') -Content '<Project Sdk="Microsoft.NET.Sdk" />'
+
+        $result = Invoke-ProjectVerification -Root $repository
+
+        $result.Stages.Name | Should -Be @('configuration', 'project-check')
+        ($result.Stages | Where-Object Name -eq 'project-check').Status | Should -Be 'unavailable'
+        ($result.Stages | Where-Object Name -eq 'project-check').Summary | Should -BeLike '*tools/check.ps1*'
+        $result.Status | Should -Be 'incomplete'
     }
 
     It 'fails the configuration stage on malformed JSON and passes on valid JSON' {
@@ -335,15 +334,60 @@ urllib3>=2.0
         $outcome.Warnings | Should -Be @('The required PSScriptAnalyzer version is not installed (run bootstrap -Install).')
     }
 
-    It 'uses a repository-owned check for product stages and retains template checks' {
+    It 'runs the built-in tooling stages before the product gate' {
         $repository = Join-Path $TestDrive 'owned-check-sample'
-        New-TestFile -Path (Join-Path $repository 'package.json') -Content '{"name":"sample"}'
+        New-TestFile -Path (Join-Path $repository 'settings.json') -Content '{"name":"sample"}'
         New-TestFile -Path (Join-Path $repository 'tools\check.ps1') -Content 'exit 0'
         $projectProfile = Get-ProjectProfile -Root $repository
 
         $plan = @(Get-ValidationPlan -ProjectProfile $projectProfile)
 
         $plan.Name | Should -Be @('powershell-lint', 'configuration', 'tooling-layout', 'project-check')
+        ($plan | Where-Object Name -eq 'project-check').TimeoutSeconds | Should -BeGreaterThan 300
+        (@(Get-ValidationPlan -ProjectProfile $projectProfile -SkipTests) | Where-Object Name -eq 'project-check').Arguments | Should -Contain '-SkipTests'
+    }
+
+    It 'summarizes a passing gate by the result lines it marks' {
+        $repository = Join-Path $TestDrive 'marked-summary-sample'
+        New-TestFile -Path (Join-Path $repository 'tools\check.ps1') -Content @'
+Write-Output 'Determining projects to restore...'
+Write-Output 'check: build succeeded (Release)'
+Write-Output 'Passed!  - Failed: 0, Passed: 3'
+Write-Output 'check: Core tests (en-US): 3 passed, 0 failed, 3 executed, 3 discovered'
+Write-Output 'Package ready'
+exit 0
+'@
+
+        $result = Invoke-ProjectVerification -Root $repository
+
+        $result.Status | Should -Be 'pass'
+        ($result.Stages | Where-Object Name -eq 'project-check').Summary |
+            Should -Be @('build succeeded (Release)', 'Core tests (en-US): 3 passed, 0 failed, 3 executed, 3 discovered')
+        $result.Warnings | Should -BeNullOrEmpty
+    }
+
+    # The help compiler is required by the product gate, so bootstrap must be able to install it.
+    It 'installs every missing build module, including the help compiler, within its supported range' {
+        Mock Get-ProjectDiagnostics {
+            [pscustomobject]@{
+                Status = 'incomplete'
+                Tools = @(
+                    [pscustomobject]@{ Name = 'Pester'; Level = 'required'; State = 'missing' }
+                    [pscustomobject]@{ Name = 'PSScriptAnalyzer'; Level = 'required'; State = 'missing' }
+                    [pscustomobject]@{ Name = 'Microsoft.PowerShell.PlatyPS'; Level = 'required'; State = 'outdated' }
+                    [pscustomobject]@{ Name = 'dotnet'; Level = 'required'; State = 'missing' }
+                )
+            }
+        }
+        Mock Install-Module { }
+
+        $result = Invoke-ToolBootstrap -Root $TestDrive -Install
+
+        @($result.Actions | Where-Object Status -eq 'installed').Name | Should -Be @('Pester', 'PSScriptAnalyzer', 'Microsoft.PowerShell.PlatyPS')
+        @($result.Actions | Where-Object Status -eq 'unsupported').Name | Should -Be @('dotnet')
+        Should -Invoke Install-Module -Exactly -Times 1 -ParameterFilter { $Name -eq 'Microsoft.PowerShell.PlatyPS' -and $MinimumVersion -eq '1.0' -and $MaximumVersion -eq '1.999.999' -and $Scope -eq 'CurrentUser' }
+        Should -Invoke Install-Module -Exactly -Times 1 -ParameterFilter { $Name -eq 'Pester' -and $MaximumVersion -eq '5.999.999' }
+        Should -Invoke Install-Module -Exactly -Times 3
     }
 
     It 'preserves skipped-tool warnings when reducing successful stage output' {
@@ -388,6 +432,14 @@ urllib3>=2.0
         $document.ImportantPaths | Should -Contain '.claude/settings.json'
     }
 
+    It 'offers only the commands that apply to this repository' {
+        $entryPoint = Get-Command -Name (Join-Path $PSScriptRoot '..\dev.ps1')
+
+        $commands = $entryPoint.Parameters['Command'].Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
+        $commands.ValidValues | Should -Be @('inspect', 'context', 'find', 'plan', 'verify', 'diagnose', 'deps', 'bootstrap')
+        $entryPoint.Parameters.Keys | Should -Not -Contain 'ProjectName'
+    }
+
     It 'blocks mutating Git commands in the Claude Code guard' {
         $pwsh = Join-Path $PSHOME 'pwsh.exe'
         $guard = Join-Path $PSScriptRoot '..\guard-git.ps1'
@@ -405,12 +457,12 @@ urllib3>=2.0
         $LASTEXITCODE | Should -Be 0
     }
 
-    It 'keeps configured Claude hook helpers under tools' {
+    It 'keeps configured Claude hook helpers under tools and every skill paired' {
         $repository = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
         $outcome = Get-ToolingLayoutOutcome -ProjectProfile (Get-ProjectProfile -Root $repository)
 
         $outcome.Failures | Should -BeNullOrEmpty
-        $outcome.Summary | Should -Be @('2 configured PowerShell hook helper(s) checked')
+        $outcome.Summary | Should -Be @('2 configured PowerShell hook helper(s) checked', '4 skill(s) paired between .agents and .claude')
     }
 
     It 'rejects hook helper paths that traverse out of tools' {
@@ -515,7 +567,7 @@ urllib3>=2.0
         $repository = Join-Path $TestDrive 'stage-arguments-sample'
         New-TestFile -Path (Join-Path $repository 'app.json') -Content '{"a":1}'
         $projectProfile = Get-ProjectProfile -Root $repository
-        $stage = @(Get-StackValidationPlan -ProjectProfile $projectProfile) |
+        $stage = @(Get-BuiltinValidationPlan -ProjectProfile $projectProfile) |
             Where-Object { $_.Name -eq 'configuration' }
 
         $result = Invoke-ValidationStage -Stage $stage -Root $repository
@@ -554,7 +606,7 @@ exit 0
         $globs = @(Get-RepositoryExclusionGlobs)
         $searchArguments = @(Get-RepositorySearchGlobs)
 
-        foreach ($expected in @('!node_modules/**', '!**/node_modules/**', '!secret/**', '!secrets/**', '!**/.env', '!*.log')) {
+        foreach ($expected in @('!artifacts/**', '!**/artifacts/**', '!secret/**', '!secrets/**', '!**/.env', '!*.log')) {
             $globs | Should -Contain $expected
         }
         $searchArguments | Should -Contain '--no-ignore'
@@ -626,5 +678,28 @@ exit 0
         $null = @($payload | & $pwsh -NoProfile -File $hook 2>&1)
 
         $LASTEXITCODE | Should -Be 2
+    }
+
+    # String catalogs and the format file are XML that an agent edits by hand.
+    It 'checks <Name> as XML in the edit guard and in the configuration stage' -TestCases @(
+        @{ Name = 'Strings.fr.resx' }
+        @{ Name = 'AdoToolkit.Format.ps1xml' }
+    ) {
+        param($Name)
+        $pwsh = Join-Path $PSHOME 'pwsh.exe'
+        $hook = Join-Path $PSScriptRoot '..\validate-edit.ps1'
+        $repository = Join-Path $TestDrive ('xml-' + $Name)
+        $file = Join-Path $repository $Name
+        New-TestFile -Path $file -Content '<root><data name="Unclosed"></root>'
+        $payload = @{ cwd = $repository; tool_input = @{ file_path = $file } } | ConvertTo-Json -Compress
+
+        $null = @($payload | & $pwsh -NoProfile -File $hook 2>&1)
+        $LASTEXITCODE | Should -Be 2
+        (Get-ConfigurationOutcome -ProjectProfile (Get-ProjectProfile -Root $repository)).Failures | Should -BeLike "$Name*"
+
+        New-TestFile -Path $file -Content '<root><data name="Closed" /></root>'
+        $null = @($payload | & $pwsh -NoProfile -File $hook 2>&1)
+        $LASTEXITCODE | Should -Be 0
+        (Get-ConfigurationOutcome -ProjectProfile (Get-ProjectProfile -Root $repository)).Failures | Should -BeNullOrEmpty
     }
 }

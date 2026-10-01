@@ -45,8 +45,9 @@ public static class SinkEncoding
                 else if (value == '>') result.Append("&gt;");
                 else
                 {
-                    if ("\\`*_[]#|".Contains(value, StringComparison.Ordinal) ||
-                        (index == first && value is '-' or '+') ||
+                    // "=" under a line makes it a heading, and "~" opens a code fence or strikes text through.
+                    if ("\\`*_[]#|~".Contains(value, StringComparison.Ordinal) ||
+                        (index == first && value is '-' or '+' or '=') ||
                         (index == digits && digits > first && value is '.' or ')')) result.Append('\\');
                     result.Append(value);
                 }

@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-22-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoTestSuite
 ---
@@ -39,7 +39,7 @@ Lit toutes les pages de la liste des suites du plan dans la zone testplan, avec 
 
 ## EXAMPLES
 
-### Example 1
+### Exemple 1
 
 ```powershell
 Get-AdoTestSuite -PlanId 812 -SuiteId 814 -Recurse
@@ -47,7 +47,7 @@ Get-AdoTestSuite -PlanId 812 -SuiteId 814 -Recurse
 
 Liste la suite 814 suivie de ses descendantes, en profondeur d’abord.
 
-### Example 2
+### Exemple 2
 
 ```powershell
 Get-AdoTestPlan -Name 'Release*' | Get-AdoTestSuite
@@ -55,7 +55,7 @@ Get-AdoTestPlan -Name 'Release*' | Get-AdoTestSuite
 
 Liste la suite racine de chaque plan correspondant, dans le projet de chaque plan.
 
-### Example 3
+### Exemple 3
 
 ```powershell
 Get-AdoTestSuite -Recurse

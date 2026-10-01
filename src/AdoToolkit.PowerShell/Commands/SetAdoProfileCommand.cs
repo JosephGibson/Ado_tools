@@ -1,6 +1,5 @@
 using AdoToolkit.Completion;
 using AdoToolkit.Core.Builds;
-using AdoToolkit.Resources;
 
 namespace AdoToolkit;
 
@@ -20,7 +19,7 @@ public sealed class SetAdoProfileCommand : AdoCmdletBase
     [ArgumentCompleter(typeof(ProjectNameCompleter))]
     public string? DefaultProject { get; set; }
 
-    // The four defaults below are removed from the profile with $null; the text ones also with a blank value.
+    // The defaults are removed from the profile with $null; the text ones also with a blank value.
     [Parameter]
     public string? DefaultBranch { get; set; }
 
@@ -58,7 +57,8 @@ public sealed class SetAdoProfileCommand : AdoCmdletBase
         AdoProfile profile = new()
         {
             Name = Name, CollectionUri = normalized.CollectionUri,
-            DefaultProject = MyInvocation.BoundParameters.ContainsKey(nameof(DefaultProject)) ? DefaultProject : previous?.DefaultProject,
+            DefaultProject = MyInvocation.BoundParameters.ContainsKey(nameof(DefaultProject))
+                ? (string.IsNullOrWhiteSpace(DefaultProject) ? null : DefaultProject) : previous?.DefaultProject,
             DefaultBranch = MyInvocation.BoundParameters.ContainsKey(nameof(DefaultBranch))
                 ? (string.IsNullOrWhiteSpace(DefaultBranch) ? null : DefaultBranch) : previous?.DefaultBranch,
             DefaultBuildDefinition = MyInvocation.BoundParameters.ContainsKey(nameof(DefaultBuildDefinition))
@@ -68,7 +68,7 @@ public sealed class SetAdoProfileCommand : AdoCmdletBase
             Authentication = MyInvocation.BoundParameters.ContainsKey(nameof(Authentication)) ? Authentication : previous?.Authentication ?? Authentication,
             RequestTimeoutSeconds = MyInvocation.BoundParameters.ContainsKey(nameof(RequestTimeoutSeconds)) ? RequestTimeoutSeconds : previous?.RequestTimeoutSeconds ?? RequestTimeoutSeconds,
         };
-        if (ShouldProcess(Name, ShellMessages.Get(AdoMessage.SetProfile, MessageCulture)))
+        if (ShouldProcess(Name, Messages.Get(AdoMessage.SetProfile, MessageCulture)))
             WriteObject(store.SetProfile(profile, DefaultProfile.IsPresent, MessageCulture));
     });
 

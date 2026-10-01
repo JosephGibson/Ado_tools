@@ -1,5 +1,3 @@
-using AdoToolkit.Resources;
-
 namespace AdoToolkit;
 
 [Cmdlet(VerbsCommunications.Disconnect, "Ado", DefaultParameterSetName = "Default")]
@@ -9,6 +7,6 @@ public sealed class DisconnectAdoCommand : AdoCmdletBase
     protected override void ProcessRecord() => RunLocal(() =>
     {
         SessionStateRegistry.Current.Disconnect();
-        WriteVerbose(ShellMessages.Get(AdoMessage.Disconnect, MessageCulture));
+        WriteVerbose(Messages.Get(AdoMessage.Disconnect, MessageCulture));
     });
 }

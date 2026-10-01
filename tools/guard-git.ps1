@@ -191,8 +191,8 @@ if ([string]::IsNullOrWhiteSpace($command)) { exit 0 }
 if (Test-IsBlockedGitCommand -CommandText $command) {
     [Console]::Error.WriteLine(
         'Blocked by tools/guard-git.ps1: the user owns Git repository state. ' +
-        'Only git status, diff, log, show, and blame are allowed, and not with -c, ' +
-        '--config-env, or --exec-path. Ask the user to run other Git commands.')
+        'Only git status, diff, log, show and blame are allowed, and not with ' +
+        ($script:ForbiddenGitOptions -join ', ') + '. Ask the user to run other Git commands.')
     exit 2
 }
 

@@ -15,12 +15,12 @@ certificate on every script, manifest and toolkit assembly.
 
 .EXAMPLE
 Unblock-File .\Install-AdoToolkit.ps1
-.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.5.0.zip
+.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.6.0.zip
 
-Uses AdoToolkit-0.5.0.zip.sha256 from the same folder as the zip.
+Uses AdoToolkit-0.6.0.zip.sha256 from the same folder as the zip.
 
 .EXAMPLE
-.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.5.0.zip -Sha256 <64 hexadecimal characters> -WhatIf
+.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.6.0.zip -Sha256 <64 hexadecimal characters> -WhatIf
 #>
 [CmdletBinding(SupportsShouldProcess = $true, DefaultParameterSetName = 'ChecksumFile')]
 param(
@@ -43,8 +43,7 @@ $ProgressPreference = 'SilentlyContinue'
 # Keep in step with Assert-AdoPackage in Package.Common.ps1; a tooling test compares them.
 $layout = @(
     'AdoToolkit.psd1', 'AdoToolkit.Format.ps1xml',
-    'AdoToolkit.Core.dll', 'AdoToolkit.PowerShell.dll',
-    'fr/AdoToolkit.Core.resources.dll', 'fr/AdoToolkit.PowerShell.resources.dll',
+    'AdoToolkit.Core.dll', 'AdoToolkit.PowerShell.dll', 'fr/AdoToolkit.Core.resources.dll',
     'en-US/AdoToolkit.PowerShell.dll-Help.xml', 'fr/AdoToolkit.PowerShell.dll-Help.xml'
 )
 $maximumEntryBytes = 64MB

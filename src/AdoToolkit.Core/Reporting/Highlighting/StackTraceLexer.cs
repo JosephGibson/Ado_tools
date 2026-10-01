@@ -96,6 +96,9 @@ public static class StackTraceLexer
             else if (method[i] is '>' or ']') depth = Math.Max(0, depth - 1);
             else if (method[i] == '.' && depth == 0) dots.Add(i);
         }
+        // Constructors are named .ctor and .cctor, so the frame reads Cart..ctor(): the second
+        // of the two adjacent dots belongs to the method name.
+        if (dots.Count > 1 && dots[^1] == dots[^2] + 1) dots.RemoveAt(dots.Count - 1);
         int methodStart = dots.Count > 0 ? dots[^1] + 1 : 0;
         int typeStart = dots.Count > 1 ? dots[^2] + 1 : 0;
         // Runtime async state machines are nested types: Cart.<Run>d__1.MoveNext().

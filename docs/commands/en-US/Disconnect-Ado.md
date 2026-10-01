@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Disconnect-Ado
 ---
@@ -29,7 +29,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Releases this runspace’s HTTP clients after active requests finish and clears its project cache. Other runspaces keep their connections. Produces no output.
+Releases this runspace’s HTTP clients after active requests finish and clears its project and test category caches. Other runspaces keep their connections. Produces no output.
 
 ## EXAMPLES
 
@@ -56,7 +56,7 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ### System.Void
 
-Object returned by the command.
+The command produces no output.
 
 ## NOTES
 
@@ -65,6 +65,6 @@ Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020.
 ## RELATED LINKS
 
 [Connect-Ado](Connect-Ado.md)
-[Get-AdoProject](Get-AdoProject.md)
+[Get-AdoConnection](Get-AdoConnection.md)
 
 

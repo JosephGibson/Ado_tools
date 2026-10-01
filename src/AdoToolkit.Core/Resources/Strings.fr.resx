@@ -104,6 +104,7 @@
   <data name="NoTestCasesToExport" xml:space="preserve"><value>Aucun cas de test n’a été reçu ; aucun rapport n’a été écrit.</value></data>
   <data name="ExportReport" xml:space="preserve"><value>Exporter le rapport du cas de test</value></data>
   <data name="ExportNotOpened" xml:space="preserve"><value>Le rapport a été écrit dans {0}, mais n’a pas été ouvert : seuls les fichiers .html, .htm, .md, .markdown, .json et .txt sont ouverts.</value></data>
+  <data name="ExportOpenFailed" xml:space="preserve"><value>Le rapport a été écrit dans {0}, mais n’a pas pu être ouvert : {1}</value></data>
   <data name="FileSystemPathRequired" xml:space="preserve"><value>Le chemin du rapport doit utiliser le fournisseur FileSystem.</value></data>
   <data name="ReportOverview" xml:space="preserve"><value>Vue d’ensemble</value></data>
   <data name="ReportSteps" xml:space="preserve"><value>Étapes</value></data>
@@ -120,20 +121,21 @@
   <data name="ProgressExpansion" xml:space="preserve"><value>Développement des cas de test : {0} sur {1}</value></data>
   <data name="ProgressCompleted" xml:space="preserve"><value>{0} cas de test récupéré(s).</value></data>
   <data name="InputNotTestCase" xml:space="preserve"><value>L’entrée {0} est un plan ou une suite de tests ; son Id n’est donc pas un ID de cas de test. Transmettez des objets AdoTestSuite obtenus avec Get-AdoTestSuite.</value></data>
+  <data name="IncompleteInput" xml:space="preserve"><value>L’entrée {0} est incomplète : {1} n’a pas de valeur valide. Transmettez un objet retourné par une commande AdoToolkit.</value></data>
   <data name="BuildDefinitionMatches" xml:space="preserve"><value>Le nom correspond à {0} définitions. Utilisez -Definition &lt;id&gt;.</value></data>
   <data name="BuildDefinitionNotFound" xml:space="preserve"><value>La définition de build {0} est introuvable.</value></data>
   <data name="BuildNotFound" xml:space="preserve"><value>Le build {0} est introuvable.</value></data>
   <data name="InvalidBuildDefinition" xml:space="preserve"><value>Definition doit être un identifiant entier positif ou un nom exact non vide.</value></data>
-  <data name="NoTestRuns" xml:space="preserve"><value>La build {0} n’a aucune série de tests.</value></data>
-  <data name="TestRunInProgress" xml:space="preserve"><value>La build {0} ou l’une de ses séries de tests n’est pas terminée; les résultats peuvent changer.</value></data>
+  <data name="NoTestRuns" xml:space="preserve"><value>Le build {0} n’a aucune série de tests.</value></data>
+  <data name="TestRunInProgress" xml:space="preserve"><value>Le build {0} ou l’une de ses séries de tests n’est pas terminé; les résultats peuvent changer.</value></data>
   <data name="FailureLimitExceeded" xml:space="preserve"><value>{0} identités de tests en échec dépassent le maximum de {1}; les identités restantes sont comptées, sans détail.</value></data>
   <data name="UngroupedTestResult" xml:space="preserve"><value>Le résultat {0} de la série {1} n’a pas de nom de test automatisé; ses tentatives ne peuvent pas être regroupées.</value></data>
   <data name="InvalidTestCaseReference" xml:space="preserve"><value>Le résultat {0} de la série {1} a une référence de cas de test qui n’est pas un entier positif.</value></data>
   <data name="UnresolvedTestCase" xml:space="preserve"><value>Le cas de test {0} est introuvable ou inaccessible; le lien vers son ID est conservé.</value></data>
-  <data name="BugLookupFailed" xml:space="preserve"><value>Les bogues des tests de la build {0} n’ont pas pu être lus; les ID de bogues des résultats de test restent des liens, sans titre, état ni indication de bogue ouvert.</value></data>
+  <data name="BugLookupFailed" xml:space="preserve"><value>Les bogues des tests du build {0} n’ont pas pu être lus; les ID de bogues des résultats de test restent des liens, sans titre, état ni indication de bogue ouvert.</value></data>
   <data name="UnresolvedBug" xml:space="preserve"><value>Le bogue {0} est introuvable ou inaccessible; le lien vers son ID est conservé.</value></data>
   <data name="BugMetadataUnavailable" xml:space="preserve"><value>Les types de bogues ou les catégories d’états du projet {0} n’ont pas pu être lus : un élément de travail lié compte comme bogue seulement si son type est Bug, et un bogue est ouvert sauf si son état est Closed, Done ou Removed.</value></data>
-  <data name="HistoryUnavailable" xml:space="preserve"><value>La build {0} n’a pas pu être lue; sa barre et ses cellules d’historique sont indisponibles.</value></data>
+  <data name="HistoryUnavailable" xml:space="preserve"><value>Le build {0} n’a pas pu être lu; sa barre et ses cellules d’historique sont indisponibles.</value></data>
   <data name="HistoryLimitExceeded" xml:space="preserve"><value>Le maximum de {0} requête(s) d’historique est atteint; les entrées d’historique plus anciennes sont indisponibles.</value></data>
   <data name="ProgressTestFailureActivity" xml:space="preserve"><value>Récupération des tests en échec</value></data>
   <data name="ProgressTestRuns" xml:space="preserve"><value>Lecture des séries de tests : {0} série(s)</value></data>
@@ -180,7 +182,7 @@
   <data name="TestReportSeconds" xml:space="preserve"><value>{0:#,0.###} s</value></data>
   <data name="TestReportStarted" xml:space="preserve"><value>Début</value></data>
   <data name="TestReportMachine" xml:space="preserve"><value>Machine</value></data>
-  <data name="TestReportRun" xml:space="preserve"><value>Exécution de tests</value></data>
+  <data name="TestReportRun" xml:space="preserve"><value>Série de tests</value></data>
   <data name="TestReportResult" xml:space="preserve"><value>Résultat du test</value></data>
   <data name="TestReportRunBy" xml:space="preserve"><value>Exécuté par</value></data>
   <data name="TestReportFailureType" xml:space="preserve"><value>Type d’échec</value></data>
@@ -214,10 +216,10 @@
   <data name="TestReportWarning" xml:space="preserve"><value>Avertissement</value></data>
   <data name="TestReportError" xml:space="preserve"><value>Erreur</value></data>
   <data name="TestReportFilterCount" xml:space="preserve"><value>{0} tests sur {1}</value></data>
-  <data name="AttachmentTooLarge" xml:space="preserve"><value>La pièce jointe {0} du résultat de test {2} de l’exécution {1} dépasse la limite de {3} octets; elle est répertoriée avec un lien vers Azure DevOps, mais n’est pas téléchargée.</value></data>
+  <data name="AttachmentTooLarge" xml:space="preserve"><value>La pièce jointe {0} du résultat de test {2} de la série {1} dépasse la limite de {3} octets; elle est répertoriée avec un lien vers Azure DevOps, mais n’est pas téléchargée.</value></data>
   <data name="AttachmentBudgetExceeded" xml:space="preserve"><value>Le budget total de {0} octets pour les pièces jointes est atteint à la pièce jointe {1}; les pièces jointes restantes sont répertoriées, mais pas téléchargées.</value></data>
-  <data name="AttachmentDownloadFailed" xml:space="preserve"><value>La pièce jointe {0} du résultat de test {2} de l’exécution {1} n’a pas pu être téléchargée; elle est répertoriée sans fichier local.</value></data>
-  <data name="AttachmentContentMismatch" xml:space="preserve"><value>La pièce jointe {0} du résultat de test {2} de l’exécution {1} ne contient pas de contenu {3} valide; elle est liée en tant que fichier .bin, sans aperçu.</value></data>
+  <data name="AttachmentDownloadFailed" xml:space="preserve"><value>La pièce jointe {0} du résultat de test {2} de la série {1} n’a pas pu être téléchargée; elle est répertoriée sans fichier local.</value></data>
+  <data name="AttachmentContentMismatch" xml:space="preserve"><value>La pièce jointe {0} du résultat de test {2} de la série {1} ne contient pas de contenu {3} valide; elle est liée en tant que fichier .bin, sans aperçu.</value></data>
   <data name="TestReportLocalCopy" xml:space="preserve"><value>Copie locale</value></data>
   <data name="TestReportNotDownloadedTooLarge" xml:space="preserve"><value>Non téléchargée : taille supérieure à la limite.</value></data>
   <data name="TestReportNotDownloadedBudget" xml:space="preserve"><value>Non téléchargée : le budget total des pièces jointes est atteint.</value></data>
@@ -226,7 +228,7 @@
   <data name="TestReportOverview" xml:space="preserve"><value>Vue d’ensemble</value></data>
   <data name="TestReportByError" xml:space="preserve"><value>Par erreur</value></data>
   <data name="TestReportDetails" xml:space="preserve"><value>Détails</value></data>
-  <data name="TestReportRunsAndHistory" xml:space="preserve"><value>Exécutions et historique</value></data>
+  <data name="TestReportRunsAndHistory" xml:space="preserve"><value>Séries de tests et historique</value></data>
   <data name="TestReportTest" xml:space="preserve"><value>Test</value></data>
   <data name="TestReportTestCase" xml:space="preserve"><value>Cas de test</value></data>
   <data name="TestReportLatestError" xml:space="preserve"><value>Dernière erreur</value></data>
@@ -250,7 +252,7 @@
   <data name="TestReportDownloaded" xml:space="preserve"><value>Téléchargées</value></data>
   <data name="TestReportListed" xml:space="preserve"><value>Listées</value></data>
   <data name="TestReportOutsideWindow" xml:space="preserve"><value>Hors de la fenêtre</value></data>
-  <data name="TestReportWindowNote" xml:space="preserve"><value>Les pièces jointes des exécutions commencées avant le {0} sont omises : {1}.</value></data>
+  <data name="TestReportWindowNote" xml:space="preserve"><value>Les pièces jointes des séries de tests commencées avant le {0} sont omises : {1}.</value></data>
   <data name="TestReportPreview" xml:space="preserve"><value>Aperçu</value></data>
   <data name="TestReportNotInlinedSize" xml:space="preserve"><value>Trop volumineuse pour être affichée ici; ouvrez la copie locale.</value></data>
   <data name="TestReportNotInlinedBudget" xml:space="preserve"><value>Non affichée ici : le rapport a atteint sa limite de pièces jointes affichées; ouvrez la copie locale.</value></data>
@@ -263,7 +265,7 @@
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Exporter le rapport des tests en échec et télécharger les pièces jointes dans {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Téléchargement des pièces jointes : {0} de {1}</value></data>
   <data name="TestFailureReportPathInvalid" xml:space="preserve"><value>Le chemin doit désigner un répertoire ou un fichier .html : {0}</value></data>
-  <data name="TestFailureReportSingleFile" xml:space="preserve"><value>Le chemin désigne un seul fichier; seul le premier ensemble de tests en échec est exporté. Utilisez un répertoire pour la build {0}.</value></data>
+  <data name="TestFailureReportSingleFile" xml:space="preserve"><value>Le chemin désigne un seul fichier; seul le premier ensemble de tests en échec est exporté. Utilisez un répertoire pour le build {0}.</value></data>
   <data name="AttachmentFolderSkipped" xml:space="preserve"><value>{0} est ignoré : c’est un lien (point d’analyse), qui n’est jamais suivi ni supprimé.</value></data>
   <data name="AttachmentFolderNotDeleted" xml:space="preserve"><value>Impossible de supprimer l’ancien dossier de pièces jointes {0}; supprimez-le manuellement.</value></data>
   <data name="ResponseFormatOperation" xml:space="preserve"><value>{0} Opération : {1}.</value></data>

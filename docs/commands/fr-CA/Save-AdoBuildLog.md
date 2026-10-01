@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Save-AdoBuildLog
 ---
@@ -68,10 +68,10 @@ HelpMessage: ''
 
 ### -LogId
 
-Identifiant positif du journal. Une valeur nulle produit l’erreur non terminale BuildLogNotAvailable pour cet élément; le pipeline continue.
+Identifiant positif du journal. Une valeur nulle produit l’erreur non bloquante BuildLogNotAvailable pour cet élément; le pipeline continue.
 
 ```yaml
-Type: System.Nullable[System.Int32]
+Type: System.Nullable`1[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
@@ -92,7 +92,7 @@ HelpMessage: ''
 Nombre positif de lignes finales à demander. Sans cette option, télécharge le journal complet. Si le nombre de lignes est inconnu, avertit et télécharge le journal complet.
 
 ```yaml
-Type: System.Nullable[System.Int32]
+Type: System.Nullable`1[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
@@ -201,7 +201,8 @@ Affiche le fichier prévu sans requête HTTP ni écriture.
 Type: System.Management.Automation.SwitchParameter
 DefaultValue: ''
 SupportsWildcards: false
-Aliases: []
+Aliases:
+- wi
 ParameterSets:
 - Name: (All)
   Position: Named
@@ -222,7 +223,8 @@ Demande confirmation avant le téléchargement et l’écriture.
 Type: System.Management.Automation.SwitchParameter
 DefaultValue: ''
 SupportsWildcards: false
-Aliases: []
+Aliases:
+- cf
 ParameterSets:
 - Name: (All)
   Position: Named

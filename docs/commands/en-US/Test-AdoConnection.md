@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Test-AdoConnection
 ---
@@ -75,7 +75,7 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 
 ### AdoToolkit.Core.Connections.AdoConnection
 
-Object returned by the command.
+A connection from Connect-Ado or Get-AdoConnection, received from the pipeline.
 
 ## OUTPUTS
 
@@ -90,6 +90,6 @@ Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020.
 ## RELATED LINKS
 
 [Connect-Ado](Connect-Ado.md)
-[Get-AdoProject](Get-AdoProject.md)
+[Get-AdoConnection](Get-AdoConnection.md)
 
 

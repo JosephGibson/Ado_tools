@@ -1,17 +1,17 @@
 #requires -Version 7.6
 <#
 .SYNOPSIS
-Compact, machine-oriented repository discovery and validation for coding agents.
+Compact, machine-oriented discovery and validation of the AdoToolkit repository for coding agents.
 
 .DESCRIPTION
-Detects the repository instead of assuming an ecosystem. The default output is
-compressed JSON so an agent can collect project state without reading several
-configuration files or parsing human-oriented command output.
+Each command writes one compressed JSON document, so an agent collects project state
+without reading several configuration files or parsing human-oriented command output.
+verify runs the full gate; its exit code is 0 for pass, 1 for failure and 2 for incomplete.
 #>
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('inspect', 'context', 'find', 'plan', 'verify', 'diagnose', 'deps', 'bootstrap', 'init')]
+    [ValidateSet('inspect', 'context', 'find', 'plan', 'verify', 'diagnose', 'deps', 'bootstrap')]
     [string] $Command = 'context',
 
     [string] $Query,
@@ -19,10 +19,6 @@ param(
     [string] $Path,
 
     [string[]] $Stage,
-
-    [string] $ProjectName,
-
-    [string] $Description,
 
     [ValidateRange(1, 100)]
     [int] $Limit = 20,
@@ -47,14 +43,21 @@ $script:RepositoryRoot = Split-Path -Parent $PSScriptRoot
 # One exclusion list drives both discovery paths. The ripgrep globs below are derived
 # from these names rather than written out again, so the file set an agent sees cannot
 # change depending on whether ripgrep happens to be installed.
-$script:ExcludedDirectoryNames = @('.git', '.vs', '.idea', 'node_modules', '.venv', 'venv', 'bin', 'obj', 'artifacts', 'dist', 'build', 'coverage', 'TestResults', 'target', '__pycache__', '.pytest_cache', '.ruff_cache', '.mypy_cache', '.next', '.nuxt', '.cache', '.nuget')
+$script:ExcludedDirectoryNames = @('.git', '.vs', '.idea', 'bin', 'obj', 'artifacts', 'dist', 'build', 'coverage', 'TestResults', 'target', '.cache', '.nuget')
 $script:SensitiveDirectoryNames = @('secret', 'secrets')
 $script:SensitiveFileGlobs = @('.env', '.env.*', 'id_rsa*', 'id_ed25519*', '*.pem', '*.pfx', '*.p12', '*.key', '*.log', '*credentials*', '*.local.*', '.npmrc', '.pypirc', '.netrc')
 # Sensitive directories must be rejected wherever they occur in a path; sensitive file
 # names are rejected at the final path component. This remains a final safety check even
 # when the walker or ripgrep globs already excluded the path earlier.
 $script:SensitivePathPattern = '(?:^|[\\/])(?:\.env(?:\.[^\\/]*)?|secrets?)(?:[\\/]|$)|(?:^|[\\/])(?:id_(?:rsa|ed25519)[^\\/]*|[^\\/]*credentials[^\\/]*|[^\\/]*\.local\.[^\\/]*|\.(?:npmrc|pypirc|netrc)|[^\\/]*\.(?:pem|pfx|p12|key|log))$'
-$script:ConfigurationExtensions = @('.json', '.xml', '.config', '.csproj', '.fsproj', '.vbproj', '.props', '.targets', '.slnx')
+$script:ConfigurationExtensions = @('.json', '.xml', '.config', '.csproj', '.props', '.targets', '.slnx', '.resx', '.ps1xml')
+# Markdown that the documentation stage does not check: archived history, apart from its two
+# index files, and test fixtures, apart from their catalog. In a dated file every link must
+# resolve, but a path may name a file that has since moved or gone.
+$script:FrozenDocumentationPattern = '^docs/archive/(?!README\.md$|plans/README\.md$)|^tests/Fixtures/(?!README\.md$)'
+$script:DatedDocumentationPattern = '^docs/release-[^/]+\.md$'
+# A code span that starts with one of these directories names a repository path.
+$script:RepositoryPathRoots = @('src', 'tests', 'tools', 'docs', '.claude', '.agents', '.github')
 
 foreach ($library in @('discovery', 'dependencies', 'validation', 'setup')) {
     . (Join-Path $PSScriptRoot "lib/$library.ps1")
@@ -77,7 +80,6 @@ if ($MyInvocation.InvocationName -ne '.') {
             'diagnose' { Get-ProjectDiagnostics }
             'deps' { Get-DependencyInventory -Limit $Limit }
             'bootstrap' { Invoke-ToolBootstrap -Install:$Install }
-            'init' { Initialize-Project -ProjectName $ProjectName -Description $Description }
         }
         Write-DevResult -Result $result
         if ($result.Status -eq 'pass' -or $result.Status -eq 'ok') { exit 0 }

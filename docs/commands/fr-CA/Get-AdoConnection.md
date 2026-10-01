@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoConnection
 ---
@@ -33,7 +33,7 @@ Retourne la connexion sélectionnée par Connect-Ado sans contacter le serveur. 
 
 ## EXAMPLES
 
-### Example 1
+### Exemple 1
 
 ```powershell
 Get-AdoConnection
@@ -64,6 +64,6 @@ Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020.
 ## RELATED LINKS
 
 [Connect-Ado](Connect-Ado.md)
-[Get-AdoProject](Get-AdoProject.md)
+[Test-AdoConnection](Test-AdoConnection.md)
 
 

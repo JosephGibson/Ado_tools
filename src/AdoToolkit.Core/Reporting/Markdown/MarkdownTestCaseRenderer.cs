@@ -1,3 +1,4 @@
+using System.Text;
 using AdoToolkit.Core.TestManagement;
 
 namespace AdoToolkit.Core.Reporting.Markdown;
@@ -84,8 +85,8 @@ public static class MarkdownTestCaseRenderer
             }
             else
             {
-                writer.Write("**" + Label("Action") + "**\n\n" + ContentLinks.Markdown(row.Action) + "\n\n");
-                writer.Write("**" + Label("ExpectedResult") + "**\n\n" + ContentLinks.Markdown(row.ExpectedResult) + "\n\n");
+                writer.Write("**" + Label("Action") + "**\n\n" + StepText(row.Action) + "\n\n");
+                writer.Write("**" + Label("ExpectedResult") + "**\n\n" + StepText(row.ExpectedResult) + "\n\n");
             }
         }
         if (model.Diagnostics.Count > 0)
@@ -96,4 +97,20 @@ public static class MarkdownTestCaseRenderer
     }
 
     private static string TableText(string text) => SinkEncoding.Markdown(text).Replace("\n", "<br>", StringComparison.Ordinal);
+
+    // A viewer joins the lines of one paragraph, so every line that is followed by another line
+    // of the same paragraph ends with a break. A blank line stays the paragraph boundary.
+    private static string StepText(string text)
+    {
+        string encoded = ContentLinks.Markdown(text);
+        StringBuilder result = new(encoded.Length);
+        for (int index = 0; index < encoded.Length; index++)
+        {
+            bool lineEnd = encoded[index] == '\n' && index > 0 && encoded[index - 1] != '\n'
+                && index + 1 < encoded.Length && encoded[index + 1] != '\n';
+            if (lineEnd) result.Append("<br>");
+            result.Append(encoded[index]);
+        }
+        return result.ToString();
+    }
 }

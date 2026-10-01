@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-22-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -13,7 +13,7 @@ title: Export-AdoBuildTestFailure
 
 ## SYNOPSIS
 
-Écrit un rapport HTML compact des tests en échec par ensemble et télécharge les pièces jointes JSON et texte de son exécution de tests la plus récente.
+Écrit un rapport HTML compact des tests en échec par ensemble et télécharge les pièces jointes JSON et texte de sa série de tests la plus récente.
 
 ## SYNTAX
 
@@ -38,7 +38,7 @@ qui a au moins un bogue ouvert porte après son nom un lien Bogue ouvert vers le
 de plus petit numéro. Par erreur regroupe les mêmes lignes sous leur dernière erreur.
 Détails présente une fiche par test, qui liste ses bogues avec leur ID lié à l’élément de
 travail, leur titre et leur état, et la mention Ouvert pour ceux qui sont ouverts. Un bogue est ouvert sauf si son état appartient à la
-catégorie d’états Completed ou Removed. Exécutions et historique liste les séries de tests
+catégorie d’états Completed ou Removed. Séries de tests et historique liste les séries de tests
 du build, le graphique de l’historique et les détails du rapport. Chaque groupe, tentative
 et aperçu de pièce jointe est d’abord réduit, et un message d’erreur ou une arborescence
 des appels répétés d’une tentative antérieure du même test sont référencés au lieu d’être
@@ -60,7 +60,7 @@ par une stratégie de sécurité du contenu fondée sur des hachages, ajoute le 
 vue, la recherche, la navigation au clavier et la copie. La recherche compare chaque mot
 saisi à toute la fiche, tentatives réduites comprises : messages d’erreur, arborescences
 des appels, pièces jointes JSON et texte affichées, noms de phase et de travail, champs
-des exécutions et des tentatives, et titres et états des bogues. Un ID de cas de test
+des séries de tests et des tentatives, et titres et états des bogues. Un ID de cas de test
 correspond avec ou sans `#`. Lorsqu’au moins un test a un bogue ouvert, le filtre Sans
 bogue ouvert n’affiche que les tests qu’aucun bogue ouvert ne suit encore.
 
@@ -71,18 +71,18 @@ leurs tentatives, mais leurs pièces jointes sont omises. Le nom de chaque pièc
 un lien vers la pièce jointe dans Azure DevOps, que le navigateur télécharge avec votre
 connexion Windows. Seules les pièces jointes JSON (`.json`) et texte (`.txt`, `.log`) sont
 téléchargées par l’exportation; les pièces jointes PNG, HTML et autres restent des liens,
-quels que soient les paramètres. Par défaut, seule l’exécution de tests la plus récente est
-téléchargée, et seulement si elle est dans la fenêtre. Cette exécution est la dernière dans l’ordre des tentatives : étape,
-phase et travail, puis date de début et ID d’exécution. Si elle n’a aucune pièce jointe JSON
-ou texte, l’exportation ne télécharge rien d’une exécution précédente et ne crée aucun
-dossier de pièces jointes.
+quels que soient les paramètres. Par défaut, seule la série de tests la plus récente est
+téléchargée, et seulement si elle est dans la fenêtre. Cette série est la dernière dans
+l’ordre des tentatives de phase, de travail et d’instance du travail, puis de la date de
+début et de l’ID de série. Si elle n’a aucune pièce jointe JSON ou texte, l’exportation ne
+télécharge rien d’une série précédente et ne crée aucun dossier de pièces jointes.
 
 Utilisez `-AllRunAttachments` pour télécharger les pièces jointes JSON et texte de toutes
-les exécutions de la fenêtre, ou `-SkipAttachments` pour n’en télécharger aucune.
+les séries de tests de la fenêtre, ou `-SkipAttachments` pour n’en télécharger aucune.
 `-SkipAttachments` a priorité si les deux paramètres sont fournis. Les pièces jointes
 sélectionnées sont téléchargées dans l’ordre du rapport, dans un dossier nommé
 `<nom de base du rapport>.files-<horodatage UTC>` à côté du rapport. Les fichiers locaux
-utilisent les noms `r<exécution>-<résultat>[-s<sous-résultat>]-a<pièce jointe>.<ext>`; les
+utilisent les noms `r<série>-<résultat>[-s<sous-résultat>]-a<pièce jointe>.<ext>`; les
 fichiers `.log` sont enregistrés en `.txt`. Les noms distants sont affichés et ne
 deviennent jamais des chemins.
 
@@ -94,7 +94,7 @@ rapport reste sous `maximumInlineTotalBytes`; les fichiers plus volumineux sont 
 liés. Les limites de taille (`maximumAttachmentBytes`, `maximumTotalAttachmentBytes`) et
 les téléchargements en échec produisent des avertissements; les pièces jointes concernées
 conservent leur nom Azure DevOps, leur taille et le lien de téléchargement. Les erreurs
-d’authentification ou d’autorisation et l’annulation interrompent l’exportation. Une build
+d’authentification ou d’autorisation et l’annulation interrompent l’exportation. Un build
 d’historique illisible ne l’interrompt pas.
 
 L’enregistrement suit cet ordre : téléchargement dans un dossier temporaire,
@@ -115,7 +115,7 @@ Get-AdoBuild -Definition 'Main Build' -Branch main -Latest -Result Failed |
 ```
 
 Écrit `.\triage\Build-<id>-TestFailures.html` en français avec son dossier de pièces
-jointes, puis ouvre le rapport. Le dossier `triage` doit déjà exister.
+jointes, puis ouvre le rapport. Le dossier `triage` est créé s’il n’existe pas.
 
 ### Exemple 2
 
@@ -135,6 +135,7 @@ Get-AdoBuildTestFailure -BuildId 401 | Export-AdoBuildTestFailure -IncludeFlaky 
 
 Inclut les tests instables et télécharge les pièces jointes JSON et texte de toutes les
 séries de tests commencées au cours des 14 derniers jours.
+
 ## PARAMETERS
 
 ### -InputObject
@@ -202,7 +203,7 @@ HelpMessage: ''
 
 ### -SkipAttachments
 
-Ne télécharge rien et ne crée aucun dossier; les pièces jointes des exécutions de la fenêtre sont répertoriées avec leur nom, leur taille et un lien de téléchargement. A priorité sur -AllRunAttachments.
+Ne télécharge rien et ne crée aucun dossier; les pièces jointes des séries de tests de la fenêtre sont répertoriées avec leur nom, leur taille et un lien de téléchargement. A priorité sur -AllRunAttachments.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -220,9 +221,10 @@ DontShow: false
 AcceptedValues: []
 HelpMessage: ''
 ```
+
 ### -AllRunAttachments
 
-Télécharge les pièces jointes JSON et texte de toutes les exécutions de la fenêtre plutôt que celles de l’exécution la plus récente seulement. Les pièces jointes PNG et HTML ne sont jamais téléchargées. Les limites de taille par fichier et au total continuent de s’appliquer. Sans effet avec -SkipAttachments.
+Télécharge les pièces jointes JSON et texte de toutes les séries de tests de la fenêtre plutôt que celles de la série la plus récente seulement. Les pièces jointes PNG et HTML ne sont jamais téléchargées. Les limites de taille par fichier et au total continuent de s’appliquer. Sans effet avec -SkipAttachments.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -240,6 +242,7 @@ DontShow: false
 AcceptedValues: []
 HelpMessage: ''
 ```
+
 ### -AttachmentWindowDays
 
 Nombre de jours avant l’exportation, de 1 à 365, pendant lesquels une série de tests doit avoir commencé pour que ses pièces jointes apparaissent et soient téléchargées. Les séries plus anciennes conservent toutes leurs tentatives, mais perdent leurs pièces jointes; une série sans date de début est considérée hors de la fenêtre. Par défaut, 7.
@@ -260,6 +263,7 @@ DontShow: false
 AcceptedValues: []
 HelpMessage: ''
 ```
+
 ### -IncludeFlaky
 
 Inclut les tests instables, qui ont échoué puis réussi dans chaque phase, travail ou série de tests nommée. Sans ce paramètre, ils sont omis du rapport et seulement comptés dans son en-tête.
@@ -280,6 +284,7 @@ DontShow: false
 AcceptedValues: []
 HelpMessage: ''
 ```
+
 ### -NoClobber
 
 Refuse un rapport existant avant tout téléchargement et ne remplace jamais un rapport créé entre-temps.
@@ -303,7 +308,7 @@ HelpMessage: ''
 
 ### -Open
 
-Ouvre chaque rapport validé avec l’application par défaut.
+Ouvre chaque rapport validé avec l’application par défaut. Un rapport qui ne peut pas être ouvert produit un avertissement et est quand même retourné.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -351,7 +356,8 @@ Nomme le rapport et le dossier de pièces jointes sans requête, téléchargemen
 Type: System.Management.Automation.SwitchParameter
 DefaultValue: ''
 SupportsWildcards: false
-Aliases: []
+Aliases:
+- wi
 ParameterSets:
 - Name: (All)
   Position: Named
@@ -372,7 +378,8 @@ Demande une confirmation par rapport avant de télécharger les pièces jointes 
 Type: System.Management.Automation.SwitchParameter
 DefaultValue: ''
 SupportsWildcards: false
-Aliases: []
+Aliases:
+- cf
 ParameterSets:
 - Name: (All)
   Position: Named
@@ -401,7 +408,7 @@ Le rapport validé et enregistré. Lorsque des pièces jointes ont été téléc
 
 ## NOTES
 
-Nécessite PowerShell 7.6 sur Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase, de travail et de série utilisés pour le regroupement et le suffixe de nouvelle tentative des noms de série (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27).
+Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase, de travail et de série utilisés pour le regroupement et le suffixe de nouvelle tentative des noms de série (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27).
 
 ## RELATED LINKS
 

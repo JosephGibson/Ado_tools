@@ -28,7 +28,7 @@
 
 **Action**
 
-« L’été : 1 234 ! » 😀 é 日本語 &lt;script&gt; &amp; "quoted"
+« L’été : 1 234 ! » 😀 é 日本語 &lt;script&gt; &amp; "quoted"<br>
 next
 
 **Résultat attendu**

@@ -1,10 +1,45 @@
 # Product source
 
-- C# 14, .NET 10; the binary module targets PowerShell 7.6 on Windows.
-- Core never references `System.Management.Automation`. Runtime dependencies are
-  BCL-only (DD-011); the PowerShell package is a compile-time reference only.
-- Human text takes an explicit `CultureInfo`; machine formats use invariant
-  culture and identifiers use ordinal comparisons.
-- All user-facing strings come from string-only neutral English and French `.resx`
-  resources. Keep one public type per file.
-- No static session state; connections and caches belong to their runspace.
+## All code
+
+- C# 14, .NET 10. The binary module targets PowerShell 7.6 on Windows.
+- `AdoToolkit.Core` never references `System.Management.Automation`. Runtime dependencies
+  are BCL-only (DD-011); the PowerShell package is a compile-time reference only.
+- One public type per file.
+- No static session state: connections and caches belong to their runspace
+  (`SessionStateRegistry`). A static cache of type metadata is not session state.
+- Human text takes an explicit `CultureInfo`. Machine formats use the invariant culture.
+  Identifiers compare ordinally.
+- Warnings are errors. Fix the cause; do not suppress.
+
+## Strings
+
+- `src/AdoToolkit.Core/Resources/Strings.resx` (English) and `Strings.fr.resx` are the only
+  catalog. Every key is an `AdoMessage` member or a `DiagnosticCodes` constant, in both files,
+  with the same placeholders. `ResourceParityTests` enforces this.
+- Read a string with `Messages.Get(AdoMessage.<Key>, culture, args)`. No string literal inside
+  `WriteWarning`, `WriteVerbose`, `WriteDebug`, `WriteInformation`, `ProgressRecord`,
+  `ErrorDetails` or an `Ado*Exception` constructor (`HardCodedStringTests`).
+- French: `build` is masculine, a test run is « série de tests », and a no-break space
+  (U+00A0) precedes `:`. `FrenchTerminologyTests` checks the first two.
+- ADO content is never translated or re-cased.
+
+## Cmdlets (`src/AdoToolkit.PowerShell/Commands/`)
+
+- One file per cmdlet, derived from `AdoCmdletBase`. Run the body in `RunLocal`; run
+  requests in `RunWorker`.
+- Throw an `Ado*Exception`. `ErrorRecordFactory` derives the error ID and category from the
+  type; only configuration, authentication and authorization errors terminate.
+- Typed pipeline input: call `EnsureInput(input, input.CollectionUri, connection)` before
+  using it. It reports a hand-made incomplete object and an object from another collection.
+- `-Name` wildcard filters use `NameFilter` and declare `[SupportsWildcards]`.
+- A new or changed parameter also changes both help cultures (`docs/commands/AGENTS.md`).
+
+## Core
+
+- Every request goes through `AdoHttpPipeline` with an `EndpointRegistry` entry.
+  WorkItemsBatch reads go through `WorkItemBatchReader`.
+- Report text is encoded at the sink (`SinkEncoding`, `ContentLinks`). Remote text never
+  enters a script element, a path or a URL; links are built from the connection and IDs.
+- Files are written through `AtomicFileWriter` or `GenerationFolderCommit`.
+- A change to rendered report output changes the goldens: use the `update-goldens` skill.

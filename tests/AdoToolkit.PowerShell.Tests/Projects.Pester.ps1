@@ -34,6 +34,24 @@ Describe 'Project command surface' -Tag 'S0-3' {
         finally { Stop-FakeAdoServer -Server $server }
     }
 
+    # -Name is a wildcard filter (§11.5): composed and decomposed accents match, and an accent
+    # stays significant.
+    It 'matches a name typed with decomposed accents and declares wildcard support' {
+        $composed = "$([char]0x00C9)quipe Web"
+        $server = Start-FakeAdoServer -Responses @(
+            @{ Body = '{"value":[{"id":"11111111-1111-1111-1111-111111111111","name":"' + $composed + '"},{"id":"22222222-2222-2222-2222-222222222222","name":"Equipe Web"}]}' },
+            @{ Body = '{"value":[]}' }
+        )
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -WarningAction SilentlyContinue | Out-Null
+            @(Get-AdoProject -Name ('E' + [char]0x0301 + 'quipe*')).Name | Should -Be @($composed)
+            @(Get-AdoProject -Name 'Equipe*').Name | Should -Be @('Equipe Web')
+            @((Get-Command Get-AdoProject).Parameters['Name'].Attributes |
+                Where-Object { $_ -is [System.Management.Automation.SupportsWildcardsAttribute] }).Count | Should -Be 1
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
     # PowerShell reads ’ and ‘ as single quotes, so doubling only ' left such names unparseable.
     It 'completes a project name with a typographic apostrophe as one pasteable argument' {
         $name = "Équipe d$([char]0x2019)Alice"

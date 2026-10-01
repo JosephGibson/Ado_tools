@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoWorkItem
 ---
@@ -39,7 +39,7 @@ Regroupe les identifiants de toute l’invocation en lots de 200, avec l’API v
 
 ## EXAMPLES
 
-### Example 1
+### Exemple 1
 
 ```powershell
 101, 102, 101 | Get-AdoWorkItem -Field System.AssignedTo
@@ -47,7 +47,7 @@ Regroupe les identifiants de toute l’invocation en lots de 200, avec l’API v
 
 Récupère une fois chaque élément, avec le champ supplémentaire demandé.
 
-### Example 2
+### Exemple 2
 
 ```powershell
 Get-AdoWorkItem -Id 101 -IncludeRelations

@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-22-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoProfile
 ---
@@ -50,7 +50,7 @@ Profile name. Get-AdoProfile accepts case-insensitive wildcard patterns; writes 
 ```yaml
 Type: System.String
 DefaultValue: ''
-SupportsWildcards: false
+SupportsWildcards: true
 Aliases: []
 ParameterSets:
 - Name: (All)
@@ -85,7 +85,8 @@ Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020.
 
 ## RELATED LINKS
 
+[Set-AdoProfile](Set-AdoProfile.md)
+[Remove-AdoProfile](Remove-AdoProfile.md)
 [Connect-Ado](Connect-Ado.md)
-[Get-AdoProject](Get-AdoProject.md)
 
 

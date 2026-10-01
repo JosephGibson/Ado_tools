@@ -1,5 +1,4 @@
 using AdoToolkit.Completion;
-using AdoToolkit.Resources;
 
 namespace AdoToolkit;
 
@@ -17,8 +16,9 @@ public sealed class RemoveAdoProfileCommand : AdoCmdletBase
 
     protected override void ProcessRecord() => RunLocal(() =>
     {
+        if (InputObject is not null) EnsureComplete(InputObject);
         string name = InputObject?.Name ?? Name;
-        if (ShouldProcess(name, ShellMessages.Get(AdoMessage.RemoveProfile, MessageCulture)))
+        if (ShouldProcess(name, Messages.Get(AdoMessage.RemoveProfile, MessageCulture)))
             new ConfigurationStore().RemoveProfile(name, MessageCulture);
     });
 }

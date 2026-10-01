@@ -156,7 +156,7 @@ See [Configuration](configuration.md#settings) for the limits.
 | `-Path` | Directory, or an `.html` file path when one build is exported. A missing directory is created when the report is written |
 | `-Culture` | Report language, for example `fr-CA` |
 | `-NoClobber` | Refuses to replace an existing report |
-| `-Open` | Opens the report when it is written |
+| `-Open` | Opens the report when it is written. A report that cannot be opened produces a warning and is still returned |
 | `-WhatIf` | Names the report and attachment folder without downloading or writing |
 
 [Export a report from a build ID](build-report.md) walks through the views, search and

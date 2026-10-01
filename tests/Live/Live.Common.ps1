@@ -59,6 +59,37 @@ function Test-AdoLiveRerunDetail {
     return $outcomes -contains 'Passed' -and @($outcomes | Where-Object { $_ -in @('Failed', 'Error', 'Timeout', 'Aborted') }).Count -gt 0
 }
 
+# What the child elements of the shared-step references (compref) in one steps document are, as
+# one word: None (no reference), NoChildren, RepeatsSharedSteps (the children equal the steps of
+# the referenced work item), OtherSteps (they differ, so they are content that work item does
+# not hold), or Unknown (the referenced document was not supplied). The toolkit skips reference
+# children (V-01), which loses nothing only for the first two. Text is compared, never returned.
+function Get-AdoLiveComprefEvidence {
+    param(
+        [Parameter(Mandatory = $true)][System.Xml.XmlDocument] $Document,
+        # Steps documents keyed by work item ID in invariant text.
+        [System.Collections.IDictionary] $ReferencedSteps = @{}
+    )
+    $describe = {
+        param([System.Xml.XmlNode] $Parent)
+        @(foreach ($child in $Parent.SelectNodes("*[local-name()='step' or local-name()='compref']")) {
+                if ($child.LocalName -eq 'compref') { 'compref:' + $child.GetAttribute('ref') }
+                else { 'step:' + (@($child.SelectNodes("*[local-name()='parameterizedString']") | ForEach-Object { $_.InnerText }) -join [char] 0x1F) }
+            }) -join [char] 0x1E
+    }
+    $verdicts = @(foreach ($reference in $Document.SelectNodes("//*[local-name()='compref']")) {
+            if ($reference.SelectNodes('*').Count -eq 0) { 'NoChildren'; continue }
+            $key = $reference.GetAttribute('ref')
+            if (-not $ReferencedSteps.Contains($key) -or $null -eq $ReferencedSteps[$key].DocumentElement) { 'Unknown'; continue }
+            if ([string]::Equals((& $describe $reference), (& $describe $ReferencedSteps[$key].DocumentElement), [StringComparison]::Ordinal)) { 'RepeatsSharedSteps' }
+            else { 'OtherSteps' }
+        })
+    foreach ($verdict in @('OtherSteps', 'Unknown', 'RepeatsSharedSteps', 'NoChildren')) {
+        if ($verdicts -contains $verdict) { return $verdict }
+    }
+    return 'None'
+}
+
 # Schema allowlists, not character filters: even an ASCII property name can contain work data.
 # Unknown members are recorded under a fixed placeholder and never traversed. Dynamic bags are
 # opaque at every depth, including arrays and customFields[].value.

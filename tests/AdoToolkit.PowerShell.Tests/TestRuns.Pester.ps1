@@ -217,7 +217,7 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
                 $set.History.Count | Should -Be 1
                 $set.History[0].IsCurrent | Should -BeTrue
             }
-            # One build listing plus eleven retrieval requests per set.
+            # One build listing plus thirteen retrieval requests per set.
             $server.Requests.Count | Should -Be 27
         }
         finally { Stop-FakeAdoServer -Server $server }

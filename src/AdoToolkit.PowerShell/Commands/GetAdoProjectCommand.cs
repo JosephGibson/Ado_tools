@@ -8,6 +8,7 @@ public sealed class GetAdoProjectCommand : AdoCmdletBase
     public AdoConnection? Connection { get; set; }
 
     [Parameter(Position = 0)]
+    [SupportsWildcards]
     public string? Name { get; set; }
 
     [Parameter]
@@ -26,11 +27,11 @@ public sealed class GetAdoProjectCommand : AdoCmdletBase
             state.Projects.Set(key + ":completion", projects.Take(256).ToArray());
             if (projects.Count <= 256) state.Projects.Set(key + ":all", projects);
         }
-        WildcardPattern? pattern = Name is null ? null : new(Name, WildcardOptions.IgnoreCase | WildcardOptions.CultureInvariant);
+        NameFilter filter = new(Name);
         int emitted = 0;
         foreach (AdoProject project in projects)
         {
-            if (pattern is not null && !pattern.IsMatch(project.Name)) continue;
+            if (!filter.IsMatch(project.Name)) continue;
             WriteObject(project);
             if (Top > 0 && ++emitted >= Top) break;
         }

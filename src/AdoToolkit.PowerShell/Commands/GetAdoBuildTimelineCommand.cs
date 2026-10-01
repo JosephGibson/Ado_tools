@@ -26,7 +26,7 @@ public sealed class GetAdoBuildTimelineCommand : AdoCmdletBase
     protected override void ProcessRecord() => RunLocal(() =>
     {
         AdoConnection connection = ResolveConnection(Connection);
-        if (InputObject is not null) EnsureSameCollection(InputObject.CollectionUri, connection);
+        if (InputObject is not null) EnsureInput(InputObject, InputObject.CollectionUri, connection);
         string project = InputObject?.TeamProject ?? ResolveProject(Project, connection);
         int id = InputObject?.Id ?? BuildId;
         using ClientLease lease = SessionStateRegistry.Current.Acquire(connection);

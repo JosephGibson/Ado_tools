@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-21-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoTestCase
 ---
@@ -33,7 +33,7 @@ Collecte les objets du pipeline et écrit exactement un document, quel que soit 
 
 ## EXAMPLES
 
-### Example 1
+### Exemple 1
 
 ```powershell
 Get-AdoTestCase -Id 101 | Export-AdoTestCase -Culture fr-CA -Path .\report.html
@@ -41,7 +41,7 @@ Get-AdoTestCase -Id 101 | Export-AdoTestCase -Culture fr-CA -Path .\report.html
 
 Exporte un rapport HTML en français dans le dossier courant.
 
-### Example 2
+### Exemple 2
 
 ```powershell
 Get-AdoTestSuite -PlanId 812 -SuiteId 813 -Recurse | Get-AdoTestCase | Export-AdoTestCase -Culture fr-CA -Path .\Release-12.html -Open
@@ -179,7 +179,7 @@ HelpMessage: ''
 
 ### -Open
 
-Ouvre le rapport validé et enregistré dans l’application par défaut. Seuls les fichiers .html, .htm, .md, .markdown, .json et .txt sont ouverts, car Windows exécute certains autres types de fichiers au lieu de les afficher; avec une autre extension, le rapport est tout de même écrit et un avertissement indique qu’il n’a pas été ouvert.
+Ouvre le rapport validé et enregistré dans l’application par défaut. Seuls les fichiers .html, .htm, .md, .markdown, .json et .txt sont ouverts, car Windows exécute certains autres types de fichiers au lieu de les afficher; avec une autre extension, le rapport est tout de même écrit et un avertissement indique qu’il n’a pas été ouvert. Un rapport qui ne peut pas être ouvert produit un avertissement et est quand même retourné.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -227,7 +227,8 @@ Affiche le chemin cible sans écrire ni ouvrir de fichier.
 Type: System.Management.Automation.SwitchParameter
 DefaultValue: ''
 SupportsWildcards: false
-Aliases: []
+Aliases:
+- wi
 ParameterSets:
 - Name: (All)
   Position: Named
@@ -248,7 +249,8 @@ Demande confirmation avant l’écriture du rapport.
 Type: System.Management.Automation.SwitchParameter
 DefaultValue: ''
 SupportsWildcards: false
-Aliases: []
+Aliases:
+- cf
 ParameterSets:
 - Name: (All)
   Position: Named

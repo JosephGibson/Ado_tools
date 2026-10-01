@@ -63,22 +63,31 @@ internal static class AttemptGrouper
         .ToArray();
 
     // The last name segment with its arguments: a dot inside the argument list does not split, so
-    // Tests.Login("a.b") is Login("a.b").
+    // Tests.Login("a.b") is Login("a.b"). A title, or a name that is not a qualified name, is
+    // shown whole: "Checkout v2.0 smoke" has no namespace to drop.
     internal static string ShortName(string? automatedName, string? title)
     {
-        string source = automatedName ?? title ?? "";
-        int separator = LastSeparator(source, Arguments(source));
+        if (string.IsNullOrEmpty(automatedName)) return title ?? "";
+        int separator = QualifierEnd(automatedName);
         // Keep the whole text when the last segment would be empty.
-        return separator >= 0 && separator < source.Length - 1 ? source[(separator + 1)..] : source;
+        return separator >= 0 && separator < automatedName.Length - 1 ? automatedName[(separator + 1)..] : automatedName;
     }
 
     // The segment before the short name (the class of a method), or null when there is none.
     internal static string? ClassName(string? automatedName)
     {
-        if (automatedName is null) return null;
-        int end = LastSeparator(automatedName, Arguments(automatedName));
+        if (string.IsNullOrEmpty(automatedName)) return null;
+        int end = QualifierEnd(automatedName);
         int start = LastSeparator(automatedName, end) + 1;
         return end > start ? automatedName[start..end] : null;
+    }
+
+    // The separator that ends the qualifier, or -1. White space before it means free text (a
+    // display name), where a dot or a plus is punctuation, not a namespace or nested-type separator.
+    private static int QualifierEnd(string name)
+    {
+        int separator = LastSeparator(name, Arguments(name));
+        return separator >= 0 && name.AsSpan(0, separator).ContainsAny(' ', '\t', '\n') ? -1 : separator;
     }
 
     private static int Arguments(string name) => name.IndexOf('(', StringComparison.Ordinal) is int open and >= 0 ? open : name.Length;

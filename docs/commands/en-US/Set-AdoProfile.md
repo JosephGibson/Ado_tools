@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-22-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Set-AdoProfile
 ---
@@ -32,7 +32,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Writes the profile atomically and preserves unspecified values, unrelated options, and unknown configuration fields. CollectionUrl is required for a new profile. DefaultProfile selects this profile as the default, which Connect-Ado uses without arguments and other commands use when no connection exists. DefaultBranch, DefaultBuildDefinition, DefaultTestPlanId and DefaultTestSuiteId save the values that build and test plan commands use when the matching parameter is omitted; pass $null, or an empty string for the first two, to remove one. Values are validated before the file is written. Commands read them from the connection, so connect again with Connect-Ado after changing them. WhatIf performs no write. A newer configuration schema is read-only. The profile stores no password or token.
+Writes the profile atomically and preserves unspecified values, unrelated options, and unknown configuration fields. CollectionUrl is required for a new profile. DefaultProfile selects this profile as the default, which Connect-Ado uses without arguments and other commands use when no connection exists. DefaultBranch, DefaultBuildDefinition, DefaultTestPlanId and DefaultTestSuiteId save the values that build and test plan commands use when the matching parameter is omitted; pass $null, or an empty string for the first two, to remove one. DefaultProject is removed the same way, with $null or an empty string. Values are validated before the file is written. Commands read them from the connection, so connect again with Connect-Ado after changing them. WhatIf performs no write. A newer configuration schema is read-only. The profile stores no password or token.
 
 ## EXAMPLES
 
@@ -191,7 +191,7 @@ HelpMessage: ''
 
 ### -DefaultProject
 
-Default project name to save in the profile.
+Default project name to save in the profile. An empty string or $null removes it.
 
 ```yaml
 Type: System.String
@@ -337,6 +337,7 @@ Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020.
 
 ## RELATED LINKS
 
+[Get-AdoProfile](Get-AdoProfile.md)
+[Remove-AdoProfile](Remove-AdoProfile.md)
 [Connect-Ado](Connect-Ado.md)
-[Get-AdoProject](Get-AdoProject.md)
 

@@ -7,6 +7,7 @@ $WarningPreference = 'SilentlyContinue'
 $VerbosePreference = 'SilentlyContinue'
 $DebugPreference = 'SilentlyContinue'
 $InformationPreference = 'SilentlyContinue'
+. (Join-Path $PSScriptRoot 'Live.Common.ps1')
 
 $checkStates = [System.Collections.Generic.List[string]]::new()
 function Write-AdoLiveResult {
@@ -17,6 +18,7 @@ function Write-AdoLiveResult {
 
 # Opt-in, installed module only (signed or unsigned); no work data leaves this process.
 # Never persist responses or print values, URLs, identities, or exception messages.
+# For V-01, choose a Test Case whose own steps follow a Shared Steps reference.
 $caseId = 0
 if ([string]::IsNullOrWhiteSpace($env:ADOTOOLKIT_LIVE_PROFILE) -or
     -not [int]::TryParse($env:ADOTOOLKIT_LIVE_TESTCASE_ID, [ref] $caseId) -or
@@ -77,7 +79,6 @@ try {
     $sourceIds = @($caseId) + @($case.SharedSteps | ForEach-Object Id)
     $sourceItems = @(Get-AdoWorkItem -Id ($sourceIds | Select-Object -Unique) -Field Microsoft.VSTS.TCM.Steps)
     $validReferences = $true
-    $hasChildren = $false
     $referenceCount = 0
     $formattedCount = 0
     $formatAgrees = $true
@@ -88,6 +89,9 @@ try {
     $settings.IgnoreProcessingInstructions = $true
     $settings.ValidationType = [System.Xml.ValidationType]::None
     $settings.MaxCharactersInDocument = 10485760
+    # Steps documents by work item ID, so the children of a reference can be compared with the
+    # steps of the work item it names.
+    $documents = [ordered]@{}
     foreach ($sourceItem in $sourceItems) {
         $xml = [string] $sourceItem.Fields['Microsoft.VSTS.TCM.Steps']
         if ([string]::IsNullOrWhiteSpace($xml)) { continue }
@@ -97,25 +101,38 @@ try {
             $document = [System.Xml.XmlDocument]::new()
             $document.XmlResolver = $null
             $document.Load($reader)
-            foreach ($reference in $document.SelectNodes("//*[local-name()='compref']")) {
-                $referenceCount++
-                $referenceId = 0
-                if (-not [int]::TryParse($reference.GetAttribute('ref'), [ref] $referenceId) -or $referenceId -lt 1) { $validReferences = $false }
-                if ($reference.SelectNodes('*').Count -gt 0) { $hasChildren = $true }
+            $sourceId = 0
+            $key = if ([int]::TryParse([string] (Get-AdoLivePropertyValue $sourceItem 'Id'), [ref] $sourceId) -and $sourceId -gt 0) {
+                $sourceId.ToString([cultureinfo]::InvariantCulture)
             }
-            foreach ($value in $document.SelectNodes("//*[local-name()='parameterizedString']")) {
-                if ([string]::IsNullOrWhiteSpace($value.InnerText)) { continue }
-                if ($value.GetAttribute('isformatted') -eq 'true') {
-                    $formattedCount++
-                }
-                elseif ($value.GetAttribute('isformatted') -notin @('false', '')) { $formatAgrees = $false }
-            }
+            else { 'unidentified-' + $documents.Count.ToString([cultureinfo]::InvariantCulture) }
+            $documents[$key] = $document
         }
         finally { $reader.Dispose(); $inputText.Dispose() }
     }
+    $referenceChildren = @()
+    foreach ($document in $documents.Values) {
+        foreach ($reference in $document.SelectNodes("//*[local-name()='compref']")) {
+            $referenceCount++
+            $referenceId = 0
+            if (-not [int]::TryParse($reference.GetAttribute('ref'), [ref] $referenceId) -or $referenceId -lt 1) { $validReferences = $false }
+        }
+        foreach ($value in $document.SelectNodes("//*[local-name()='parameterizedString']")) {
+            if ([string]::IsNullOrWhiteSpace($value.InnerText)) { continue }
+            if ($value.GetAttribute('isformatted') -eq 'true') {
+                $formattedCount++
+            }
+            elseif ($value.GetAttribute('isformatted') -notin @('false', '')) { $formatAgrees = $false }
+        }
+        $referenceChildren += Get-AdoLiveComprefEvidence -Document $document -ReferencedSteps $documents
+    }
+    # The toolkit skips the children of a reference. That loses nothing when there are none or
+    # when they repeat the Shared Steps; any other nested step is missing from its output.
     if (-not $validReferences) { Write-AdoLiveResult 'FAIL V-01 INVALID_REF' }
     elseif ($referenceCount -eq 0) { Write-AdoLiveResult 'INCONCLUSIVE V-01 NO_REFERENCES' }
-    elseif ($hasChildren) { Write-AdoLiveResult 'PASS V-01 POSITIVE_REF_CHILDREN_PRESENT' }
+    elseif ($referenceChildren -contains 'OtherSteps') { Write-AdoLiveResult 'FAIL V-01 REFERENCE_CHILDREN_ARE_NOT_THE_SHARED_STEPS' }
+    elseif ($referenceChildren -contains 'Unknown') { Write-AdoLiveResult 'INCONCLUSIVE V-01 REFERENCE_CHILDREN_PRESENT_SHARED_STEPS_NOT_READ' }
+    elseif ($referenceChildren -contains 'RepeatsSharedSteps') { Write-AdoLiveResult 'PASS V-01 POSITIVE_REF_CHILDREN_REPEAT_SHARED_STEPS' }
     else { Write-AdoLiveResult 'PASS V-01 POSITIVE_REF_NO_CHILDREN' }
     if (-not $formatAgrees) { Write-AdoLiveResult 'INCONCLUSIVE V-02 UNKNOWN_FORMAT_FLAG' }
     elseif ($formattedCount -eq 0) { Write-AdoLiveResult 'INCONCLUSIVE V-02 NO_FORMATTED_VALUES' }

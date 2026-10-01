@@ -204,6 +204,48 @@ Describe 'Approved live-check audit regressions with synthetic data only' {
         $lines -join "`n" | Should -Not -Match 'FAIL V-02'
     }
 
+    # V-01: the toolkit skips the children of a shared-step reference. That is right only when
+    # they repeat the Shared Steps work item's own steps; other nested steps would be lost.
+    It 'V-01 classifies the children of shared-step references as <Expected>' -TestCases @(
+        @{ Expected = 'NoChildren'; Case = '<steps><step><parameterizedString>CustomerAlpha</parameterizedString></step><compref id="3" ref="20" /></steps>' }
+        @{ Expected = 'RepeatsSharedSteps'; Case = '<steps><compref id="3" ref="20"><step><parameterizedString>CustomerShared</parameterizedString><parameterizedString>CustomerExpected</parameterizedString></step></compref></steps>' }
+        @{ Expected = 'OtherSteps'; Case = '<steps><compref id="3" ref="20"><step><parameterizedString>CustomerFollowing</parameterizedString></step></compref></steps>' }
+        @{ Expected = 'OtherSteps'; Case = '<steps><compref id="3" ref="20"><step><parameterizedString>CustomerShared</parameterizedString><parameterizedString>CustomerExpected</parameterizedString></step><compref id="5" ref="30" /></compref></steps>' }
+        @{ Expected = 'Unknown'; Case = '<steps><compref id="3" ref="21"><step /></compref></steps>' }
+        @{ Expected = 'None'; Case = '<steps><step /></steps>' }
+    ) {
+        param($Expected, $Case)
+        $shared = [xml] '<steps><step><parameterizedString>CustomerShared</parameterizedString><parameterizedString>CustomerExpected</parameterizedString></step></steps>'
+        @(Get-AdoLiveComprefEvidence -Document ([xml] $Case) -ReferencedSteps @{ '20' = $shared }) | Should -Be @($Expected)
+    }
+
+    It 'V-01 reports <Verdict> for the reference children of a test case' -TestCases @(
+        @{ Children = '<step><parameterizedString>CustomerFollowing</parameterizedString></step>'; Verdict = 'FAIL V-01 REFERENCE_CHILDREN_ARE_NOT_THE_SHARED_STEPS' }
+        @{ Children = '<step><parameterizedString>CustomerShared</parameterizedString></step>'; Verdict = 'PASS V-01 POSITIVE_REF_CHILDREN_REPEAT_SHARED_STEPS' }
+        @{ Children = ''; Verdict = 'PASS V-01 POSITIVE_REF_NO_CHILDREN' }
+    ) {
+        param($Children, $Verdict)
+        $sourceItems = @(
+            [pscustomobject]@{ Id = 10; Fields = @{ 'Microsoft.VSTS.TCM.Steps' = '<steps><compref id="2" ref="20">' + $Children + '</compref></steps>' } }
+            [pscustomobject]@{ Id = 20; Fields = @{ 'Microsoft.VSTS.TCM.Steps' = '<steps><step><parameterizedString>CustomerShared</parameterizedString></step></steps>' } }
+        )
+        $source = (Read-LiveAst 'TestCase').Extent.Text
+        $start = $source.IndexOf('$validReferences = $true', [StringComparison]::Ordinal)
+        $end = $source.IndexOf('$parameterCases = @($case)', [StringComparison]::Ordinal)
+        $text = @(. ([scriptblock]::Create($source.Substring($start, $end - $start)))) -join "`n"
+        $text | Should -Match ('(?m)^' + [regex]::Escape($Verdict) + '$')
+        $text | Should -Not -Match 'Customer'
+    }
+
+    It 'V-01 stays inconclusive when the referenced Shared Steps were not read' {
+        $sourceItems = @([pscustomobject]@{ Id = 10; Fields = @{ 'Microsoft.VSTS.TCM.Steps' = '<steps><compref id="2" ref="20"><step /></compref></steps>' } })
+        $source = (Read-LiveAst 'TestCase').Extent.Text
+        $start = $source.IndexOf('$validReferences = $true', [StringComparison]::Ordinal)
+        $end = $source.IndexOf('$parameterCases = @($case)', [StringComparison]::Ordinal)
+        $text = @(. ([scriptblock]::Create($source.Substring($start, $end - $start)))) -join "`n"
+        $text | Should -Match '(?m)^INCONCLUSIVE V-01 REFERENCE_CHILDREN_PRESENT_SHARED_STEPS_NOT_READ$'
+    }
+
     It 'F16 never includes dynamic keys from objects or arrays in shape paths' {
         $document = [System.Text.Json.JsonDocument]::Parse(@'
 {"id":1,"CustomerAlpha":{"id":2},"customFields":[{"fieldName":"synthetic","value":{"CustomerBeta":{"id":3}}}],"links":{"CustomerGamma":{"href":"https://ado.example.test"}},"workItemFields":[{"CustomerDelta":"synthetic"}],"pipelineReference":{"jobReference":{"attempt":"2"}}}

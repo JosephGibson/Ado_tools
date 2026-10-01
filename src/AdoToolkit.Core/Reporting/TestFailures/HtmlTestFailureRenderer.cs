@@ -1,4 +1,6 @@
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using AdoToolkit.Core.Connections;
 using AdoToolkit.Core.Reporting.Charts;
@@ -38,6 +40,55 @@ public static partial class HtmlTestFailureRenderer
     internal static string? LatestError(AdoTestFailure failure) =>
         failure.Attempts.Reverse().Where(a => a.OutcomeClass == AdoTestOutcomeClass.Failure).Select(a => FirstLine(a.ErrorMessage)).FirstOrDefault(l => l is not null)
         ?? failure.Attempts.Reverse().Select(a => FirstLine(a.ErrorMessage)).FirstOrDefault(l => l is not null);
+
+    // The text of one metadata value in the report culture. A custom field keeps the JSON shape
+    // the server sent (§15.11), so an array or object shows as compact JSON, never as a type name.
+    internal static string? FieldText(object value, CultureInfo culture) => value switch
+    {
+        string text => text,
+        IFormattable formatted => formatted.ToString(null, culture),
+        IReadOnlyDictionary<string, object?> or System.Collections.IEnumerable => FieldJson(value),
+        _ => value.ToString(),
+    };
+
+    private static string FieldJson(object value)
+    {
+        using MemoryStream buffer = new();
+        // The text is encoded again at the HTML sink, so JSON escaping stays minimal and readable.
+        using (Utf8JsonWriter json = new(buffer, new JsonWriterOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }))
+            WriteJson(json, value);
+        return Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length);
+    }
+
+    private static void WriteJson(Utf8JsonWriter json, object? value)
+    {
+        switch (value)
+        {
+            case null: json.WriteNullValue(); break;
+            case string text: json.WriteStringValue(text); break;
+            case bool flag: json.WriteBooleanValue(flag); break;
+            case long integer: json.WriteNumberValue(integer); break;
+            case double number when double.IsFinite(number): json.WriteNumberValue(number); break;
+            case AdoIdentityRef identity:
+                json.WriteStartObject();
+                json.WriteString("displayName", identity.DisplayName);
+                if (identity.UniqueName is not null) json.WriteString("uniqueName", identity.UniqueName);
+                if (identity.Id is not null) json.WriteString("id", identity.Id);
+                json.WriteEndObject();
+                break;
+            case IReadOnlyDictionary<string, object?> map:
+                json.WriteStartObject();
+                foreach ((string name, object? item) in map) { json.WritePropertyName(name); WriteJson(json, item); }
+                json.WriteEndObject();
+                break;
+            case System.Collections.IEnumerable items:
+                json.WriteStartArray();
+                foreach (object? item in items) WriteJson(json, item);
+                json.WriteEndArray();
+                break;
+            default: json.WriteStringValue(Convert.ToString(value, CultureInfo.InvariantCulture)); break;
+        }
+    }
 
     // Errors that differ only in numbers or GUIDs fall into one group.
     internal static string ErrorKey(string line) => Digits().Replace(Guids().Replace(line, "…"), "#");
@@ -614,8 +665,7 @@ public static partial class HtmlTestFailureRenderer
         private void Field(string label, object? value)
         {
             if (value is null) return;
-            W("<div><dt>"); T(label); W("</dt><dd>");
-            T(value is IFormattable formatted ? formatted.ToString(null, Culture) : value.ToString()); W("</dd></div>");
+            W("<div><dt>"); T(label); W("</dt><dd>"); T(FieldText(value, Culture)); W("</dd></div>");
         }
 
         private void FieldLink(string label, Uri uri, string text)

@@ -36,30 +36,15 @@ public sealed class WorkItemService
         int[] unique = ids.Distinct().ToArray();
         string[]? requestedFields = includeRelations ? null
             : RequiredFields.Concat(fields ?? []).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        EndpointDefinition endpoint = EndpointRegistry.WorkItemsBatch;
-        IReadOnlyList<WorkItemDto> returned = await IdChunks.FetchAsync(unique, endpoint.ChunkSize,
-            async (chunk, token) =>
-            {
-                byte[] body = JsonSerializer.SerializeToUtf8Bytes(new WorkItemBatchRequestDto
-                { Ids = chunk, Fields = requestedFields, Expand = includeRelations ? "relations" : null }, AdoJsonContext.Default.WorkItemBatchRequestDto);
-                return await pipeline.ExecuteAsync(endpoint, null, null, body, culture, async (response, requestToken) =>
-                {
-                    try
-                    {
-                        string bytes = await ResponseJson.ReadAsync(response, requestToken).ConfigureAwait(false);
-                        return (IReadOnlyList<WorkItemDto>)(JsonSerializer.Deserialize(bytes, AdoJsonContext.Default.WorkItemBatchDto)?.Value
-                            ?? throw new JsonException());
-                    }
-                    catch (JsonException error) { throw FormatError(culture, error); }
-                }, token).ConfigureAwait(false);
-            }, static item => item.Id, culture, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<WorkItemDto> returned = await WorkItemBatchReader.ReadAsync(pipeline, unique, requestedFields, includeRelations,
+            culture, cancellationToken).ConfigureAwait(false);
         List<AdoWorkItem> result = [];
         foreach (WorkItemDto item in returned)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try { result.Add(Map(item, includeRelations)); }
             catch (Exception error) when (error is JsonException or InvalidOperationException or FormatException or ArgumentException)
-            { throw FormatError(culture, error); }
+            { throw WorkItemBatchReader.FormatError(culture, error); }
         }
         return result.AsReadOnly();
     }
@@ -87,7 +72,4 @@ public sealed class WorkItemService
             WebUrl = AdoWebLinks.WorkItem(connection.CollectionUri, project, item.Id),
         };
     }
-
-    private static AdoResponseFormatException FormatError(CultureInfo culture, Exception error) =>
-        new(Messages.Get(AdoMessage.ResponseFormat, culture), error) { Operation = "WorkItemsBatch" };
 }

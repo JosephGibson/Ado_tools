@@ -1,71 +1,11 @@
-Describe 'Reusable workflow contracts' {
+Describe 'Workflow contracts' {
     BeforeAll {
         . (Join-Path $PSScriptRoot '../dev.ps1')
         function New-Fixture {
             param([string] $Path, [string] $Content = '')
             [void][System.IO.Directory]::CreateDirectory((Split-Path -Parent $Path))
-            Set-AtomicText -Path $Path -Content $Content
+            [System.IO.File]::WriteAllText($Path, $Content.Replace("`r`n", "`n"), [System.Text.UTF8Encoding]::new($false))
         }
-    }
-
-    It 'reports a missing Node test script as unavailable' {
-        $root = Join-Path $TestDrive 'missing-script'
-        New-Fixture (Join-Path $root 'package.json') '{"scripts":{"build":"node build.js"}}'
-        $plan = @(Get-ValidationPlan (Get-ProjectProfile $root))
-        $testStage = $plan | Where-Object Name -eq 'node-test:package.json'
-        (Invoke-ValidationStage $testStage $root).Status | Should -Be 'unavailable'
-        ($plan | Where-Object Name -eq 'node-build:package.json').Arguments | Should -Not -Contain '--if-present'
-    }
-
-    It 'uses each package directory and nearest declared package manager' {
-        $root = Join-Path $TestDrive 'node-packages'
-        New-Fixture (Join-Path $root 'package.json') '{"packageManager":"pnpm@10.0.0","scripts":{"test":"node --test"}}'
-        New-Fixture (Join-Path $root 'packages/a/package.json') '{"scripts":{"lint":"eslint .","test":"node --test"}}'
-        New-Fixture (Join-Path $root 'packages/b/package.json') '{"packageManager":"yarn@4.0.0","scripts":{"test":"node --test"}}'
-        $plan = @(Get-ValidationPlan (Get-ProjectProfile $root))
-        $a = $plan | Where-Object Name -eq 'node-test:packages/a/package.json'
-        $b = $plan | Where-Object Name -eq 'node-test:packages/b/package.json'
-        $a.Executable | Should -Be 'pnpm'
-        $a.WorkingDirectory | Should -Be 'packages/a'
-        $b.Executable | Should -Be 'yarn'
-        $b.Arguments | Should -Be @('run', 'test')
-    }
-
-    It 'does not guess between conflicting package manager lockfiles' {
-        $root = Join-Path $TestDrive 'conflicting-locks'
-        New-Fixture (Join-Path $root 'package.json') '{}'
-        New-Fixture (Join-Path $root 'package-lock.json') '{}'
-        New-Fixture (Join-Path $root 'yarn.lock') ''
-        $plan = @(Get-ValidationPlan (Get-ProjectProfile $root))
-        (Invoke-ValidationStage ($plan | Where-Object Name -eq 'node-plan:package.json') $root).Status | Should -Be 'unavailable'
-    }
-
-    It 'builds every .NET project and gives test stages a build prerequisite' {
-        $root = Join-Path $TestDrive 'dotnet-multiple'
-        New-Fixture (Join-Path $root 'src/a/a.csproj') '<Project Sdk="Microsoft.NET.Sdk" />'
-        New-Fixture (Join-Path $root 'src/b/b.csproj') '<Project Sdk="Microsoft.NET.Sdk" />'
-        New-Fixture (Join-Path $root 'tests/a/a.csproj') '<Project><PropertyGroup><IsTestProject>true</IsTestProject></PropertyGroup></Project>'
-        $plan = @(Get-ValidationPlan (Get-ProjectProfile $root))
-        $builds = @($plan | Where-Object Name -like 'dotnet-build:*')
-        $builds.Count | Should -Be 3
-        foreach ($build in $builds) { $build.Arguments | Should -Contain '--no-restore' }
-        $testStage = $plan | Where-Object Name -like 'dotnet-test:*'
-        $testStage.DependsOn | Should -Be @('dotnet-build:tests/a/a.csproj')
-        $testStage.Arguments | Should -Contain '--no-build'
-    }
-
-    It 'marks detected <Stack> without an environment contract incomplete' -TestCases @(
-        @{ Stack = 'python'; Manifest = 'pyproject.toml'; Content = '[project]' }
-        @{ Stack = 'rust'; Manifest = 'Cargo.toml'; Content = '[package]' }
-        @{ Stack = 'go'; Manifest = 'go.mod'; Content = 'module example' }
-        @{ Stack = 'java'; Manifest = 'pom.xml'; Content = '<project />' }
-    ) {
-        param($Stack, $Manifest, $Content)
-        $root = Join-Path $TestDrive $Stack
-        New-Fixture (Join-Path $root $Manifest) $Content
-        $result = Invoke-ProjectVerification -Root $root
-        $result.Status | Should -Be 'incomplete'
-        ($result.Stages | Where-Object Name -eq "$Stack-plan").Status | Should -Be 'unavailable'
     }
 
     It 'previews the plan without invoking checks' {
@@ -76,12 +16,12 @@ Describe 'Reusable workflow contracts' {
         Should -Invoke Invoke-ValidationStage -Times 0
     }
 
-    It 'requires a manifest or project check for product source with no detected stack' {
-        $root = Join-Path $TestDrive 'unconfigured-source'
-        New-Fixture (Join-Path $root 'src/main.cs') 'System.Console.WriteLine("hello");'
-        $result = Invoke-ProjectVerification -Root $root
-        $result.Status | Should -Be 'incomplete'
-        $result.Stages.Name | Should -Be @('dotnet-manifest')
+    It 'previews the product gate with its command line' {
+        $root = Join-Path $TestDrive 'preview-gate'
+        New-Fixture (Join-Path $root 'tools/check.ps1') 'exit 0'
+        $stage = (Get-ProjectValidationPlan -Root $root -SkipTests).Stages | Where-Object Name -eq 'project-check'
+        $stage.Executable | Should -Be (Join-Path $PSHOME 'pwsh.exe')
+        $stage.Arguments | Should -Be @('-NoProfile', '-File', (Join-Path $root 'tools\check.ps1'), '-SkipTests')
     }
 
     It 'reports centrally declared NuGet package versions without evaluating MSBuild' {
@@ -92,7 +32,7 @@ Describe 'Reusable workflow contracts' {
         $result.Packages[0].Scope | Should -Be 'central'
     }
 
-    It 'rejects nonstandard JSON that native package tools would reject' -TestCases @(
+    It 'rejects nonstandard JSON that native tools would reject' -TestCases @(
         @{Text = '{"a":1,}'}
         @{Text = '{/*comment*/"a":1}'}
     ) {
@@ -111,23 +51,13 @@ Describe 'Reusable workflow contracts' {
     It 'reports a passing selected check as incomplete and rejects unknown names' {
         $root = Join-Path $TestDrive 'selected'
         New-Fixture (Join-Path $root 'app.json') '{}'
+        New-Fixture (Join-Path $root 'tools/sample.ps1') 'Write-Output ready'
         $result = Invoke-ProjectVerification -Root $root -Stage configuration
         $result.Status | Should -Be 'incomplete'
+        $result.Stages.Name | Should -Be @('configuration')
         $result.Stages[0].Status | Should -Be 'pass'
+        $result.Warnings | Should -Contain 'Only the selected stages ran; run verify for the full gate.'
         { Invoke-ProjectVerification -Root $root -Stage typo } | Should -Throw '*Unknown stage*'
-    }
-
-    It 'includes build prerequisites for selected tests and blocks them after failure' {
-        $root = Join-Path $TestDrive 'dependencies'
-        New-Fixture (Join-Path $root 'tests.csproj') '<Project><PropertyGroup><IsTestProject>true</IsTestProject></PropertyGroup></Project>'
-        Mock Invoke-ValidationStage {
-            param($Stage)
-            [pscustomobject]@{ Name = $Stage.Name; Status = 'fail'; ExitCode = 1; Summary = @('build failed'); Warnings = @(); AdvisoryWarnings = $false }
-        } -ParameterFilter { $Stage.Name -like 'dotnet-build:*' }
-        $result = Invoke-ProjectVerification -Root $root -Stage 'dotnet-test:tests.csproj'
-        $result.Stages.Name | Should -Be @('dotnet-build:tests.csproj', 'dotnet-test:tests.csproj')
-        $result.Stages[1].Status | Should -Be 'unavailable'
-        $result.Status | Should -Be 'fail'
     }
 
     It 'does not mistake PowerShell fixtures for Pester test containers' {
@@ -146,9 +76,24 @@ Describe 'Reusable workflow contracts' {
         New-Fixture (Join-Path $root 'src/ui/AGENTS.md') '# UI'
         New-Fixture (Join-Path $root '.claude/rules/api/style.md') '# Style'
         $result = Get-ProjectContext -Root $root -Path 'src/api/new.cs'
+        $result.Project | Should -Be 'Root'
         $result.ScopedInstructions | Should -Be @('AGENTS.md', 'src/api/AGENTS.md')
         $result.ImportantPaths | Should -Contain '.claude/rules/api/style.md'
         { Get-ProjectContext -Root $root -Path '../outside.cs' } | Should -Throw '*safe repository path*'
+    }
+
+    It 'lists workflow, instruction, configuration and project files as important paths, not test files' {
+        $root = Join-Path $TestDrive 'important-paths'
+        New-Fixture (Join-Path $root 'tools/dev.ps1') ''
+        New-Fixture (Join-Path $root 'docs/tooling.md') '# Tooling'
+        New-Fixture (Join-Path $root 'AGENTS.md') '# Sample'
+        New-Fixture (Join-Path $root 'global.json') '{}'
+        New-Fixture (Join-Path $root 'src/App/App.csproj') '<Project Sdk="Microsoft.NET.Sdk" />'
+        New-Fixture (Join-Path $root 'tests/App.Tests/SampleTests.cs') ''
+        $result = Get-ProjectContext -Root $root
+        $result.ImportantPaths | Should -Be @('tools/dev.ps1', 'docs/tooling.md', 'AGENTS.md', 'global.json', 'src/App/App.csproj')
+        $result.Tests | Should -Be 1
+        $result.PSObject.Properties.Name | Should -Not -Contain 'Entrypoints'
     }
 
     It 'returns line numbers and the output limit signal for literal content matches' {
@@ -163,7 +108,7 @@ Describe 'Reusable workflow contracts' {
         $root = Join-Path $TestDrive 'search-parity'
         New-Fixture (Join-Path $root 'src/visible.txt') 'unique-fixture'
         New-Fixture (Join-Path $root 'SECRETS/hidden.txt') 'unique-fixture'
-        New-Fixture (Join-Path $root 'NODE_MODULES/hidden.txt') 'unique-fixture'
+        New-Fixture (Join-Path $root 'ARTIFACTS/hidden.txt') 'unique-fixture'
         New-Fixture (Join-Path $root '.ENV.PRODUCTION') 'unique-fixture'
         New-Fixture (Join-Path $root '.claude/settings.local.json') '{}'
         $native = @(Get-RepositoryFiles -Root $root | ForEach-Object Name)
@@ -192,45 +137,6 @@ Describe 'Reusable workflow contracts' {
         $file = Get-Item -LiteralPath (Join-Path $junction 'outside.txt')
         (Test-IsSafeRepositoryFile -File $file -Root $root) | Should -BeFalse
         @(Get-RepositoryFiles -Root $root | ForEach-Object Name) | Should -Be @('visible.txt')
-    }
-
-    It 'initializes both identities, escapes text and is idempotent' {
-        $root = Join-Path $TestDrive 'init'
-        $content = "<!-- project:start -->`n# Template`n<!-- project:end -->`nKeep this workflow.`n"
-        New-Fixture (Join-Path $root 'README.md') $content
-        New-Fixture (Join-Path $root 'AGENTS.md') $content
-        $first = Initialize-Project -Root $root -ProjectName 'Sample App' -Description 'Costs $5 and uses [data] *carefully*.'
-        $second = Initialize-Project -Root $root -ProjectName 'Sample App' -Description 'Costs $5 and uses [data] *carefully*.'
-        $first.Changed.Count | Should -Be 2
-        $second.Changed | Should -BeNullOrEmpty
-        $readme = Get-Content -LiteralPath (Join-Path $root 'README.md') -Raw
-        $readme | Should -Match 'Keep this workflow'
-        $readme | Should -Match ([regex]::Escape('Costs $5 and uses \[data\] \*carefully\*.'))
-        (Get-ProjectContext -Root $root).Project | Should -Be 'Sample App'
-    }
-
-    It 'preflights both identity files before changing either' {
-        $root = Join-Path $TestDrive 'init-preflight'
-        $content = '<!-- project:start -->old<!-- project:end -->'
-        New-Fixture (Join-Path $root 'README.md') $content
-        New-Fixture (Join-Path $root 'AGENTS.md') '# No markers'
-        { Initialize-Project -Root $root -ProjectName Sample -Description Example } | Should -Throw '*marker pair*'
-        (Get-Content -LiteralPath (Join-Path $root 'README.md') -Raw) | Should -Be $content
-        @(Get-ChildItem -LiteralPath $root -Filter '*.tmp' -Force).Count | Should -Be 0
-    }
-
-    It 'rolls back the first identity if replacing the second fails' {
-        $root = Join-Path $TestDrive 'init-rollback'
-        $content = '<!-- project:start -->old<!-- project:end -->'
-        New-Fixture (Join-Path $root 'README.md') $content
-        New-Fixture (Join-Path $root 'AGENTS.md') $content
-        Mock Set-AtomicText { throw 'simulated write failure' } -ParameterFilter { $Path -like '*AGENTS.md' }
-        { Initialize-Project -Root $root -ProjectName Sample -Description Example } | Should -Throw '*simulated write failure*'
-        (Get-Content -LiteralPath (Join-Path $root 'README.md') -Raw) | Should -Be $content
-    }
-
-    It 'rejects multiline identity input' {
-        { Initialize-Project -Root $TestDrive -ProjectName Sample -Description "line`nline" } | Should -Throw '*single-line*'
     }
 
     It 'passes shell metacharacters as literal arguments to external stages' {

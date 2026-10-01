@@ -219,7 +219,7 @@ intact. Older attachment folders of the same report are removed after the replac
 
 | Option | Effect |
 | --- | --- |
-| `-Open` | Opens the committed report with the default handler |
+| `-Open` | Opens the committed report with the default handler. A report that cannot be opened produces a warning and is still returned |
 | `-SkipAttachments` | Downloads nothing; attachments of runs inside the window are still listed with name, size and a link |
 | `-AllRunAttachments` | Downloads JSON and text from every run inside the window. `-SkipAttachments` takes precedence if both switches are supplied |
 | `-AttachmentWindowDays` | Days, 1–365, in which a run must have started for its attachments to appear. Default 7 |

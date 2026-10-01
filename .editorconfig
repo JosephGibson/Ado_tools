@@ -1,5 +1,5 @@
-# Editor formatting defaults. The gate uses PSScriptAnalyzer for correctness;
-# use stack-native formatters through tools/check.ps1 when formatting is a gate.
+# Editor formatting defaults. Formatting is not gated: verify checks PowerShell with
+# PSScriptAnalyzer and C# with the analyzers below, which Directory.Build.props also makes errors.
 root = true
 
 [*]

@@ -1,10 +1,8 @@
-<!-- project:start -->
 # AdoToolkit
 
-PowerShell toolkit for Azure DevOps Server 2020: compiled C\# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
-<!-- project:end -->
+PowerShell toolkit for Azure DevOps Server 2020: compiled C# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 
-**Version 0.5.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.6.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
@@ -12,16 +10,15 @@ DevOps. Its cmdlets return typed objects that you can use in pipelines, and it w
 standalone HTML, Markdown or JSON reports when you need a document. All messages,
 report labels and help are available in English and French.
 
-Version 0.5.0 lets each connection profile keep a default branch, build definition,
-test plan and test suite. Set them once with `Set-AdoProfile` or in the
-[configuration file](docs/guides/configuration.md#profiles), and `Get-AdoBuild`,
-`Get-AdoBuildTestFailure`, `Get-AdoTestCase` and `Get-AdoTestSuite` use them whenever you
-leave out `-Branch`, `-Definition`, `-PlanId` or `-SuiteId`. A parameter you pass still
-wins, and configuration files from earlier versions load and save unchanged. The
-failed-test report also separates attempts by test run name, links every attachment and
-each test's open bug to Azure DevOps, and `Export-AdoBuildTestFailure` shows the report's
-address in the console. See the [release notes](docs/release-0.5.0.md) for every change,
-the validation evidence and the remaining work-PC checks.
+Version 0.6.0 is a correctness release. An export no longer fails after its report is
+written when `-Open` cannot start an application, and an incomplete object piped into a
+command gets a clear error for that input instead of a .NET exception. Markdown Test Case
+reports keep the line breaks inside a step, the failed-test report shows list, object and
+identity values of custom fields, and the French messages and reports use consistent
+terms. Profiles still hold your default project, branch, build definition, test plan and
+test suite; see the [configuration file](docs/guides/configuration.md#profiles). The
+[release notes](docs/release-0.6.0.md) list every change, the validation evidence and the
+remaining work-PC checks.
 
 > [!NOTE]
 > Live validation against Azure DevOps Server 2020 is in progress. Connections, projects,
@@ -31,7 +28,7 @@ the validation evidence and the remaining work-PC checks.
 
 | Area | Capabilities | Cmdlets |
 | --- | --- | --- |
-| Connections | Local profiles, Windows integrated authentication, access checks, project listing | `Set-AdoProfile`, `Get-AdoProfile`, `Remove-AdoProfile`, `Connect-Ado`, `Disconnect-Ado`, `Get-AdoConnection`, `Test-AdoConnection`, `Get-AdoProject` |
+| Connections | Local profiles with default project, branch, build definition, test plan and suite; Windows integrated authentication, access checks, project listing | `Set-AdoProfile`, `Get-AdoProfile`, `Remove-AdoProfile`, `Connect-Ado`, `Disconnect-Ado`, `Get-AdoConnection`, `Test-AdoConnection`, `Get-AdoProject` |
 | Work items | Batched retrieval by ID with extra fields or relations; flat WIQL queries | `Get-AdoWorkItem`, `Invoke-AdoWiql` |
 | Test Cases | Plans and suite trees; Test Cases with recursively expanded Shared Steps, parameters and diagnostics | `Get-AdoTestPlan`, `Get-AdoTestSuite`, `Get-AdoTestCase` |
 | Reports and bulk export | One HTML, Markdown or JSON document for a Test Case, a suite tree or a WIQL result | `Export-AdoTestCase` |
@@ -115,7 +112,8 @@ Profiles, connections and the other options are described in
 | Full cmdlet help (also available with `Get-Help <cmdlet> -Full`) | [English](docs/commands/en-US/) · [French](docs/commands/fr-CA/) |
 | Test Case JSON report format | [testcase.v1.schema.json](docs/schemas/testcase.v1.schema.json) |
 | Developer CLI, validation and prerequisites | [Developer tooling](docs/tooling.md) |
-| Original specification, delivery plans and design notes | [Archive](docs/archive/README.md) |
+| Release notes | [Version 0.6.0](docs/release-0.6.0.md), with links to the earlier notes |
+| Original specification, delivery plans, design notes and earlier release notes | [Archive](docs/archive/README.md) |
 | Rules for coding agents | [AGENTS.md](AGENTS.md) |
 
 ## Build and verify
@@ -132,9 +130,10 @@ pwsh -NoProfile -File .\tools\dev.ps1 verify
 `verify` is the complete gate. It prints one JSON document and exits with `0` when
 all checks pass, `1` when a check fails, and `2` when the run is incomplete, for
 example because a prerequisite is missing. It lints the PowerShell code, runs the
-tooling tests, checks configuration files, builds the solution, and runs the Core
-tests under `en-US` and `fr-CA`. It then stages the package and runs the product
-Pester tests against it. All tests run offline against synthetic data.
+tooling tests, checks configuration files and the links and paths in the documentation,
+builds the solution, and runs the Core tests under `en-US` and `fr-CA`. It then stages
+the package and runs the product Pester tests against it. All tests run offline against
+synthetic data.
 
 To build release assets locally, run `tools\package\Publish-AdoToolkitPackage.ps1` and
 then `tools\package\New-AdoToolkitRelease.ps1`. Pushing a `v<version>` tag runs the same

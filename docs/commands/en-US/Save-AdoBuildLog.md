@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Save-AdoBuildLog
 ---
@@ -71,7 +71,7 @@ HelpMessage: ''
 Positive log ID. A null value produces the per-input non-terminating BuildLogNotAvailable error; the pipeline continues.
 
 ```yaml
-Type: System.Nullable[System.Int32]
+Type: System.Nullable`1[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
@@ -92,7 +92,7 @@ HelpMessage: ''
 Positive number of final lines to request. Omit for the full log. If the line count is unknown, warns and downloads the full log.
 
 ```yaml
-Type: System.Nullable[System.Int32]
+Type: System.Nullable`1[System.Int32]
 DefaultValue: ''
 SupportsWildcards: false
 Aliases: []
@@ -201,7 +201,8 @@ Lists the intended file without HTTP requests or writes.
 Type: System.Management.Automation.SwitchParameter
 DefaultValue: ''
 SupportsWildcards: false
-Aliases: []
+Aliases:
+- wi
 ParameterSets:
 - Name: (All)
   Position: Named
@@ -222,7 +223,8 @@ Asks for confirmation before downloading and writing.
 Type: System.Management.Automation.SwitchParameter
 DefaultValue: ''
 SupportsWildcards: false
-Aliases: []
+Aliases:
+- cf
 ParameterSets:
 - Name: (All)
   Position: Named

@@ -45,6 +45,21 @@ public sealed class RunHistoryTests
         Assert.Equal(2, set.Failures.Count);
     }
 
+    // History progress counts the earlier builds it reads, so its last report is "n of n".
+    [Fact]
+    public async Task HistoryProgressEndsAtItsTotal()
+    {
+        TestRunFixture fixture = History();
+        using FakeHttpMessageHandler handler = fixture.Handler();
+        using HttpClient client = new(handler);
+        CapturingLog log = new();
+        await new TestFailureRetrievalService(client, TestRunFixture.Connection, log, new FakeClock()).GetAsync(TestRunFixture.Build(),
+            new TestFailureQuery { HistoryCount = 4 }, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
+        AdoProgress[] history = [.. log.ProgressEvents.Where(static progress => progress.Phase == AdoProgressPhase.History)];
+        Assert.Equal([1, 2, 3], history.Select(static progress => progress.Completed));
+        Assert.All(history, static progress => Assert.Equal(3, progress.Total));
+    }
+
     [Fact]
     public async Task SameBranchScopeSendsTheBranchNameAndAllBranchesOmitsIt()
     {
@@ -162,6 +177,26 @@ public sealed class RunHistoryTests
             request.Uri.Query.Contains("Build%2F400", StringComparison.Ordinal)
             || request.Uri.AbsolutePath.Contains("/Runs/261/", StringComparison.Ordinal)));
         Assert.True(service.RequestCount - afterFirst < afterFirst);
+    }
+
+    // A history build that could not be read is cached for the invocation. A later set that reuses
+    // it carries the same warning, so its Unavailable bar is explained in that report too.
+    [Fact]
+    public async Task CachedUnreadableHistoryBuildKeepsItsWarningForLaterSets()
+    {
+        TestRunFixture fixture = History();
+        using FakeHttpMessageHandler handler = fixture.Handler();
+        using HttpClient client = new(handler);
+        TestFailureRetrievalService service = TestRunFixture.Service(client);
+        TestFailureQuery query = new() { HistoryCount = 4 };
+        AdoBuildTestFailureSet first = await service.GetAsync(TestRunFixture.Build(), query, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
+        int unreadable = handler.Requests.Count(static request => request.Uri.Query.Contains("Build%2F398", StringComparison.Ordinal));
+        Assert.True(unreadable > 0);
+        AdoBuildTestFailureSet second = await service.GetAsync(TestRunFixture.Build(), query, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
+        // Not requested again.
+        Assert.Equal(unreadable, handler.Requests.Count(static request => request.Uri.Query.Contains("Build%2F398", StringComparison.Ordinal)));
+        Assert.Equal(first.History.Select(static summary => summary.IsAvailable), second.History.Select(static summary => summary.IsAvailable));
+        Assert.Equal(["398"], Assert.Single(second.Diagnostics, static item => item.Code == DiagnosticCodes.HistoryUnavailable).Arguments);
     }
 
     private static void AssertBarsMatchCells(AdoBuildTestFailureSet set)

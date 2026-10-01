@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-22-2026
+ms.date: 10-01-2026
 PlatyPS schema version: 2024-05-01
 title: Connect-Ado
 ---
@@ -45,7 +45,7 @@ Crée une connexion de session à partir d’une URL de collection explicite, d�
 
 ## EXAMPLES
 
-### Example 1
+### Exemple 1
 
 ```powershell
 Connect-Ado -Profile work -Project 'Équipe Web'
@@ -138,7 +138,8 @@ Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020.
 
 ## RELATED LINKS
 
-[Connect-Ado](Connect-Ado.md)
+[Test-AdoConnection](Test-AdoConnection.md)
+[Set-AdoProfile](Set-AdoProfile.md)
 [Get-AdoProject](Get-AdoProject.md)
 
 

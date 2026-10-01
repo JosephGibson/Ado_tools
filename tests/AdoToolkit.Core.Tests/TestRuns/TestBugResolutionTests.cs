@@ -144,7 +144,7 @@ public sealed class TestBugResolutionTests
         string html = TestFailureReportFixture.Render(model);
         TestFailureReportValidator.Validate(new StringReader(html), model);
         Assert.Contains("data-diagnostic=\"BugLookupFailed\"", html, StringComparison.Ordinal);
-        Assert.Contains("Les bogues des tests de la build 401 n’ont pas pu être lus", html, StringComparison.Ordinal);
+        Assert.Contains("Les bogues des tests du build 401 n’ont pas pu être lus", html, StringComparison.Ordinal);
         Assert.Contains("<li data-bug=\"2001\"><a rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/2001\">#2001",
             html, StringComparison.Ordinal);
         Assert.DoesNotContain("class=\"open-bug-marker\"", html, StringComparison.Ordinal);

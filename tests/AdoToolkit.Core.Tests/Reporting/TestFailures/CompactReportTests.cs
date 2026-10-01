@@ -128,7 +128,8 @@ public sealed class CompactReportTests
     }
 
     // 100 failures with 7 English and 7 French attempts, a 40-frame stack trace and four attachments
-    // per attempt. The 0.2.0 renderer wrote about 46 MB for this input.
+    // per attempt. The 0.2.0 renderer wrote about 46 MB for this input. Every attempt now repeats
+    // its message and trace, which takes this input from under 7 MB to 26,400,701 bytes.
     [Fact]
     public void AHundredFailuresWithFourteenAttemptsStayWithinTheSizeBudget()
     {
@@ -163,7 +164,7 @@ public sealed class CompactReportTests
         TestFailureReportModel model = Model(With(grouped, runs, failures));
         string html = TestFailureReportFixture.Render(model);
         long bytes = Encoding.UTF8.GetByteCount(html);
-        Assert.True(bytes < 7_000_000, "The report is " + bytes.ToString("N0", English) + " bytes.");
+        Assert.True(bytes < 27_000_000, "The report is " + bytes.ToString("N0", English) + " bytes.");
         Assert.DoesNotMatch("<details[^>]*\\sopen[\\s>=]", html);
     }
 

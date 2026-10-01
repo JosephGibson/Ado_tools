@@ -10,8 +10,9 @@ namespace AdoToolkit.Core.TestRuns;
 // Reads the bugs of the reported tests in batches: every work item associated with one of a test's
 // results, and every work item linked to its Test Case whose type is in the Bug category of its
 // project. A bug is open unless its state is in the Completed or Removed category of its project
-// and type. Lookup problems become warnings; only authentication, authorization and cancellation
-// fail the retrieval.
+// and type. Closed bugs are left out of the result; a bug that could not be read is kept, because
+// it may be open. Lookup problems become warnings; only authentication, authorization and
+// cancellation fail the retrieval.
 internal sealed class TestBugResolver
 {
     private const string BugCategory = "Microsoft.BugCategory";
@@ -22,18 +23,21 @@ internal sealed class TestBugResolver
     private static readonly string[] DefaultClosedStates = ["Closed", "Done", "Removed"];
     private readonly AdoConnection connection;
     private readonly AdoHttpPipeline pipeline;
-    // Null marks metadata that could not be read. The server compares project and type names without case.
-    private readonly Dictionary<string, IReadOnlyList<string>?> bugTypes = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, Dictionary<string, IReadOnlyDictionary<string, string>?>> states = new(StringComparer.OrdinalIgnoreCase);
+    // Bug types and state categories are cached for the invocation, so piped builds read them once.
+    private readonly TestFailureInvocationCache cache;
+    private readonly int concurrency;
 
-    internal TestBugResolver(HttpClient client, AdoConnection connection, IAdoLog? log, RequestCounter? counter)
+    internal TestBugResolver(HttpClient client, AdoConnection connection, IAdoLog? log, RequestCounter? counter,
+        RequestGate? gate, TestFailureInvocationCache cache, int concurrency)
     {
         this.connection = connection;
+        this.cache = cache;
+        this.concurrency = concurrency;
         pipeline = new AdoHttpPipeline(client, connection.CollectionUri, TimeSpan.FromSeconds(connection.RequestTimeoutSeconds),
-            log, counter: counter);
+            log, counter: counter, gate: gate);
     }
 
-    // Returns one list per test, in the order given, each ordered by ID.
+    // Returns one list per test, in the order given, each ordered by ID and without its closed bugs.
     internal async Task<IReadOnlyList<IReadOnlyList<AdoTestBug>>> ResolveAsync(IReadOnlyList<TestBugReferences> tests, int buildId,
         string project, CultureInfo culture, List<AdoDiagnostic> diagnostics, CancellationToken cancellationToken)
     {
@@ -61,16 +65,37 @@ internal sealed class TestBugResolver
         HashSet<int> associated = [.. tests.SelectMany(static test => test.Associated)];
         HashSet<int> linked = [.. tests.SelectMany(static test => test.Linked)];
         HashSet<int> linkedBugs = [];
+        // The Bug categories that the first loop needs are read together, in the order that loop
+        // first meets their projects; the loop itself then runs against the cache, so its warnings
+        // keep their order whatever request finished first.
+        string[] owners = [.. candidates.Where(id => linked.Contains(id) && read.ContainsKey(id)).Select(id => Project(read[id]) ?? project)
+            .Distinct(StringComparer.OrdinalIgnoreCase).Where(owner => !cache.TryGetBugTypes(owner, out _))];
+        IReadOnlyList<IReadOnlyList<string>?> readTypes = await OrderedParallel.RunAsync(owners, concurrency,
+            (owner, token) => ReadBugTypesAsync(owner, culture, token), cancellationToken).ConfigureAwait(false);
+        for (int index = 0; index < owners.Length; index++) cache.AddBugTypes(owners[index], readTypes[index]);
         foreach (int id in candidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!linked.Contains(id) || !read.TryGetValue(id, out WorkItemDto? item)) continue;
             string owner = Project(item) ?? project;
-            IReadOnlyList<string>? types = await BugTypesAsync(owner, culture, cancellationToken).ConfigureAwait(false);
+            cache.TryGetBugTypes(owner, out IReadOnlyList<string>? types);
             if (types is null) Degraded(owner);
             if (Text(item, "System.WorkItemType") is { } type && (types ?? DefaultBugTypes).Contains(type, StringComparer.OrdinalIgnoreCase))
                 linkedBugs.Add(id);
         }
+        // The state lists that the second loop needs, read together in the same way.
+        List<(string Owner, string Type)> stateKeys = [];
+        HashSet<string> seenKeys = new(StringComparer.OrdinalIgnoreCase);
+        foreach (int id in candidates)
+        {
+            if ((!associated.Contains(id) && !linkedBugs.Contains(id)) || !read.TryGetValue(id, out WorkItemDto? item)) continue;
+            string owner = Project(item) ?? project;
+            if (Text(item, "System.State") is null || Text(item, "System.WorkItemType") is not { } type || !RequestBuilder.IsPathSegment(type)) continue;
+            if (!cache.TryGetStates(owner, type, out _) && seenKeys.Add(owner + "\u001f" + type)) stateKeys.Add((owner, type));
+        }
+        IReadOnlyList<IReadOnlyDictionary<string, string>?> readStates = await OrderedParallel.RunAsync(stateKeys, concurrency,
+            (key, token) => ReadStatesAsync(key.Owner, key.Type, culture, token), cancellationToken).ConfigureAwait(false);
+        for (int index = 0; index < stateKeys.Count; index++) cache.AddStates(stateKeys[index].Owner, stateKeys[index].Type, readStates[index]);
         Dictionary<int, BugData> bugs = [];
         foreach (int id in candidates)
         {
@@ -89,8 +114,8 @@ internal sealed class TestBugResolver
             // A type name is a route segment too; one that cannot be requested keeps the default states.
             if (state is not null && type is not null)
             {
-                IReadOnlyDictionary<string, string>? known = RequestBuilder.IsPathSegment(type)
-                    ? await StatesAsync(owner, type, culture, cancellationToken).ConfigureAwait(false) : null;
+                IReadOnlyDictionary<string, string>? known = null;
+                if (RequestBuilder.IsPathSegment(type)) cache.TryGetStates(owner, type, out known);
                 if (known is null || !known.TryGetValue(state, out category)) Degraded(owner);
             }
             bugs[id] = new BugData(id, Text(item, "System.Title"), state, type, owner, reported, category, IsOpen(state, category), true);
@@ -111,7 +136,8 @@ internal sealed class TestBugResolver
         foreach (TestBugReferences test in tests)
         {
             SortedSet<int> ids = [.. test.Associated, .. test.Linked.Where(linkedBugs.Contains)];
-            result.Add(Array.AsReadOnly(ids.Where(bugs.ContainsKey).Select(id => bugs[id]).Select(bug => new AdoTestBug
+            // IsOpen is false only for a bug that was read and is closed; null means it could not be read.
+            result.Add(Array.AsReadOnly(ids.Where(bugs.ContainsKey).Select(id => bugs[id]).Where(static bug => bug.IsOpen != false).Select(bug => new AdoTestBug
             {
                 Id = bug.Id, Title = bug.Title, State = bug.State, WorkItemType = bug.Type, TeamProject = bug.TeamProject,
                 StateCategory = bug.Category, IsOpen = bug.IsOpen, IsResolved = bug.IsResolved,
@@ -127,33 +153,27 @@ internal sealed class TestBugResolver
         (await WorkItemBatchReader.ReadAsync(pipeline, ids, Fields, false, culture, cancellationToken).ConfigureAwait(false))
             .ToDictionary(static item => item.Id);
 
-    private async Task<IReadOnlyList<string>?> BugTypesAsync(string project, CultureInfo culture, CancellationToken cancellationToken)
+    // The Bug category of one project; null when it could not be read. The caller caches the result.
+    private async Task<IReadOnlyList<string>?> ReadBugTypesAsync(string project, CultureInfo culture, CancellationToken cancellationToken)
     {
-        if (bugTypes.TryGetValue(project, out IReadOnlyList<string>? cached)) return cached;
-        IReadOnlyList<string>? types;
         try
         {
-            types = await WorkItemTypeCategories.ReadAsync(pipeline, project, BugCategory, culture, cancellationToken).ConfigureAwait(false);
+            return await WorkItemTypeCategories.ReadAsync(pipeline, project, BugCategory, culture, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception error) when (RunHistoryService.IsRecoverable(error, cancellationToken))
         {
-            types = null;
+            return null;
         }
-        bugTypes[project] = types;
-        return types;
     }
 
-    // State name to state category for one work item type of one project.
-    private async Task<IReadOnlyDictionary<string, string>?> StatesAsync(string project, string type, CultureInfo culture,
+    // State name to state category for one work item type of one project; null when it could not be
+    // read. The caller caches the result.
+    private async Task<IReadOnlyDictionary<string, string>?> ReadStatesAsync(string project, string type, CultureInfo culture,
         CancellationToken cancellationToken)
     {
-        if (!states.TryGetValue(project, out Dictionary<string, IReadOnlyDictionary<string, string>?>? byType))
-            states[project] = byType = new(StringComparer.OrdinalIgnoreCase);
-        if (byType.TryGetValue(type, out IReadOnlyDictionary<string, string>? cached)) return cached;
-        IReadOnlyDictionary<string, string>? result;
         try
         {
-            result = await pipeline.ExecuteAsync(EndpointRegistry.WorkItemTypeStates,
+            return await pipeline.ExecuteAsync(EndpointRegistry.WorkItemTypeStates,
                 new Dictionary<string, string> { ["project"] = project, ["type"] = type }, null, null, culture,
                 async (response, token) =>
                 {
@@ -175,10 +195,8 @@ internal sealed class TestBugResolver
         }
         catch (Exception error) when (RunHistoryService.IsRecoverable(error, cancellationToken))
         {
-            result = null;
+            return null;
         }
-        byType[type] = result;
-        return result;
     }
 
     private static string? Text(WorkItemDto item, string name) => item.Fields is null ? null : TestCaseLinkResolver.Text(item.Fields, name);

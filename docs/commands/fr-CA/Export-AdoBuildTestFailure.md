@@ -13,7 +13,7 @@ title: Export-AdoBuildTestFailure
 
 ## SYNOPSIS
 
-Écrit un rapport HTML compact des tests en échec par ensemble et télécharge les pièces jointes JSON et texte de sa série de tests la plus récente.
+Écrit un rapport HTML compact des tests en échec par ensemble et télécharge ses pièces jointes JSON et texte : les petites de chaque série de tests récente et les plus volumineuses de la série la plus récente.
 
 ## SYNTAX
 
@@ -30,20 +30,31 @@ Aucun alias.
 ## DESCRIPTION
 
 Produit, pour chaque `AdoBuildTestFailureSet` reçu de `Get-AdoBuildTestFailure`, un
-rapport HTML sombre dans la culture du rapport. Le rapport compte quatre vues, et une
-cinquième pour les diagnostics lorsqu’il y en a. Vue d’ensemble est un tableau d’une ligne
+rapport HTML sombre dans la culture du rapport. Le rapport compte cinq vues, et une
+sixième pour les diagnostics lorsqu’il y en a. Vue d’ensemble est un tableau d’une ligne
 par test en échec : son numéro de cas de test lié à l’élément de travail, l’état de chaque
 groupe de tentatives qui l’a exécuté et la première ligne de sa dernière erreur. Un test
 qui a au moins un bogue ouvert porte après son nom un lien Bogue ouvert vers le bogue ouvert
 de plus petit numéro. Par erreur regroupe les mêmes lignes sous leur dernière erreur.
-Détails présente une fiche par test, qui liste ses bogues avec leur ID lié à l’élément de
-travail, leur titre et leur état, et la mention Ouvert pour ceux qui sont ouverts. Un bogue est ouvert sauf si son état appartient à la
-catégorie d’états Completed ou Removed. Séries de tests et historique liste les séries de tests
-du build, le graphique de l’historique et les détails du rapport. Chaque groupe, tentative
-et aperçu de pièce jointe est d’abord réduit, et un message d’erreur ou une arborescence
-des appels répétés d’une tentative antérieure du même test sont référencés au lieu d’être
-répétés. Toutes les dates et heures sont affichées dans le fuseau horaire de l’ordinateur
-qui exporte le rapport, comme l’heure de génération du rapport.
+Bogues ouverts liste chaque bogue une fois avec les tests qui lui sont liés et indique si
+chaque lien vient d’un résultat de test, du cas de test ou des deux; le bogue qui a le plus
+de tests vient en premier, et un bogue qui n’a pas pu être lu vient en dernier, avec la
+mention Non lu. Détails présente une fiche par test, qui liste ses bogues ouverts avec leur
+ID lié à l’élément de travail, leur titre et leur état. Un bogue est ouvert sauf si son
+état appartient à la catégorie d’états Completed ou Removed; un bogue fermé n’est pas
+affiché, et un bogue qui n’a pas pu être lu n’affiche que le lien vers son ID et la mention
+Non lu. Séries de tests et historique liste les séries de tests du build avec leurs
+tentatives, leur durée, leurs décomptes de tests, les tests signalés et les pièces jointes
+répertoriées et téléchargées, et signale la dernière série de tests. La vue présente
+ensuite l’historique des exécutions sous forme de graphique, de tableau des builds et de
+tableau des tests signalés, avec leur résultat dans chaque build et le nombre de builds
+consécutifs, jusqu’à celui-ci, où chacun a échoué ou a été instable. La date et l’origine
+du rapport figurent sous chaque vue. Chaque groupe, tentative et aperçu de pièce jointe est
+d’abord réduit, et chaque tentative contient son propre
+message d’erreur complet et sa propre arborescence des appels, même lorsqu’une tentative
+antérieure du même test avait le même texte. Toutes les dates et heures sont affichées dans
+le fuseau horaire de l’ordinateur qui exporte le rapport, comme l’heure de génération du
+rapport.
 
 Lorsque les séries de tests du build portent des noms de phase, de travail ou de série
 différents, par exemple une phase par langue, chaque fiche regroupe ses tentatives selon ces
@@ -71,28 +82,39 @@ leurs tentatives, mais leurs pièces jointes sont omises. Le nom de chaque pièc
 un lien vers la pièce jointe dans Azure DevOps, que le navigateur télécharge avec votre
 connexion Windows. Seules les pièces jointes JSON (`.json`) et texte (`.txt`, `.log`) sont
 téléchargées par l’exportation; les pièces jointes PNG, HTML et autres restent des liens,
-quels que soient les paramètres. Par défaut, seule la série de tests la plus récente est
-téléchargée, et seulement si elle est dans la fenêtre. Cette série est la dernière dans
-l’ordre des tentatives de phase, de travail et d’instance du travail, puis de la date de
-début et de l’ID de série. Si elle n’a aucune pièce jointe JSON ou texte, l’exportation ne
-télécharge rien d’une série précédente et ne crée aucun dossier de pièces jointes.
+quels que soient les paramètres. Par défaut, les fichiers JSON et texte d’au plus
+`maximumInlineJsonBytes` (256 Kio) sont téléchargés de chaque série de tests de la fenêtre,
+et les plus volumineux seulement de la série la plus récente. Cette série est la dernière
+dans l’ordre des tentatives de phase, de travail et d’instance du travail, puis de la date
+de début et de l’ID de série. Un fichier plus volumineux d’une série plus ancienne reste un
+lien : l’exportation ne se rabat pas sur une série précédente pour ceux-là. Un fichier
+d’une série plus ancienne qui ne déclare aucune taille est téléchargé et conservé seulement
+s’il fait au plus `maximumInlineJsonBytes`. Lorsqu’aucune série n’a de fichier à
+télécharger, aucun dossier de pièces jointes n’est créé et aucune connexion n’est requise.
 
-Utilisez `-AllRunAttachments` pour télécharger les pièces jointes JSON et texte de toutes
-les séries de tests de la fenêtre, ou `-SkipAttachments` pour n’en télécharger aucune.
-`-SkipAttachments` a priorité si les deux paramètres sont fournis. Les pièces jointes
-sélectionnées sont téléchargées dans l’ordre du rapport, dans un dossier nommé
-`<nom de base du rapport>.files-<horodatage UTC>` à côté du rapport. Les fichiers locaux
-utilisent les noms `r<série>-<résultat>[-s<sous-résultat>]-a<pièce jointe>.<ext>`; les
-fichiers `.log` sont enregistrés en `.txt`. Les noms distants sont affichés et ne
-deviennent jamais des chemins.
+Utilisez `-AllRunAttachments` pour télécharger aussi les fichiers JSON et texte plus
+volumineux de toutes les séries de tests de la fenêtre, ou `-SkipAttachments` pour n’en
+télécharger aucun. `-SkipAttachments` a priorité si les deux paramètres sont fournis. Les
+pièces jointes sélectionnées sont téléchargées dans un dossier nommé
+`<nom de base du rapport>.files-<horodatage UTC>` à côté du rapport, la série la plus
+récente d’abord, puis les séries plus anciennes, chacune dans l’ordre du rapport, afin que
+la limite de taille totale ne soit jamais épuisée d’abord par les séries plus anciennes.
+Jusqu’à `testResults.maximumConcurrentRequests` fichiers, 6 par défaut, sont lus en même
+temps; le sort de chaque fichier reste décidé dans cet ordre, de sorte que les limites, les
+avertissements et les fichiers sont les mêmes que lorsqu’un seul fichier est lu à la fois.
+Les fichiers locaux utilisent les noms
+`r<série>-<résultat>[-s<sous-résultat>]-a<pièce jointe>.<ext>`; les fichiers `.log` sont
+enregistrés en `.txt`. Les noms distants sont affichés et ne deviennent jamais des chemins.
 
 Le contenu téléchargé est vérifié avant l’aperçu : un JSON doit être valide, et un texte
 doit être en UTF-8 ou en UTF-16 avec marque d’ordre des octets. Un contenu non conforme est
 enregistré en `.bin` et lié sans aperçu. Un aperçu n’est affiché, et donc cherchable, que
 pour les fichiers d’au plus `maximumInlineJsonBytes` et tant que le total affiché du
 rapport reste sous `maximumInlineTotalBytes`; les fichiers plus volumineux sont seulement
-liés. Les limites de taille (`maximumAttachmentBytes`, `maximumTotalAttachmentBytes`) et
-les téléchargements en échec produisent des avertissements; les pièces jointes concernées
+liés. Les aperçus de la série la plus récente sont choisis d’abord, puis ceux des séries
+plus anciennes. Les limites de taille (`maximumAttachmentBytes`,
+`maximumTotalAttachmentBytes`) et les téléchargements en échec produisent des
+avertissements; les pièces jointes concernées
 conservent leur nom Azure DevOps, leur taille et le lien de téléchargement. Les erreurs
 d’authentification ou d’autorisation et l’annulation interrompent l’exportation. Un build
 d’historique illisible ne l’interrompt pas.
@@ -224,7 +246,7 @@ HelpMessage: ''
 
 ### -AllRunAttachments
 
-Télécharge les pièces jointes JSON et texte de toutes les séries de tests de la fenêtre plutôt que celles de la série la plus récente seulement. Les pièces jointes PNG et HTML ne sont jamais téléchargées. Les limites de taille par fichier et au total continuent de s’appliquer. Sans effet avec -SkipAttachments.
+Télécharge les pièces jointes JSON et texte de toute taille de chaque série de tests de la fenêtre. Sans ce paramètre, les séries autres que la plus récente ne fournissent que leurs fichiers d’au plus maximumInlineJsonBytes. Les pièces jointes PNG et HTML ne sont jamais téléchargées. Les limites de taille par fichier et au total continuent de s’appliquer. Sans effet avec -SkipAttachments.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter

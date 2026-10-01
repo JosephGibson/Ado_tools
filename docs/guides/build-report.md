@@ -20,11 +20,12 @@ definition and a branch, see [Pipeline failure triage](pipeline-triage.md).
 Get-AdoBuildTestFailure -BuildId 12345 | Export-AdoBuildTestFailure -Open
 ```
 
-That writes `Build-12345-TestFailures.html` to your Downloads folder, downloads the JSON
-and text attachments of the build's most recent test run into a folder beside it, and
-opens the report. Other attachments stay listed with name, size and a download link. Flaky tests
-are left out. The rest of this guide is the same thing with a look at the data first,
-how to read the report, and the options worth knowing.
+That writes `Build-12345-TestFailures.html` to your Downloads folder, downloads the build's
+JSON and text attachments into a folder beside it (the small ones of every recent test run,
+and the larger ones of the most recent run), and opens the report. Other attachments stay
+listed with name, size and a download link. Flaky tests are left out. The rest of this
+guide is the same thing with a look at the data first, how to read the report, and the
+options worth knowing.
 
 ## Step 1 — Connect
 
@@ -71,11 +72,11 @@ $set.Failures | Where-Object HasOpenBug -eq $false | Select-Object ShortName   #
 $set.Diagnostics | Format-List Severity, Code, Message
 ```
 
-`Bugs` holds the bugs associated with the test's results and the Bug-category work items
-linked to its Test Case. A bug is open unless its state is in the Completed or Removed state
-category, so a `Resolved` bug is still open. See
-[Pipeline failure triage](pipeline-triage.md#bugs) for the details and the warnings the
-lookup can add.
+`Bugs` holds the open bugs associated with the test's results and the open Bug-category work
+items linked to its Test Case. A bug is open unless its state is in the Completed or Removed
+state category, so a `Resolved` bug is still open; a closed bug is left out of the set and of
+the report. See [Pipeline failure triage](pipeline-triage.md#bugs) for the details and the
+warnings the lookup can add.
 
 A `Partial` status also raises a warning naming the counts. The export still runs; the
 report lists the diagnostics in its own section.
@@ -120,21 +121,28 @@ another on a single page.
 | --- | --- |
 | Overview | One row per failed test: its number, name and class, an **Open bug** link to the lowest-numbered open bug that tracks it, Test Case number, one status column per group of attempts, and the first line of its latest error |
 | By error | The same rows, grouped under their latest error, largest group first. Numbers and GUIDs are ignored when grouping, so "after 30012 ms" and "after 30020 ms" group together |
-| Details | One card per test: Test Case number and title, links, full name, its bugs with title, state and an **Open** mark, and history, then its attempts |
-| Runs and history | The build's test runs with their stage, job, attempts and attachment status, the run history chart, and when and where the report was made |
-| Diagnostics | Shown only when something could not be retrieved |
+| Open bugs | One entry per bug: its number, title and state, then a row for each test linked to it, saying whether the link comes from a test result, the Test Case or both. The bug with the most tests comes first, and a test with several bugs appears under each. Bugs that could not be read come last, marked **Not read**. The tab shows the number of bugs |
+| Details | One card per test: Test Case number and title, links, full name, its open bugs with title and state, and history, then its attempts. A bug that could not be read shows its number and a **Not read** mark |
+| Runs and history | The build's test runs with their stage, job, attempts, duration, test counts, the number of reported tests, and how many attachments are listed and downloaded; the latest run is marked and runs outside the attachment window are greyed. Below them, the run history: a chart with the failed count above each bar, the same numbers as a table of builds, and a table with one row per reported test, its outcome in each build and the number of builds in a row, ending with this one, in which it failed or was flaky |
+| Diagnostics | Shown only when something could not be retrieved: one line per diagnostic, errors first, then warnings, then information, with the number of each in the heading |
 
-In the overview, each group cell reads `✕ 7/7`: `✕` means the last attempt in that
-group failed, `≈` that it failed, then passed, and `✓` that it never failed. The numbers are
-failed attempts out of all attempts, and each square after them opens that attempt.
+In the Overview, By error and Open bugs tables, each group cell reads `✕ 7/7`: `✕` means the
+last attempt in that group failed, `≈` that it failed, then passed, and `✓` that it never
+failed. The numbers are failed attempts out of all attempts; a line above each table repeats
+this. In the overview, each square after them opens that attempt. A latest error that is too
+long for its cell is cut; rest the pointer on it to read the whole line.
+
+An attachment larger than 1,024 bytes shows its size in KB or MB; rest the pointer on the
+size to read the exact number of bytes.
 
 In a card, every group and every attempt starts collapsed. An attempt's summary line shows its
-outcome, duration, machine and the first line of its error. When a later attempt has the same
-error message or stack trace as an earlier one, it shows a link to that attempt instead of
-another copy.
+outcome, duration, machine and the first line of its error. Opened, every attempt shows its
+own full error message and stack trace, even when an earlier attempt failed with the same
+text, so a report with many retries of long traces is large.
 
 Every date and time in the report is shown in the time zone of the computer that exported it,
-the same zone as the report's own generation time.
+the same zone as the report's own generation time. When the report was made, with which
+toolkit version and from which server, collection and project, is at the foot of every view.
 
 ### English and French attempts
 
@@ -185,13 +193,19 @@ attachments are left out, and a run without a start date counts as outside.
 
 Only JSON and text (`.txt`, `.log`) attachments are ever downloaded by the export. Every
 attachment name, PNG, HTML and other types included, links to the file in Azure DevOps, which
-the browser downloads with your Windows sign-in. By default, only the most recent run is
-downloaded, and only when it is inside the window. The latest run is the last in attempt
-order: stage, phase and job attempt, then start date and run ID. If that run has no JSON or
-text attachments, no attachment folder is created; the export does not fall back to an
-older run.
+the browser downloads with your Windows sign-in. By default the export downloads:
 
-To download JSON and text from every run inside the window:
+- from every run inside the window, the JSON and text files of at most
+  `testResults.maximumInlineJsonBytes` (256 KiB), which are the ones the report can show;
+- from the most recent run, the larger ones too, up to the per-file limit.
+
+The latest run is the last in attempt order: stage, phase and job attempt, then start date and
+run ID. A larger file of an older run stays a link; the export does not fall back to an older
+run for those. A file of an older run that declares no size is downloaded and kept only if it
+turns out small enough. When no run has a file to download, no attachment folder is created
+and the export needs no connection.
+
+To download the larger JSON and text files from every run inside the window as well:
 
 ```powershell
 $set | Export-AdoBuildTestFailure -Path .\reports\build-12345 -AllRunAttachments
@@ -199,7 +213,9 @@ $set | Export-AdoBuildTestFailure -Path .\reports\build-12345 -AllRunAttachments
 
 Downloaded JSON and text appear in a collapsed preview, which is also what makes their
 contents searchable. Files above `testResults.maximumInlineJsonBytes`, or past
-`testResults.maximumInlineTotalBytes` for the whole report, are linked but not shown.
+`testResults.maximumInlineTotalBytes` for the whole report, are linked but not shown. The
+files of the latest run are downloaded and previewed first, then those of the older runs, so
+when a total runs out it is the older runs that go without.
 
 | Item | Where |
 | --- | --- |
@@ -221,7 +237,7 @@ intact. Older attachment folders of the same report are removed after the replac
 | --- | --- |
 | `-Open` | Opens the committed report with the default handler. A report that cannot be opened produces a warning and is still returned |
 | `-SkipAttachments` | Downloads nothing; attachments of runs inside the window are still listed with name, size and a link |
-| `-AllRunAttachments` | Downloads JSON and text from every run inside the window. `-SkipAttachments` takes precedence if both switches are supplied |
+| `-AllRunAttachments` | Also downloads the larger JSON and text files from every run inside the window, not only from the most recent run. `-SkipAttachments` takes precedence if both switches are supplied |
 | `-AttachmentWindowDays` | Days, 1–365, in which a run must have started for its attachments to appear. Default 7 |
 | `-IncludeFlaky` | Includes flaky tests; by default they are left out and only counted in the header |
 | `-Path` | A directory, or an `.html` file path for a single build |
@@ -259,7 +275,7 @@ failed". `Save-AdoBuildLog` needs an existing directory, unlike the export.
 | A run's attachments are missing | The run started before the attachment window. Raise `-AttachmentWindowDays`; the Runs and history view marks runs outside the window |
 | No English and French columns | The runs have no distinct stage, job or run names: the server sent no stage or job names and the runs share one name, or every run has the same names. Check `$set.Runs` as shown above |
 | One test shows in two groups of the same job | Its runs have different names, for example `Suite` and `Suite (retry)`. Only a ` (attempt N)` suffix that matches the job attempt joins a retry to its first run |
-| A bug linked to the Test Case is missing | Its type is not in the project's Bug category, or it could not be read. A `BugMetadataUnavailable` warning means only the type named `Bug` was recognized |
+| A bug linked to the Test Case is missing | It is closed, its type is not in the project's Bug category, or it could not be read. A `BugMetadataUnavailable` warning means only the type named `Bug` was recognized |
 | A bug shows as open although it is resolved | Only the Completed and Removed state categories count as closed; `Resolved` is its own category |
 | The report opens without filtering or keyboard shortcuts | Scripts are blocked. The report content is complete; only the built-in interactions are lost |
 

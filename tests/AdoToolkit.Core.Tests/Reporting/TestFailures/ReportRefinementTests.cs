@@ -40,7 +40,7 @@ public sealed class ReportRefinementTests
     [Theory]
     [InlineData("en-US")]
     [InlineData("fr-CA")]
-    public void OverviewLinksTheLowestOpenBugInItsOwningProjectAndKeepsTheCardBadgeColor(string culture)
+    public void OverviewLinksTheLowestOpenBugInItsOwningProjectAndTheCardMarksOnlyTheUnreadBug(string culture)
     {
         TestFailureReportModel model = TestFailureReportFixture.Model(culture: culture);
         AdoTestFailure original = model.Failures[0];
@@ -48,7 +48,8 @@ public sealed class ReportRefinementTests
         {
             Ordinal = original.Ordinal, ShortName = original.ShortName, CollectionUri = original.CollectionUri,
             Classification = original.Classification, Attempts = original.Attempts,
-            Bugs = [Bug(950, true), Bug(920, true, "Bugs / été"), Bug(910, false), Bug(900, null)],
+            // Bug 900 could not be read, so it is not known to be open.
+            Bugs = [Bug(950, true), Bug(920, true, "Bugs / été"), Bug(900, null)],
         };
         model = TestFailureReportModelBuilder.WithAttachments(model, [failure], [], null);
         string html = TestFailureReportFixture.Render(model);
@@ -57,8 +58,11 @@ public sealed class ReportRefinementTests
             row, StringComparison.Ordinal);
         Assert.Single(Regex.Matches(row, "class=\"open-bug-marker\""));
         Assert.Matches(@"\.open-bug-marker, \.open-bug-marker:visited \{[^{}]*color: var\(--fail\);[^{}]*border-color: var\(--fail\);", html);
-        Assert.Matches(@"\.bug-open[^{}]*\{[^{}]*color: var\(--info\);", html);
-        Assert.Contains("class=\"bug-open\"", Section(html, "<article class=\"card failure-card\"", "</article>"), StringComparison.Ordinal);
+        // The card has no Open badge; it marks the one bug that was not read.
+        string card = Section(html, "<article class=\"card failure-card\"", "</article>");
+        Assert.DoesNotContain("bug-open", html, StringComparison.Ordinal);
+        Assert.Single(Regex.Matches(card, "class=\"bug-unread\""));
+        Assert.Contains("class=\"bug-unread\"", Section(card, "<li data-bug=\"900\">", "</li>"), StringComparison.Ordinal);
         TestFailureReportValidator.Validate(new StringReader(html), model);
     }
 

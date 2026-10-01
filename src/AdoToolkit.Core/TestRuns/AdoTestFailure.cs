@@ -13,7 +13,7 @@ public sealed class AdoTestFailure
     public string? Title { get; init; }
     public IReadOnlyList<AdoTestAttempt> Attempts { get; init; } = Array.Empty<AdoTestAttempt>();
     public AdoTestCaseLink? TestCase { get; init; }
-    // Bugs of its test results and of its Test Case, ordered by ID.
+    // Open and unread bugs of its test results and of its Test Case, ordered by ID; closed bugs are left out.
     public IReadOnlyList<AdoTestBug> Bugs { get; init; } = Array.Empty<AdoTestBug>();
     public bool HasOpenBug => Bugs.Any(static bug => bug.IsOpen == true);
     // One cell per history entry, oldest first, current last.

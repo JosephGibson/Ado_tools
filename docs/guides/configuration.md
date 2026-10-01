@@ -63,7 +63,8 @@ defaults apply.
 
 ## Settings
 
-Omitted settings use their defaults. Every limit must be a positive whole number.
+Omitted settings use their defaults. Every limit must be a positive whole number, and a
+value outside a stated range is a configuration error.
 Where a cmdlet parameter exists, it overrides the setting for that call.
 
 ### Profiles
@@ -109,8 +110,9 @@ changing them. A connection made with `Connect-Ado -CollectionUrl` has no defaul
 | `testResults.maximumHistoryRequests` | `400` | Most requests spent on run history; older entries show as unavailable | none |
 | `testResults.maximumAttachmentBytes` | `52428800` (50 MiB) | Largest attachment that is downloaded | none |
 | `testResults.maximumTotalAttachmentBytes` | `524288000` (500 MiB) | Total attachment download size per report | none |
-| `testResults.maximumInlineJsonBytes` | `262144` (256 KiB) | Largest JSON or text attachment shown inline, and so searchable, in the failed-test report | none |
+| `testResults.maximumInlineJsonBytes` | `262144` (256 KiB) | Largest JSON or text attachment shown inline, and so searchable, in the failed-test report. Also the largest one that the export downloads from test runs other than the most recent | none |
 | `testResults.maximumInlineTotalBytes` | `8388608` (8 MiB) | Total JSON and text shown inline per failed-test report; later attachments are linked only | none |
+| `testResults.maximumConcurrentRequests` | `6` | Requests that `Get-AdoBuildTestFailure` has in progress at the same time, and attachments that `Export-AdoBuildTestFailure` downloads at the same time, 1–16. With `1`, every request waits for the previous one. The result is the same at every value; lower it if the server answers several requests at once badly. How Server 2020 answers several requests at once is not confirmed at work (V-33) | none |
 
 ### Reporting
 

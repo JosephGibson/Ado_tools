@@ -9,15 +9,14 @@ BeforeAll {
         Get-Content -LiteralPath (Join-Path $PSScriptRoot "../Fixtures/TestRuns/$Name") -Raw -Encoding utf8
     }
     $script:EmptyPage = '{"count":0,"value":[]}'
-    # One two-run retrieval without history, after the build has been selected.
+    # One two-run retrieval without history, after the build has been selected. Both runs list as
+    # many results as they report, so neither result listing ends with a request for an empty page.
     function Get-TwoRunResponses {
         @(
             @{ Body = Get-TestRunFixture 'runs-two.json' },
             @{ Body = $script:EmptyPage },
             @{ Body = Get-TestRunFixture 'results-run-201.json' },
-            @{ Body = $script:EmptyPage },
             @{ Body = Get-TestRunFixture 'results-run-202.json' },
-            @{ Body = $script:EmptyPage },
             @{ Body = Get-TestRunFixture 'result-detail-202-11.json' },
             @{ Body = Get-TestRunFixture 'result-detail-201-1.json' },
             @{ Body = Get-TestRunFixture 'attachments-empty.json' },
@@ -146,10 +145,15 @@ Describe 'Connection diagnostics' {
 Describe 'Failed-test report shortcuts' {
     BeforeEach {
         $env:ADOTOOLKIT_CONFIG_PATH = Join-Path $TestDrive 'config.json'
+        # The response lists are positional, so these tests send one request at a time.
+        Set-Content -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Encoding utf8 -Value '{"schemaVersion":1,"testResults":{"maximumConcurrentRequests":1}}'
         $outputDirectory = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
         [void][IO.Directory]::CreateDirectory($outputDirectory)
     }
-    AfterEach { Disconnect-Ado }
+    AfterEach {
+        Disconnect-Ado
+        Remove-Item -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Force -ErrorAction SilentlyContinue
+    }
 
     It 'selects the latest completed build of a definition' {
         $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'builds-history.json' }) + (Get-TwoRunResponses))

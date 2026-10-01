@@ -67,7 +67,8 @@ public sealed class TestFailureReportModelTests
             AdoWebLinks.BuildTestResult(TestFailureReportFixture.Collection, TestFailureReportFixture.Project, 401, 201, 11).AbsoluteUri);
         string html = TestFailureReportFixture.Render(model);
         Assert.Contains("/_workitems/edit/801", html, StringComparison.Ordinal);
-        Assert.Contains("/_workitems/edit/802", html, StringComparison.Ordinal);
+        // Every attempt names bug 802 as associated, but it is closed and so not among the test's bugs.
+        Assert.DoesNotContain("/_workitems/edit/802", html, StringComparison.Ordinal);
         Assert.Contains("/_build/results?buildId=400", html, StringComparison.Ordinal);
     }
 }

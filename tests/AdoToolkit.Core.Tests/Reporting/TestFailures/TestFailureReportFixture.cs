@@ -112,11 +112,12 @@ internal static class TestFailureReportFixture
         Owner = new AdoIdentityRef { DisplayName = "Fictional Tester", UniqueName = "tester@example.test" }, Priority = 2,
         TestCase = new AdoTestCaseLink { Id = unresolved || hostile ? 902 : 901, Title = hostile ? Hostile : "Valider la commande", State = "Ready", Rev = 4,
             IsResolved = !unresolved && !hostile, WebUrl = Untrusted },
-        // An open bug found on both sources and a closed one; the flaky test has only the closed bug,
-        // and in the partial report the closed bug could not be read.
-        Bugs = flaky ? [Closed()]
+        // Only what retrieval can produce: an open bug found on both sources, and in the partial report
+        // bug 802, which could not be read. Elsewhere 802 is closed, so it is absent here although every
+        // attempt still names it as associated; the flaky test has that closed bug only.
+        Bugs = flaky ? []
             : [Bug(801, hostile ? Hostile : "Le total ignore la remise", hostile ? Hostile : "Active", "InProgress", true, linked: true),
-                unresolved ? new AdoTestBug { Id = 802, IsAssociatedWithResult = true, WebUrl = Untrusted } : Closed()],
+                .. unresolved ? [new AdoTestBug { Id = 802, IsAssociatedWithResult = true, WebUrl = Untrusted }] : Array.Empty<AdoTestBug>()],
         Attempts = flaky ? [Attempt(1, false, hostile), Attempt(2, true, hostile)] : [Attempt(1, false, hostile)],
         History = [History(398, AdoTestHistoryOutcome.Unavailable), History(399, AdoTestHistoryOutcome.NotRun), History(400, AdoTestHistoryOutcome.Failed),
             History(401, flaky ? AdoTestHistoryOutcome.Flaky : AdoTestHistoryOutcome.Failed)], CollectionUri = Collection,
@@ -149,8 +150,6 @@ internal static class TestFailureReportFixture
         Id = id, Title = title, State = state, WorkItemType = "Bug", TeamProject = Project, StateCategory = category, IsOpen = open, IsResolved = true,
         IsAssociatedWithResult = associated, IsLinkedToTestCase = linked, WebUrl = Untrusted,
     };
-
-    private static AdoTestBug Closed() => Bug(802, "Ancien délai d’expiration", "Closed", "Completed", false);
 
     private static AdoTestHistoryEntry History(int build, AdoTestHistoryOutcome outcome) => new()
     { BuildId = build, BuildNumber = "20260916." + (build - 398).ToString(CultureInfo.InvariantCulture), Outcome = outcome, IsCurrent = build == 401, WebUrl = Untrusted };

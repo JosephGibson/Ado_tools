@@ -410,6 +410,7 @@ try {
             $relations = if ($read.Count -eq 0) { 'TESTCASE_UNREADABLE' } else { 'WORKITEM_LINKS=' + $links.Count.ToString([cultureinfo]::InvariantCulture) }
         }
         $set = Get-AdoBuildTestFailure -BuildId $buildId -HistoryCount 1 -WarningAction SilentlyContinue
+        # The module leaves closed bugs out, so BUGS counts the open and the unread ones.
         $bugs = @($set.Failures | ForEach-Object { $_.Bugs })
         $codes = @($set.Diagnostics | ForEach-Object Code)
         $counts = [ordered]@{

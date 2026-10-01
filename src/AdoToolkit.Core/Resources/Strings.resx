@@ -235,9 +235,6 @@
   <data name="TestReportNoErrorMessage" xml:space="preserve"><value>No error message</value></data>
   <data name="TestReportGroupFailed" xml:space="preserve"><value>{0} of {1} failed</value></data>
   <data name="TestReportGroupLegend" xml:space="preserve"><value>✕ ended failed · ≈ failed, then passed · ✓ did not fail · n/m: failed attempts out of all attempts</value></data>
-  <data name="TestReportSameError" xml:space="preserve"><value>Same error message as attempt {0}.</value></data>
-  <data name="TestReportSameStack" xml:space="preserve"><value>Same stack trace as attempt {0}.</value></data>
-  <data name="TestReportSameBoth" xml:space="preserve"><value>Same error message and stack trace as attempt {0}.</value></data>
   <data name="TestReportNotShown" xml:space="preserve"><value>not shown</value></data>
   <data name="TestReportFailingIn" xml:space="preserve"><value>Failing in</value></data>
   <data name="TestReportAnyGroup" xml:space="preserve"><value>Any</value></data>
@@ -249,18 +246,27 @@
   <data name="TestReportAttemptNumbers" xml:space="preserve"><value>Attempts (stage / job / instance)</value></data>
   <data name="TestReportState" xml:space="preserve"><value>State</value></data>
   <data name="TestReportTests" xml:space="preserve"><value>Tests</value></data>
-  <data name="TestReportDownloaded" xml:space="preserve"><value>Downloaded</value></data>
-  <data name="TestReportListed" xml:space="preserve"><value>Listed</value></data>
   <data name="TestReportOutsideWindow" xml:space="preserve"><value>Outside the window</value></data>
-  <data name="TestReportWindowNote" xml:space="preserve"><value>Attachments of runs started before {0} are left out: {1}.</value></data>
+  <data name="TestReportWindowNote" xml:space="preserve"><value>Attachments are listed for runs started on or after {0}. Left out from older runs: {1}.</value></data>
   <data name="TestReportPreview" xml:space="preserve"><value>Preview</value></data>
   <data name="TestReportNotInlinedSize" xml:space="preserve"><value>Too large to show here; open the local copy.</value></data>
   <data name="TestReportNotInlinedBudget" xml:space="preserve"><value>Not shown here: the report reached its limit for inline attachments; open the local copy.</value></data>
   <data name="TestReportText" xml:space="preserve"><value>Text</value></data>
   <data name="TestReportBugList" xml:space="preserve"><value>Bugs</value></data>
-  <data name="TestReportOpen" xml:space="preserve"><value>Open</value></data>
   <data name="TestReportOpenBug" xml:space="preserve"><value>Open bug</value></data>
   <data name="TestReportWithoutOpenBug" xml:space="preserve"><value>Without an open bug</value></data>
+  <data name="TestReportOpenBugs" xml:space="preserve"><value>Open bugs</value></data>
+  <data name="TestReportNoOpenBugs" xml:space="preserve"><value>No open bug is linked to a test in this report.</value></data>
+  <data name="TestReportBugSource" xml:space="preserve"><value>Linked through</value></data>
+  <data name="TestReportBugNotRead" xml:space="preserve"><value>Not read</value></data>
+  <data name="TestReportTestRuns" xml:space="preserve"><value>Test runs</value></data>
+  <data name="TestReportReportedTests" xml:space="preserve"><value>Reported tests</value></data>
+  <data name="TestReportRunAttachmentCounts" xml:space="preserve"><value>{0} listed, {1} downloaded</value></data>
+  <data name="TestReportLatestRun" xml:space="preserve"><value>Latest run</value></data>
+  <data name="TestReportHistoryByTest" xml:space="preserve"><value>History by test</value></data>
+  <data name="TestReportConsecutiveFailures" xml:space="preserve"><value>Consecutive failures</value></data>
+  <data name="TestReportKilobytes" xml:space="preserve"><value>{0:N1} KB</value></data>
+  <data name="TestReportMegabytes" xml:space="preserve"><value>{0:N1} MB</value></data>
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Export failed-test report</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Export failed-test report and download attachments to {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Downloading attachments: {0} of {1}</value></data>

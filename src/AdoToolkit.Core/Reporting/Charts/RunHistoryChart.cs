@@ -3,8 +3,16 @@ using AdoToolkit.Core.Connections;
 
 namespace AdoToolkit.Core.Reporting.Charts;
 
+// One bar per build, oldest first, with a legend and the same numbers as a table below it. The
+// chart is drawn at its natural size, one slot per build: a few builds stay small and to the
+// left, and many builds scroll sideways instead of shrinking until their labels cannot be read.
 public static class RunHistoryChart
 {
+    private const double BarWidth = 52, BarTop = 56, BarHeight = 180, BarBottom = BarTop + BarHeight, ChartHeight = 272;
+    private const double MinimumSlot = 80, CharacterWidth = 7, MinimumSegment = 6;
+    // A build number longer than this is cut in the bar label; the bar's title and the table hold it whole.
+    private const int MaximumLabelCharacters = 28;
+
     public static void Write(TextWriter writer, IReadOnlyList<AdoBuildTestSummary> history, Uri collectionUri, string teamProject, CultureInfo culture)
         => Write(writer, history, collectionUri, teamProject, culture, null);
 
@@ -18,46 +26,58 @@ public static class RunHistoryChart
         ArgumentNullException.ThrowIfNull(collectionUri);
         ArgumentException.ThrowIfNullOrWhiteSpace(teamProject);
         double maximum = Math.Max(1, history.Where(item => item.IsAvailable).Select(Total).DefaultIfEmpty().Max());
-        writer.Write("<div class=\"chart-scroll\"><svg class=\"history-chart\" xmlns=\"http://www.w3.org/2000/svg\" role=\"img\" viewBox=\"0 0 ");
-        writer.Write(N(Math.Max(320, history.Count * 80 + 32))); writer.Write(" 260\"><title>");
+        // Every slot is as wide as the longest label needs, so labels never run into each other.
+        string[] labels = [.. history.Select(static item => Label(item.BuildNumber))];
+        double slot = Math.Max(MinimumSlot, labels.Select(static label => label.Length).DefaultIfEmpty().Max() * CharacterWidth + 16);
+        double width = Math.Max(320, history.Count * slot + 32);
+        Legend(writer, culture);
+        // The width and height attributes give the drawing its natural size; the stylesheet does not stretch it.
+        writer.Write("<div class=\"chart-scroll\"><svg class=\"history-chart\" xmlns=\"http://www.w3.org/2000/svg\" role=\"img\" width=\"");
+        writer.Write(N(width)); writer.Write("\" height=\""); writer.Write(N(ChartHeight)); writer.Write("\" viewBox=\"0 0 ");
+        writer.Write(N(width)); writer.Write(' '); writer.Write(N(ChartHeight)); writer.Write("\"><title>");
         writer.Write(E(Messages.Get(AdoMessage.TestReportHistory, culture))); writer.Write("</title>");
         for (int i = 0; i < history.Count; i++)
         {
             AdoBuildTestSummary item = history[i];
-            double x = 16 + i * 80, top = 220 - Total(item) / maximum * 180;
+            double center = 16 + i * slot + slot / 2, x = center - BarWidth / 2, top = BarTop;
             writer.Write("<a rel=\"noreferrer\" href=\""); writer.Write(E(AdoWebLinks.BuildTestResult(collectionUri, teamProject, item.BuildId).AbsoluteUri)); writer.Write("\" data-build-id=\"");
             writer.Write(N(item.BuildId)); writer.Write('"');
             if (item.IsCurrent) writer.Write(" aria-current=\"true\"");
             writer.Write("><title>"); writer.Write(E(Title(item, culture, offset))); writer.Write("</title>");
             if (!item.IsAvailable)
             {
-                top = 40;
-                Rect(writer, x, top, 52, 180, "chart-unavailable");
+                Rect(writer, x, BarTop, BarWidth, BarHeight, "chart-unavailable");
                 // Explicit short hatch lines avoid document-wide SVG ids and collisions between charts.
-                for (int y = 40; y < 220; y += 12)
+                for (double y = BarTop; y < BarBottom; y += 12)
                 {
                     writer.Write("<path class=\"chart-hatch\" d=\"M "); writer.Write(N(x)); writer.Write(' '); writer.Write(N(y + 8));
                     writer.Write(" l 52 -8\"/>");
                 }
-                Text(writer, x + 26, 138, "?", "chart-caption");
+                Text(writer, center, BarTop + 98, "?", "chart-caption");
             }
             else
             {
-                double bottom = 220;
-                Segment(writer, item.Passed, AdoTestHistoryOutcome.Passed, "chart-pass", x, ref bottom, maximum, culture);
-                Segment(writer, item.Failed, AdoTestHistoryOutcome.Failed, "chart-fail", x, ref bottom, maximum, culture);
-                Segment(writer, item.Other, AdoTestHistoryOutcome.Other, "chart-other", x, ref bottom, maximum, culture);
+                // A segment that would be a hair's breadth still shows: one failure among thousands of
+                // tests gets the minimum height, taken from the largest segment so the bar keeps its total.
+                double[] heights = SegmentHeights([item.Passed, item.Failed, item.Other], maximum);
+                double bottom = BarBottom;
+                Segment(writer, item.Passed, heights[0], AdoTestHistoryOutcome.Passed, "chart-pass", x, ref bottom, culture);
+                Segment(writer, item.Failed, heights[1], AdoTestHistoryOutcome.Failed, "chart-fail", x, ref bottom, culture);
+                Segment(writer, item.Other, heights[2], AdoTestHistoryOutcome.Other, "chart-other", x, ref bottom, culture);
+                top = bottom;
                 if (Total(item) == 0)
                 {
-                    writer.Write("<path class=\"chart-zero\" d=\"M "); writer.Write(N(x)); writer.Write(" 220 h 52\"/>");
+                    writer.Write("<path class=\"chart-zero\" d=\"M "); writer.Write(N(x)); writer.Write(' '); writer.Write(N(BarBottom)); writer.Write(" h 52\"/>");
                 }
+                // The failed count is the number this chart is read for, so it stands above every bar.
+                Text(writer, center, top - 8, StatusPresentation.Glyph(AdoTestHistoryOutcome.Failed) + " " + item.Failed.ToString(culture), "chart-failed");
             }
             if (item.IsCurrent)
             {
-                Rect(writer, x - 3, top - 3, 58, 226 - top, "chart-current");
-                Text(writer, x + 26, 20, Messages.Get(AdoMessage.TestReportThisRun, culture), "chart-caption");
+                Rect(writer, x - 3, top - 3, BarWidth + 6, BarBottom + 6 - top, "chart-current");
+                Text(writer, center, 16, Messages.Get(AdoMessage.TestReportThisRun, culture), "chart-caption");
             }
-            Text(writer, x + 26, 244, (i + 1).ToString(culture) + " ↗", "chart-caption");
+            Text(writer, center, BarBottom + 22, labels[i] + " ↗", "chart-caption");
             writer.Write("</a>");
         }
         writer.Write("</svg></div>");
@@ -68,6 +88,9 @@ public static class RunHistoryChart
     private static string N(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
     private static string E(string value) => SinkEncoding.Attribute(value);
 
+    private static string Label(string buildNumber) => buildNumber.Length <= MaximumLabelCharacters
+        ? buildNumber : string.Concat(buildNumber.AsSpan(0, MaximumLabelCharacters - 1), "…");
+
     private static string? Date(DateTimeOffset? value, CultureInfo culture, TimeSpan? offset) =>
         (offset is TimeSpan shift ? value?.ToOffset(shift) : value)?.ToString("g", culture);
 
@@ -77,16 +100,33 @@ public static class RunHistoryChart
         item.IsAvailable ? Messages.Get(AdoMessage.TestReportAvailable, culture) : StatusPresentation.Label(AdoTestHistoryOutcome.Unavailable, culture),
         Messages.Get(AdoMessage.TestReportOpenAdo, culture));
 
-    private static void Segment(TextWriter writer, int count, AdoTestHistoryOutcome status, string css, double x, ref double bottom, double maximum, CultureInfo culture)
+    // Heights in proportion to the counts. A count above zero is drawn at least MinimumSegment high;
+    // what that adds is taken from the tallest segment while it stays at least as high itself.
+    private static double[] SegmentHeights(int[] counts, double maximum)
+    {
+        double[] heights = [.. counts.Select(count => count / maximum * BarHeight)];
+        double added = 0;
+        for (int index = 0; index < heights.Length; index++)
+        {
+            if (counts[index] == 0 || heights[index] >= MinimumSegment) continue;
+            added += MinimumSegment - heights[index];
+            heights[index] = MinimumSegment;
+        }
+        int tallest = Array.IndexOf(heights, heights.Max());
+        if (added > 0 && heights[tallest] - added >= MinimumSegment) heights[tallest] -= added;
+        return heights;
+    }
+
+    private static void Segment(TextWriter writer, int count, double height, AdoTestHistoryOutcome status, string css, double x, ref double bottom,
+        CultureInfo culture)
     {
         if (count == 0) return;
-        double height = count / maximum * 180;
         bottom -= height;
         writer.Write("<g data-outcome=\""); writer.Write(StatusPresentation.Css(status)); writer.Write("\" data-count=\""); writer.Write(N(count)); writer.Write("\"><title>");
         writer.Write(E(StatusPresentation.Glyph(status) + " " + StatusPresentation.Label(status, culture) + ": " + count.ToString(culture)));
         writer.Write("</title>");
-        Rect(writer, x, bottom, 52, height, css);
-        if (height >= 20 && count.ToString(culture).Length <= 6) Text(writer, x + 26, bottom + height / 2 + 4, count.ToString(culture), "chart-count");
+        Rect(writer, x, bottom, BarWidth, height, css);
+        if (height >= 20 && count.ToString(culture).Length <= 6) Text(writer, x + BarWidth / 2, bottom + height / 2 + 4, count.ToString(culture), "chart-count");
         writer.Write("</g>");
     }
 
@@ -102,11 +142,26 @@ public static class RunHistoryChart
         writer.Write("\">"); writer.Write(E(text)); writer.Write("</text>");
     }
 
+    // What each colour of a bar means, in the words the rest of the report uses.
+    private static void Legend(TextWriter writer, CultureInfo culture)
+    {
+        writer.Write("<ul class=\"chart-legend\">");
+        foreach ((AdoTestHistoryOutcome status, string css) in new[] { (AdoTestHistoryOutcome.Passed, "chart-pass"), (AdoTestHistoryOutcome.Failed, "chart-fail"),
+            (AdoTestHistoryOutcome.Other, "chart-other"), (AdoTestHistoryOutcome.Unavailable, "chart-unavailable") })
+        {
+            writer.Write("<li><svg class=\"legend-swatch\" xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 12 12\" aria-hidden=\"true\">");
+            Rect(writer, 0, 0, 12, 12, css);
+            if (status == AdoTestHistoryOutcome.Unavailable) writer.Write("<path class=\"chart-hatch\" d=\"M 0 9 l 12 -6\"/>");
+            writer.Write("</svg> "); writer.Write(E(StatusPresentation.Label(status, culture))); writer.Write("</li>");
+        }
+        writer.Write("</ul>");
+    }
+
+    // Always visible: a table inside a closed <details> could not be opened without the script.
     private static void Table(TextWriter writer, IReadOnlyList<AdoBuildTestSummary> history, Uri collectionUri, string teamProject, CultureInfo culture,
         TimeSpan? offset)
     {
-        writer.Write("<details class=\"history-data\"><summary>"); writer.Write(E(Messages.Get(AdoMessage.TestReportHistoryData, culture)));
-        writer.Write("</summary><div class=\"table-scroll\"><table><caption>"); writer.Write(E(Messages.Get(AdoMessage.TestReportHistory, culture)));
+        writer.Write("<div class=\"history-data\"><div class=\"table-scroll\"><table><caption>"); writer.Write(E(Messages.Get(AdoMessage.TestReportHistoryData, culture)));
         writer.Write("</caption><thead><tr>");
         foreach (AdoMessage header in new[] { AdoMessage.TestReportBuild, AdoMessage.TestReportBranch, AdoMessage.TestReportFinished, AdoMessage.TestReportPassed,
             AdoMessage.TestReportFailed, AdoMessage.TestReportFlaky, AdoMessage.TestReportOther, AdoMessage.ReportStatus })
@@ -128,6 +183,6 @@ public static class RunHistoryChart
             else writer.Write(E(Messages.Get(AdoMessage.TestReportAvailable, culture)));
             writer.Write("</td></tr>");
         }
-        writer.Write("</tbody></table></div></details>");
+        writer.Write("</tbody></table></div></div>");
     }
 }

@@ -46,9 +46,9 @@ public sealed class StructuralCompletenessTests
                 foreach (string? value in new[] { outcome, attempt.ComputerName, attempt.RunBy?.DisplayName,
                     attempt.RunBy?.UniqueName, attempt.FailureType, attempt.ResolutionState, attempt.Comment })
                     if (value is not null) Assert.Contains(value, detail, StringComparison.Ordinal);
-                // A message or trace repeated from an earlier attempt is referenced instead of repeated.
+                // Every attempt holds its own message and trace, repeated or not.
                 foreach (string? value in new[] { attempt.ErrorMessage, attempt.StackTrace })
-                    if (value is not null) Assert.True(detail.Contains(value, StringComparison.Ordinal) || body.Contains("class=\"same-as\"", StringComparison.Ordinal));
+                    if (value is not null) Assert.Contains(value, detail, StringComparison.Ordinal);
                 if (attempt.Duration.HasValue) Assert.Contains(attempt.Duration.Value.TotalSeconds.ToString("#,0.###", model.Culture), detail, StringComparison.Ordinal);
                 if (attempt.StartedDate.HasValue) Assert.Contains(attempt.StartedDate.Value.ToString("g", model.Culture), detail, StringComparison.Ordinal);
                 if (attempt.CompletedDate.HasValue) Assert.Contains(attempt.CompletedDate.Value.ToString("g", model.Culture), detail, StringComparison.Ordinal);
@@ -67,7 +67,9 @@ public sealed class StructuralCompletenessTests
                 {
                     Assert.Contains("id=\"" + anchor + "-a" + attempt.Number.ToString(CultureInfo.InvariantCulture) + "-att" + attachment.Id.ToString(CultureInfo.InvariantCulture) + "\"", body, StringComparison.Ordinal);
                     Assert.Contains(attachment.FileName, detail, StringComparison.Ordinal);
-                    Assert.Contains(attachment.Size!.Value.ToString("N0", model.Culture), detail, StringComparison.Ordinal);
+                    // The exact size is the text up to 1,024 bytes, and the title of a rounded size above that.
+                    string bytes = SinkEncoding.Attribute(string.Format(model.Culture, model.Labels["Bytes"], attachment.Size!.Value));
+                    Assert.Contains(attachment.Size.Value > 1024 ? " title=\"" + bytes + "\">" : ">" + bytes + "</span>", body, StringComparison.Ordinal);
                     Assert.Contains("runId=" + attachment.RunId.ToString(CultureInfo.InvariantCulture) + "&amp;resultId=" + attachment.ResultId.ToString(CultureInfo.InvariantCulture), body, StringComparison.Ordinal);
                 }
                 foreach ((string key, object? value) in attempt.CustomFields.Concat(attempt.AdditionalFields))

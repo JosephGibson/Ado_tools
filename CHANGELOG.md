@@ -6,6 +6,28 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.7.0 - 2026-10-01
+
+### Added
+
+- The failed-test report has an Open bugs view: each open bug once, with the tests linked to it and whether the link comes from a test result or the Test Case.
+- The Runs and history view of the failed-test report shows each test run's duration, failed and reported tests and listed and downloaded attachments, and a table with the outcome of every reported test in each build of the history.
+- The configuration key `testResults.maximumConcurrentRequests` (1 to 16, default 6) sets how many requests `Get-AdoBuildTestFailure` and the downloads of `Export-AdoBuildTestFailure` have in progress at the same time.
+
+### Changed
+
+- `Get-AdoBuildTestFailure` sends up to six requests at the same time instead of one and returns the same result; how Azure DevOps Server 2020 answers them is not confirmed yet, and the value `1` restores the earlier behavior.
+- `Get-AdoBuildTestFailure` leaves closed bugs out of `Bugs`: a listed bug is open, or could not be read.
+- `Export-AdoBuildTestFailure` downloads by default the JSON and text attachments of up to 256 KiB from every test run inside the attachment window, not only from the latest run, starting with the latest run and several files at a time.
+- The failed-test report shows the full error message and stack trace of every attempt instead of a reference to an earlier attempt with the same text, so a report with many retries is larger.
+- The failed-test report lists diagnostics one per line with errors first, shows sizes in KB or MB, colors the build result, and puts when and where it was made under every view.
+
+### Removed
+
+- The Open mark on the bugs of a failed-test report card: every listed bug is open, and a bug that could not be read is marked Not read.
+
+Details: [release notes](docs/release-0.7.0.md)
+
 ## 0.6.5 - 2026-10-01
 
 ### Added
@@ -24,6 +46,6 @@ This file starts with 0.6.5.
 
 | Version | Changes |
 | --- | --- |
-| 0.6.0 | [Release notes](docs/release-0.6.0.md) |
+| 0.6.0 | [Release notes](docs/archive/release-0.6.0.md) |
 | 0.5.0 | [Release notes](docs/archive/release-0.5.0.md) |
 | 0.2.0 to 0.4.0 | [Archive](docs/archive/README.md) |

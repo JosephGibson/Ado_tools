@@ -13,7 +13,7 @@ title: Export-AdoBuildTestFailure
 
 ## SYNOPSIS
 
-Writes one compact HTML failed-test report per failure set and downloads the JSON and text attachments of its most recent test run.
+Writes one compact HTML failed-test report per failure set and downloads its JSON and text attachments: the small ones of every recent test run and the larger ones of the most recent run.
 
 ## SYNTAX
 
@@ -30,18 +30,26 @@ No aliases.
 ## DESCRIPTION
 
 Renders each `AdoBuildTestFailureSet` from `Get-AdoBuildTestFailure` as one dark HTML
-report in the report culture. The report has four views, plus a fifth for diagnostics
+report in the report culture. The report has five views, plus a sixth for diagnostics
 when there are any. Overview is a table with one row per failed test: its Test Case
 number linked to the work item, the status of each group of attempts that ran it, and the
 first line of its latest error. A test with at least one open bug shows an Open bug link
 to the lowest-numbered open bug after its name. By error groups the same rows under their
-latest error. Details has one card per test, which lists its bugs, each with its ID linked
-to the work item, its title and state, and an Open mark when it is open. A bug is open unless its state is in the
-Completed or Removed state category. Runs and history lists the build's test runs, the run
-history chart and the report details. Every group, attempt and attachment preview starts
-collapsed, and an error message or stack trace repeated from an earlier attempt of the
-same test is referenced instead of repeated. Every date and time is shown in the time zone
-of the computer that runs the export, like the report's generation time.
+latest error. Open bugs lists each bug once with the tests linked to it and says whether
+each link comes from a test result, the Test Case or both; the bug with the most tests
+comes first, and a bug that could not be read comes last, marked Not read. Details has one
+card per test, which lists its open bugs, each with its ID linked to the work item, its
+title and its state. A bug is open unless its state is in the Completed or Removed state
+category; a closed bug is not shown, and a bug that could not be read shows its ID link
+and the mark Not read. Runs and history lists the build's test runs with their attempts,
+duration, test counts, reported tests and listed and downloaded attachments, and marks the
+latest run. Below them it shows the run history as a chart, as a table of builds, and as a
+table of the reported tests with their outcome in each build and the number of builds in a
+row, ending with this one, in which each failed or was flaky. When and where the report was
+made is shown under every view. Every group, attempt and attachment preview starts
+collapsed, and every attempt holds its own full error message and stack trace, even when
+an earlier attempt of the same test had the same text. Every date and time is shown in the
+time zone of the computer that runs the export, like the report's generation time.
 
 When the build's test runs carry different stage, job or run names, for example one stage
 per language, each card groups its attempts by them and the overview shows one status column
@@ -64,15 +72,23 @@ of the export, 7 by default; a run without a start date counts as outside. Older
 every attempt, but their attachments are left out. Every attachment name links to the
 attachment in Azure DevOps, which the browser downloads with your Windows sign-in. Only JSON
 (`.json`) and text (`.txt`, `.log`) attachments are ever downloaded by the export; PNG,
-HTML and other attachments stay links, whatever the switches. By default, only the most
-recent test run is downloaded, and only when it is inside the window. The latest run is the last in attempt
-order: stage, phase and job attempt, then start date and run ID. If it has no JSON or text
-attachments, the export does not fall back to an older run and creates no attachment folder.
+HTML and other attachments stay links, whatever the switches. By default, JSON and text
+files of at most `maximumInlineJsonBytes` (256 KiB) are downloaded from every run inside the
+window, and larger ones only from the most recent test run. The latest run is the last in
+attempt order: stage, phase and job attempt, then start date and run ID. A larger file of an
+older run stays a link: the export does not fall back to an older run for those. A file of an
+older run that declares no size is downloaded and kept only if it is at most
+`maximumInlineJsonBytes`. When no run has a file to download, no attachment folder is
+created and no connection is needed.
 
-Use `-AllRunAttachments` to download JSON and text from every run inside the window, or
-`-SkipAttachments` to download none. `-SkipAttachments` takes precedence if both are
-supplied. Selected attachments are downloaded in report order into a folder named
-`<report base name>.files-<UTC stamp>` beside the report. Local files use toolkit names:
+Use `-AllRunAttachments` to download the larger JSON and text files from every run inside
+the window too, or `-SkipAttachments` to download none. `-SkipAttachments` takes precedence
+if both are supplied. Selected attachments are downloaded into a folder named
+`<report base name>.files-<UTC stamp>` beside the report, the latest run first and then the
+older runs, each in report order, so the total size limit is never used up by older runs
+first. Up to `testResults.maximumConcurrentRequests` files, 6 by default, are read at the
+same time; each file's outcome is still decided in that order, so the limits, the warnings
+and the files are the same as when one file is read at a time. Local files use toolkit names:
 `r<run>-<result>[-s<sub-result>]-a<attachment>.<ext>`, where `.log` files are saved as
 `.txt`. Remote names are display text and never become paths.
 
@@ -80,9 +96,10 @@ Downloaded content is checked before it is previewed: JSON must parse, and text 
 UTF-8 or UTF-16 with a byte order mark. A failed check saves the file as `.bin` and links it
 without a preview. A preview is shown, and searchable, only for files up to
 `maximumInlineJsonBytes` and while the report's inline total stays within
-`maximumInlineTotalBytes`; larger files are linked only. Size limits
-(`maximumAttachmentBytes`, `maximumTotalAttachmentBytes`) and failed downloads produce
-warnings; affected attachments retain their Azure DevOps name, size and download link.
+`maximumInlineTotalBytes`; larger files are linked only. The previews of the latest run are
+chosen first, then those of older runs. Size limits (`maximumAttachmentBytes`,
+`maximumTotalAttachmentBytes`) and failed downloads produce warnings; affected attachments
+retain their Azure DevOps name, size and download link.
 Authentication, authorization and cancellation stop the export. An unreadable history
 build does not stop it.
 
@@ -213,7 +230,7 @@ HelpMessage: ''
 
 ### -AllRunAttachments
 
-Downloads JSON and text attachments from every run inside the attachment window instead of only the most recent run. PNG and HTML attachments are never downloaded. Existing per-file and total size limits still apply. Has no effect with -SkipAttachments.
+Downloads JSON and text attachments of any size from every run inside the attachment window. Without it, runs other than the most recent give only their files of at most maximumInlineJsonBytes. PNG and HTML attachments are never downloaded. Existing per-file and total size limits still apply. Has no effect with -SkipAttachments.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter

@@ -235,9 +235,6 @@
   <data name="TestReportNoErrorMessage" xml:space="preserve"><value>Aucun message d’erreur</value></data>
   <data name="TestReportGroupFailed" xml:space="preserve"><value>{0} sur {1} en échec</value></data>
   <data name="TestReportGroupLegend" xml:space="preserve"><value>✕ en échec à la fin · ≈ en échec, puis réussi · ✓ sans échec · n/m : tentatives en échec sur l’ensemble des tentatives</value></data>
-  <data name="TestReportSameError" xml:space="preserve"><value>Même message d’erreur que la tentative {0}.</value></data>
-  <data name="TestReportSameStack" xml:space="preserve"><value>Même arborescence des appels que la tentative {0}.</value></data>
-  <data name="TestReportSameBoth" xml:space="preserve"><value>Même message d’erreur et même arborescence des appels que la tentative {0}.</value></data>
   <data name="TestReportNotShown" xml:space="preserve"><value>non affichés</value></data>
   <data name="TestReportFailingIn" xml:space="preserve"><value>En échec dans</value></data>
   <data name="TestReportAnyGroup" xml:space="preserve"><value>Tous</value></data>
@@ -249,18 +246,27 @@
   <data name="TestReportAttemptNumbers" xml:space="preserve"><value>Tentatives (phase / travail / instance)</value></data>
   <data name="TestReportState" xml:space="preserve"><value>État</value></data>
   <data name="TestReportTests" xml:space="preserve"><value>Tests</value></data>
-  <data name="TestReportDownloaded" xml:space="preserve"><value>Téléchargées</value></data>
-  <data name="TestReportListed" xml:space="preserve"><value>Listées</value></data>
   <data name="TestReportOutsideWindow" xml:space="preserve"><value>Hors de la fenêtre</value></data>
-  <data name="TestReportWindowNote" xml:space="preserve"><value>Les pièces jointes des séries de tests commencées avant le {0} sont omises : {1}.</value></data>
+  <data name="TestReportWindowNote" xml:space="preserve"><value>Les pièces jointes sont répertoriées pour les séries de tests commencées le {0} ou après. Omises des séries plus anciennes : {1}.</value></data>
   <data name="TestReportPreview" xml:space="preserve"><value>Aperçu</value></data>
   <data name="TestReportNotInlinedSize" xml:space="preserve"><value>Trop volumineuse pour être affichée ici; ouvrez la copie locale.</value></data>
   <data name="TestReportNotInlinedBudget" xml:space="preserve"><value>Non affichée ici : le rapport a atteint sa limite de pièces jointes affichées; ouvrez la copie locale.</value></data>
   <data name="TestReportText" xml:space="preserve"><value>Texte</value></data>
   <data name="TestReportBugList" xml:space="preserve"><value>Bogues</value></data>
-  <data name="TestReportOpen" xml:space="preserve"><value>Ouvert</value></data>
   <data name="TestReportOpenBug" xml:space="preserve"><value>Bogue ouvert</value></data>
   <data name="TestReportWithoutOpenBug" xml:space="preserve"><value>Sans bogue ouvert</value></data>
+  <data name="TestReportOpenBugs" xml:space="preserve"><value>Bogues ouverts</value></data>
+  <data name="TestReportNoOpenBugs" xml:space="preserve"><value>Aucun bogue ouvert n’est lié à un test de ce rapport.</value></data>
+  <data name="TestReportBugSource" xml:space="preserve"><value>Lié par</value></data>
+  <data name="TestReportBugNotRead" xml:space="preserve"><value>Non lu</value></data>
+  <data name="TestReportTestRuns" xml:space="preserve"><value>Séries de tests</value></data>
+  <data name="TestReportReportedTests" xml:space="preserve"><value>Tests signalés</value></data>
+  <data name="TestReportRunAttachmentCounts" xml:space="preserve"><value>{0} répertoriées, {1} téléchargées</value></data>
+  <data name="TestReportLatestRun" xml:space="preserve"><value>Dernière série de tests</value></data>
+  <data name="TestReportHistoryByTest" xml:space="preserve"><value>Historique par test</value></data>
+  <data name="TestReportConsecutiveFailures" xml:space="preserve"><value>Échecs consécutifs</value></data>
+  <data name="TestReportKilobytes" xml:space="preserve"><value>{0:N1} Ko</value></data>
+  <data name="TestReportMegabytes" xml:space="preserve"><value>{0:N1} Mo</value></data>
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Exporter le rapport des tests en échec</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Exporter le rapport des tests en échec et télécharger les pièces jointes dans {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Téléchargement des pièces jointes : {0} de {1}</value></data>

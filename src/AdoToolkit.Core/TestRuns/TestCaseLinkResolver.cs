@@ -9,21 +9,24 @@ namespace AdoToolkit.Core.TestRuns;
 // One WorkItemsBatch pass over the distinct valid Test Case IDs, reconciled by ID (§9.1).
 // Requested IDs are never matched to response positions; an absent ID keeps its link.
 // Relations are expanded so the bug lookup knows every linked work item; the API returns all
-// fields with them, of which only the title and state are read.
+// fields with them, of which only the title and state are read. Links are cached for the
+// invocation (§17), so piped builds read each Test Case once. The chunks of one read stay
+// sequential: WorkItemBatchReader is shared with other cmdlets and §6.4 fixes that order.
 internal sealed class TestCaseLinkResolver
 {
     // Relations that are not work item links, whatever their URL.
     private static readonly string[] ResourceRelations = ["ArtifactLink", "Hyperlink", "AttachedFile"];
     private readonly AdoConnection connection;
     private readonly AdoHttpPipeline pipeline;
-    private readonly Dictionary<int, AdoTestCaseLink> cache = [];
-    private readonly Dictionary<int, IReadOnlyList<int>> linked = [];
+    private readonly TestFailureInvocationCache cache;
 
-    internal TestCaseLinkResolver(HttpClient client, AdoConnection connection, IAdoLog? log, RequestCounter? counter)
+    internal TestCaseLinkResolver(HttpClient client, AdoConnection connection, IAdoLog? log, RequestCounter? counter,
+        RequestGate? gate, TestFailureInvocationCache cache)
     {
         this.connection = connection;
+        this.cache = cache;
         pipeline = new AdoHttpPipeline(client, connection.CollectionUri, TimeSpan.FromSeconds(connection.RequestTimeoutSeconds),
-            log, counter: counter);
+            log, counter: counter, gate: gate);
     }
 
     // Parses testCase.id, which arrives as a string [Verify V-21]. Null means "no reference";
@@ -38,41 +41,52 @@ internal sealed class TestCaseLinkResolver
     internal async Task<IReadOnlyDictionary<int, AdoTestCaseLink>> ResolveAsync(IReadOnlyList<int> ids, string project,
         CultureInfo culture, List<AdoDiagnostic> diagnostics, IAdoLog progress, CancellationToken cancellationToken)
     {
-        int[] missing = ids.Distinct().Where(id => !cache.ContainsKey(id)).OrderBy(static id => id).ToArray();
-        if (missing.Length == 0) return cache;
-        int batches = 0;
-        IReadOnlyList<WorkItemDto> returned = await WorkItemBatchReader.ReadAsync(pipeline, missing, null, true, culture, cancellationToken,
-            () => progress.Progress(new AdoProgress { Phase = AdoProgressPhase.TestCaseLinks, Completed = ++batches })).ConfigureAwait(false);
-        // The batch reader rejects duplicate and unrequested IDs, so the result is keyed safely.
-        Dictionary<int, WorkItemDto> resolved = returned.ToDictionary(static item => item.Id);
-        foreach (int id in missing)
+        int[] requested = ids.Distinct().OrderBy(static id => id).ToArray();
+        int[] missing = requested.Where(id => !cache.TryGetTestCase(project, id, out _)).ToArray();
+        if (missing.Length > 0)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            Uri webUrl = AdoWebLinks.WorkItem(connection.CollectionUri, project, id);
-            if (!resolved.TryGetValue(id, out WorkItemDto? item))
+            int batches = 0;
+            IReadOnlyList<WorkItemDto> returned = await WorkItemBatchReader.ReadAsync(pipeline, missing, null, true, culture, cancellationToken,
+                () => progress.Progress(new AdoProgress { Phase = AdoProgressPhase.TestCaseLinks, Completed = ++batches })).ConfigureAwait(false);
+            // The batch reader rejects duplicate and unrequested IDs, so the result is keyed safely.
+            Dictionary<int, WorkItemDto> resolved = returned.ToDictionary(static item => item.Id);
+            foreach (int id in missing)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                Uri webUrl = AdoWebLinks.WorkItem(connection.CollectionUri, project, id);
+                if (!resolved.TryGetValue(id, out WorkItemDto? item))
+                {
+                    cache.AddTestCase(project, id, new AdoTestCaseLink { Id = id, WebUrl = webUrl, IsResolved = false }, []);
+                    continue;
+                }
+                Dictionary<string, JsonElement> fields = item.Fields ?? throw WorkItemBatchReader.FormatError(culture);
+                cache.AddTestCase(project, id, new AdoTestCaseLink
+                {
+                    Id = id,
+                    Title = Text(fields, "System.Title"),
+                    State = Text(fields, "System.State"),
+                    Rev = item.Rev >= 1 ? item.Rev : null,
+                    WebUrl = webUrl,
+                    IsResolved = true,
+                }, LinkedIds(id, item.Relations));
+            }
+        }
+        // A Test Case that was not found warns in every set that references it, whether this set
+        // asked the server or an earlier set of the invocation did.
+        Dictionary<int, AdoTestCaseLink> result = [];
+        foreach (int id in requested)
+        {
+            if (!cache.TryGetTestCase(project, id, out AdoTestCaseLink link)) continue;
+            result[id] = link;
+            if (!link.IsResolved)
                 diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.UnresolvedTestCase, culture, id,
                     [id.ToString(CultureInfo.InvariantCulture)]));
-                cache[id] = new AdoTestCaseLink { Id = id, WebUrl = webUrl, IsResolved = false };
-                continue;
-            }
-            Dictionary<string, JsonElement> fields = item.Fields ?? throw WorkItemBatchReader.FormatError(culture);
-            cache[id] = new AdoTestCaseLink
-            {
-                Id = id,
-                Title = Text(fields, "System.Title"),
-                State = Text(fields, "System.State"),
-                Rev = item.Rev >= 1 ? item.Rev : null,
-                WebUrl = webUrl,
-                IsResolved = true,
-            };
-            linked[id] = LinkedIds(id, item.Relations);
         }
-        return cache;
+        return result;
     }
 
     // The work items linked to a resolved Test Case by any link type; empty for any other ID.
-    internal IReadOnlyList<int> LinkedWorkItems(int id) => linked.TryGetValue(id, out IReadOnlyList<int>? ids) ? ids : [];
+    internal IReadOnlyList<int> LinkedWorkItems(string project, int id) => cache.LinkedWorkItems(project, id);
 
     // Only the title and state are read, so no other field of the expanded response can fail the lookup.
     internal static string? Text(Dictionary<string, JsonElement> fields, string name)

@@ -99,10 +99,10 @@ has `Status` set to `Partial` and details in `Diagnostics`.
 
 ### Bugs
 
-Each reported test lists its bugs in `Bugs`, ordered by ID: every work item associated
-with one of its test results, and every work item linked to its Test Case, by any link
-type, whose type is in the project's Bug category. `HasOpenBug` is `$true` when at least
-one of them is open.
+Each reported test lists its open bugs in `Bugs`, ordered by ID: every open work item
+associated with one of its test results, and every open work item linked to its Test Case,
+by any link type, whose type is in the project's Bug category. Closed bugs are left out:
+they no longer explain a failure. `HasOpenBug` is `$true` when at least one bug is open.
 
 ```powershell
 $set.Failures | Format-Table Ordinal, ShortName, HasOpenBug
@@ -111,13 +111,16 @@ $set.Failures[0].Bugs                                         # Id, IsOpen, Stat
 ```
 
 A bug is open unless its state is in the Completed or Removed state category of its
-project and type, so a `Resolved` bug is still open. Each bug also has `StateCategory`,
-`TeamProject`, `WebUrl`, and `IsAssociatedWithResult` and `IsLinkedToTestCase`, which say
-where it was found. The lookup never fails the retrieval:
+project and type, so a `Resolved` bug is still open and stays in the list. Each bug also
+has `StateCategory`, `TeamProject`, `WebUrl`, and `IsAssociatedWithResult` and
+`IsLinkedToTestCase`, which say where it was found. `IsOpen` is `True`, or empty for a bug
+that could not be read; such a bug stays in the list because it may be open. An attempt's
+`AssociatedBugIds` is still the server's own list and can name a closed bug. The lookup
+never fails the retrieval:
 
 | Warning | What happened |
 | --- | --- |
-| `BugMetadataUnavailable` | The Bug category or state categories of a project could not be read. Only the type named `Bug` counts, and `Closed`, `Done` and `Removed` count as closed |
+| `BugMetadataUnavailable` | The Bug category or state categories of a project could not be read. Only the type named `Bug` counts, and bugs in the states `Closed`, `Done` and `Removed` count as closed and are left out |
 | `UnresolvedBug` | A bug of a test result could not be read. It keeps its ID and link; `IsOpen` is empty |
 | `BugLookupFailed` | No bug could be read. The bug IDs of the test results stay as links; linked work items can't be told apart from bugs, so they are left out |
 
@@ -125,10 +128,11 @@ where it was found. The lookup never fails the retrieval:
 
 `Export-AdoBuildTestFailure` writes one dark HTML report per build, by default to your
 Downloads folder as `Build-<id>-TestFailures.html`. Its views are an overview table, the
-same rows grouped by error, one card per test with every attempt, the build's runs with the
-run history, and diagnostics when something could not be retrieved. In both tables, a test
-with an open bug has an **Open bug** link to the lowest-numbered one, each card lists the
-test's bugs, and **Without an open bug** shows only the tests that still need one. Flaky
+same rows grouped by error, the open bugs with the tests linked to each, one card per test
+with every attempt, the build's runs with the run history, and diagnostics when something
+could not be retrieved. In the overview and by-error tables, a test with an open bug has an
+**Open bug** link to the lowest-numbered one, each card lists the test's open bugs, and
+**Without an open bug** shows only the tests that still need one. Flaky
 tests are left out unless you add `-IncludeFlaky`. Times are shown in the time zone of the
 computer that exported the report. The command returns the report as a `FileInfo` and
 shows its `file:///` address in the console, like `Write-Host`; `-InformationAction Ignore`
@@ -139,8 +143,9 @@ search, filtering, keyboard navigation (`/`, `j`, `k`, `o`) and copying of names
 and stack traces.
 
 Only JSON and text attachments are downloaded, into a `<report name>.files-<UTC timestamp>`
-folder beside the report: by default those of the build's latest test run, if it started
-within the last 7 days. Every attachment is listed with its name and size, and the name
+folder beside the report: by default the small ones, up to 256 KiB, of every test run that
+started within the last 7 days, and the larger ones of the build's latest test run.
+Every attachment is listed with its name and size, and the name
 links to the file in Azure DevOps: the browser downloads it with your Windows sign-in.
 PNG, HTML and other attachments are never downloaded by the export. A file that fails its
 content check is saved as `.bin` and linked without a preview. Size limits and failed
@@ -150,7 +155,7 @@ See [Configuration](configuration.md#settings) for the limits.
 | Option | Effect |
 | --- | --- |
 | `-SkipAttachments` | Downloads nothing; attachments are only listed |
-| `-AllRunAttachments` | Downloads JSON and text from every run inside the attachment window |
+| `-AllRunAttachments` | Also downloads the larger JSON and text files of every run inside the attachment window |
 | `-AttachmentWindowDays` | Days, 1–365, in which a run must have started for its attachments to appear. Default 7 |
 | `-IncludeFlaky` | Includes flaky tests; by default they are only counted in the header |
 | `-Path` | Directory, or an `.html` file path when one build is exported. A missing directory is created when the report is written |

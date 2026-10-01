@@ -13,20 +13,21 @@ public sealed class TestRunService
     // enumeration: TopSkip advances by the number actually returned and stops on an empty page.
     internal const int ResultPageSize = 1000;
     internal const int RunPageSize = 100;
+    internal const string CompletedState = "Completed";
     private readonly AdoConnection connection;
     private readonly AdoHttpPipeline pipeline;
 
     public TestRunService(HttpClient client, AdoConnection connection, IAdoLog? log = null)
         : this(client, connection, log, null) { }
 
-    internal TestRunService(HttpClient client, AdoConnection connection, IAdoLog? log, RequestCounter? counter)
+    internal TestRunService(HttpClient client, AdoConnection connection, IAdoLog? log, RequestCounter? counter, RequestGate? gate = null)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(connection);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(connection.RequestTimeoutSeconds);
         this.connection = connection;
         pipeline = new AdoHttpPipeline(client, connection.CollectionUri, TimeSpan.FromSeconds(connection.RequestTimeoutSeconds),
-            log, counter: counter);
+            log, counter: counter, gate: gate);
     }
 
     // vstfs:///Build/Build/<id> is composed when the build carries no uri of its own [Verify V-25].
@@ -102,9 +103,22 @@ public sealed class TestRunService
         return AttemptGrouper.OrderRuns(result);
     }
 
+    // Pass 1 for one run of a build. The listing normally ends on an empty page (§6.4). That last
+    // request is left out only when three things hold: the run is completed, the page just read
+    // was shorter than the page size, and the results read so far equal the run's total. In any
+    // other case the empty page is requested, as before.
+    internal Task<IReadOnlyList<TestResultDto>> GetResultsAsync(string project, AdoTestRun run,
+        CultureInfo culture, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        Func<int, int, bool>? isComplete = string.Equals(run.State, CompletedState, StringComparison.OrdinalIgnoreCase) && run.TotalTests is int total
+            ? (read, lastPage) => lastPage < ResultPageSize && read == total : null;
+        return GetResultsAsync(project, run.Id, culture, cancellationToken, isComplete);
+    }
+
     // Pass 1: lightweight fields only. The server outcomes filter is never used (§15.9 step 3).
     internal async Task<IReadOnlyList<TestResultDto>> GetResultsAsync(string project, int runId,
-        CultureInfo culture, CancellationToken cancellationToken)
+        CultureInfo culture, CancellationToken cancellationToken, Func<int, int, bool>? isComplete = null)
     {
         IReadOnlyList<TestResultDto> values = await pipeline.GetPagesAsync(EndpointRegistry.TestResultsList,
             AdoJsonContext.Default.TestResultPageDto, static page => page.Value,
@@ -114,7 +128,7 @@ public sealed class TestRunService
                 ["project"] = project,
                 ["runId"] = runId.ToString(CultureInfo.InvariantCulture),
             }, null, ResultPageSize,
-            new Dictionary<string, string> { ["detailsToInclude"] = "None" }).ConfigureAwait(false);
+            new Dictionary<string, string> { ["detailsToInclude"] = "None" }, isComplete).ConfigureAwait(false);
         HashSet<int> seen = [];
         foreach (TestResultDto value in values)
             if (value.Id < 1 || !seen.Add(value.Id)) throw FormatError(culture, "TestResultsList");

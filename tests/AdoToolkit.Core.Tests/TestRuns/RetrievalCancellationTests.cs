@@ -37,8 +37,9 @@ public sealed class RetrievalCancellationTests
             },
         };
         using HttpClient client = new(handler);
+        // One request at a time: with more, the other detail requests of the stage are already in flight.
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => TestRunFixture.Service(client)
-            .GetAsync(TestRunFixture.Build(), new TestFailureQuery { HistoryCount = 1 }, CultureInfo.InvariantCulture,
+            .GetAsync(TestRunFixture.Build(), new TestFailureQuery { HistoryCount = 1, MaximumConcurrentRequests = 1 }, CultureInfo.InvariantCulture,
                 cancellation.Token));
         // Only the cancelled detail request was issued; no further detail or attachment call followed.
         Assert.Equal(1, details);

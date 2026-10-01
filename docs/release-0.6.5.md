@@ -91,7 +91,7 @@ with `CHANGELOG.md needs one heading '## 0.6.5 - <yyyy-MM-dd>'`.
 | The actionlint version is not pinned locally | winget installs the current version. The workflows install 1.7.12 |
 | No rule on `main` requires the pull request check | A repository setting, declined by the developer for now |
 | The release is published before the pull request is reviewed | Accepted by the developer. A draft release was declined |
-| The findings of 0.6.0 | Unchanged; see its [findings not fixed](release-0.6.0.md#findings-not-fixed) |
+| The findings of 0.6.0 | Unchanged; see its [findings not fixed](archive/release-0.6.0.md#findings-not-fixed) |
 
 ### Known limitations
 
@@ -101,7 +101,7 @@ with `CHANGELOG.md needs one heading '## 0.6.5 - <yyyy-MM-dd>'`.
 | Pull request page | The second command opens the page; the pull request exists once it is created there. The filled-in title and body rely on GitHub's `quick_pull`, `title` and `body` query parameters, and the page was not opened in a browser during this preparation |
 | Remote address | The second command converts the `https` and `ssh` forms of a GitHub address. An address with a port is not handled |
 | Links in the release text | Only an inline link without a title is pointed at the tagged file |
-| Limits carried over | The 0.6.0 [known limitations](release-0.6.0.md#known-limitations) still apply, with V-31, V-32 and V-02 |
+| Limits carried over | The 0.6.0 [known limitations](archive/release-0.6.0.md#known-limitations) still apply, with V-31, V-32 and V-02 |
 
 ## Work-PC Live checks
 
@@ -115,7 +115,7 @@ still pending and decides the same assumptions.
 | Rank | Check | Evidence to seek |
 | --- | --- | --- |
 | 1 | Record `Get-FileHash` of `%APPDATA%\AdoToolkit\config.json`, install 0.6.5, then run `Get-AdoProfile` and `Connect-Ado` | The hash is unchanged, no warning appears, and `Get-Module AdoToolkit -ListAvailable` shows 0.6.5 with seven files in its folder |
-| 2 | Checks 2 to 9 of the [0.6.0 notes](release-0.6.0.md#work-pc-live-checks), with the 0.6.5 package | As listed there: V-31 and V-32, V-02, V-01, V-03, the `-Open` warning, custom fields, Markdown line breaks, and the 0.5.0 checks with V-30. All still pending |
+| 2 | Checks 2 to 9 of the [0.6.0 notes](archive/release-0.6.0.md#work-pc-live-checks), with the 0.6.5 package | As listed there: V-31 and V-32, V-02, V-01, V-03, the `-Open` warning, custom fields, Markdown line breaks, and the 0.5.0 checks with V-30. All still pending |
 
 ## Local validation and developer handoff
 

@@ -7,7 +7,9 @@ namespace AdoToolkit.Core.Tests.TestRuns;
 // The §15.9 bound: run pages + result pages (current and history builds) + one detail request per
 // reported result record + attachment lists + ceil(distinct Test Case IDs / 200). The bug lookup
 // adds ceil(distinct bug candidates / 200), one Bug category read per project with linked work
-// items and one state list per project and bug type (TestBugResolutionTests).
+// items and one state list per project and bug type (TestBugResolutionTests). A result listing
+// costs one request less when its run is completed and its short last page completes the run's
+// total: the empty page that would end it is not requested.
 [Trait("Acceptance", "S5-1")]
 public sealed class RetrievalRequestBoundTests
 {
@@ -35,16 +37,17 @@ public sealed class RetrievalRequestBoundTests
         int attachmentLists = handler.Requests.Count(static request =>
             request.Uri.AbsolutePath.EndsWith("/attachments", StringComparison.Ordinal));
         int batches = Count(handler, "/_apis/wit/workitemsbatch");
-        // Two run pages, three result pages, one detail per rerun parent, one attachment list per
-        // detailed result plus one per rerun attempt, and no Test Case batch (no references).
+        // Two run pages, two result pages (run 201 lists its three tests on one page; run 202 lists
+        // none of its two, so its first page is the empty one), one detail per rerun parent, one
+        // attachment list per detailed result plus one per rerun attempt, and no Test Case batch.
         Assert.Equal(2, runPages);
-        Assert.Equal(3, resultPages);
+        Assert.Equal(2, resultPages);
         Assert.Equal(3, details);
         Assert.Equal(11, attachmentLists);
         Assert.Equal(0, batches);
         Assert.Equal(runPages + resultPages + details + attachmentLists + batches, handler.Requests.Count);
         Assert.Equal(handler.Requests.Count, service.RequestCount);
-        Assert.Equal(19, handler.Requests.Count);
+        Assert.Equal(18, handler.Requests.Count);
         // Eight attempts over three identities cost three detail requests: sub-results arrive
         // with their parent, so a rerun group is one request whatever its attempt count.
         Assert.Equal(8, set.Failures.Sum(static failure => failure.Attempts.Count));
@@ -66,14 +69,15 @@ public sealed class RetrievalRequestBoundTests
         using HttpClient client = new(handler);
         await TestRunFixture.Service(client).GetAsync(TestRunFixture.Build(), new TestFailureQuery { HistoryCount = 2 },
             CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
-        // Current build: 2 run pages + 3 result pages + 1 detail + 1 attachment list.
-        // History: 1 window page + 2 run pages + 2 result pages. No detail or attachment requests.
+        // Current build: 2 run pages + 3 result pages + 1 detail + 1 attachment list. Run 201 lists one
+        // of its three tests, so its listing still ends on an empty page.
+        // History: 1 window page + 2 run pages + 1 result page. No detail or attachment requests.
         Assert.Equal(1, Count(handler, "/_apis/build/builds"));
         Assert.Equal(1, handler.Requests.Count(static request =>
             request.Uri.Query.Contains("detailsToInclude=Iterations", StringComparison.Ordinal)));
         Assert.Equal(1, handler.Requests.Count(static request =>
             request.Uri.AbsolutePath.EndsWith("/attachments", StringComparison.Ordinal)));
-        Assert.Equal(12, handler.Requests.Count);
+        Assert.Equal(11, handler.Requests.Count);
     }
 
     private static int Count(FakeHttpMessageHandler handler, string path) => handler.Requests

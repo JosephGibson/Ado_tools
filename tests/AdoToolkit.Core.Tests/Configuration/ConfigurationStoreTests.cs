@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using AdoToolkit.Core.Builds;
 using AdoToolkit.Core.IO;
+using AdoToolkit.Core.TestRuns;
 
 namespace AdoToolkit.Core.Tests.Configuration;
 
@@ -91,6 +92,22 @@ public sealed class ConfigurationStoreTests
     public void RejectsInvalidConfiguration(string json)
     {
         Assert.Throws<AdoConfigurationException>(() => ConfigurationStore.Parse(json, English));
+    }
+
+    // The bound on concurrent requests is 6 unless set, and a value outside 1 to 16 is a configuration error.
+    [Fact]
+    public void ConcurrentRequestBoundDefaultsToSixAndIsLimitedToSixteen()
+    {
+        Assert.Equal(6, ConfigurationStore.Parse("{}", English).TestResults.MaximumConcurrentRequests);
+        Assert.Equal(6, new TestFailureQuery().MaximumConcurrentRequests);
+        foreach (int valid in new[] { 1, 6, 16 })
+            Assert.Equal(valid, ConfigurationStore.Parse("{\"testResults\":{\"maximumConcurrentRequests\":" + valid.ToString(CultureInfo.InvariantCulture) + "}}", English)
+                .TestResults.MaximumConcurrentRequests);
+        foreach (string invalid in new[] { "0", "-1", "17", "2.5", "\"6\"" })
+            Assert.Throws<AdoConfigurationException>(() => ConfigurationStore.Parse("{\"testResults\":{\"maximumConcurrentRequests\":" + invalid + "}}", English));
+        AdoConfiguration loaded = ConfigurationStore.Parse("{\"testResults\":{\"maximumConcurrentRequests\":4}}", English);
+        Assert.Empty(loaded.Warnings);
+        Assert.Equal(4, JsonNode.Parse(ConfigurationStore.Serialize(loaded))!["testResults"]!["maximumConcurrentRequests"]!.GetValue<int>());
     }
 
     // A hand-edited file with a repeated name must fail as configuration, not as an unhandled
@@ -253,7 +270,8 @@ public sealed class ConfigurationStoreTests
                 "requestTimeoutSeconds":100}},
      "testCases":{"maximumSharedStepDepth":4,"maximumExpandedSteps":900,"maximumResolvedWorkItems":300},
      "testResults":{"historyCount":20,"historyScope":"AllBranches","maximumReportedFailures":50,"maximumHistoryRequests":60,
-                    "maximumAttachmentBytes":1000,"maximumTotalAttachmentBytes":2000,"maximumInlineJsonBytes":300,"maximumInlineTotalBytes":400},
+                    "maximumAttachmentBytes":1000,"maximumTotalAttachmentBytes":2000,"maximumInlineJsonBytes":300,"maximumInlineTotalBytes":400,
+                    "maximumConcurrentRequests":3},
      "reporting":{"culture":"fr-CA"}}
     """;
 

@@ -6,6 +6,24 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.7.5 - 2026-10-02
+
+### Changed
+
+- `Get-AdoWorkItem -Field` and `Invoke-AdoWiql -Query` refuse a value of whitespace only before any request is sent.
+- The help topics and guides, in English and French, mark server behavior that is not confirmed with its `V-nn` item and correct several statements. French messages and help put a no-break space before colons.
+
+### Fixed
+
+- A request that no server answered, because the network failed or the connection was lost, says that the server could not be reached instead of "The server rejected the request."
+- `-Definition` accepts an integer of any type, such as an ID read by `ConvertFrom-Json`.
+- A hand-made connection object with a relative or non-HTTP collection URL is refused with a configuration error.
+- In the failed-test report, a bug of another project links to its own project, **Expand all** and **Collapse all** work after a history cell has opened the Runs view, and a time at the limit of the calendar no longer fails the report.
+- A custom field value that cannot be read no longer fails a failed-test result, a link closed by a table cell no longer breaks the step text of a Test Case report, a server error message cut inside a character no longer escapes as a .NET error, and a temporary file that cannot be deleted is reported as a file output error.
+- `Install-AdoToolkit.ps1` keeps the previous copy when the move of the new copy and the rollback both fail, and ignores a blank entry in `PSModulePath`.
+
+Details: [release notes](docs/release-0.7.5.md)
+
 ## 0.7.0 - 2026-10-01
 
 ### Added
@@ -42,7 +60,7 @@ Details: [release notes](docs/release-0.7.0.md)
 
 - The module itself is unchanged apart from its version number: the cmdlets, the reports, the help and the configuration file are those of 0.6.0.
 
-Details: [release notes](docs/release-0.6.5.md)
+Details: [release notes](docs/archive/release-0.6.5.md)
 
 ## Earlier versions
 

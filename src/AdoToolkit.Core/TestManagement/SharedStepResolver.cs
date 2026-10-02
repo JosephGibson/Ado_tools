@@ -17,7 +17,7 @@ internal sealed class SharedStepResolver(TestWorkItemReader reader)
         foreach (int id in rootIds) cache.TryAdd(id, new());
         int[] frontier = roots.SelectMany(root => References(root.Document!)).Concat(sharedParameterIds).Distinct().ToArray();
         int fetched = 0;
-        // Roots are already retrieved; the budget bounds additional resolution requests, including omitted IDs.
+        // Roots are already retrieved; the budget bounds the work items read to resolve them, including omitted IDs.
         for (int level = 1; frontier.Length != 0 && level <= maximumDepth; level++)
         {
             token.ThrowIfCancellationRequested();

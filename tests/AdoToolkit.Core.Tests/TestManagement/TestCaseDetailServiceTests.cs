@@ -163,9 +163,10 @@ public sealed class TestCaseDetailServiceTests
     {
         using FakeHttpMessageHandler handler = new();
         handler.Enqueue(FakeHttpMessageHandler.Response(Batch(Item(3))));
-        // 500 is retried; a fallback serves every attempt.
-        handler.Fallback = (_, _) => Task.FromResult(FakeHttpMessageHandler.Response(body, status));
+        // One points request in every row: 500 is not retried.
+        handler.Enqueue(FakeHttpMessageHandler.Response(body, status));
         TestCaseDetailResult result = await Get(handler, Case(3));
+        Assert.Equal(2, handler.Requests.Count);
         AdoTestCaseDetail detail = result.Details[3];
         Assert.True(detail.IsResolved);
         // Unknown, not empty: the report leaves the section out instead of saying that there is no point.

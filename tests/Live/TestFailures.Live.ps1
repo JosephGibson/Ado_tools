@@ -67,19 +67,17 @@ function Get-AdoLiveTopSkip {
     )
     $items = [System.Collections.Generic.List[object]]::new()
     $skip = 0
-    $pages = 0
     for ($page = 0; $page -lt 50; $page++) {
         $uri = $BaseUri + '?' + $Query + '&%24top=' + $Top.ToString([cultureinfo]::InvariantCulture) +
             '&%24skip=' + $skip.ToString([cultureinfo]::InvariantCulture)
         $data = (Invoke-AdoTestRequest -Uri $uri).Content | ConvertFrom-Json
-        $pages++
         if (-not (Test-AdoLiveProperty -Object $data -Name 'value')) { throw 'INVALID_PAGE' }
         $batch = @($data.value)
         foreach ($item in $batch) { $items.Add($item) }
-        if ($batch.Count -eq 0) { return [pscustomobject]@{ Items = $items.ToArray(); Pages = $pages; Complete = $true } }
+        if ($batch.Count -eq 0) { return [pscustomobject]@{ Items = $items.ToArray(); Complete = $true } }
         $skip += $batch.Count
     }
-    return [pscustomobject]@{ Items = $items.ToArray(); Pages = $pages; Complete = $false }
+    return [pscustomobject]@{ Items = $items.ToArray(); Complete = $false }
 }
 
 function Get-AdoLiveBuildRunList {
@@ -106,33 +104,36 @@ try {
     try {
         $build = (Invoke-AdoTestRequest -Uri ($projectBase + '/_apis/build/builds/' + $buildText + '?api-version=6.0')).Content | ConvertFrom-Json
         $missing = Get-AdoLiveMissingField -Object $build -Names @('id', 'definition', 'buildNumber')
-        $composed = 'vstfs:///Build/Build/' + $buildText
-        $uriAgrees = (Test-AdoLiveProperty -Object $build -Name 'uri') -and ([string] $build.uri) -eq $composed
-        $bound = Get-AdoLivePropertyValue $build 'finishTime'
-        if ($null -eq $bound) { $bound = Get-AdoLivePropertyValue $build 'queueTime' }
-        $window = $projectBase + '/_apis/build/builds?api-version=6.0&definitions=' +
-            ([int] $build.definition.id).ToString([cultureinfo]::InvariantCulture) +
-            '&statusFilter=completed&queryOrder=finishTimeDescending'
-        if ($null -ne $bound) {
-            $maxTime = ([datetimeoffset] $bound).ToUniversalTime().ToString('o', [cultureinfo]::InvariantCulture)
-            $window += '&maxTime=' + [uri]::EscapeDataString($maxTime)
-        }
-        $branch = [string] (Get-AdoLivePropertyValue $build 'sourceBranch')
-        if (-not [string]::IsNullOrEmpty($branch)) { $window += '&branchName=' + [uri]::EscapeDataString($branch) }
-        $history = @(((Invoke-AdoTestRequest -Uri $window).Content | ConvertFrom-Json).value)
-        $ordered = $true
-        $previous = $null
-        foreach ($entry in $history) {
-            if (-not (Test-AdoLiveProperty -Object $entry -Name 'finishTime') -or $null -eq $entry.finishTime) { continue }
-            $current = [datetimeoffset] $entry.finishTime
-            if ($null -ne $previous -and $current -gt $previous) { $ordered = $false }
-            $previous = $current
-        }
+        # The history window is built from the definition, so a missing field is reported first.
         if ($missing.Count -gt 0) { Write-AdoLiveResult "FAIL V-25 BUILD_FIELDS_MISSING $($missing -join ',')" }
-        elseif ($history.Count -eq 0) { Write-AdoLiveResult 'INCONCLUSIVE V-25 BUILD_FIELDS_PRESENT_HISTORY_WINDOW_EMPTY' }
-        elseif (-not $ordered) { Write-AdoLiveResult 'FAIL V-25 HISTORY_ORDER_DIFFERS' }
-        elseif (-not $uriAgrees) { Write-AdoLiveResult 'PASS V-25 FIELDS_AND_WINDOW_AGREE_URI_FORM_DIFFERS' }
-        else { Write-AdoLiveResult 'PASS V-25 FIELDS_WINDOW_AND_URI_FORM_AGREE' }
+        else {
+            $composed = 'vstfs:///Build/Build/' + $buildText
+            $uriAgrees = (Test-AdoLiveProperty -Object $build -Name 'uri') -and ([string] $build.uri) -eq $composed
+            $bound = Get-AdoLivePropertyValue $build 'finishTime'
+            if ($null -eq $bound) { $bound = Get-AdoLivePropertyValue $build 'queueTime' }
+            $window = $projectBase + '/_apis/build/builds?api-version=6.0&definitions=' +
+                ([int] $build.definition.id).ToString([cultureinfo]::InvariantCulture) +
+                '&statusFilter=completed&queryOrder=finishTimeDescending'
+            if ($null -ne $bound) {
+                $maxTime = ([datetimeoffset] $bound).ToUniversalTime().ToString('o', [cultureinfo]::InvariantCulture)
+                $window += '&maxTime=' + [uri]::EscapeDataString($maxTime)
+            }
+            $branch = [string] (Get-AdoLivePropertyValue $build 'sourceBranch')
+            if (-not [string]::IsNullOrEmpty($branch)) { $window += '&branchName=' + [uri]::EscapeDataString($branch) }
+            $history = @(((Invoke-AdoTestRequest -Uri $window).Content | ConvertFrom-Json).value)
+            $ordered = $true
+            $previous = $null
+            foreach ($entry in $history) {
+                if (-not (Test-AdoLiveProperty -Object $entry -Name 'finishTime') -or $null -eq $entry.finishTime) { continue }
+                $current = [datetimeoffset] $entry.finishTime
+                if ($null -ne $previous -and $current -gt $previous) { $ordered = $false }
+                $previous = $current
+            }
+            if ($history.Count -eq 0) { Write-AdoLiveResult 'INCONCLUSIVE V-25 BUILD_FIELDS_PRESENT_HISTORY_WINDOW_EMPTY' }
+            elseif (-not $ordered) { Write-AdoLiveResult 'FAIL V-25 HISTORY_ORDER_DIFFERS' }
+            elseif (-not $uriAgrees) { Write-AdoLiveResult 'PASS V-25 FIELDS_AND_WINDOW_AGREE_URI_FORM_DIFFERS' }
+            else { Write-AdoLiveResult 'PASS V-25 FIELDS_WINDOW_AND_URI_FORM_AGREE' }
+        }
     }
     catch { Write-AdoLiveResult 'FAIL V-25 CHECK_FAILED' }
 
@@ -320,9 +321,9 @@ try {
             if ($list.Count -eq 0) { Write-AdoLiveResult "INCONCLUSIVE V-23 ROUTES_OK_NO_ATTACHMENTS SUBRESULT=$subOk" }
             else {
                 $missing = Get-AdoLiveMissingField -Object $list[0] -Names @('id')
-                $agrees = Test-AdoLiveContent -Item $list[0] -Query ''
+                # The download is addressed by the id, so a missing one is reported before it.
                 if ($missing.Count -gt 0) { Write-AdoLiveResult "FAIL V-23 ATTACHMENT_FIELDS_MISSING $($missing -join ',')" }
-                elseif (-not $agrees) { Write-AdoLiveResult 'FAIL V-23 CONTENT_LENGTH_DIFFERS_FROM_SIZE' }
+                elseif (-not (Test-AdoLiveContent -Item $list[0] -Query '')) { Write-AdoLiveResult 'FAIL V-23 CONTENT_LENGTH_DIFFERS_FROM_SIZE' }
                 elseif ($subOk.EndsWith('/CONTENT_DIFFERS')) { Write-AdoLiveResult "FAIL V-23 SUBRESULT_CONTENT_DIFFERS SUBRESULT=$subOk" }
                 else { Write-AdoLiveResult "PASS V-23 ROUTES_FIELDS_AND_CONTENT_LENGTH_AGREE SUBRESULT=$subOk" }
             }

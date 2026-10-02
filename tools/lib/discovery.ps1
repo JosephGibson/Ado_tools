@@ -57,9 +57,13 @@ function Test-IsSafeRepositoryFile {
 function Test-IsExcludedDirectoryName {
     param([Parameter(Mandatory = $true)][string] $Name)
 
-    return $Name -in $script:ExcludedDirectoryNames -or
-        $Name -in $script:SensitiveDirectoryNames -or
-        $Name -match '^(?i)\.env(?:\..*)?$'
+    if ($Name -in $script:ExcludedDirectoryNames -or $Name -in $script:SensitiveDirectoryNames) { return $true }
+    # ripgrep applies a file glob to a directory name too and does not descend into a match,
+    # so the walk prunes the same directories.
+    foreach ($glob in $script:SensitiveFileGlobs) {
+        if ($Name -like $glob) { return $true }
+    }
+    return $false
 }
 
 function Test-IsExcludedRepositoryDirectory {
@@ -265,8 +269,6 @@ function Get-ProjectProfile {
 }
 
 function Get-RecommendedProjectCommands {
-    param([Parameter(Mandatory = $true)][object] $ProjectProfile)
-
     $devCommand = 'pwsh -NoProfile -File .\tools\dev.ps1'
     $commands = [ordered]@{
         Inspect = "$devCommand inspect"
@@ -319,9 +321,9 @@ function Get-ProjectInspection {
         Tests = [pscustomobject]@{ Files = $projectProfile.TestFiles; Count = $projectProfile.TestFiles.Count }
         Directories = $projectProfile.MajorDirectories
         Configuration = $projectProfile.Configuration
-        AgentInstructions = Get-AgentInstructionPaths -ProjectProfile $projectProfile
+        AgentInstructions = @(Get-AgentInstructionPaths -ProjectProfile $projectProfile)
         FileCount = $projectProfile.FileCount
-        Commands = Get-RecommendedProjectCommands -ProjectProfile $projectProfile
+        Commands = Get-RecommendedProjectCommands
     }
 }
 
@@ -358,14 +360,14 @@ function Get-ProjectContext {
         ScopedInstructions = @($scope)
         ImportantPaths = @($importantPaths | Select-Object -First $importantPathBudget)
         ImportantPathCount = $importantPaths.Count
-        Commands = Get-RecommendedProjectCommands -ProjectProfile $projectProfile
+        Commands = Get-RecommendedProjectCommands
     }
 }
 
 function Get-ScopedInstructions {
     param([object] $ProjectProfile, [string] $Path)
 
-    $absolute = [System.IO.Path]::GetFullPath((Join-Path $ProjectProfile.Root $Path))
+    $absolute = [System.IO.Path]::GetFullPath($Path, $ProjectProfile.Root)
     if (-not (Test-IsRepositoryPath -Path $absolute -Root $ProjectProfile.Root) -or
         -not (Test-IsAgentSafePath -Path $absolute -Root $ProjectProfile.Root)) { throw 'Context path must be a safe repository path.' }
     $relative = (Get-RelativeRepositoryPath -Path $absolute -Root $ProjectProfile.Root).TrimEnd('/')

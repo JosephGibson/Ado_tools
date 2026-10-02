@@ -4,7 +4,7 @@ using AdoToolkit.Core.TestManagement;
 
 namespace AdoToolkit.Core.Tests.Reporting;
 
-// The model/JSON portion of S2-6; HTML header and content-link assertions arrive in 2.2.
+// The model/JSON portion of S2-6; the rendered portion is in RenderedHeaderAndLinkTests.
 [Trait("Acceptance", "S2-6")]
 public sealed class ReportHeaderAndLinkTests
 {

@@ -4,8 +4,6 @@ namespace AdoToolkit.Core.Tests.Reporting.Highlighting;
 
 internal static class LexerFixtures
 {
-    internal static string Read(string name) => File.ReadAllText(Path.Combine(TestDirectory.RepositoryRoot, "tests", "Fixtures", name));
-
     internal static IEnumerable<string> EveryText()
     {
         foreach (string directory in new[] { "TestRuns", "Attachments" })

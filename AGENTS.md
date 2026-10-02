@@ -16,10 +16,11 @@ command prints one compact JSON document.
 | File inventory / NuGet packages | `inspect` / `deps` |
 | Stages that would run | `plan` |
 | Full gate, required before handoff | `verify` |
-| One stage (always exits `2`) | `verify -Stage <name>`: `powershell-lint`, `powershell-test`, `configuration`, `documentation`, `tooling-layout`, `workflow-lint`, or `project-check`, the product gate |
-| Tool versions / missing prerequisites | `diagnose` / `bootstrap` |
+| One stage (never exits `0`) | `verify -Stage <name>`: `powershell-lint`, `powershell-test`, `configuration`, `documentation`, `tooling-layout`, `workflow-lint`, or `project-check`, the product gate |
+| Tool versions and missing prerequisites | `diagnose`; `bootstrap -Install` installs them |
 
-- Exit codes: `0` pass, `1` failure, `2` incomplete (missing tool, skipped test, `-Stage`, `-SkipTests`).
+- Exit codes: `0` pass, `1` failure, `2` incomplete and never a pass (missing tool, skipped
+  test, `-Stage`, `-SkipTests`).
 - One Core test: `dotnet test tests/AdoToolkit.Core.Tests --configuration Release --no-restore --filter "FullyQualifiedName~<Name>"`.
 - Discovery skips generated, dependency, secret and local-configuration paths and never follows links.
 
@@ -38,12 +39,11 @@ command prints one compact JSON document.
 | `docs/commands/<culture>/` | Cmdlet help sources, shipped as compiled help | `docs/commands/AGENTS.md` |
 | `docs/guides/`, `README.md`, `CHANGELOG.md`, `docs/release-<version>.md` | End-user documentation | `docs/AGENTS.md` |
 | `docs/archive/` | Specification and superseded documents; never edited | `docs/AGENTS.md` |
-| `docs/tooling.md` | Reference for `tools/`; read it only to change tooling | |
+| `docs/tooling.md` | Reference for `tools/` and the agent setup; read it only to change them | |
 
 ## Working contract
 
-- A nested `AGENTS.md` refines its subtree. `CLAUDE.md` imports this file;
-  `.claude/rules/*.md` import the nested files by path.
+- A nested `AGENTS.md` refines its subtree.
 - In instructions and documentation, name a repository file by its path from the root, in
   a code span. `verify` fails on a path, link or heading anchor that does not resolve.
 - Code comments cite decisions as `§n`, `DD-0nn`, `Q-nn`, `V-nn`, `S0-n` and `Fnn`.
@@ -53,11 +53,9 @@ command prints one compact JSON document.
 - Public contract: cmdlet names, parameters, output types, the configuration file format
   and `docs/schemas/testcase.v1.schema.json`. Change it only when the change is the fix,
   and list it in the release notes.
-- Procedures are skills: `fix-bug`, `update-goldens`, `release`, `rewrite`. Each body is
-  `.agents/skills/<name>/SKILL.md`; `.claude/skills/<name>/SKILL.md` is a wrapper with the
-  same name and description.
-- Run `verify` after changes. Fix named failures. Report a missing prerequisite by name;
-  an exit code of `2` is never a pass.
+- Procedures are skills, each in `.agents/skills/<name>/SKILL.md`: `fix-bug`,
+  `update-goldens`, `release`, `rewrite`.
+- Run `verify` after changes. Fix named failures; report a missing prerequisite by name.
 - Keep always-loaded instructions short: procedures go to skills, references to `docs/`,
   mechanical work to `tools/`.
 
@@ -71,9 +69,9 @@ command prints one compact JSON document.
 - Generated output: write a temporary file beside the target, validate it, then replace
   atomically. Use literal paths, stay inside the workspace, clean up on error.
 - Tests never use the network or a live service.
-- Install or restore prerequisites only with user authorization. `verify` never installs.
+- Install or restore prerequisites only with user authorization.
 - Publishing, deployment, messages, credential changes and changes outside the project
   need explicit direction. Inspection, edits and deterministic checks do not.
-- Claude hooks: `tools/guard-git.ps1` blocks other Git commands before they run;
-  `tools/validate-edit.ps1` checks an edited file after the write and cannot undo it.
-  Hooks are not a sandbox, and Codex does not inherit Claude permissions.
+- The Claude hooks, `tools/guard-git.ps1` for the Git rule and `tools/validate-edit.ps1`
+  for edited files, are not a sandbox, and Codex does not run them: the boundaries hold
+  without a hook.

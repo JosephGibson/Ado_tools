@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoBuildFailure
 ---
@@ -35,7 +35,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Builds the parentId tree, keeps the highest attempt per identifier, and removes superseded records with their subtrees. Selects deepest failed records, or canceled records when the build was canceled. IncludeWarnings also selects deepest succeededWithIssues records. Record type names do not determine failures. Paths join ancestor names with ›. Reads the log list once per build for line counts; no log contents are downloaded. Missing log IDs or line counts remain null. With BuildId, retrieves build metadata using BuildsList and buildIds first; piped builds already supply that metadata. A foreign collection produces a ConnectionMismatch error for that input.
+Builds the parentId tree, keeps the highest attempt per identifier, and removes superseded records with their subtrees. Selects deepest failed records, and also canceled records when the build was canceled. IncludeWarnings also selects deepest succeededWithIssues records. Record type names do not determine failures. Paths join ancestor names with ›. Reads the log list once per build for line counts; no log contents are downloaded. Missing log IDs or line counts remain null. With BuildId, retrieves build metadata using BuildsList and buildIds first; piped builds already supply that metadata. A foreign collection produces an AdoConnectionMismatch error for that input.
 
 ## EXAMPLES
 
@@ -168,7 +168,7 @@ Supports common parameters including ErrorAction, ErrorVariable, Verbose, and De
 
 ## NOTES
 
-Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Timeline shapes and paging await server confirmation (V-11, V-14). Web links await confirmation at work.
+Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Timeline shapes and the log list await server confirmation (V-11, V-14).
 
 ## RELATED LINKS
 

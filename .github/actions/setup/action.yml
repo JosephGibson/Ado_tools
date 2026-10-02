@@ -16,8 +16,8 @@ runs:
       shell: pwsh
       env:
         POWERSHELL_VERSION: '7.6.6'
-        # SHA-256 of PowerShell-7.6.6-win-x64.zip as published in that release's hashes.sha256. The
-        # published file comes from the same place as the archive, so the runtime is pinned here.
+        # SHA-256 of the win-x64 zip of that version, as published in its release's hashes.sha256.
+        # The published file comes from the same place as the archive, so the runtime is pinned here.
         POWERSHELL_SHA256: '02fe458be20493fbdf43f61ea20610b811ee6c738ab1676c61b9cfcd1a33c860'
       run: |
         $ErrorActionPreference = 'Stop'
@@ -46,7 +46,7 @@ runs:
       shell: pwsh
       env:
         ACTIONLINT_VERSION: '1.7.12'
-        # SHA-256 of actionlint_1.7.12_windows_amd64.zip as published in that release's checksums file.
+        # SHA-256 of the windows_amd64 zip of that version, as published in its release's checksums file.
         ACTIONLINT_SHA256: '6e7241b51e6817ea6a047693d8e6fed13b31819c9a0dd6c5a726e1592d22f6e9'
       run: |
         $ErrorActionPreference = 'Stop'

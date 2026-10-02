@@ -93,9 +93,6 @@ public static class ReportFileNames
     }
 
     // The cmdlet supplies a resolved FileSystem path; this layer never interprets providers or wildcards.
-    public static string Resolve(string? path, int id, ReportFormat format, CultureInfo culture,
-        Func<string>? getDownloads = null) => Resolve(path, TestCase(id, format), culture, getDownloads);
-
     public static string Resolve(string? path, string defaultName, CultureInfo culture, Func<string>? getDownloads = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(defaultName);

@@ -32,8 +32,8 @@ $build | Get-AdoBuildTimeline               # the full record tree, parents firs
 ```
 
 `Get-AdoBuildFailure` returns the deepest failed timeline records, such as tasks,
-from the latest attempt of each record. If the build was canceled, it returns
-canceled records instead. `Path` shows the stage › job › task chain. Add
+from the latest attempt of each record. If the build was canceled, it also returns
+the deepest canceled records. `Path` shows the stage › job › task chain. Add
 `-IncludeWarnings` to also get records that succeeded with issues.
 
 ## Save logs
@@ -44,8 +44,9 @@ $build | Get-AdoBuildFailure | Save-AdoBuildLog -Tail 200 -Path .\triage
 
 - Each log is saved as `Build-<id>-Log-<logId>.txt`, byte for byte. An existing
   file is replaced.
-- `-Tail` keeps only the last lines. Omit it for the full log. `-Path` must be an
-  existing directory and defaults to your Downloads folder.
+- `-Tail` keeps only the last lines. Omit it for the full log. The line range it requests
+  is not confirmed on Azure DevOps Server 2020 (V-14). `-Path` must be an existing
+  directory and defaults to your Downloads folder.
 - A failure without a log writes an error for that record, and the pipeline
   continues.
 - A download fails after 10 minutes in total or 60 seconds without data.
@@ -88,7 +89,8 @@ the run totals `PassedTests`, `NotApplicableTests`, `UnanalyzedTests` and
 When the test runs carry different stage, job or run names, attempts are grouped by them, so
 a test that fails in every French attempt stays `Failed` even if an English retry passes
 last. A run whose name only adds the job retry suffix, such as `UI tests (attempt 2)` on
-job attempt 2, stays in the group of the run it retries.
+job attempt 2, stays in the group of the run it retries. The names and the suffix are not
+confirmed on Azure DevOps Server 2020 (V-19).
 
 Each failure keeps all its attempts, with error messages, stack traces,
 attachment metadata, any linked Test Case and its bugs. Run history covers the current build
@@ -103,6 +105,8 @@ Each reported test lists its open bugs in `Bugs`, ordered by ID: every open work
 associated with one of its test results, and every open work item linked to its Test Case,
 by any link type, whose type is in the project's Bug category. Closed bugs are left out:
 they no longer explain a failure. `HasOpenBug` is `$true` when at least one bug is open.
+The Bug category, state category and Test Case link requests are not confirmed on Azure
+DevOps Server 2020 (V-30).
 
 ```powershell
 $set.Failures | Format-Table Ordinal, ShortName, HasOpenBug
@@ -145,8 +149,9 @@ and stack traces.
 Only JSON and text attachments are downloaded, into a `<report name>.files-<UTC timestamp>`
 folder beside the report: by default the small ones, up to 256 KiB, of every test run that
 started within the last 7 days, and the larger ones of the build's latest test run.
-Every attachment is listed with its name and size, and the name
-links to the file in Azure DevOps: the browser downloads it with your Windows sign-in.
+Every attachment of a run inside that window is listed with its name and size, and the name
+links to the file in Azure DevOps: the browser downloads it with your Windows sign-in (not
+confirmed under the work browser policy, V-27).
 PNG, HTML and other attachments are never downloaded by the export. A file that fails its
 content check is saved as `.bin` and linked without a preview. Size limits and failed
 downloads produce warnings.

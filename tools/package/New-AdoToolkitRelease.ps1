@@ -15,7 +15,8 @@ $ProgressPreference = 'SilentlyContinue'
 $repository = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 if (-not $PackagePath) {
     $properties = Read-AdoPackageXml -Path (Join-Path $repository 'Directory.Build.props')
-    $version = $properties.SelectSingleNode('/Project/PropertyGroup/VersionPrefix').InnerText
+    $declared = $properties.SelectSingleNode('/Project/PropertyGroup/VersionPrefix')
+    $version = if ($null -ne $declared) { $declared.InnerText } else { '' }
     if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'VersionPrefix must be a three-part module version.' }
     $PackagePath = Join-Path $repository "artifacts/AdoToolkit/$version"
 }

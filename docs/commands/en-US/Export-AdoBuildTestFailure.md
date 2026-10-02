@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -100,8 +100,7 @@ without a preview. A preview is shown, and searchable, only for files up to
 chosen first, then those of older runs. Size limits (`maximumAttachmentBytes`,
 `maximumTotalAttachmentBytes`) and failed downloads produce warnings; affected attachments
 retain their Azure DevOps name, size and download link.
-Authentication, authorization and cancellation stop the export. An unreadable history
-build does not stop it.
+Authentication, authorization and cancellation stop the export.
 
 The report and its folder are committed in this order: download into a temporary
 folder, render and validate a temporary report, rename the folder, then replace the
@@ -335,7 +334,7 @@ HelpMessage: ''
 
 ### -Connection
 
-Explicit connection used for attachment downloads; overrides the active runspace connection. A set from another collection produces a per-input error.
+Explicit connection used for attachment downloads; overrides the active runspace connection. When attachments are downloaded, a set from another collection produces a per-input error.
 
 ```yaml
 Type: AdoToolkit.Core.Connections.AdoConnection
@@ -414,7 +413,7 @@ The committed report. When attachments were downloaded, its AttachmentDirectory 
 
 ## NOTES
 
-Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Downloaded attachments are work data and stay on this machine. Attachment routes, version and fields await server confirmation (V-23), as do the stage, job and run names used for grouping and the run name retry suffix (V-19), and browser behavior from local files awaits confirmation under the work browser policy (V-27).
+Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Downloaded attachments are work data and stay on this machine. How Server 2020 answers several downloads at once has not been confirmed at work (V-33). Attachment routes, version and fields await server confirmation (V-23), as do the stage, job and run names used for grouping and the run name retry suffix (V-19), and browser behavior from local files awaits confirmation under the work browser policy (V-27).
 
 ## RELATED LINKS
 

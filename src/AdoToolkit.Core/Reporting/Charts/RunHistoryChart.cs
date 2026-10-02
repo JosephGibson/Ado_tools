@@ -51,7 +51,7 @@ public static class RunHistoryChart
                 for (double y = BarTop; y < BarBottom; y += 12)
                 {
                     writer.Write("<path class=\"chart-hatch\" d=\"M "); writer.Write(N(x)); writer.Write(' '); writer.Write(N(y + 8));
-                    writer.Write(" l 52 -8\"/>");
+                    writer.Write(" l "); writer.Write(N(BarWidth)); writer.Write(" -8\"/>");
                 }
                 Text(writer, center, BarTop + 98, "?", "chart-caption");
             }
@@ -67,7 +67,7 @@ public static class RunHistoryChart
                 top = bottom;
                 if (Total(item) == 0)
                 {
-                    writer.Write("<path class=\"chart-zero\" d=\"M "); writer.Write(N(x)); writer.Write(' '); writer.Write(N(BarBottom)); writer.Write(" h 52\"/>");
+                    writer.Write("<path class=\"chart-zero\" d=\"M "); writer.Write(N(x)); writer.Write(' '); writer.Write(N(BarBottom)); writer.Write(" h "); writer.Write(N(BarWidth)); writer.Write("\"/>");
                 }
                 // The failed count is the number this chart is read for, so it stands above every bar.
                 Text(writer, center, top - 8, StatusPresentation.Glyph(AdoTestHistoryOutcome.Failed) + " " + item.Failed.ToString(culture), "chart-failed");
@@ -92,7 +92,7 @@ public static class RunHistoryChart
         ? buildNumber : string.Concat(buildNumber.AsSpan(0, MaximumLabelCharacters - 1), "…");
 
     private static string? Date(DateTimeOffset? value, CultureInfo culture, TimeSpan? offset) =>
-        (offset is TimeSpan shift ? value?.ToOffset(shift) : value)?.ToString("g", culture);
+        (value is { } time && offset is { } shift ? ReportTime.InOffset(time, shift) : value)?.ToString("g", culture);
 
     private static string Title(AdoBuildTestSummary item, CultureInfo culture, TimeSpan? offset) => Messages.Get(AdoMessage.TestReportHistoryTitle, culture,
         item.BuildNumber, item.SourceBranch ?? "–", Date(item.FinishTime, culture, offset) ?? "–",

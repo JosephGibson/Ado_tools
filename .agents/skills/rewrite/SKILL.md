@@ -29,8 +29,9 @@ Identify, from the draft and from this conversation when the draft refers to it:
 When the draft concerns this repository, spend a few cheap lookups (file search, grep)
 turning vague references into exact ones: "the exporter" becomes
 `src/AdoToolkit.Core/Reporting/TestCaseExporter.cs`; "run the tests" becomes
-`pwsh -NoProfile -File .\tools\dev.ps1 verify`. Stop there. Diagnosing the problem or designing the solution is the next session's job, and a
-guess written into the prompt reads as fact.
+`pwsh -NoProfile -File .\tools\dev.ps1 verify`. Stop there. Diagnosing the problem or
+designing the solution is the next session's job, and a guess written into the prompt
+reads as fact.
 
 Leave out what the target session already loads: AGENTS.md, CLAUDE.md, and other
 auto-loaded instructions.

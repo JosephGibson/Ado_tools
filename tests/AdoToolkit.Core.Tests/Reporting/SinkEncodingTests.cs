@@ -6,7 +6,7 @@ namespace AdoToolkit.Core.Tests.Reporting;
 public sealed class SinkEncodingTests
 {
     [Fact]
-    public void FrameworkEncoderBehaviorIsPinnedBeforeRendererImplementation()
+    public void FrameworkEncoderEscapesTheSpacesThatSinkEncodingKeepsLiteral()
     {
         HtmlEncoder encoder = HtmlEncoder.Create(UnicodeRanges.All);
         Assert.Equal("&#xA0;&#x202F;’« »&#x1F600;", encoder.Encode("  ’« »😀"));

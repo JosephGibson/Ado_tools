@@ -34,7 +34,7 @@ public sealed class TestFailureExporterTests
         Assert.Contains("data-diagnostic=\"HistoryUnavailable\"", html, StringComparison.Ordinal);
         Assert.Contains("data-history-count=\"4\"", html, StringComparison.Ordinal);
         Assert.Contains("<html lang=\"fr-CA\"", html, StringComparison.Ordinal);
-        Assert.Equal([result.Report.FullName], Directory.GetFileSystemEntries(directory.Root).Where(p => !p.EndsWith("config.json", StringComparison.Ordinal)));
+        Assert.Equal([result.Report.FullName], Directory.GetFileSystemEntries(directory.Root));
     }
 
     // S5-6: -SkipAttachments downloads nothing, creates no folder, and still lists names and sizes.
@@ -213,11 +213,7 @@ public sealed class TestFailureExporterTests
     private static async Task<(AdoBuildTestFailureSet, FakeHttpMessageHandler, HttpClient)> Retrieve()
     {
         TestRunFixture fixture = new TestRunFixture()
-            .RouteBytes(AttachmentFixture.Bytes("pattern.png"), "/Runs/201/Results/1/attachments/5001")
             .RouteBytes(AttachmentFixture.Bytes("valid.json"), "/Runs/201/Results/1/attachments/5002")
-            .RouteBytes(AttachmentFixture.Bytes("test-output.html"), "/Runs/201/Results/1/attachments/5003")
-            .RouteBytes(AttachmentFixture.Bytes("other-bytes.txt"), "/Runs/201/Results/1/attachments/5004")
-            .RouteBytes(AttachmentFixture.Bytes("other-bytes.txt"), "/Runs/201/Results/1/attachments/5005")
             .Route("runs-two.json", "/test/runs", "%24skip=0&")
             .Route("results-run-201.json", "/Runs/201/results", "%24skip=0&")
             .Route("results-run-202.json", "/Runs/202/results", "%24skip=0&")

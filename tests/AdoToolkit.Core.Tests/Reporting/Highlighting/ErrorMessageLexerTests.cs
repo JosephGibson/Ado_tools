@@ -8,7 +8,7 @@ public sealed class ErrorMessageLexerTests
     [Fact]
     public void AssertionFormsTypesStringsAndNumbersAreRecognized()
     {
-        IReadOnlyList<CodeToken> tokens = ErrorMessageLexer.Lex(LexerFixtures.Read("TestRuns/messages.txt"));
+        IReadOnlyList<CodeToken> tokens = ErrorMessageLexer.Lex(ParserFixture.Read("TestRuns/messages.txt"));
         Assert.Contains(tokens, static token => token.Kind == CodeTokenKind.Type && token.Text == "System.InvalidOperationException");
         foreach (string marker in new[] { "Expected", "Actual", "But was", "Attendu", "Réel", "Obtenu", "Mais était", "Mais a été" })
             Assert.Contains(tokens, token => token.Kind == CodeTokenKind.Keyword && token.Text == marker);

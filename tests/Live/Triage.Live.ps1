@@ -38,7 +38,6 @@ function Invoke-AdoTriageRequest {
 function Get-AdoTriagePageSummary {
     param([Parameter(Mandatory = $true)][string] $BaseUri)
     $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-    $items = [System.Collections.Generic.List[object]]::new()
     $token = $null
     for ($page = 0; $page -lt 50; $page++) {
         $query = 'api-version=6.0&%24top=1'
@@ -46,13 +45,12 @@ function Get-AdoTriagePageSummary {
         $response = Invoke-AdoTriageRequest -Uri ($BaseUri + '?' + $query)
         $data = $response.Content | ConvertFrom-Json
         if ($null -eq $data -or $null -eq $data.PSObject.Properties['value']) { throw 'INVALID_PAGE' }
-        foreach ($item in @($data.value)) { $items.Add($item) }
         $values = @($response.Headers['x-ms-continuationtoken'])
         $token = if ($values.Count -gt 0 -and -not [string]::IsNullOrEmpty([string] $values[0])) { [string] $values[0] } else { $null }
-        if ($null -eq $token) { return [pscustomobject]@{ Continued = $seen.Count -gt 0; Complete = $true; Items = $items.ToArray() } }
+        if ($null -eq $token) { return [pscustomobject]@{ Continued = $seen.Count -gt 0; Complete = $true } }
         if (-not $seen.Add($token)) { throw 'REPEATED_TOKEN' }
     }
-    return [pscustomobject]@{ Continued = $seen.Count -gt 0; Complete = $false; Items = $items.ToArray() }
+    return [pscustomobject]@{ Continued = $seen.Count -gt 0; Complete = $false }
 }
 
 function Get-AdoTriageLine {

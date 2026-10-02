@@ -118,7 +118,11 @@
     const action = button.dataset.action;
     if (action === 'copy') { void copy(button); return; }
     if (action === 'expand' || action === 'collapse') {
-      if (activeView()?.id !== 'details') location.hash = 'details';
+      if (activeView()?.id !== 'details') {
+        // A history cell shows the Runs view and leaves the hash, so an equal hash raises no event.
+        if (location.hash === '#details') show('details');
+        else location.hash = 'details';
+      }
       cards.filter(card => !card.hidden).forEach(card => all('.attempt-group, .attempt', card).forEach(node => { node.open = action === 'expand'; }));
       return;
     }

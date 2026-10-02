@@ -83,6 +83,23 @@ Back to the [README](../README.md) and to [here](#Custom).
             "AGENTS.md:4: path 'tools/' does not exist.")
     }
 
+    It 'treats a path or an anchor target outside the repository as missing instead of reading it' {
+        $root = Join-Path $TestDrive 'escape'
+        $outside = Join-Path $TestDrive 'escape-outside'
+        New-Fixture (Join-Path $outside 'notes.md') '# Heading'
+        New-Fixture (Join-Path $root 'docs/guide.md') '# Guide'
+        [void] (New-Item -ItemType Junction -Path (Join-Path $root 'linked') -Target $outside)
+        New-Fixture (Join-Path $root 'README.md') @'
+# Sample
+
+`docs/../../escape-outside/notes.md` exists, but outside; `docs/guide.md` is inside.
+[a heading reached through a link](linked/notes.md#heading)
+'@
+        (Get-Outcome $root).Failures | Should -Be @(
+            "README.md:3: path 'docs/../../escape-outside/notes.md' does not exist.",
+            "README.md:4: link 'linked/notes.md#heading' does not resolve.")
+    }
+
     It 'ignores links and paths inside code blocks, and links inside code spans' {
         $root = Join-Path $TestDrive 'code'
         New-Fixture (Join-Path $root 'README.md') @'

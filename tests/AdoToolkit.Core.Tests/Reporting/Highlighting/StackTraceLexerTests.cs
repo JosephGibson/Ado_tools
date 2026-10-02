@@ -10,7 +10,7 @@ public sealed class StackTraceLexerTests
     [InlineData("stack-french.txt", "à", "dans", "ligne", "Démo.Tests.")]
     public void FramesHeadersSeparatorsAndFirstUserFrameAreRecognized(string fixture, string frame, string path, string line, string ns)
     {
-        IReadOnlyList<CodeToken> tokens = StackTraceLexer.Lex(LexerFixtures.Read("TestRuns/" + fixture));
+        IReadOnlyList<CodeToken> tokens = StackTraceLexer.Lex(ParserFixture.Read("TestRuns/" + fixture));
         Has(tokens, CodeTokenKind.Keyword, frame);
         Has(tokens, CodeTokenKind.Keyword, " " + path + " ");
         Has(tokens, CodeTokenKind.Keyword, line);

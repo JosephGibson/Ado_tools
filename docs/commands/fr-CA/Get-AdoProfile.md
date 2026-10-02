@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoProfile
 ---
@@ -29,7 +29,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Lit la configuration locale sans contacter le serveur. Retourne les profils triés par nom ; Name accepte les caractères génériques PowerShell. Chaque profil est affiché sous forme de liste avec sa collection, son projet par défaut, son délai d’expiration des requêtes, ainsi que les valeurs DefaultBranch, DefaultBuildDefinition, DefaultTestPlanId et DefaultTestSuiteId que les commandes de builds et de plans de test utilisent quand ces paramètres sont omis. Une valeur vide n’est pas définie. ADOTOOLKIT_CONFIG_PATH remplace le chemin de configuration par défaut.
+Lit la configuration locale sans contacter le serveur. Retourne les profils triés par nom; Name accepte les caractères génériques PowerShell. Chaque profil est affiché sous forme de liste avec sa collection, son projet par défaut, son délai d’expiration des requêtes, ainsi que les valeurs DefaultBranch, DefaultBuildDefinition, DefaultTestPlanId et DefaultTestSuiteId que les commandes de builds et de plans de test utilisent quand ces paramètres sont omis. Une valeur vide n’est pas définie. ADOTOOLKIT_CONFIG_PATH remplace le chemin de configuration par défaut.
 
 ## EXAMPLES
 
@@ -45,7 +45,7 @@ Liste les profils de connexion enregistrés localement.
 
 ### -Name
 
-Nom du profil. Get-AdoProfile accepte les caractères génériques sans distinction de casse ; les écritures utilisent le nom littéral.
+Nom du profil. Get-AdoProfile accepte les caractères génériques sans distinction de casse; les écritures utilisent le nom littéral.
 
 ```yaml
 Type: System.String
@@ -66,9 +66,10 @@ HelpMessage: ''
 
 ### CommonParameters
 
-Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVariable,
+Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVariable,
 -InformationAction, -InformationVariable, -OutBuffer, -OutVariable, -PipelineVariable,
--ProgressAction, -Verbose, -WarningAction et -WarningVariable.
+-ProgressAction, -Verbose, -WarningAction et -WarningVariable. Pour en savoir plus, consultez
+[about_CommonParameters](https://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 

@@ -1,13 +1,15 @@
 # Developer tooling
 
-Reference for `tools/`. Daily work needs only the command table in `AGENTS.md`; read this
-before changing a command, a stage, the product gate, packaging or the agent setup.
+Reference for `tools/` and the agent setup. Daily work needs only the command table in
+`AGENTS.md`; read this before changing a command, a stage, the product gate, packaging or
+the agent setup. The rules for those files are in `tools/AGENTS.md` and
+`tools/package/AGENTS.md`.
 
 ```powershell
 pwsh -NoProfile -File .\tools\dev.ps1 <command>
 ```
 
-`tools/dev.ps1` requires PowerShell 7.6.5 or later and runs from the repository root.
+`tools/dev.ps1` requires PowerShell 7.6.5 or later.
 
 ## Commands
 
@@ -16,16 +18,16 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
 | `context [-Path <target>]` | Project name, stack, test counts, the commands, and up to 40 important paths. With `-Path`, also `ScopedInstructions`: the `AGENTS.md` and `CLAUDE.md` files that apply to the target |
 | `find -Query <literal> [-Limit 20]` | Case-insensitive matches in paths, then in content, with line numbers. `LimitReached` means the limit, 1 to 100, was filled |
 | `inspect` | Project files, test files, top-level directories, configuration and instruction files |
-| `deps [-Limit 20]` | NuGet packages declared in project and props files, and the tools `verify` needs |
+| `deps [-Limit 20]` | NuGet packages declared in project, props and targets files, and the tools `verify` needs |
 | `plan` | The stages `verify` would run, with the command line of the product gate. Runs nothing |
 | `verify` | The full gate: status, findings and duration per stage |
-| `verify -Stage <name>` | Only the named stages. Always incomplete |
-| `verify -SkipTests` | Every check except tests. Always incomplete |
+| `verify -Stage <name>` | Only the named stages. Never a pass: `incomplete`, or `fail` |
+| `verify -SkipTests` | Every check except tests. Never a pass: `incomplete`, or `fail` |
 | `diagnose` | Presence and version of each required tool and of ripgrep |
-| `bootstrap [-Install]` | The same list. `-Install` installs Pester 5.x, PSScriptAnalyzer and PlatyPS 1.x from PSGallery for the current user, and actionlint and ripgrep with winget. It does not install the .NET SDK |
+| `bootstrap [-Install]` | The same list. `-Install` installs what is missing: Pester 5.x, PSScriptAnalyzer and PlatyPS 1.x from PSGallery for the current user, actionlint and ripgrep with winget. It does not install the .NET SDK |
 
-- Output: one compact JSON document. Exit `0` for `ok` or `pass`, `1` for a failure, `2`
-  for `incomplete` or `unavailable`.
+- `Status` decides the exit code: `ok` or `pass` is `0`, `fail` is `1`, `incomplete` or
+  `unavailable` is `2`.
 - In PowerShell, `& .\tools\dev.ps1 <command> -Format Object` returns objects.
 - Several stages: `& .\tools\dev.ps1 verify -Stage @('configuration', 'tooling-layout')`.
 
@@ -35,7 +37,8 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
   the lists in `tools/dev.ps1` and ignore `.gitignore` and user ripgrep settings, so the
   result does not depend on the tool.
 - Excluded: build and output directories (`ExcludedDirectoryNames`), `secret` and
-  `secrets` directories, sensitive file names (`SensitiveFileGlobs`), and links.
+  `secrets` directories, sensitive file names (`SensitiveFileGlobs`), and links. A
+  directory named like a sensitive file is excluded with everything in it.
 - Hidden shared configuration such as `.claude/` and `.github/` is included.
 - Content search skips binary files and files above 1 MiB. Nothing is indexed or cached.
 
@@ -51,24 +54,26 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
 | `workflow-lint` | Runs actionlint on every file in `.github/workflows/`: the YAML, the workflow schema and the expressions. Its shellcheck and pyflakes integrations are switched off, because every run block is PowerShell |
 | `project-check` | The product gate, `tools/check.ps1` |
 
-- `verify` never installs or restores. A missing tool makes its stage `unavailable` and
-  the result `incomplete`.
+- A missing tool makes its stage `unavailable` and the result `incomplete`.
 - The `documentation` stage skips files under `docs/archive/` other than the two index
   files, and files under `tests/Fixtures/` other than the catalog. In `CHANGELOG.md` and
   `docs/release-<version>.md` it checks links but not paths, because the entry or the
-  notes of a release may name a file that has since gone. A code span with a placeholder
-  (`<`, `*`, `{`) is not treated as a path. The three lists are in `tools/dev.ps1`.
-- An external stage runs with `CI=true` and `NO_COLOR=1`, for at most 300 seconds
-  (`project-check`: 900). On timeout its process tree is stopped. The last 120 output
-  lines are kept, 2,000 characters each.
+  notes of a release may name a file that has since gone. A code span is read as a path
+  only when it holds no space, no placeholder or shell character (`<`, `>`, `*`, `{`, `}`,
+  `$`, `|`, `?`, `"`), no `:` and no `...`. A path or an anchor target that leaves the
+  repository, or that discovery excludes, counts as missing. The three lists are in
+  `tools/dev.ps1`.
+- An external stage runs with `CI=true`, `NO_COLOR=1` and UTF-8 pipes, for at most 300
+  seconds (`project-check`: 900; actionlint: 120). On timeout its process tree is stopped.
+  The last 120 output lines are kept, 2,000 characters each.
 - Pass, fail and incomplete come from exit codes and structured outcomes, never from
   console text. Output lines of an external stage that mention something skipped, missing
   or not installed become advisory warnings; they never change the result.
 
 ### Product gate
 
-`tools/check.ps1` exits `0`, `1` or `2`. Lines that start with `check: ` are its results;
-`verify` shows them as the stage summary.
+`verify` shows the lines of `tools/check.ps1` that start with `check: ` as the stage
+summary. The gate:
 
 1. Exits `2` when the .NET SDK, restored package assets, Pester 5.x or PlatyPS 1.x is
    missing.
@@ -88,23 +93,11 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
 
 With `-SkipTests`, the gate builds and stages the package only.
 
-### Changing checks
-
-- Product checks go into `tools/check.ps1`: call executables with argument arrays, test
-  the exit code at once, print a `check: ` line per result, and never call `verify`.
-- A built-in stage goes into `tools/lib/validation.ps1`, with fixture-based tests in
-  `tools/tests/`. An in-process stage has `Name`, `Action` and `ActionArguments` and
-  returns `Failures`, `Summary`, `Warnings` and optionally `Unavailable`. An external
-  stage has `Name`, `Executable`, `Arguments` and optionally `TimeoutSeconds` (1 to 3600)
-  and `ExitCodeContract = 'dev'`, which reads exit `2` as incomplete.
-
 ## Prerequisites
-
-Install tools only as an explicit, authorized step.
 
 | Tool | Used for | Installation |
 | --- | --- | --- |
-| PowerShell 7.6.5+ | `tools/dev.ps1`, the hooks, the packaging scripts | `winget install --id Microsoft.PowerShell --exact --source winget` |
+| PowerShell 7.6.5+ | `tools/dev.ps1` and the hooks; the packaging scripts need 7.6 | `winget install --id Microsoft.PowerShell --exact --source winget` |
 | .NET SDK | Build and tests; `global.json` selects the version | [Microsoft installer](https://dotnet.microsoft.com/download/dotnet), then `dotnet restore AdoToolkit.slnx --locked-mode` |
 | Pester 5.x | Tooling and product tests | `Install-Module Pester -MinimumVersion 5.0 -MaximumVersion 5.999.999 -Scope CurrentUser -Repository PSGallery` |
 | PSScriptAnalyzer | `powershell-lint` | `Install-Module PSScriptAnalyzer -Scope CurrentUser -Repository PSGallery` |
@@ -116,9 +109,9 @@ Install tools only as an explicit, authorized step.
 - winget extends `PATH` for new processes: open a new terminal after it installs a tool.
   Any actionlint version passes locally; the workflows install the version pinned in the
   [setup action](#setup-action).
-- `ADOTOOLKIT_RELEASE_BUILD=1`, set by the release workflow, makes the gate, the product
-  tests and help generation require the exact versions in `tools/BuildModules.psd1`. A
-  newer installed version does not satisfy a missing pin.
+- `ADOTOOLKIT_RELEASE_BUILD=1`, set by both workflows, makes the gate, the product tests
+  and help generation require the exact versions in `tools/BuildModules.psd1`. A newer
+  installed version does not satisfy a missing pin.
 - `nuget.config` clears inherited package sources and maps every package to nuget.org.
   Where nuget.org is blocked, restore fails; the prebuilt release needs no build.
 - Without administrator rights, install the .NET SDK for the account with Microsoft's
@@ -138,39 +131,34 @@ Install tools only as an explicit, authorized step.
 
 ## Packaging and releases
 
-Rules for these scripts are in `tools/package/AGENTS.md`; the `release` skill is the
-procedure. It prepares a release of the checked-out branch (version, release notes, the
-`CHANGELOG.md` section, validation), runs no Git write, and ends with two commands for the
-developer:
+The `release` skill is the procedure. It runs no Git write and ends with the two commands
+that the developer runs: one commits, tags and pushes, the other opens the pull request.
 
-| Command | Does | Starts |
-| --- | --- | --- |
-| 1 | Stages and commits every change, creates the annotated tag `v<version>` and pushes the branch and the tag together | The [release workflow](#release-workflow), which publishes at once |
-| 2 | Prints and opens GitHub's compare page for the branch against `main`, with the title and body of the pull request filled in | The [pull request check](#pull-request-check), once the developer creates the pull request |
-
-| Script | Purpose |
+| File | Purpose |
 | --- | --- |
 | `tools/package/Publish-AdoToolkitPackage.ps1` | Checks prerequisites, restores in locked mode, builds Release and stages `artifacts/AdoToolkit/<version>/` with compiled English and French help. `-NoBuild` packages the existing build without restoring; `-NoRestore` skips only the restore |
 | `tools/package/New-AdoToolkitRelease.ps1` | Writes the module zip, its checksum and the installer to `artifacts/release/`. With `-PowerShellArchivePath`, `-PowerShellChecksumPath` and `-PowerShellVersion`, also writes `AdoToolkit-<version>-win-x64.zip` and its checksum |
 | `tools/package/Test-AdoToolkitPortable.ps1` | Extracts the portable zip and starts its launcher offline, with empty `PATH` and `PSModulePath`; checks the module, the PowerShell version, the architecture and the loaded paths |
-| `tools/package/Install-AdoToolkit.ps1` | End-user installer: checks the zip against its checksum, requires exactly the module layout under one `AdoToolkit/<version>/` folder, installs for the current user and replaces the same version only when the new copy is complete. `-ExpectedThumbprint` also requires valid signatures |
+| `tools/package/Install-AdoToolkit.ps1` | End-user installer, shipped beside the zip: checks the zip against its checksum, requires exactly the module layout under one `AdoToolkit/<version>/` folder, installs for the current user and replaces the same version only when the new copy is complete. `-ExpectedThumbprint` also requires valid signatures |
 | `tools/package/Set-AdoToolkitPackageSignature.ps1`, `tools/package/Install-AdoToolkitPackage.ps1` | The signed flow for a staged package, when a code-signing certificate exists |
+| `tools/package/Package.Common.ps1`, `tools/package/Portable.Common.ps1` | Shared path, layout, archive and signature checks |
+| `tools/package/portable/` | The launcher and `README.txt` shipped inside the portable zip |
+| `tools/BuildModules.psd1` | The module versions that a release build requires exactly |
 
-- Files are written beside their target, validated, then moved. Symbolic links and
-  junctions are rejected on every package and install path; cloud-file placeholders, such
-  as a OneDrive-redirected Documents folder, are allowed.
+- Symbolic links and junctions are rejected on every package and install path; cloud-file
+  placeholders, such as a OneDrive-redirected Documents folder, are allowed.
 - Package validation reads each assembly's identity and version without loading it. The
   three DLLs must match the manifest version, so `-NoBuild` rejects stale binaries.
 - Release generation validates every archive, checksum and the installer before replacing
   an asset, and restores the previous set when a replacement fails. A crash can leave
-  `.previous-*` files for manual recovery.
+  `.previous-*` files for manual recovery; so can a replacement whose rollback fails too.
 - Relative package and output paths follow the PowerShell location and must stay inside
   the repository.
 - The portable zip is built from an official, unmodified Windows x64 PowerShell zip and
-  its published `hashes.sha256`, both already on disk; nothing is downloaded. The version
-  must be a 7.6 patch version that matches the file name. Unsafe paths, links, duplicate
-  entries and incomplete runtimes are rejected. `bundle.json` records the module version,
-  the runtime version and the runtime hash.
+  its published `hashes.sha256`, both already on disk. The version must be a 7.6 patch
+  version that matches the file name. Unsafe paths, links, duplicate entries and
+  incomplete runtimes are rejected. `bundle.json` records the module version, the runtime
+  version and the runtime hash.
 
 ```powershell
 pwsh -NoProfile -File .\tools\package\Publish-AdoToolkitPackage.ps1 -NoRestore
@@ -189,25 +177,24 @@ policy or `PATH` change.
 
 ### Release workflow
 
-`.github/workflows/release.yml` runs when a tag `v<VersionPrefix>` is pushed:
+`.github/workflows/release.yml` runs when a tag `v<VersionPrefix>` is pushed, or by hand
+for an existing tag:
 
-1. Checks out the tag without keeping the write token in the Git configuration.
+1. Checks out the tag without keeping the token in the Git configuration.
 2. Installs the toolchain with the [setup action](#setup-action).
 3. Requires the tag to equal the module version.
 4. Restores in locked mode, runs `verify`, and packages the verified build with
    `-NoBuild`.
 5. Checks the portable zip with `tools/package/Test-AdoToolkitPortable.ps1`.
-6. Creates the GitHub release with five assets. Only this step receives the token.
+6. Creates the GitHub release with five assets.
 
 - The release text is the `CHANGELOG.md` section of the version, the lines under its
   `## <version>` heading, then the installation instructions. A relative link in the
   section is pointed at the file as tagged. When the section is missing or empty, step 6
   fails before anything is published.
 - `verify` requires that section for `VersionPrefix` already, in the form the `release`
-  skill writes, so a version without it fails locally, in the pull request check and in
-  step 4. The test is in `tools/tests/ReleaseWorkflow.Tests.ps1`.
-- The steps name the tag through `RELEASE_TAG`, never through the ref of the run, which
-  is a branch in a manual run.
+  skill defines, so a version without it fails locally, in the pull request check and in
+  step 4.
 - Scripts and modules are unsigned by decision. Checksums detect a corrupted download;
   they do not replace signatures or a trusted source.
 
@@ -217,7 +204,7 @@ When a run does not publish:
 | --- | --- |
 | A passing fault: a download, the runner | Re-run the failed job from the page of the run |
 | The run did not start, or the workflow file was at fault and is corrected on a branch | Start the workflow by hand on that branch (Actions, Release, Run workflow) with the tag as input. The run takes `.github/workflows/release.yml` from the branch and every other file from the tag, so the tag must hold `.github/actions/setup/action.yml` |
-| The tagged files are at fault: `verify` fails, or the tag does not match the version | Nothing was published. Correct and commit on the branch, remove the tag as below, then tag and push again as command 1 does |
+| The tagged files are at fault: `verify` fails, or the tag does not match the version | Nothing was published. Correct and commit on the branch, remove the tag as below, then tag and push again as the first command of the `release` skill does |
 
 ```powershell
 git push <remote> :refs/tags/v<version>; git tag -d v<version>
@@ -225,15 +212,13 @@ git push <remote> :refs/tags/v<version>; git tag -d v<version>
 
 ### Pull request check
 
-`.github/workflows/verify.yml` runs on a pull request to `main`, with a token that can only
-read the repository:
+`.github/workflows/verify.yml` runs on a pull request to `main`:
 
 1. Checks out without keeping the token in the Git configuration.
 2. Installs the toolchain with the [setup action](#setup-action).
 3. Restores in locked mode and runs `verify`. Any exit code other than `0` fails the check.
 
 A pull request is therefore verified with the toolchain that the release is verified with.
-Its tests are in `tools/tests/VerifyWorkflow.Tests.ps1`.
 
 ### Setup action
 
@@ -247,24 +232,22 @@ checkout. It installs:
 | actionlint | `ACTIONLINT_VERSION` | `ACTIONLINT_SHA256` |
 | Pester, PSScriptAnalyzer, PlatyPS | Exactly those in `tools/BuildModules.psd1` | The installed version |
 
-- Each pin is declared once, in this file. Update a version and its SHA-256 together:
-  the PowerShell hash from that release's `hashes.sha256`, the actionlint hash from that
-  release's `actionlint_<version>_checksums.txt`.
+- Update a version and its SHA-256 together: the PowerShell hash from that release's
+  `hashes.sha256`, the actionlint hash from that release's
+  `actionlint_<version>_checksums.txt`.
 - The action exports `POWERSHELL_VERSION`; the release job bundles that runtime and names
   it in the release text.
-- The actions that the workflows and this action use are pinned by commit.
-  `.github/dependabot.yml` opens a pull request each week when one has a newer release
-  and rewrites the commit with its version comment; the pull request check verifies it.
-  Dependabot does not know the PowerShell and actionlint pins.
-- `tools/tests/ReleaseWorkflow.Tests.ps1` runs the steps of the action with mocked
-  downloads.
+- `.github/dependabot.yml` opens a pull request each week when a pinned action has a
+  newer release and rewrites the commit with its version comment; the pull request check
+  verifies it. Dependabot does not know the PowerShell and actionlint pins.
 
 ## Live checks
 
 Rules are in `tests/Live/AGENTS.md`. The developer runs a check in a new PowerShell
 window at work, for example `pwsh -NoProfile -File .\tests\Live\Smoke.Live.ps1`. Every
-check needs `ADOTOOLKIT_LIVE_PROFILE`, a profile with a default project. A signed release
-must verify completely; an unsigned one is accepted.
+check needs `ADOTOOLKIT_LIVE_PROFILE`; all but `Connection`, `TestCase` and
+`TestCaseDetail` need a profile with a default project. A signed release must verify
+completely; an unsigned one is accepted.
 
 | Script | Checks | Further variables |
 | --- | --- | --- |
@@ -281,9 +264,8 @@ must verify completely; an unsigned one is accepted.
   retry build to see its `pipelineReference` and sub-results.
 - Not covered by a script: V-07 and V-18 need controlled failing requests; V-15 and V-26
   links, V-16 terminology, V-27 browser policy and V-29 runner text need manual
-  acceptance; V-28 has no probe.
-- `tools/tests/LiveAudit.Tests.ps1` tests the helpers in `tests/Live/Live.Common.ps1` and
-  single validation blocks offline. The findings behind those tests are in the
+  acceptance; V-28 has no probe; V-33 is a timed comparison by hand.
+- The findings behind `tools/tests/LiveAudit.Tests.ps1` are in the
   [audit fix record](archive/plans/server-2020-audit-fixes.md).
 
 ## Agent setup
@@ -292,20 +274,10 @@ must verify completely; an unsigned one is accepted.
 | --- | --- |
 | `AGENTS.md` | The always-loaded contract; `CLAUDE.md` imports it |
 | `src/AGENTS.md`, `tests/AGENTS.md`, `tests/Live/AGENTS.md`, `tools/AGENTS.md`, `tools/package/AGENTS.md`, `docs/AGENTS.md`, `docs/commands/AGENTS.md` | Rules for one subtree. Codex reads them by directory |
-| `.claude/rules/*.md` | One import per nested file, scoped by `paths`, so Claude loads the same rules when it touches matching files |
+| `.claude/rules/*.md` | One `@` import of a nested file each, with the `paths` globs that make Claude load it |
 | `.agents/skills/<name>/SKILL.md` | The body of a skill; Codex reads it |
 | `.claude/skills/<name>/SKILL.md` | A wrapper with the same name and description that tells Claude to read the body |
 | `.claude/settings.json` | Permissions and hooks for Claude |
-
-| Rule file | Loads | When Claude touches |
-| --- | --- | --- |
-| `.claude/rules/product-src.md` | `src/AGENTS.md` | `src/**` |
-| `.claude/rules/product-tests.md` | `tests/AGENTS.md` | `tests/**` |
-| `.claude/rules/live-checks.md` | `tests/Live/AGENTS.md` | `tests/Live/**` |
-| `.claude/rules/tooling.md` | `tools/AGENTS.md` | `tools/**`, `PSScriptAnalyzerSettings.psd1` |
-| `.claude/rules/packaging.md` | `tools/package/AGENTS.md` | `tools/package/**`, `tools/BuildModules.psd1`, `.github/**`, `Directory.Build.props` |
-| `.claude/rules/docs.md` | `docs/AGENTS.md` | `docs/**`, `README.md`, `CHANGELOG.md` |
-| `.claude/rules/help-sources.md` | `docs/commands/AGENTS.md` | `docs/commands/**`, the cmdlet files `src/AdoToolkit.PowerShell/Commands/*Command.cs` |
 
 | Skill | Use | Invoked by |
 | --- | --- | --- |
@@ -317,13 +289,12 @@ must verify completely; an unsigned one is accepted.
 | Hook | Event | Behavior |
 | --- | --- | --- |
 | `tools/guard-git.ps1` | Before a shell command | Blocks every Git command except `status`, `diff`, `log`, `show` and `blame`, and those with an option that runs a program. It reads the command text, so it is a speed bump, not a boundary |
-| `tools/validate-edit.ps1` | After an edit | Parses the edited PowerShell, JSON or XML file and reports a syntax error. The file is already written; the hook cannot undo it |
+| `tools/validate-edit.ps1` | After an edit | Parses the edited PowerShell, JSON or XML file and reports a syntax error, or that `tools/dev.ps1`, which it loads, does not load. The file is already written; the hook cannot undo it |
 
 - `.claude/settings.json` denies reading and editing secret-like paths, and allows the
   `tools/dev.ps1` commands, the Release build, Core test runs and the five Git commands
-  without a prompt. Every other command follows the user's permission mode.
-- Hooks and permissions reduce mistakes; they are not a sandbox. Codex uses its own
-  permissions.
+  without a prompt. Every other command follows the user's permission mode. Codex uses
+  its own permissions.
 - To add a rule: write it into the nested `AGENTS.md` of the subtree. A new nested file
   also needs a `.claude/rules/` import and a row in the map of `AGENTS.md`.
 - To add a skill: write the body, then the wrapper. `tooling-layout` fails when one is

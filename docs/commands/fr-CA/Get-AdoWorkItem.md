@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoWorkItem
 ---
@@ -35,7 +35,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Regroupe les identifiants de toute l’invocation en lots de 200, avec l’API version 6.0. Supprime les doublons en conservant la première occurrence et retourne les résultats dans l’ordre d’entrée. Chaque identifiant absent produit une erreur ObjectNotFound non bloquante ; les autres éléments sont retournés. Fields contient les valeurs .NET en lecture seule, avec des noms de référence sans distinction de casse. Les liens utilisent le projet propre à chaque élément. Les objets d’une autre collection produisent ConnectionMismatch avant toute requête pour ces objets.
+Regroupe les identifiants de toute l’invocation en lots de 200, avec l’API version 6.0. Supprime les doublons en conservant la première occurrence et retourne les résultats dans l’ordre d’entrée. Chaque identifiant absent produit une erreur ObjectNotFound non bloquante; les autres éléments sont retournés. Fields contient les valeurs .NET en lecture seule, avec des noms de référence sans distinction de casse. Les liens utilisent le projet propre à chaque élément. Les objets d’une autre collection produisent AdoConnectionMismatch avant toute requête pour ces objets.
 
 ## EXAMPLES
 
@@ -122,7 +122,7 @@ HelpMessage: ''
 
 ### -Connection
 
-Objet de connexion explicite ; remplace la connexion active de l’espace d’exécution.
+Objet de connexion explicite; remplace la connexion active de l’espace d’exécution.
 
 ```yaml
 Type: AdoToolkit.Core.Connections.AdoConnection

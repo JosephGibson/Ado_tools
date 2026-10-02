@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoProject
 ---
@@ -45,7 +45,7 @@ Liste les projets de la collection connectée.
 
 ### -Connection
 
-Objet de connexion explicite ; remplace la connexion active de l’espace d’exécution.
+Objet de connexion explicite; remplace la connexion active de l’espace d’exécution.
 
 ```yaml
 Type: AdoToolkit.Core.Connections.AdoConnection
@@ -87,7 +87,7 @@ HelpMessage: ''
 
 ### -Top
 
-Nombre maximal de projets correspondants à retourner. Omettez ce paramètre pour tous les projets ; la valeur fournie doit être positive.
+Nombre maximal de projets correspondants à retourner. Omettez ce paramètre pour tous les projets; la valeur fournie doit être positive.
 
 ```yaml
 Type: System.Int32
@@ -108,9 +108,10 @@ HelpMessage: ''
 
 ### CommonParameters
 
-Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVariable,
+Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVariable,
 -InformationAction, -InformationVariable, -OutBuffer, -OutVariable, -PipelineVariable,
--ProgressAction, -Verbose, -WarningAction et -WarningVariable.
+-ProgressAction, -Verbose, -WarningAction et -WarningVariable. Pour en savoir plus, consultez
+[about_CommonParameters](https://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 

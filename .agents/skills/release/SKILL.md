@@ -77,8 +77,8 @@ Details: [release notes](docs/release-<new>.md)
 ```
 
 - The heading is exactly `## <new> - <date>`, with the date of the notes.
-  `.github/workflows/release.yml` finds the section by that heading, puts it at the top of
-  the GitHub release text, and fails without publishing when the section is missing or empty.
+  `.github/workflows/release.yml` finds the section by that heading and opens the GitHub
+  release text with it (`docs/tooling.md`, Release workflow).
 - Use the Keep a Changelog groups that have an entry, in this order: `Added`, `Changed`,
   `Deprecated`, `Removed`, `Fixed`, `Security`.
 - An entry is one line that says what a user of the module sees, in the user's terms:
@@ -87,7 +87,7 @@ Details: [release notes](docs/release-<new>.md)
 - The last line links the notes with an inline link, as above.
 
 `verify` fails in step 5 when the section for `VersionPrefix` is missing, has another
-heading, has no entry or does not link the notes.
+heading, has no `- ` entry or does not link the notes.
 
 ## 5. Validate
 

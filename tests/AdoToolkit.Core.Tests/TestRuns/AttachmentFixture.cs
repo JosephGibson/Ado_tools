@@ -18,7 +18,7 @@ internal sealed class AttachmentFixture
     private readonly Dictionary<int, Queue<Func<HttpResponseMessage>>> content = [];
 
     internal FakeHttpMessageHandler Handler { get; } = new();
-    internal FakeClock Clock { get; } = new();
+    private FakeClock Clock { get; } = new();
     // Waits before the content of an attachment is answered, so that bodies can arrive out of order.
     internal Func<int, TimeSpan>? Delay { get; set; }
 
@@ -43,12 +43,12 @@ internal sealed class AttachmentFixture
     internal static byte[] Bytes(string name) =>
         File.ReadAllBytes(Path.Combine(TestDirectory.RepositoryRoot, "tests", "Fixtures", "Attachments", name));
 
-    internal static IReadOnlyList<AdoTestAttachment> Metadata(string fixture, int runId, int resultId, int? subResultId = null)
+    internal static IReadOnlyList<AdoTestAttachment> Metadata(string fixture, int runId, int resultId)
     {
         using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestDirectory.RepositoryRoot, "tests", "Fixtures", fixture)));
         return document.RootElement.GetProperty("value").EnumerateArray().Select(item => new AdoTestAttachment
         {
-            Id = item.GetProperty("id").GetInt32(), RunId = runId, ResultId = resultId, SubResultId = subResultId,
+            Id = item.GetProperty("id").GetInt32(), RunId = runId, ResultId = resultId,
             FileName = item.GetProperty("fileName").GetString()!,
             Size = item.TryGetProperty("size", out JsonElement size) ? size.GetInt64() : null,
             AttachmentType = item.GetProperty("attachmentType").GetString(),

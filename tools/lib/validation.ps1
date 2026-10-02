@@ -74,12 +74,13 @@ function Get-PesterOutcome {
             [void] $failures.Add("$($container.Item): $($record.Exception.Message)")
         }
     }
-    foreach ($test in @($result.Failed | Select-Object -First 10)) {
+    $listed = @($result.Failed | Select-Object -First 10)
+    foreach ($test in $listed) {
         $reason = @("$($test.ErrorRecord.Exception.Message)" -split "`r?`n" | Where-Object { $_ } | Select-Object -First 1)
         [void] $failures.Add("$($test.ExpandedPath): $reason")
     }
-    if ($result.FailedCount -gt $failures.Count) {
-        [void] $failures.Add("... and $($result.FailedCount - $failures.Count) further failing test(s)")
+    if ($result.FailedCount -gt $listed.Count) {
+        [void] $failures.Add("... and $($result.FailedCount - $listed.Count) further failing test(s)")
     }
     if ($result.Result -eq 'Failed' -and $failures.Count -eq 0) { [void] $failures.Add('Pester failed during discovery or setup. Inspect the test container.') }
     $incomplete = $result.TotalCount -eq 0 -or $result.SkippedCount -gt 0 -or $result.NotRunCount -gt 0
@@ -204,7 +205,10 @@ function Get-DocumentationOutcome {
             if ($reference.Kind -eq 'path') {
                 if ($dated) { continue }
                 $paths++
-                if (-not (Test-Path -LiteralPath (Join-Path $root $reference.Target.TrimEnd('/')))) {
+                # As for a link: a path that leaves the repository or names a sensitive file is not probed.
+                $named = [System.IO.Path]::GetFullPath((Join-Path $root $reference.Target.TrimEnd('/')))
+                if (-not (Test-IsRepositoryPath -Path $named -Root $root) -or
+                    -not (Test-IsAgentSafePath -Path $named -Root $root) -or -not (Test-Path -LiteralPath $named)) {
                     [void] $failures.Add("${location}: path '$($reference.Target)' does not exist.")
                 }
                 continue
@@ -224,7 +228,15 @@ function Get-DocumentationOutcome {
                 }
             }
             if (-not $anchor -or $resolved -notlike '*.md' -or -not (Test-Path -LiteralPath $resolved -PathType Leaf)) { continue }
-            if (-not $anchors.ContainsKey($resolved)) { $anchors[$resolved] = Get-MarkdownAnchor -Line @(Get-Content -LiteralPath $resolved) }
+            if (-not $anchors.ContainsKey($resolved)) {
+                # The headings are read only from a file that discovery would list: not through a
+                # link that leads out of the repository, and not from an excluded directory.
+                if (-not (Test-IsSafeRepositoryFile -File (Get-Item -LiteralPath $resolved -Force) -Root $root)) {
+                    [void] $failures.Add("${location}: link '$($reference.Target)' does not resolve.")
+                    continue
+                }
+                $anchors[$resolved] = Get-MarkdownAnchor -Line @(Get-Content -LiteralPath $resolved)
+            }
             if (-not $anchors[$resolved].Contains([uri]::UnescapeDataString($anchor))) {
                 [void] $failures.Add("${location}: link '$($reference.Target)' names no heading of its target.")
             }
@@ -681,11 +693,13 @@ function Invoke-BoundedProcess {
     param([string] $Executable, [string[]] $Arguments, [string] $WorkingDirectory, [ValidateRange(1, 3600)][int] $TimeoutSeconds = 300)
 
     # A fixed child program accepts data on stdin. This also runs Windows .cmd shims
-    # without interpolating paths or arguments into shell source.
+    # without interpolating paths or arguments into shell source. Both ends of the three
+    # pipes use UTF-8: the console code page would otherwise decide which characters survive.
     $program = @'
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 try {
+    [Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
     $stage = [Console]::In.ReadToEnd() | ConvertFrom-Json
     Set-Location -LiteralPath $stage.WorkingDirectory
     $env:CI = 'true'
@@ -702,6 +716,7 @@ catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }
     $info.RedirectStandardInput = $true
     $info.RedirectStandardOutput = $true
     $info.RedirectStandardError = $true
+    $info.StandardInputEncoding = $info.StandardOutputEncoding = $info.StandardErrorEncoding = [System.Text.UTF8Encoding]::new($false)
     foreach ($argument in @('-NoProfile', '-NonInteractive', '-EncodedCommand', [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($program)))) { $info.ArgumentList.Add($argument) }
     $process = [System.Diagnostics.Process]::new()
     $process.StartInfo = $info
@@ -749,8 +764,9 @@ function Invoke-ProjectVerification {
     $projectProfile = Get-ProjectProfile -Root $Root
     $plan = @(Get-ValidationPlan -ProjectProfile $projectProfile -SkipTests:$SkipTests)
     if ($Stage) {
+        $planned = @($plan | ForEach-Object Name)
         foreach ($name in $Stage) {
-            if ($name -notin $plan.Name) { throw "Unknown stage '$name'. Run dev.ps1 plan for valid names." }
+            if ($name -notin $planned) { throw "Unknown stage '$name'. Run dev.ps1 plan for valid names." }
         }
         $plan = @($plan | Where-Object { $_.Name -in $Stage })
     }

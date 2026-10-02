@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Set-AdoProfile
 ---
@@ -32,7 +32,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Écrit le profil de façon atomique et conserve les valeurs non précisées, les autres options et les champs inconnus. CollectionUrl est obligatoire pour un nouveau profil. DefaultProfile choisit ce profil par défaut, que Connect-Ado utilise sans argument et que les autres commandes utilisent en l’absence de connexion. DefaultBranch, DefaultBuildDefinition, DefaultTestPlanId et DefaultTestSuiteId enregistrent les valeurs que les commandes de builds et de plans de test utilisent quand le paramètre correspondant est omis ; passez $null, ou une chaîne vide pour les deux premiers, pour en supprimer une. DefaultProject se supprime de la même façon, avec $null ou une chaîne vide. Les valeurs sont validées avant l’écriture du fichier. Les commandes les lisent dans la connexion ; reconnectez-vous avec Connect-Ado après les avoir modifiées. WhatIf n’effectue aucune écriture. Une version de schéma plus récente est en lecture seule. Le profil ne contient ni mot de passe ni jeton.
+Écrit le profil de façon atomique et conserve les valeurs non précisées, les autres options et les champs inconnus. CollectionUrl est obligatoire pour un nouveau profil. DefaultProfile choisit ce profil par défaut, que Connect-Ado utilise sans argument et que les autres commandes utilisent en l’absence de connexion. DefaultBranch, DefaultBuildDefinition, DefaultTestPlanId et DefaultTestSuiteId enregistrent les valeurs que les commandes de builds et de plans de test utilisent quand le paramètre correspondant est omis; passez $null, ou une chaîne vide pour les deux premiers, pour en supprimer une. DefaultProject se supprime de la même façon, avec $null ou une chaîne vide. Les valeurs sont validées avant l’écriture du fichier. Les commandes les lisent dans la connexion; reconnectez-vous avec Connect-Ado après les avoir modifiées. WhatIf n’effectue aucune écriture. Une version de schéma plus récente est en lecture seule. Le profil ne contient ni mot de passe ni jeton.
 
 ## EXAMPLES
 
@@ -85,7 +85,7 @@ HelpMessage: ''
 
 ### -CollectionUrl
 
-URL absolue de collection Azure DevOps Server. Les guillemets appariés et les barres obliques finales sont retirés. HTTPS est recommandé ; HTTP produit un avertissement.
+URL absolue de collection Azure DevOps Server. Les guillemets appariés et les barres obliques finales sont retirés. HTTPS est recommandé; HTTP produit un avertissement.
 
 ```yaml
 Type: System.String
@@ -149,7 +149,7 @@ HelpMessage: ''
 
 ### -DefaultBuildDefinition
 
-Définition de build utilisée par Get-AdoBuild et Get-AdoBuildTestFailure quand -Definition est omis : un identifiant entier positif ou un nom exact de définition, comme pour -Definition. Une chaîne vide ou $null la supprime.
+Définition de build utilisée par Get-AdoBuild et Get-AdoBuildTestFailure quand -Definition est omis : un identifiant entier positif ou un nom exact de définition, comme pour -Definition. Une chaîne vide ou $null la supprime.
 
 ```yaml
 Type: System.Object
@@ -233,7 +233,7 @@ HelpMessage: ''
 
 ### -DefaultTestSuiteId
 
-Identifiant de la suite de tests utilisé par Get-AdoTestCase et Get-AdoTestSuite quand -PlanId et -SuiteId sont tous deux omis ; il ne sert qu’avec le plan de test du profil. $null le supprime.
+Identifiant de la suite de tests utilisé par Get-AdoTestCase et Get-AdoTestSuite quand -PlanId et -SuiteId sont tous deux omis; il ne sert qu’avec le plan de test du profil. $null le supprime.
 
 ```yaml
 Type: System.Nullable`1[System.Int32]
@@ -254,7 +254,7 @@ HelpMessage: ''
 
 ### -Name
 
-Nom du profil; il ne peut pas être vide. Get-AdoProfile accepte les caractères génériques sans distinction de casse ; les écritures utilisent le nom littéral.
+Nom du profil; il ne peut pas être vide. Get-AdoProfile accepte les caractères génériques sans distinction de casse; les écritures utilisent le nom littéral.
 
 ```yaml
 Type: System.String
@@ -275,7 +275,7 @@ HelpMessage: ''
 
 ### -RequestTimeoutSeconds
 
-Délai d’expiration des requêtes, en secondes, de 1 à 86 400 (un jour). Vaut 100 pour un nouveau profil.
+Délai d’expiration des requêtes, en secondes, de 1 à 86 400 (un jour). Vaut 100 pour un nouveau profil.
 
 ```yaml
 Type: System.Int32
@@ -318,9 +318,10 @@ HelpMessage: ''
 
 ### CommonParameters
 
-Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVariable,
+Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVariable,
 -InformationAction, -InformationVariable, -OutBuffer, -OutVariable, -PipelineVariable,
--ProgressAction, -Verbose, -WarningAction et -WarningVariable.
+-ProgressAction, -Verbose, -WarningAction et -WarningVariable. Pour en savoir plus, consultez
+[about_CommonParameters](https://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 

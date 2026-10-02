@@ -17,7 +17,7 @@ public sealed class SharedStepResolverRequestCountTests
         other["fields"]!.AsObject().Remove("Microsoft.VSTS.TCM.Steps");
         using var handler = ExpansionFixture.Handler(root, other);
         using HttpClient client = new(handler);
-        TestCaseResult result = await new TestCaseService(client, ExpansionFixture.Connection, new()).GetTestCasesAsync(Values6,
+        TestCaseResult result = await new TestCaseService(client, ExpansionFixture.Connection, new()).GetTestCasesAsync(Values5,
             CultureInfo.CurrentCulture, TestContext.Current.CancellationToken);
         Assert.Equal(3, Assert.Single(result.MissingIds));
         Assert.Equal(2, Assert.Single(result.InputDiagnostics).WorkItemId);
@@ -32,7 +32,6 @@ public sealed class SharedStepResolverRequestCountTests
     private static readonly int[] Values3 = [3, 4];
     private static readonly int[] Values4 = [1, 200, 200, 50];
     private static readonly int[] Values5 = [1, 2, 3];
-    private static readonly int[] Values6 = [1, 2, 3];
     [Fact]
     public async Task ThreeLevelsIssueExactlyFourBatchesAndNoCategoryRequests()
     {
@@ -98,7 +97,7 @@ public sealed class SharedStepResolverRequestCountTests
         TestCaseService service = new(client, ExpansionFixture.Connection, cache);
         TestCaseResult first = await service.GetTestCasesAsync(Values5, CultureInfo.CurrentCulture, TestContext.Current.CancellationToken);
         handler.Enqueue(FakeHttpMessageHandler.Fixture("testcase-no-steps.json"));
-        TestCaseResult second = await service.GetTestCasesAsync(Values6, CultureInfo.CurrentCulture, TestContext.Current.CancellationToken);
+        TestCaseResult second = await service.GetTestCasesAsync(Values5, CultureInfo.CurrentCulture, TestContext.Current.CancellationToken);
         Assert.Equal(2, first.TestCases.Count);
         Assert.Equal(2, second.TestCases.Count);
         Assert.Equal(DiagnosticCodes.NotAStepContainer, Assert.Single(first.InputDiagnostics).Code);

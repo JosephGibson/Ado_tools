@@ -10,20 +10,23 @@ $InformationPreference = 'SilentlyContinue'
 . (Join-Path $PSScriptRoot 'Live.Common.ps1')
 
 $checkStates = [System.Collections.Generic.List[string]]::new()
+$checkLines = [System.Collections.Generic.List[string]]::new()
 function Write-AdoLiveResult {
     param([Parameter(Mandatory = $true)][string] $Text)
     $checkStates.Add($Text.Split(' ')[0])
+    $checkLines.Add($Text)
     Write-Output $Text
 }
 
 # Opt-in, installed module only (signed or unsigned); no work data leaves this process.
 # Never persist responses or print values, URLs, identities, or exception messages.
 # For V-01, choose a Test Case whose own steps follow a Shared Steps reference.
+$items = @('V-01', 'V-02', 'V-03', 'V-05', 'V-10', 'V-13')
 $caseId = 0
 if ([string]::IsNullOrWhiteSpace($env:ADOTOOLKIT_LIVE_PROFILE) -or
     -not [int]::TryParse($env:ADOTOOLKIT_LIVE_TESTCASE_ID, [ref] $caseId) -or
     $caseId -lt 1 -or $caseId -eq [int]::MaxValue) {
-    foreach ($item in @('V-01', 'V-02', 'V-03', 'V-05', 'V-10', 'V-13')) { Write-AdoLiveResult "INCONCLUSIVE $item PROFILE_AND_CASE_REQUIRED" }
+    foreach ($item in $items) { Write-AdoLiveResult "INCONCLUSIVE $item PROFILE_AND_CASE_REQUIRED" }
     exit 2
 }
 try {
@@ -171,7 +174,8 @@ try {
     exit 0
 }
 catch {
-    foreach ($item in @('V-01', 'V-02', 'V-03', 'V-05', 'V-10', 'V-13')) { Write-AdoLiveResult "FAIL $item CHECK_FAILED" }
+    # A check that printed its verdict keeps it; the others failed before they could print one.
+    foreach ($item in Get-AdoLivePendingCheck -Id $items -Line $checkLines) { Write-AdoLiveResult "FAIL $item CHECK_FAILED" }
     exit 1
 }
 finally {

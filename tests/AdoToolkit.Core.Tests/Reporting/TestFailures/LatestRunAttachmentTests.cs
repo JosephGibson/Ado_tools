@@ -26,7 +26,7 @@ public sealed class LatestRunAttachmentTests
         using HttpClient client = new(handler);
         CapturingLog log = new();
         AdoBuildTestFailureSet set = Set([Run(201), Run(202)], latestAttachments: true);
-        TestFailureExporter exporter = new(new RecordingLauncher());
+        TestFailureExporter exporter = new(new SilentLauncher());
         TestFailureExportPlan plan = exporter.Prepare(set, Options(directory.Root, allRuns, skip));
         Assert.Equal(!skip, plan.DownloadsAttachments);
         Assert.Empty(handler.Requests);
@@ -86,7 +86,7 @@ public sealed class LatestRunAttachmentTests
             [Remote(201, 60, "early.png"), Remote(201, 61, "early.json")],
             [Remote(202, 71, "screen.PNG"), Remote(202, 72, "page.html"), Remote(202, 73, "context.json"), Remote(202, 74, "console.txt"),
                 Remote(202, 75, "agent.LOG"), Remote(202, 76, "trace.dat"), Remote(202, 77, "report.htm")]]);
-        TestFailureExporter exporter = new(new RecordingLauncher());
+        TestFailureExporter exporter = new(new SilentLauncher());
         TestFailureExportPlan plan = exporter.Prepare(set, Options(directory.Root, allRuns));
         TestFailureExportResult result = await exporter.ExportAsync(plan, fixture.Downloader(client, new TestResultOptions()), null,
             TestContext.Current.CancellationToken);
@@ -115,7 +115,7 @@ public sealed class LatestRunAttachmentTests
         using HttpClient client = new(fixture.Handler);
         AdoTestRun old = Run(201, Generated.AddMinutes(-ageMinutes));
         AdoBuildTestFailureSet set = Set([old], latestAttachments: false);
-        TestFailureExporter exporter = new(new RecordingLauncher());
+        TestFailureExporter exporter = new(new SilentLauncher());
         TestFailureExportPlan plan = exporter.Prepare(set, Options(directory.Root, allRuns: true, windowDays: windowDays));
         Assert.Equal(inside, plan.DownloadsAttachments);
         TestFailureExportResult result = await exporter.ExportAsync(plan, inside ? fixture.Downloader(client, new TestResultOptions()) : null, null,
@@ -134,7 +134,7 @@ public sealed class LatestRunAttachmentTests
     public async Task NoEligibleRunDoesNotFallBackToOlderLargeAttachments(bool noRuns)
     {
         using TestDirectory directory = new();
-        TestFailureExporter exporter = new(new RecordingLauncher());
+        TestFailureExporter exporter = new(new SilentLauncher());
         AdoBuildTestFailureSet set = Set(noRuns ? [] : [Run(201), Run(202)], latestAttachments: false);
         TestFailureExportPlan plan = exporter.Prepare(set, Options(directory.Root));
         Assert.False(plan.DownloadsAttachments);
@@ -163,7 +163,7 @@ public sealed class LatestRunAttachmentTests
             job: precedence == "job" ? 2 : null);
         AdoTestRun earlier = Run(201, precedence == "id" ? Generated.AddHours(-2) : Generated.AddHours(-1.5),
             phase: precedence == "stage" ? 5 : null, job: precedence == "phase" ? 5 : null);
-        TestFailureExportPlan plan = new TestFailureExporter(new RecordingLauncher())
+        TestFailureExportPlan plan = new TestFailureExporter(new SilentLauncher())
             .Prepare(Set([latest, earlier], latestAttachments: true), Options(directory.Root));
         Assert.Equal([202], plan.Attachments.FullRunIds);
         Assert.Equal(202, plan.Attachments.LatestRunId);
@@ -215,7 +215,7 @@ public sealed class LatestRunAttachmentTests
         Kind = AdoTestAttachmentKind.Text,
     };
 
-    private sealed class RecordingLauncher : IDocumentLauncher
+    private sealed class SilentLauncher : IDocumentLauncher
     {
         public void Open(string path) => Assert.Fail("This export must not launch a browser.");
     }

@@ -1,5 +1,3 @@
-using AdoToolkit.Core.Connections;
-
 namespace AdoToolkit.Core.Tests.Connections;
 
 public sealed class SessionCacheTests

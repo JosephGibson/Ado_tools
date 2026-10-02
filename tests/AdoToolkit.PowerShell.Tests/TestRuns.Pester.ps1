@@ -119,8 +119,8 @@ Describe 'Test run listing' -Tag 'S5-1' {
                 WebUrl = [uri] 'https://other.example.test/Collection/x'
                 CollectionUri = [uri] 'https://other.example.test/Collection'
             }
-            { $foreign | Get-AdoTestRun -ErrorAction Stop } | Should -Throw
-            { $foreign | Get-AdoBuildTestFailure -ErrorAction Stop } | Should -Throw
+            { $foreign | Get-AdoTestRun -ErrorAction Stop } | Should -Throw -ErrorId 'AdoConnectionMismatch,AdoToolkit.GetAdoTestRunCommand'
+            { $foreign | Get-AdoBuildTestFailure -ErrorAction Stop } | Should -Throw -ErrorId 'AdoConnectionMismatch,AdoToolkit.GetAdoBuildTestFailureCommand'
             $server.Requests.Count | Should -Be 0
         }
         finally { Stop-FakeAdoServer -Server $server }
@@ -267,9 +267,15 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
 Describe 'Concurrent failed test retrieval and download' {
     BeforeAll {
         function Get-TwoRunRoutes {
+            # The attachment window is measured from now, so the two runs start two hours ago.
+            $start = [DateTimeOffset]::UtcNow.AddHours(-2)
+            $format = 'yyyy-MM-ddTHH:mm:ssZ'
+            $runs = (Get-TestRunFixture 'runs-two.json').
+                Replace('2026-09-14T10:00:00Z', $start.ToString($format, [cultureinfo]::InvariantCulture)).
+                Replace('2026-09-14T10:10:00Z', $start.AddMinutes(10).ToString($format, [cultureinfo]::InvariantCulture))
             @(
                 @{ Line = '/_apis/build/builds/401\?'; Response = @{ Body = Get-TestRunFixture 'build-401.json' } }
-                @{ Line = '/_apis/test/runs\?.*%24skip=0&'; Response = @{ Body = Get-TestRunFixture 'runs-two.json' } }
+                @{ Line = '/_apis/test/runs\?.*%24skip=0&'; Response = @{ Body = $runs } }
                 @{ Line = '/Runs/201/results\?.*%24skip=0&'; Response = @{ Body = Get-TestRunFixture 'results-run-201.json' } }
                 @{ Line = '/Runs/202/results\?.*%24skip=0&'; Response = @{ Body = Get-TestRunFixture 'results-run-202.json' } }
                 @{ Line = '/Runs/(\d+)/results/(\d+)\?'; Responses = @{
@@ -315,8 +321,7 @@ Describe 'Concurrent failed test retrieval and download' {
             @($lines | Where-Object { $_ -match '/_apis/wit/workitemsbatch\?' }).Count | Should -Be 2
 
             # The export reads the small JSON file of each run, both at once unless the bound is one.
-            # The fixture runs started in September 2026, so the attachment window is a year.
-            $file = $set | Export-AdoBuildTestFailure -Path (Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))) -AttachmentWindowDays 365 6> $null
+            $file = $set | Export-AdoBuildTestFailure -Path (Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))) 6> $null
             $server.Requests.Count | Should -Be 14
             Get-FakeAdoServerPeak -Server $server | Should -Be $Peak
             @(Get-ChildItem -LiteralPath $file.AttachmentDirectory -File).Name | Sort-Object | Should -Be @('r201-1-a5002.json', 'r202-11-a5002.json')

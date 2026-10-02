@@ -8,10 +8,7 @@ disallowed-tools: Edit Write NotebookEdit
 
 # Rewrite a prompt
 
-The skill body lives at `.agents/skills/rewrite/SKILL.md` — the location Codex
-reads — so both agents run the same instructions from one file.
-
-Read that file now and follow it. The draft to rewrite:
+Read `.agents/skills/rewrite/SKILL.md` now and follow it. The draft to rewrite:
 
 <draft>
 $ARGUMENTS

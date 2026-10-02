@@ -14,7 +14,7 @@ public sealed class HighlightedCodeWriterTests
     [InlineData(CodeLanguage.Json)]
     public void HostileContentIsEncodedAndPreformattedTextSurvives(CodeLanguage language)
     {
-        string input = LexerFixtures.Read("TestRuns/hostile-text.txt");
+        string input = ParserFixture.Read("TestRuns/hostile-text.txt");
         using StringWriter writer = new(CultureInfo.InvariantCulture);
         Assert.Null(HighlightedCodeWriter.Write(writer, input, language, CultureInfo.GetCultureInfo("fr-CA")));
         string html = writer.ToString();
@@ -69,7 +69,7 @@ public sealed class HighlightedCodeWriterTests
     public void FramesHaveContainerClassesAndExactlyOneFirstUserMarker()
     {
         using StringWriter writer = new(CultureInfo.InvariantCulture);
-        HighlightedCodeWriter.Write(writer, LexerFixtures.Read("TestRuns/stack-english.txt"), CodeLanguage.StackTrace, CultureInfo.GetCultureInfo("en-US"));
+        HighlightedCodeWriter.Write(writer, ParserFixture.Read("TestRuns/stack-english.txt"), CodeLanguage.StackTrace, CultureInfo.GetCultureInfo("en-US"));
         string html = writer.ToString();
         Assert.Single(Regex.Matches(html, "class=\"first-user-frame\""));
         Assert.Contains("class=\"framework-frame\"", html, StringComparison.Ordinal);

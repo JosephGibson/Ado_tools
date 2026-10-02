@@ -119,7 +119,13 @@ public sealed class RetryPolicyTests
         using HttpClient client = new(handler);
         AdoHttpPipeline pipeline = new(client, new Uri("https://ado.example.test/Collection"), TimeSpan.FromSeconds(5), clock: new FakeClock());
         if (attempts == 2) Assert.Empty(await Fetch(pipeline));
-        else await Assert.ThrowsAsync<AdoRequestException>(() => Fetch(pipeline));
+        else
+        {
+            // No server answered, so the message must not say that one rejected the request.
+            AdoRequestException error = await Assert.ThrowsAsync<AdoRequestException>(() => Fetch(pipeline));
+            Assert.Null(error.StatusCode);
+            Assert.Equal(Messages.Get(AdoMessage.Transport, CultureInfo.InvariantCulture), error.Message);
+        }
         Assert.Equal(attempts, handler.Requests.Count);
     }
 

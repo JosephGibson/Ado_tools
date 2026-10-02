@@ -62,7 +62,7 @@ script is blocked, unblock the original ZIP in Properties and extract it again.
    .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.7.0.zip
    ```
 
-   The script checks the zip against the `.sha256` file and checks that it contains
+   The script checks the ZIP against the `.sha256` file and checks that it contains
    exactly the module files. It then installs them to
    `Documents\PowerShell\Modules\AdoToolkit\<version>`. An existing copy of the same
    version is replaced only after the new copy is complete. `-WhatIf` shows the
@@ -81,9 +81,9 @@ installed module files carry no mark, so `Import-Module` works without
 download instead. If your organization enforces `AllSigned` through Group Policy,
 unsigned releases can't be loaded, and you need a signed build. For a signed release,
 add `-ExpectedThumbprint <certificate thumbprint>` to require a valid signature on
-every module file.
+the manifest, the format file and every toolkit assembly.
 
-To install without the script, check the hash yourself, then unblock the zip before
+To install without the script, check the hash yourself, then unblock the ZIP before
 extracting it so that no extracted file carries the download mark:
 
 ```powershell
@@ -111,9 +111,9 @@ nuget.org only, through the repository `nuget.config`, so machine-wide package f
 and their credentials are not involved.
 
 A signed installation is still available when you have a code-signing certificate:
-sign the staged package with `Set-AdoToolkitPackageSignature.ps1`, then install it with
-`Install-AdoToolkitPackage.ps1 -ExpectedThumbprint <thumbprint>`. Both scripts
-support `-WhatIf`.
+sign the staged package with `tools/package/Set-AdoToolkitPackageSignature.ps1`, then
+install it with `tools/package/Install-AdoToolkitPackage.ps1`. Both scripts take
+`-PackagePath` and the certificate thumbprint, and support `-WhatIf`.
 
 Messages and help follow `$PSUICulture`: French cultures get French text, and all
 other cultures get English.
@@ -134,7 +134,8 @@ Get-AdoProfile
 ```
 
 The collection URL must be an absolute collection-level URL, such as
-`https://server/tfs/DefaultCollection` or `https://server/DefaultCollection`. Put the
+`https://ado.example.test/tfs/DefaultCollection` or
+`https://ado.example.test/DefaultCollection`. Put the
 project in `-DefaultProject`, not in the URL. A URL with a web page or API route is
 rejected, and so are Azure DevOps Services hosts. A URL that ends with a project name
 can't be recognized until the server is contacted: `Test-AdoConnection` then reports
@@ -161,10 +162,10 @@ Get-AdoProject -Name 'W*'
 
 When the check fails, the error or the result's `Hint` points to likely causes, such
 as the Windows identity in use, the collection URL or the proxy. For example, after
-connecting to `https://server/DefaultCollection/Web` by mistake, the hint is:
+connecting to `https://ado.example.test/DefaultCollection/Web` by mistake, the hint is:
 
 ```text
-The collection URL ends with the project name. Connect with: Connect-Ado -CollectionUrl 'https://server/DefaultCollection' -Project 'Web'
+The collection URL ends with the project name. Connect with: Connect-Ado -CollectionUrl 'https://ado.example.test/DefaultCollection' -Project 'Web'
 ```
 
 - Each runspace has its own connection. `Get-AdoConnection` shows it, and
@@ -172,7 +173,7 @@ The collection URL ends with the project name. Connect with: Connect-Ado -Collec
 - Cmdlets that contact the server accept `-Connection` to use another connection
   object. Project-scoped cmdlets also accept `-Project`.
 - Objects remember their collection. Piping one into a cmdlet that uses a different
-  collection produces a `ConnectionMismatch` error instead of querying the wrong
+  collection produces an `AdoConnectionMismatch` error instead of querying the wrong
   server.
 - Pipe the objects that AdoToolkit commands return. A hand-made object that lacks a
   required property is refused with an error for that input, and the rest of the input

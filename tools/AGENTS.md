@@ -13,7 +13,8 @@
 | `tools/tests/` | Tooling tests, `*.Tests.ps1`, stage `powershell-test` |
 | `tools/package/` | Packaging and release; see `tools/package/AGENTS.md` |
 
-`docs/tooling.md` describes each command and stage. Read it before changing one.
+`docs/tooling.md` describes each command, stage and limit. Read it before changing one,
+and correct it in the same change.
 
 ## Rules
 
@@ -27,16 +28,21 @@
   `tools/dev.ps1`.
 - Never follow links. Never parse a sensitive file. XML is read with DTDs prohibited and a
   null resolver.
+- `verify` never installs or restores anything.
+- A built-in stage goes into `tools/lib/validation.ps1`. An in-process stage has `Name`,
+  `Action` and `ActionArguments` and returns `Failures`, `Summary`, `Warnings` and
+  optionally `Unavailable`. An external stage has `Name`, `Executable`, `Arguments` and
+  optionally `TimeoutSeconds` (1 to 3600) and `ExitCodeContract = 'dev'`, which reads
+  exit `2` as incomplete.
 - A stage script block receives its state as arguments. `GetNewClosure()` loses the
   library scope.
-- An in-process stage returns `Failures`, `Summary`, `Warnings` and optionally `Unavailable`.
-- `tools/check.ps1` exits `0`, `1` or `2`, marks its result lines with the prefix
-  `check: `, and never calls `verify`.
-- `verify` never installs or restores anything.
+- A product check goes into `tools/check.ps1`: call executables with argument arrays,
+  test the exit code at once, print one `check: ` line per result, exit `0`, `1` or `2`,
+  and never call `verify`.
 
 ## Tests
 
 - Pester 5.x in `tools/tests/`, with fixtures under `$TestDrive` and mocked external
-  boundaries. No network, no installation.
+  boundaries. No installation.
 - Test observable failures and command contracts, not implementation details.
 - Product tests stay under `tests/`.

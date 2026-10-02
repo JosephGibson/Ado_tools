@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Invoke-AdoWiql
 ---
@@ -29,7 +29,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Envoie la requête au point de terminaison WIQL du projet, avec l’API version 6.0, et retourne un résultat contenant les identifiants correspondants dans l’ordre de la requête, les noms de référence des colonnes retournées et AsOf. Seules les requêtes plates sont prises en charge ; les requêtes de liens et d’arborescence produisent une erreur NotSupported. Sans Top, un résultat de 20 000 identifiants ou plus est considéré comme potentiellement incomplet et produit une erreur sans sortie ; les résultats ne sont jamais tronqués en silence. Les erreurs de limite du serveur sont signalées avec le même conseil de restreindre la requête. Avec Top, au plus ce nombre d’éléments est demandé au serveur et LimitApplied consigne la limite ; le résultat n’est donc pas présenté comme complet. Il n’y a pas de pagination par décalage. Le texte de la requête n’est jamais écrit dans les flux Verbose ou Debug.
+Envoie la requête au point de terminaison WIQL du projet, avec l’API version 6.0, et retourne un résultat contenant les identifiants correspondants dans l’ordre de la requête, les noms de référence des colonnes retournées et AsOf. Seules les requêtes plates sont prises en charge; les requêtes de liens et d’arborescence produisent une erreur NotSupported. Sans Top, un résultat de 20 000 identifiants ou plus est considéré comme potentiellement incomplet et produit une erreur sans sortie; les résultats ne sont jamais tronqués en silence. Les erreurs de limite du serveur sont signalées avec le même conseil de restreindre la requête. Avec Top, au plus ce nombre d’éléments est demandé au serveur et LimitApplied consigne la limite; le résultat n’est donc pas présenté comme complet. Il n’y a pas de pagination par décalage. Le texte de la requête n’est jamais écrit dans les flux Verbose ou Debug.
 
 ## EXAMPLES
 
@@ -53,7 +53,7 @@ Retourne au plus 50 éléments de travail dans l’ordre de la requête, avec le
 
 ### -Query
 
-Texte WIQL d’une requête plate. Les macros propres au portail exigent des valeurs explicites ; la requête n’est pas réécrite.
+Texte WIQL d’une requête plate. Les macros propres au portail exigent des valeurs explicites; la requête n’est pas réécrite.
 
 ```yaml
 Type: System.String
@@ -74,7 +74,7 @@ HelpMessage: ''
 
 ### -Project
 
-Nom du projet. Par défaut, le projet par défaut de la connexion ; une erreur est produite si aucun n’est disponible.
+Nom du projet. Par défaut, le projet par défaut de la connexion; une erreur est produite si aucun n’est disponible.
 
 ```yaml
 Type: System.String
@@ -95,7 +95,7 @@ HelpMessage: ''
 
 ### -Top
 
-Limite volontaire du résultat, de 1 à 20 000, envoyée comme paramètre de requête $top et consignée dans LimitApplied.
+Limite volontaire du résultat, de 1 à 20 000, envoyée comme paramètre de requête $top et consignée dans LimitApplied.
 
 ```yaml
 Type: System.Nullable`1[System.Int32]
@@ -116,7 +116,7 @@ HelpMessage: ''
 
 ### -Hydrate
 
-Retourne les éléments de travail dans l’ordre de la requête au lieu de l’objet résultat, récupérés par lots de 200 avec les colonnes retournées et les champs pratiques. Les éléments qui ne sont plus retournés produisent des erreurs ObjectNotFound. Les révisions actuelles sont utilisées ; AsOf n’indique que la provenance.
+Retourne les éléments de travail dans l’ordre de la requête au lieu de l’objet résultat, récupérés par lots de 200 avec les colonnes retournées et les champs pratiques. Les éléments qui ne sont plus retournés produisent des erreurs ObjectNotFound. Les révisions actuelles sont utilisées; AsOf n’indique que la provenance.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -137,7 +137,7 @@ HelpMessage: ''
 
 ### -Connection
 
-Objet de connexion explicite ; remplace la connexion active de l’espace d’exécution.
+Objet de connexion explicite; remplace la connexion active de l’espace d’exécution.
 
 ```yaml
 Type: AdoToolkit.Core.Connections.AdoConnection
@@ -176,7 +176,7 @@ Identifiants, colonnes, AsOf, projet, collection et, s’il y a lieu, la limite 
 
 ## NOTES
 
-Le comportement du serveur à la limite de 20 000 éléments reste à confirmer (V-06). Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020.
+Le comportement du serveur à la limite de 20 000 éléments reste à confirmer (V-06). Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020.
 
 ## RELATED LINKS
 

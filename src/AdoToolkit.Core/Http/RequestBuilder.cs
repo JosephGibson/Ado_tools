@@ -15,7 +15,8 @@ internal static class RequestBuilder
         {
             string segment = segments[i];
             if (!segment.StartsWith('{') || !segment.EndsWith('}')) continue;
-            string value = routeValues?[segment[1..^1]] ?? throw new ArgumentException(segment, nameof(routeValues));
+            string value = routeValues is not null && routeValues.TryGetValue(segment[1..^1], out string? supplied)
+                ? supplied : throw new ArgumentException(segment, nameof(routeValues));
             // Uri collapses "." and ".." even after escaping, which would leave the collection.
             if (!IsPathSegment(value)) throw new ArgumentException(segment, nameof(routeValues));
             segments[i] = Uri.EscapeDataString(value);

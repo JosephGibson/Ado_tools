@@ -21,13 +21,13 @@
 
 ## Isolation
 
-- No network and no live service. Core HTTP tests use `FakeHttpMessageHandler`; Pester
-  tests use `tests/AdoToolkit.PowerShell.Tests/Support/FakeAdoServer.ps1`, bound to
-  `127.0.0.1`.
+- Core HTTP tests use `FakeHttpMessageHandler`; Pester tests use
+  `tests/AdoToolkit.PowerShell.Tests/Support/FakeAdoServer.ps1`, bound to `127.0.0.1`.
 - No test reads the developer's configuration: the Core test assembly and the gate both
   point `ADOTOOLKIT_CONFIG_PATH` at a file that does not exist. A test that writes
   configuration uses `TestDirectory` (Core) or a path under `$TestDrive` (Pester).
-- A test that needs a culture sets it explicitly.
+- A test that needs a culture sets it explicitly. A test that needs a recent date computes
+  it from the clock: a fixed date ages out of the window.
 
 ## Style
 

@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoTestSuite
 ---
@@ -35,7 +35,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Lit toutes les pages de la liste des suites du plan dans la zone testplan, avec l’API version 6.0-preview.1, construit l’arborescence à partir des références aux suites parentes et calcule chaque SuitePath de la suite racine jusqu’à la suite. Retourne seule la suite indiquée par SuiteId, ou la suite racine du plan. Avec Recurse, retourne cette suite et toute sa sous-arborescence en profondeur d’abord, en conservant l’ordre des suites sœurs retourné par le serveur. Un SuiteId absent produit une erreur ObjectNotFound non bloquante. Les plans d’une autre collection reçus du pipeline produisent ConnectionMismatch avant toute requête. Sans PlanId ni plan reçu du pipeline, la valeur defaultTestPlanId du profil connecté est utilisée, et sans SuiteId, la valeur defaultTestSuiteId du profil sert de départ. La suite du profil ne s’applique qu’avec le plan du profil : avec un PlanId explicite ou un plan reçu du pipeline, la suite racine du plan sert de départ, sauf si SuiteId est indiqué. Sans plan d’aucune source, la commande échoue avec une erreur de configuration avant toute requête.
+Lit toutes les pages de la liste des suites du plan dans la zone testplan, avec l’API version 6.0-preview.1, construit l’arborescence à partir des références aux suites parentes et calcule chaque SuitePath de la suite racine jusqu’à la suite. Retourne seule la suite indiquée par SuiteId, ou la suite racine du plan. Avec Recurse, retourne cette suite et toute sa sous-arborescence en profondeur d’abord, en conservant l’ordre des suites sœurs retourné par le serveur. Un SuiteId absent produit une erreur ObjectNotFound non bloquante. Les plans d’une autre collection reçus du pipeline produisent AdoConnectionMismatch avant toute requête. Sans PlanId ni plan reçu du pipeline, la valeur defaultTestPlanId du profil connecté est utilisée, et sans SuiteId, la valeur defaultTestSuiteId du profil sert de départ. La suite du profil ne s’applique qu’avec le plan du profil : avec un PlanId explicite ou un plan reçu du pipeline, la suite racine du plan sert de départ, sauf si SuiteId est indiqué. Sans plan d’aucune source, la commande échoue avec une erreur de configuration avant toute requête.
 
 ## EXAMPLES
 
@@ -67,7 +67,7 @@ Liste la suite de tests par défaut enregistrée dans le profil de connexion et 
 
 ### -PlanId
 
-Identifiant positif du plan de test. Par défaut, la valeur defaultTestPlanId du profil connecté ; obligatoire si le profil n’en a pas.
+Identifiant positif du plan de test. Par défaut, la valeur defaultTestPlanId du profil connecté; obligatoire si le profil n’en a pas.
 
 ```yaml
 Type: System.Nullable`1[System.Int32]
@@ -109,7 +109,7 @@ HelpMessage: ''
 
 ### -SuiteId
 
-Identifiant positif de la suite de départ. Sans lui, la valeur defaultTestSuiteId du profil connecté sert de départ si le plan vient aussi du profil ; sinon, la suite racine du plan sert de départ.
+Identifiant positif de la suite de départ. Sans lui, la valeur defaultTestSuiteId du profil connecté sert de départ si le plan vient aussi du profil; sinon, la suite racine du plan sert de départ.
 
 ```yaml
 Type: System.Nullable`1[System.Int32]
@@ -151,7 +151,7 @@ HelpMessage: ''
 
 ### -Project
 
-Nom du projet. Par défaut, le projet par défaut de la connexion ; une erreur est produite si aucun n’est disponible.
+Nom du projet. Par défaut, le projet par défaut de la connexion; une erreur est produite si aucun n’est disponible.
 
 ```yaml
 Type: System.String
@@ -172,7 +172,7 @@ HelpMessage: ''
 
 ### -Connection
 
-Objet de connexion explicite ; remplace la connexion active de l’espace d’exécution.
+Objet de connexion explicite; remplace la connexion active de l’espace d’exécution.
 
 ```yaml
 Type: AdoToolkit.Core.Connections.AdoConnection

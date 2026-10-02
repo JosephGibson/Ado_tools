@@ -342,7 +342,8 @@ Describe 'Failed-test report export' {
             { $set | Export-AdoBuildTestFailure -Path 'Env:ADOTOOLKIT_REPORT_TEST' } | Should -Throw
             { $set | Export-AdoBuildTestFailure -Path (Join-Path $outputDirectory 'missing/report.html') -SkipAttachments -ErrorAction Stop } | Should -Throw
             $foreign = [AdoToolkit.Core.Connections.AdoConnection]@{ CollectionUri = [uri] 'https://foreign.example.test/Collection' }
-            { $set | Export-AdoBuildTestFailure -Connection $foreign -Path $outputDirectory -AllRunAttachments -ErrorAction Stop } | Should -Throw
+            { $set | Export-AdoBuildTestFailure -Connection $foreign -Path $outputDirectory -AllRunAttachments -ErrorAction Stop } |
+                Should -Throw -ErrorId 'AdoConnectionMismatch,AdoToolkit.ExportAdoBuildTestFailureCommand'
             $literal = Join-Path $outputDirectory 'rapport-[été].html'
             $file = $set | Export-AdoBuildTestFailure -Connection $connection -Path $literal -SkipAttachments
             $file.FullName | Should -Be $literal

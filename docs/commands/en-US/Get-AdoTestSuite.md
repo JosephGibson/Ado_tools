@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-22-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoTestSuite
 ---
@@ -35,7 +35,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Reads every page of the plan's suite listing with the testplan area at API version 6.0-preview.1, builds the suite tree from parent references, and computes each SuitePath from the root suite to the suite. Returns the suite given by SuiteId, or the plan's root suite, alone. With Recurse, returns that suite and its whole subtree depth-first, keeping sibling order as returned by the server. A missing SuiteId produces a non-terminating ObjectNotFound error. Piped plans from another collection produce ConnectionMismatch before any request. Without PlanId or a piped plan, the defaultTestPlanId of the connected profile is used, and without SuiteId, the profile's defaultTestSuiteId is the start. The profile's suite applies only together with the profile's plan: with an explicit PlanId or a piped plan, the plan's root suite is the start unless SuiteId is given. Without a plan from either source, the command fails with a configuration error before any request.
+Reads every page of the plan's suite listing with the testplan area at API version 6.0-preview.1, builds the suite tree from parent references, and computes each SuitePath from the root suite to the suite. Returns the suite given by SuiteId, or the plan's root suite, alone. With Recurse, returns that suite and its whole subtree depth-first, keeping sibling order as returned by the server. A missing SuiteId produces a non-terminating ObjectNotFound error. Piped plans from another collection produce AdoConnectionMismatch before any request. Without PlanId or a piped plan, the defaultTestPlanId of the connected profile is used, and without SuiteId, the profile's defaultTestSuiteId is the start. The profile's suite applies only together with the profile's plan: with an explicit PlanId or a piped plan, the plan's root suite is the start unless SuiteId is given. Without a plan from either source, the command fails with a configuration error before any request.
 
 ## EXAMPLES
 

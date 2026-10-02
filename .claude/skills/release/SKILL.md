@@ -7,10 +7,7 @@ disable-model-invocation: true
 
 # Prepare a release
 
-The skill body lives at `.agents/skills/release/SKILL.md` — the location Codex
-reads — so both agents run the same instructions from one file.
-
-Read that file now and follow it. The version to release:
+Read `.agents/skills/release/SKILL.md` now and follow it. The version to release:
 
 <version>
 $ARGUMENTS

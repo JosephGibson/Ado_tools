@@ -23,6 +23,7 @@
   <data name="Authorization" xml:space="preserve"><value>Access was denied. Check collection and project permissions.</value></data>
   <data name="NotFound" xml:space="preserve"><value>The requested resource was not found.</value></data>
   <data name="Request" xml:space="preserve"><value>The server rejected the request.</value></data>
+  <data name="Transport" xml:space="preserve"><value>The server could not be reached, or the connection was lost.</value></data>
   <data name="RegistryMismatch" xml:space="preserve"><value>Check the endpoint registry and requested API version.</value></data>
   <data name="Redirect" xml:space="preserve"><value>A redirect was blocked. Target: {0}</value></data>
   <data name="Throttled" xml:space="preserve"><value>The server is throttling requests. Try again later.</value></data>

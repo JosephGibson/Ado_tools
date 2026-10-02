@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoBuildTestFailure
 ---
@@ -304,7 +304,7 @@ Build, Runs, Summary, History, Failures, FailedCount, FlakyCount, Status, Diagno
 
 ## NOTES
 
-Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. The test results of each earlier build, the Test Case links and the Bug category and state categories of each project are cached for the invocation, so several piped builds of one definition read them once; a Test Case that was not found still produces its warning in every set that references it. The listing of a run's results ends without a further request when the run is completed and its last page, shorter than a full page, brings the results read to the run's total; otherwise it ends on an empty page. Concurrent requests have been exercised only against a synthetic server: how Server 2020 with Windows authentication handles several at once has not been observed at work. Every test-area route, version and field awaits server confirmation (V-19 to V-25), including how retries are recorded. Web links await confirmation at work (V-26). State categories come from the work item type states route at version 6.0-preview.1, which the Server 2020 REST documentation lists but which has not been confirmed at work.
+Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. The test results of each earlier build, the Test Case links and the Bug category and state categories of each project are cached for the invocation, so several piped builds of one definition read them once; a Test Case that was not found still produces its warning in every set that references it. The listing of a run's results ends without a further request when the run is completed and its last page, shorter than a full page, brings the results read to the run's total; otherwise it ends on an empty page. Concurrent requests have been exercised only against a synthetic server: how Server 2020 with Windows authentication handles several at once has not been observed at work (V-33). Every test-area route, version and field awaits server confirmation (V-19 to V-25), including how retries are recorded. Web links await confirmation at work (V-26). State categories come from the work item type states route at version 6.0-preview.1, which the Server 2020 REST documentation lists but which has not been confirmed at work (V-30).
 
 ## RELATED LINKS
 

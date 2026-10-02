@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoWorkItem
 ---
@@ -35,7 +35,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Buffers IDs across the invocation into batches of 200 using API version 6.0. Deduplicates on first occurrence and returns results in input order. Each absent ID produces a non-terminating ObjectNotFound error; other items are returned. Fields contains read-only .NET values keyed by case-insensitive reference names. Links use each item's own project. Objects from another collection produce ConnectionMismatch before any request for those inputs.
+Buffers IDs across the invocation into batches of 200 using API version 6.0. Deduplicates on first occurrence and returns results in input order. Each absent ID produces a non-terminating ObjectNotFound error; other items are returned. Fields contains read-only .NET values keyed by case-insensitive reference names. Links use each item's own project. Objects from another collection produce AdoConnectionMismatch before any request for those inputs.
 
 ## EXAMPLES
 

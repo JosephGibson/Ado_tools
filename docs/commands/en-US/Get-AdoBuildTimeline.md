@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoBuildTimeline
 ---
@@ -35,7 +35,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Retrieves the Build timeline at API version 6.0 and emits parents before children, sorting siblings by order. All records, including earlier attempts, retain their IDs, parent IDs, identifiers, attempt history, issues, and log IDs. Piped builds provide their own project. A foreign collection produces a ConnectionMismatch error before any request.
+Retrieves the Build timeline at API version 6.0 and emits parents before children, sorting siblings by order. All records, including earlier attempts, retain their IDs, parent IDs, identifiers, attempt history, issues, and log IDs. Piped builds provide their own project. A foreign collection produces an AdoConnectionMismatch error before any request.
 
 ## EXAMPLES
 
@@ -147,7 +147,7 @@ Supports common parameters including ErrorAction, ErrorVariable, Verbose, and De
 
 ## NOTES
 
-Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Timeline shapes and paging await server confirmation (V-11, V-14). Web links await confirmation at work.
+Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Timeline record types and retry fields await server confirmation (V-11).
 
 ## RELATED LINKS
 

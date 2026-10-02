@@ -6,6 +6,8 @@ Describe 'Workflow contracts' {
             [void][System.IO.Directory]::CreateDirectory((Split-Path -Parent $Path))
             [System.IO.File]::WriteAllText($Path, $Content.Replace("`r`n", "`n"), [System.Text.UTF8Encoding]::new($false))
         }
+        # The version a mocked Pester reports: a release build accepts only the pinned one.
+        $pesterVersion = [version] (Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot '../BuildModules.psd1')).Pester
     }
 
     It 'previews the plan without invoking checks' {
@@ -60,6 +62,12 @@ Describe 'Workflow contracts' {
         { Invoke-ProjectVerification -Root $root -Stage typo } | Should -Throw '*Unknown stage*'
     }
 
+    It 'rejects an unknown stage name in a repository that has no stage' {
+        $root = Join-Path $TestDrive 'selected-nothing'
+        New-Fixture (Join-Path $root 'notes.txt') 'nothing to validate'
+        { Invoke-ProjectVerification -Root $root -Stage typo } | Should -Throw '*Unknown stage*'
+    }
+
     It 'does not mistake PowerShell fixtures for Pester test containers' {
         $root = Join-Path $TestDrive 'test-discovery'
         New-Fixture (Join-Path $root 'tests/fixtures/helper.ps1') 'Write-Output helper'
@@ -82,6 +90,15 @@ Describe 'Workflow contracts' {
         { Get-ProjectContext -Root $root -Path '../outside.cs' } | Should -Throw '*safe repository path*'
     }
 
+    It 'scopes instructions for an absolute path as for the same relative path' {
+        $root = Join-Path $TestDrive 'absolute-scope'
+        New-Fixture (Join-Path $root 'AGENTS.md') '# Root'
+        New-Fixture (Join-Path $root 'src/api/AGENTS.md') '# API'
+        $result = Get-ProjectContext -Root $root -Path (Join-Path $root 'src\api\new.cs')
+        $result.ScopedInstructions | Should -Be @('AGENTS.md', 'src/api/AGENTS.md')
+        { Get-ProjectContext -Root $root -Path (Join-Path $TestDrive 'outside.cs') } | Should -Throw '*safe repository path*'
+    }
+
     It 'lists workflow, instruction, configuration and project files as important paths, not test files' {
         $root = Join-Path $TestDrive 'important-paths'
         New-Fixture (Join-Path $root 'tools/dev.ps1') ''
@@ -93,7 +110,6 @@ Describe 'Workflow contracts' {
         $result = Get-ProjectContext -Root $root
         $result.ImportantPaths | Should -Be @('tools/dev.ps1', 'docs/tooling.md', 'AGENTS.md', 'global.json', 'src/App/App.csproj')
         $result.Tests | Should -Be 1
-        $result.PSObject.Properties.Name | Should -Not -Contain 'Entrypoints'
     }
 
     It 'returns line numbers and the output limit signal for literal content matches' {
@@ -111,11 +127,16 @@ Describe 'Workflow contracts' {
         New-Fixture (Join-Path $root 'ARTIFACTS/hidden.txt') 'unique-fixture'
         New-Fixture (Join-Path $root '.ENV.PRODUCTION') 'unique-fixture'
         New-Fixture (Join-Path $root '.claude/settings.local.json') '{}'
+        # ripgrep applies a file glob to a directory name too, and does not descend into a match.
+        New-Fixture (Join-Path $root 'credentials/hidden.txt') 'unique-fixture'
+        New-Fixture (Join-Path $root 'src/Run.LOG/hidden.txt') 'unique-fixture'
         $native = @(Get-RepositoryFiles -Root $root | ForEach-Object Name)
         Mock Get-FirstCommand { $null } -ParameterFilter { $Names -contains 'rg' }
         $fallback = @(Get-RepositoryFiles -Root $root | ForEach-Object Name)
         $native | Should -Be @('visible.txt')
         $fallback | Should -Be $native
+        (Find-ProjectSource -Root $root -Query 'unique-fixture').Results.Path | Should -Be @('src/visible.txt')
+        Test-IsSafeRepositoryFile -File (Get-Item -LiteralPath (Join-Path $root 'credentials/hidden.txt')) -Root $root | Should -BeFalse
     }
 
     It 'skips large and binary content in the filesystem fallback' {
@@ -158,6 +179,20 @@ Describe 'Workflow contracts' {
         $result.Lines[-1] | Should -Be 'line 300'
     }
 
+    It 'returns non-ASCII output and arguments of an external stage unchanged' {
+        # An accented letter, and a check mark that no single-byte code page holds.
+        $text = [string][char]0xE9 + [char]0x2713
+        $script = Join-Path $TestDrive 'accent.ps1'
+        New-Fixture $script 'param([string] $Value) Write-Output ([string][char]0xE9 + [char]0x2713); Write-Output $Value'
+        $result = Invoke-BoundedProcess -Executable (Join-Path $PSHOME 'pwsh.exe') -Arguments @('-NoProfile', '-File', $script, "argument $text") -WorkingDirectory $TestDrive
+        $result.ExitCode | Should -Be 0
+        $result.Lines | Should -Be @($text, "argument $text")
+        # A stage that cannot start reports through the error stream of the child.
+        $absent = Invoke-BoundedProcess -Executable (Join-Path $TestDrive "absent-$text.exe") -Arguments @() -WorkingDirectory $TestDrive
+        $absent.ExitCode | Should -Be 1
+        $absent.Lines -join ' ' | Should -BeLike "*absent-$text.exe*"
+    }
+
     It 'terminates external checks that exceed their timeout' {
         $script = Join-Path $TestDrive 'timeout.ps1'
         New-Fixture $script 'Start-Sleep -Seconds 30'
@@ -188,7 +223,7 @@ Describe 'Workflow contracts' {
     }
 
     It 'does not pass Pester container errors when there are no failed test blocks' {
-        Mock Get-Module { [pscustomobject]@{Version=[version]'5.9.1'} } -ParameterFilter { $Name -eq 'Pester' }
+        Mock Get-Module { [pscustomobject]@{Version=$pesterVersion} } -ParameterFilter { $Name -eq 'Pester' }
         Mock Invoke-Pester {
             [pscustomobject]@{
                 Result='Failed'; TotalCount=0; PassedCount=0; FailedCount=0; SkippedCount=0; NotRunCount=0; Failed=@()
@@ -199,12 +234,28 @@ Describe 'Workflow contracts' {
         $result.Failures | Should -Be @('broken.Tests.ps1: Discovery failed')
     }
 
+    It 'counts the failing tests it does not list apart from the container errors' {
+        Mock Get-Module { [pscustomobject]@{Version=$pesterVersion} } -ParameterFilter { $Name -eq 'Pester' }
+        Mock Invoke-Pester {
+            [pscustomobject]@{
+                Result='Failed'; TotalCount=12; PassedCount=0; FailedCount=12; SkippedCount=0; NotRunCount=0
+                Failed=@(1..12 | ForEach-Object { [pscustomobject]@{ExpandedPath="Suite.Test $_"; ErrorRecord=[pscustomobject]@{Exception=[Exception]::new('Expected 1, but got 2.')}} })
+                Containers=@([pscustomobject]@{Result='Failed'; Item='broken.Tests.ps1'; ErrorRecord=@(1..3 | ForEach-Object { [pscustomobject]@{Exception=[Exception]::new("Setup failed $_")} })})
+            }
+        }
+        $result = Get-PesterOutcome -TestPath @($TestDrive)
+        $result.Failures.Count | Should -Be 14
+        $result.Failures[0..2] | Should -Be @('broken.Tests.ps1: Setup failed 1', 'broken.Tests.ps1: Setup failed 2', 'broken.Tests.ps1: Setup failed 3')
+        $result.Failures[12] | Should -Be 'Suite.Test 10: Expected 1, but got 2.'
+        $result.Failures[13] | Should -Be '... and 2 further failing test(s)'
+    }
+
     It 'marks empty or skipped Pester runs unavailable' -TestCases @(
         @{Total=0; Skipped=0}
         @{Total=1; Skipped=1}
     ) {
         param($Total, $Skipped)
-        Mock Get-Module { [pscustomobject]@{Version=[version]'5.9.1'} } -ParameterFilter { $Name -eq 'Pester' }
+        Mock Get-Module { [pscustomobject]@{Version=$pesterVersion} } -ParameterFilter { $Name -eq 'Pester' }
         Mock Invoke-Pester {
             [pscustomobject]@{Result='Passed'; TotalCount=$Total; PassedCount=0; FailedCount=0; SkippedCount=$Skipped; NotRunCount=0; Failed=@(); Containers=@()}
         }

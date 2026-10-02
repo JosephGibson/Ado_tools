@@ -14,11 +14,7 @@ AfterAll { $env:ADOTOOLKIT_CONFIG_PATH = $previousConfig }
 Describe 'Single case report export' -Tag 'S2-4' {
     BeforeEach {
         $requestCount = $null
-        $server = Start-FakeAdoServer -Responses @(
-            @{ Body = $singleCaseBody },
-            @{ Body = Get-Content -LiteralPath (Join-Path $fixtureRoot 'test-category.json') -Raw },
-            @{ Body = Get-Content -LiteralPath (Join-Path $fixtureRoot 'shared-category.json') -Raw }
-        )
+        $server = Start-FakeAdoServer -Responses @(@{ Body = $singleCaseBody })
         $connection = Connect-Ado -CollectionUrl $server.Uri -WarningAction SilentlyContinue
         $item = Get-AdoTestCase -Id 3
         $requestCount = $server.Requests.Count
@@ -67,7 +63,7 @@ Describe 'Single case report export' -Tag 'S2-4' {
     }
 
     It 'exports Markdown and JSON with optional sources' {
-        $file = $item | Export-AdoTestCase -Path (Join-Path $TestDrive 'case.md') -Format Markdown
+        $file = $item | Export-AdoTestCase -Path (Join-Path $TestDrive 'case.md') -Format Markdown -Culture en-US
         [IO.File]::ReadAllText($file.FullName) | Should -Match '^# Azure DevOps Test Case'
         $file = $item | Export-AdoTestCase -Path (Join-Path $TestDrive 'case.json') -Format Json -IncludeSource
         $json = [IO.File]::ReadAllText($file.FullName) | ConvertFrom-Json
@@ -94,7 +90,8 @@ Describe 'Single case report export' -Tag 'S2-4' {
 
     It 'checks provenance and treats wildcard characters in paths literally' {
         $foreign = [AdoToolkit.Core.Connections.AdoConnection]@{ CollectionUri = [uri]'https://foreign.example.test/Collection' }
-        { $item | Export-AdoTestCase -Connection $foreign -Path $destination } | Should -Throw
+        { $item | Export-AdoTestCase -Connection $foreign -Path $destination } |
+            Should -Throw -ErrorId 'AdoConnectionMismatch,AdoToolkit.ExportAdoTestCaseCommand'
         $literal = Join-Path $TestDrive 'rapport-[été].html'
         $file = $item | Export-AdoTestCase -Connection $connection -Path $literal
         $file.FullName | Should -Be $literal
@@ -110,7 +107,7 @@ Describe 'Test case detail export' {
         function Start-DetailServer {
             param([object[]] $Detail)
             $script:server = Start-FakeAdoServer -Responses (@(@{ Body = $singleCaseBody }) + $Detail)
-            $script:connection = Connect-Ado -CollectionUrl $script:server.Uri -WarningAction SilentlyContinue
+            Connect-Ado -CollectionUrl $script:server.Uri -WarningAction SilentlyContinue | Out-Null
             $script:item = Get-AdoTestCase -Id 3
             $script:destination = Join-Path $TestDrive ([guid]::NewGuid().ToString('N') + '.html')
         }

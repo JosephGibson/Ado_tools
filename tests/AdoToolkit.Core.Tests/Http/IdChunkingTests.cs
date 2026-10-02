@@ -15,6 +15,7 @@ public sealed class IdChunkingTests
     {
         using FakeHttpMessageHandler handler = new();
         int active = 0;
+        JsonNode template = JsonNode.Parse(ParserFixture.Read("Rest/workitem-fields.json"))!["value"]![0]!;
         handler.Fallback = async (request, token) =>
         {
             Assert.Equal(1, Interlocked.Increment(ref active));
@@ -24,7 +25,7 @@ public sealed class IdChunkingTests
             JsonArray values = [];
             foreach (int id in chunk.Reverse())
             {
-                JsonNode item = JsonNode.Parse(File.ReadAllText(Path.Combine(TestDirectory.RepositoryRoot, "tests/Fixtures/Rest/workitem-fields.json")))!["value"]![0]!.DeepClone();
+                JsonNode item = template.DeepClone();
                 item["id"] = id;
                 values.Add(item);
             }

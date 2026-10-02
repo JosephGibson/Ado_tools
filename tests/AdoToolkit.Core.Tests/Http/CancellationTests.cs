@@ -77,27 +77,35 @@ public sealed class CancellationTests
         using HttpClient client = new(handler);
         AdoHttpPipeline pipeline = new(client, new Uri("https://ado.example.test/Collection"), TimeSpan.FromSeconds(5),
             downloadTimeout: TimeSpan.FromMilliseconds(100), inactivityTimeout: TimeSpan.FromMilliseconds(40));
-        await Assert.ThrowsAsync<AdoTimeoutException>(() => pipeline.DownloadAsync(
-            EndpointRegistry.ProjectsList with { Timeout = TimeoutClass.Download }, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<AdoTimeoutException>(() => Download(pipeline));
         Assert.True(stream.Disposed);
         Assert.Single(handler.Requests);
     }
 
+    // Twelve reads of 20 ms take longer than one inactivity window, and none comes near it.
     [Fact]
     [Trait("Acceptance", "S0-3")]
     public async Task DownloadInactivityBudgetResetsAfterEachRead()
     {
         using FakeHttpMessageHandler handler = new();
-        using DripStream stream = new(4, TimeSpan.FromMilliseconds(20));
+        using DripStream stream = new(12, TimeSpan.FromMilliseconds(20));
         handler.Enqueue(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StreamContent(stream) });
         using HttpClient client = new(handler);
         AdoHttpPipeline pipeline = new(client, new Uri("https://ado.example.test/Collection"), TimeSpan.FromSeconds(5),
-            downloadTimeout: TimeSpan.FromSeconds(2), inactivityTimeout: TimeSpan.FromMilliseconds(60));
-        byte[] result = await pipeline.DownloadAsync(EndpointRegistry.ProjectsList with { Timeout = TimeoutClass.Download },
-            CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
-        Assert.Equal("xxxx", Encoding.UTF8.GetString(result));
+            downloadTimeout: TimeSpan.FromSeconds(5), inactivityTimeout: TimeSpan.FromMilliseconds(200));
+        Assert.Equal(new string('x', 12), Encoding.UTF8.GetString(await Download(pipeline)));
         Assert.True(stream.Disposed);
     }
+
+    // The whole body, read through the stream that the pipeline hands to a download.
+    private static Task<byte[]> Download(AdoHttpPipeline pipeline) => pipeline.DownloadStreamAsync(
+        EndpointRegistry.ProjectsList with { Timeout = TimeoutClass.Download }, new Dictionary<string, string>(), null, CultureInfo.InvariantCulture,
+        static async (_, body, token) =>
+        {
+            using MemoryStream output = new();
+            await body.CopyToAsync(output, token);
+            return output.ToArray();
+        }, TestContext.Current.CancellationToken);
 
     [Fact]
     [Trait("Acceptance", "S0-3")]

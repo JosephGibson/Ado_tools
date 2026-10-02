@@ -14,16 +14,17 @@ $root = Resolve-AdoPackagePath -Path $OutputRoot -Root $repository
 $project = Join-Path $repository 'src/AdoToolkit.PowerShell/AdoToolkit.PowerShell.csproj'
 $staging = $null
 $helpStaging = $null
+# dotnet selects the SDK from the global.json of its working directory, so every dotnet
+# command runs in the repository, whatever the caller's location.
+Push-Location -LiteralPath $repository
 try {
     # Report every missing prerequisite at once, before anything is built or staged.
     $missing = [System.Collections.Generic.List[string]]::new()
     $dotnet = Get-Command -Name dotnet -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($null -eq $dotnet) { $missing.Add('the .NET SDK (dotnet was not found on PATH)') }
     else {
-        Push-Location -LiteralPath $repository
-        try { $null = & $dotnet.Source --version 2>&1; $sdkExit = $LASTEXITCODE }
-        finally { Pop-Location }
-        if ($sdkExit -ne 0) { $missing.Add('the .NET SDK version that global.json requests') }
+        $null = & $dotnet.Source --version 2>&1
+        if ($LASTEXITCODE -ne 0) { $missing.Add('the .NET SDK version that global.json requests') }
     }
     $platy = @(Get-BuildModule -Name Microsoft.PowerShell.PlatyPS)
     if ($platy.Count -eq 0) {
@@ -84,6 +85,7 @@ try {
     Write-Output "Package ready: AdoToolkit/$version"
 }
 finally {
+    Pop-Location
     if ($staging) { Remove-AdoPackageDirectory -Path $staging -Root $repository }
     if ($helpStaging) { Remove-AdoPackageDirectory -Path $helpStaging -Root $repository }
 }

@@ -87,3 +87,32 @@ Describe 'Product restore preflight' {
         Test-Path -LiteralPath (Join-Path $fixture 'src/Sample/obj') | Should -BeFalse
     }
 }
+
+Describe 'Product version' {
+    It 'names a VersionPrefix that Directory.Build.props does not declare' {
+        $fixture = Join-Path $TestDrive 'undeclared-version'
+        foreach ($directory in @('tools/lib', 'src/Sample/obj', 'shim')) {
+            [void] [System.IO.Directory]::CreateDirectory((Join-Path $fixture $directory))
+        }
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../check.ps1') -Destination (Join-Path $fixture 'tools/check.ps1')
+        # Stand-ins for the build and the installed modules: the gate reaches its version check
+        # without building, restoring or loading anything.
+        Set-Content -LiteralPath (Join-Path $fixture 'shim/dotnet.cmd') -Value '@exit /b 0'
+        Set-Content -LiteralPath (Join-Path $fixture 'tools/lib/dependencies.ps1') -Value "function Get-BuildModule { [pscustomobject]@{ Path = 'synthetic' } }"
+        Set-Content -LiteralPath (Join-Path $fixture 'tools/lib/test-results.ps1') -Value ''
+        Set-Content -LiteralPath (Join-Path $fixture 'AdoToolkit.slnx') -Value '<Solution><Project Path="src/Sample/Sample.csproj" /></Solution>'
+        Set-Content -LiteralPath (Join-Path $fixture 'src/Sample/Sample.csproj') -Value '<Project Sdk="Microsoft.NET.Sdk" />'
+        Set-Content -LiteralPath (Join-Path $fixture 'src/Sample/obj/project.assets.json') -Value '{}'
+        Set-Content -LiteralPath (Join-Path $fixture 'Directory.Build.props') -Value '<Project><PropertyGroup /></Project>'
+        $arguments = @('-NoProfile', '-File', (Join-Path $fixture 'tools/check.ps1'), '-SkipTests')
+        $previousPath = $env:PATH
+        try {
+            $env:PATH = (Join-Path $fixture 'shim') + [System.IO.Path]::PathSeparator + $previousPath
+            $output = @(& (Join-Path $PSHOME 'pwsh.exe') @arguments)
+            $code = $LASTEXITCODE
+        }
+        finally { $env:PATH = $previousPath }
+        $code | Should -Be 1
+        $output | Should -Be @('check: build succeeded (Release)', 'VersionPrefix must be a three-part module version.')
+    }
+}

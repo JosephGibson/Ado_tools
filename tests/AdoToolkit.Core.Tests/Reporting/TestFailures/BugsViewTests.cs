@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using AdoToolkit.Core.Reporting;
 using AdoToolkit.Core.Reporting.TestFailures;
 using AdoToolkit.Core.TestRuns;
 
@@ -113,6 +114,25 @@ public sealed class BugsViewTests
         Assert.Contains("<tbody class=\"error-cluster\" data-bug=\"804\"><tr class=\"cluster-heading\"><th scope=\"colgroup\" colspan=\"6\">", view, StringComparison.Ordinal);
         Assert.Equal(["f-1"], Rows(Entry(view, 804)));
         Assert.Contains("<td class=\"col-source\">Test Case</td>", view, StringComparison.Ordinal);
+    }
+
+    // A bug can live in another project than the build. The attempt names it through that project,
+    // like the bug list of the card and this view.
+    [Fact]
+    public void AnAttemptLinksItsBugThroughTheProjectOfTheBug()
+    {
+        TestFailureReportModel model = Build("en-US", new AdoTestFailure
+        {
+            Ordinal = 1, Classification = AdoTestFailureClassification.Failed, ShortName = "A", TestName = "Synthetic.BugTests.A", Storage = "Synthetic.Tests.dll",
+            CollectionUri = TestFailureReportFixture.Collection, Bugs = [Read(805, result: true, project: OtherProject)],
+            Attempts = [new AdoTestAttempt { Number = 1, RunId = 201, ResultId = 11, Outcome = "Failed", OutcomeClass = AdoTestOutcomeClass.Failure,
+                ErrorMessage = "Failed A", AssociatedBugIds = [805] }],
+        });
+        string html = TestFailureReportFixture.Render(model);
+        TestFailureReportValidator.Validate(new StringReader(html), model);
+        Assert.Contains(SinkEncoding.Attribute(AdoWebLinks.WorkItem(TestFailureReportFixture.Collection, OtherProject, 805).AbsoluteUri), html, StringComparison.Ordinal);
+        Assert.DoesNotContain(SinkEncoding.Attribute(AdoWebLinks.WorkItem(TestFailureReportFixture.Collection, TestFailureReportFixture.Project, 805).AbsoluteUri),
+            html, StringComparison.Ordinal);
     }
 
     private static string View(string html)

@@ -111,7 +111,7 @@ changing them. A connection made with `Connect-Ado -CollectionUrl` has no defaul
 | `testResults.maximumAttachmentBytes` | `52428800` (50 MiB) | Largest attachment that is downloaded | none |
 | `testResults.maximumTotalAttachmentBytes` | `524288000` (500 MiB) | Total attachment download size per report | none |
 | `testResults.maximumInlineJsonBytes` | `262144` (256 KiB) | Largest JSON or text attachment shown inline, and so searchable, in the failed-test report. Also the largest one that the export downloads from test runs other than the most recent | none |
-| `testResults.maximumInlineTotalBytes` | `8388608` (8 MiB) | Total JSON and text shown inline per failed-test report; later attachments are linked only | none |
+| `testResults.maximumInlineTotalBytes` | `8388608` (8 MiB) | Total JSON and text shown inline per failed-test report; attachments that no longer fit are linked only, those of older runs first | none |
 | `testResults.maximumConcurrentRequests` | `6` | Requests that `Get-AdoBuildTestFailure` has in progress at the same time, and attachments that `Export-AdoBuildTestFailure` downloads at the same time, 1–16. With `1`, every request waits for the previous one. The result is the same at every value; lower it if the server answers several requests at once badly. How Server 2020 answers several requests at once is not confirmed at work (V-33) | none |
 
 ### Reporting
@@ -121,3 +121,8 @@ changing them. A connection made with `Connect-Ado -CollectionUrl` has no defaul
 | `reporting.culture` | session UI culture | Report language, for example `en-US` or `fr-CA`. Cultures other than English or French fall back to English with a warning | `-Culture` |
 
 Cmdlet messages and help always follow the session UI culture (`$PSUICulture`).
+
+Full help: [Set-AdoProfile](../commands/en-US/Set-AdoProfile.md),
+[Get-AdoProfile](../commands/en-US/Get-AdoProfile.md),
+[Remove-AdoProfile](../commands/en-US/Remove-AdoProfile.md),
+[Connect-Ado](../commands/en-US/Connect-Ado.md).

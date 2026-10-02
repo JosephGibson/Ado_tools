@@ -21,7 +21,8 @@
   `WriteWarning`, `WriteVerbose`, `WriteDebug`, `WriteInformation`, `ProgressRecord`,
   `ErrorDetails` or an `Ado*Exception` constructor (`HardCodedStringTests`).
 - French: `build` is masculine, a test run is « série de tests », and a no-break space
-  (U+00A0) precedes `:`. `FrenchTerminologyTests` checks the first two.
+  (U+00A0) precedes `:`. `FrenchTerminologyTests` checks all three in the catalog and the
+  help sources.
 - ADO content is never translated or re-cased.
 
 ## Cmdlets (`src/AdoToolkit.PowerShell/Commands/`)
@@ -41,5 +42,6 @@
   WorkItemsBatch reads go through `WorkItemBatchReader`.
 - Report text is encoded at the sink (`SinkEncoding`, `ContentLinks`). Remote text never
   enters a script element, a path or a URL; links are built from the connection and IDs.
-- Files are written through `AtomicFileWriter` or `GenerationFolderCommit`.
+- Files are written through `AtomicFileWriter`, `AtomicFileReplace` (the configuration
+  file) or `GenerationFolderCommit`.
 - A change to rendered report output changes the goldens: use the `update-goldens` skill.

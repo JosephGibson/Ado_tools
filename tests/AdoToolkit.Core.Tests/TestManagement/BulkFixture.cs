@@ -1,7 +1,6 @@
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using AdoToolkit.Core.TestManagement;
 using AdoToolkit.Core.Tests.Http;
 
 namespace AdoToolkit.Core.Tests.TestManagement;
@@ -14,10 +13,10 @@ internal sealed class BulkFixture
     private readonly Dictionary<int, JsonObject> items = [];
     private readonly Dictionary<int, List<JsonArray>> pages = [];
 
-    internal string PlansBody { get; set; } = ParserFixture.Read("Rest/testplans-first.json");
-    internal string SuitesBody { get; set; } = MergedSuites();
+    internal string PlansBody { get; } = ParserFixture.Read("Rest/testplans-first.json");
+    internal string SuitesBody { get; } = MergedSuites();
 
-    internal static string MergedSuites()
+    private static string MergedSuites()
     {
         JsonObject first = JsonNode.Parse(ParserFixture.Read("Rest/testsuites-first.json"))!.AsObject();
         foreach (JsonNode? suite in JsonNode.Parse(ParserFixture.Read("Rest/testsuites-last.json"))!["value"]!.AsArray())

@@ -45,7 +45,7 @@ Get-AdoTestSuite -PlanId 812 -SuiteId 813 | Get-AdoTestCase
 ```powershell
 Get-AdoTestCase -Id 1234 | Export-AdoTestCase -Open
 Get-AdoTestCase -Id 1234 | Export-AdoTestCase -IncludeDetail -Open
-Get-AdoTestCase -Id 1234 | Export-AdoTestCase -Format Json -IncludeSource -Path .\out
+Get-AdoTestCase -Id 1234 | Export-AdoTestCase -Format Json -IncludeSource -Path .\case-1234.json
 ```
 
 | Format | Output |
@@ -107,8 +107,9 @@ step, including collapsed groups.
 Get-AdoTestCase -PlanId 812 -SuiteId 813 -Recurse | Export-AdoTestCase -IncludeDetail -Path .\release-12.html
 ```
 
-- These are the only requests of an export: two batch requests per 200 cases, and one
-  test points query per project and 50 cases. Nothing is requested with `-WhatIf`.
+- These are the only requests of an export: the cases with their relations and the work
+  items they link to, in batches of 200, and one test points query per project and 50
+  cases. Nothing is requested with `-WhatIf`.
 - A lookup that fails becomes a warning and a diagnostic in the report, which is written
   without that part. An authentication or authorization failure stops the export before a
   file is written.

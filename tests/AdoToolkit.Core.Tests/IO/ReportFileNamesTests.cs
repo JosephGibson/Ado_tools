@@ -20,13 +20,13 @@ public sealed class ReportFileNamesTests
             using TestDirectory directory = new();
             string redirected = Path.Combine(directory.Root, "Téléchargements [équipe]");
             Directory.CreateDirectory(redirected);
-            string expected = Path.Combine(redirected, "TestCase-1234567-Steps.json");
-            Assert.Equal(expected, ReportFileNames.Resolve(null, 1234567, ReportFormat.Json,
-                CultureInfo.CurrentCulture, () => redirected));
-            Assert.Equal(expected, ReportFileNames.Resolve(redirected, 1234567, ReportFormat.Json,
+            string name = ReportFileNames.TestCase(1234567, ReportFormat.Json);
+            string expected = Path.Combine(redirected, name);
+            Assert.Equal(expected, ReportFileNames.Resolve(null, name, CultureInfo.CurrentCulture, () => redirected));
+            Assert.Equal(expected, ReportFileNames.Resolve(redirected, name,
                 CultureInfo.CurrentCulture, () => throw new InvalidOperationException("Must not resolve Downloads")));
             string explicitPath = Path.Combine(redirected, "report [1].json");
-            Assert.Equal(explicitPath, ReportFileNames.Resolve(explicitPath, 1234567, ReportFormat.Json, CultureInfo.CurrentCulture));
+            Assert.Equal(explicitPath, ReportFileNames.Resolve(explicitPath, name, CultureInfo.CurrentCulture));
             Assert.Empty(Directory.GetFiles(redirected));
         }
         finally { CultureInfo.CurrentCulture = previous; }
@@ -129,7 +129,7 @@ public sealed class ReportFileNamesTests
     {
         using TestDirectory directory = new();
         Assert.Throws<AdoFileOutputException>(() => ReportFileNames.Resolve(Path.Combine(directory.Root, "missing", "report.json"),
-            1, ReportFormat.Json, CultureInfo.InvariantCulture));
+            ReportFileNames.TestCase(1, ReportFormat.Json), CultureInfo.InvariantCulture));
         Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.TestCase(0, ReportFormat.Json));
         Assert.Throws<ArgumentOutOfRangeException>(() => ReportFileNames.TestCase(1, (ReportFormat)999));
     }

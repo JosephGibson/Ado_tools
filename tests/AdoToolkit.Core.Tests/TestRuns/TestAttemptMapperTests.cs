@@ -25,6 +25,17 @@ public sealed class TestAttemptMapperTests
         Assert.Equal(1L, fallback.CustomFields["AttemptId"]);
     }
 
+    [Fact]
+    public void ACustomFieldThatCannotBeMappedIsLeftOutWithoutFailingTheResult()
+    {
+        const string body = """{"id":1,"customFields":[{"fieldName":"Repeated","value":{"a":1,"a":2}},{"fieldName":"Kept","value":1}]}""";
+        TestResultDto result = JsonSerializer.Deserialize(body, AdoJsonContext.Default.TestResultDto)!;
+        AdoTestAttempt attempt = TestAttemptMapper.FromResult(result, 201, 1, AdoTestAttemptSource.Single,
+            null, TestContext.Current.CancellationToken);
+        Assert.False(attempt.CustomFields.ContainsKey("Repeated"));
+        Assert.Equal(1L, attempt.CustomFields["Kept"]);
+    }
+
     [Theory]
     [InlineData(double.MaxValue)]
     [InlineData(1e20)]

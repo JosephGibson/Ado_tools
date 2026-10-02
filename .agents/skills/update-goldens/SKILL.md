@@ -51,5 +51,5 @@ bytes with them and rewrite them only when `ADOTOOLKIT_UPDATE_GOLDEN` is `1`.
   `TestFailureReportFixture`, its name in the test's variant list and an entry in
   `tests/Fixtures/README.md`.
 - Report which goldens changed and why. A change to layout or wording needs the user's
-  review of the rendered English and French reports: name the files in the handoff, and
-  list them under "Existing tests changed" in the release notes.
+  review of the rendered English and French reports: name the files in the handoff. The
+  `release` skill lists them under "Existing tests changed" in the release notes.

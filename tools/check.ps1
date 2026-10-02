@@ -43,7 +43,8 @@ function Read-ProjectXml {
 }
 
 try {
-    $dotnet = Get-Command -Name dotnet -CommandType Application -ErrorAction SilentlyContinue
+    # Get-Command lists every dotnet on PATH; the first one is the one a command line would run.
+    $dotnet = Get-Command -Name dotnet -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $dotnet) { Write-Output 'dotnet missing: authorized setup step required'; exit 2 }
 
     $solution = Read-ProjectXml -Path (Resolve-RepositoryPath 'AdoToolkit.slnx')
@@ -107,7 +108,8 @@ try {
         }
 
         $buildProperties = Read-ProjectXml -Path (Resolve-RepositoryPath 'Directory.Build.props')
-        $version = $buildProperties.SelectSingleNode('/Project/PropertyGroup/VersionPrefix').InnerText
+        $declared = $buildProperties.SelectSingleNode('/Project/PropertyGroup/VersionPrefix')
+        $version = if ($null -ne $declared) { $declared.InnerText } else { '' }
         if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'VersionPrefix must be a three-part module version.' }
         $staging = Resolve-RepositoryPath "artifacts/verify/AdoToolkit/$version"
         $publishArguments = @('-NoProfile', '-File', (Resolve-RepositoryPath 'tools/package/Publish-AdoToolkitPackage.ps1'),

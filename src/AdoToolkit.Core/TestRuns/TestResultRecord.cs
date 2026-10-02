@@ -13,7 +13,6 @@ internal sealed class TestResultRecord
     internal string? AutomatedTestStorage { get; init; }
     internal string? TestCaseTitle { get; init; }
     internal string? ResultGroupType { get; init; }
-    internal DateTimeOffset? StartedDate { get; init; }
     internal AdoTestOutcomeClass OutcomeClass => OutcomeClassifier.Classify(Outcome);
     internal bool IsRerunGroup => OutcomeClassifier.IsRerunGroup(ResultGroupType);
 }

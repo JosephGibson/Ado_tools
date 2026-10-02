@@ -88,7 +88,7 @@ internal sealed class TestCaseLinkResolver
     // The work items linked to a resolved Test Case by any link type; empty for any other ID.
     internal IReadOnlyList<int> LinkedWorkItems(string project, int id) => cache.LinkedWorkItems(project, id);
 
-    // Only the title and state are read, so no other field of the expanded response can fail the lookup.
+    // One field, read as text: no other field of the expanded response can fail the lookup.
     internal static string? Text(Dictionary<string, JsonElement> fields, string name)
     {
         foreach ((string key, JsonElement value) in fields)

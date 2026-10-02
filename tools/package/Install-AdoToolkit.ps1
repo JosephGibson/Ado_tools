@@ -216,7 +216,8 @@ try {
         }
         try { [System.IO.Directory]::Move($staging, $target) }
         catch {
-            if ($backup) { [System.IO.Directory]::Move($backup, $target); $backup = $null }
+            # Never discard the only old copy: when the rollback fails too, the backup stays.
+            if ($backup) { $previous = $backup; $backup = $null; [System.IO.Directory]::Move($previous, $target) }
             throw
         }
     }
@@ -229,7 +230,7 @@ try {
 }
 finally { $archive.Dispose() }
 
-$searched = @($env:PSModulePath -split [System.IO.Path]::PathSeparator | Where-Object { $_ } |
+$searched = @($env:PSModulePath -split [System.IO.Path]::PathSeparator | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
         ForEach-Object { [System.IO.Path]::GetFullPath($_).TrimEnd($separator) })
 if ($modules.TrimEnd($separator) -notin $searched) {
     Write-Warning "$modules is not in PSModulePath; import the module by path: Import-Module '$target\AdoToolkit.psd1'"

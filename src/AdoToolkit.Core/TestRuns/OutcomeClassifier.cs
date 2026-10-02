@@ -7,9 +7,6 @@ internal static class OutcomeClassifier
     private static readonly HashSet<string> FailureOutcomes =
         new(["Failed", "Error", "Timeout", "Aborted"], StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> PassOutcomes = new(["Passed"], StringComparer.OrdinalIgnoreCase);
-    // Group types that are never attempts (§15.10).
-    private static readonly HashSet<string> NonAttemptGroups =
-        new(["DataDriven", "OrderedTest", "Generic"], StringComparer.OrdinalIgnoreCase);
 
     internal static AdoTestOutcomeClass Classify(string? outcome) => outcome is null ? AdoTestOutcomeClass.Other
         : FailureOutcomes.Contains(outcome) ? AdoTestOutcomeClass.Failure
@@ -19,8 +16,6 @@ internal static class OutcomeClassifier
     internal static bool IsRerunGroup(string? resultGroupType) =>
         string.Equals(resultGroupType, RerunGroup, StringComparison.OrdinalIgnoreCase);
 
-    internal static bool IsNonAttemptGroup(string? resultGroupType) =>
-        resultGroupType is not null && NonAttemptGroups.Contains(resultGroupType);
 
     // The deciding outcome takes each pipeline group's last attempt, then the worst of them: a
     // failure in any group decides Failure, then Other; Pass only when every group ends passing.

@@ -199,4 +199,17 @@ Describe 'Build discovery and timeline triage' -Tag 'S4-1', 'S4-2' {
         }
         finally { Stop-FakeAdoServer -Server $server }
     }
+
+    # ConvertFrom-Json reads every integer as Int64.
+    It 'accepts a definition ID of another integer type' {
+        $server = Start-FakeAdoServer
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            @(Get-AdoBuild -Definition ('{"id":42}' | ConvertFrom-Json).id).Count | Should -Be 0
+            $server.Requests.ToArray()[0].Line | Should -Match 'builds\?definitions=42&'
+            { Get-AdoBuild -Definition ([long] [int]::MaxValue + 1) -ErrorAction Stop } |
+                Should -Throw -ErrorId 'AdoRequest,AdoToolkit.GetAdoBuildCommand'
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
 }

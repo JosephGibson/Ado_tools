@@ -55,7 +55,6 @@ public sealed class TestFailureRetrievalService
         AutomatedTestStorage = result.AutomatedTestStorage,
         TestCaseTitle = result.TestCaseTitle,
         ResultGroupType = result.ResultGroupType,
-        StartedDate = result.StartedDate,
     };
 
     public async Task<AdoBuildTestFailureSet> GetAsync(AdoBuild build, TestFailureQuery query, CultureInfo culture,

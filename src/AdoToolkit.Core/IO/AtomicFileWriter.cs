@@ -63,16 +63,7 @@ public sealed class AtomicFileWriter
         }
         finally
         {
-            if (created) DeleteTemporary(temporary, path, culture);
-        }
-    }
-
-    private static void DeleteTemporary(string temporary, string destination, CultureInfo culture)
-    {
-        try { File.Delete(temporary); }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-        {
-            throw new AdoFileOutputException(Messages.Get(AdoMessage.FileOutput, culture, destination), error);
+            if (created) AtomicFileReplace.DeleteTemporary(temporary, path, culture);
         }
     }
 
@@ -120,7 +111,7 @@ public sealed class AtomicFileWriter
         }
         finally
         {
-            if (created && File.Exists(temporary)) File.Delete(temporary);
+            if (created) AtomicFileReplace.DeleteTemporary(temporary, path, culture);
         }
     }
 }

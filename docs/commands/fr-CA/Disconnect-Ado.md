@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Disconnect-Ado
 ---
@@ -45,9 +45,10 @@ Efface la connexion et les caches de cet espace d’exécution.
 
 ### CommonParameters
 
-Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVariable,
+Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVariable,
 -InformationAction, -InformationVariable, -OutBuffer, -OutVariable, -PipelineVariable,
--ProgressAction, -Verbose, -WarningAction et -WarningVariable.
+-ProgressAction, -Verbose, -WarningAction et -WarningVariable. Pour en savoir plus, consultez
+[about_CommonParameters](https://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 

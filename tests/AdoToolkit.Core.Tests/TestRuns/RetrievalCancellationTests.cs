@@ -13,7 +13,7 @@ public sealed class RetrievalCancellationTests
     {
         using CancellationTokenSource cancellation = new();
         int details = 0;
-        FakeHttpMessageHandler handler = new()
+        using FakeHttpMessageHandler handler = new()
         {
             Fallback = (request, _) =>
             {
@@ -45,7 +45,6 @@ public sealed class RetrievalCancellationTests
         Assert.Equal(1, details);
         Assert.DoesNotContain(handler.Requests, static request =>
             request.Uri.AbsolutePath.EndsWith("/attachments", StringComparison.Ordinal));
-        handler.Dispose();
     }
 
     [Fact]

@@ -25,7 +25,8 @@ remaining work-PC checks.
 
 > [!NOTE]
 > Live validation against Azure DevOps Server 2020 is in progress. Connections, projects,
-> builds and test runs have been confirmed; the opt-in checks in `tests/Live` cover the rest.
+> builds and test runs have been confirmed; the opt-in checks in `tests/Live` and the manual
+> checks in the release notes cover the rest.
 
 ## Features
 
@@ -134,11 +135,10 @@ pwsh -NoProfile -File .\tools\dev.ps1 verify
 `verify` is the complete gate. It prints one JSON document and exits with `0` when
 all checks pass, `1` when a check fails, and `2` when the run is incomplete, for
 example because a prerequisite is missing. It lints the PowerShell code, runs the
-tooling tests, checks configuration files and the links and paths in the documentation,
-lints the GitHub workflows, builds the solution, and runs the Core tests under `en-US` and
-`fr-CA`. It then stages
-the package and runs the product Pester tests against it. All tests run offline against
-synthetic data.
+tooling tests, checks configuration files, the links and paths in the documentation and
+the layout of the agent tooling, lints the GitHub workflows, builds the solution, and runs
+the Core tests under `en-US` and `fr-CA`. It then stages the package and runs the product
+Pester tests against it. All tests run offline against synthetic data.
 
 To build release assets locally, run `tools\package\Publish-AdoToolkitPackage.ps1` and
 then `tools\package\New-AdoToolkitRelease.ps1`. Pushing a `v<version>` tag runs the same
@@ -153,9 +153,9 @@ Actions. For details and the other `dev.ps1` commands, see
 | --- | --- |
 | `src/AdoToolkit.Core` | HTTP pipeline, services, domain model, parsers and report renderers; no dependencies beyond the .NET base class library |
 | `src/AdoToolkit.PowerShell` | Cmdlets, argument completers, format views and the module manifest |
-| `tests/AdoToolkit.Core.Tests` | xUnit tests, including golden report files |
+| `tests/AdoToolkit.Core.Tests` | xUnit tests, including the golden report tests |
 | `tests/AdoToolkit.PowerShell.Tests` | Pester tests against the staged module and a loopback fake server |
-| `tests/Fixtures` | Synthetic fixtures, listed in [tests/Fixtures/README.md](tests/Fixtures/README.md) |
+| `tests/Fixtures` | Synthetic fixtures and golden report files, listed in [tests/Fixtures/README.md](tests/Fixtures/README.md) |
 | `tests/Live` | Optional checks against a live server; `verify` never runs them |
 | `tools` | `dev.ps1` developer CLI, product gate, packaging and release scripts, tooling tests |
 | `.github` | The release workflow, the pull request check, their shared setup action and the Dependabot configuration |

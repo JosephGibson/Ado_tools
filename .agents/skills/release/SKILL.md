@@ -90,6 +90,7 @@ List unrelated working-tree paths above the commands; command 1 stages everythin
 
 Set `<message>` to one line, `AdoToolkit <new>: <summary>`, following
 `git log --oneline`. The summary contains no quote; the message has no body or trailer.
+Leave out the ` (#<n>)` that ends a subject on `main`: the squash merge appends it.
 
 Report the gate, built assets with size/SHA-256, public contract changes and unfixed
 findings. Fill every placeholder in these templates and give each on one line in its
@@ -109,7 +110,11 @@ $title = '<message>'; $body = 'Release of AdoToolkit <new>, published from tag v
 
 Developer steps after running them:
 
-1. Create the pull request on the opened page; merge after the verify workflow passes.
-2. Watch the release workflow and compare its five assets/checksums. For failures, use
+1. Create the pull request on the opened page, keeping its title.
+2. After the verify workflow passes, merge with Squash and merge. Keep the proposed
+   commit title, `<message> (#<n>)`: the pull-request title, then its number.
+3. Watch the release workflow and compare its five assets/checksums. For failures, use
    Release workflow in `docs/tooling.md`.
-3. Run work-PC live checks with the published package.
+4. Run work-PC live checks with the published package.
+5. Start the next branch from the updated `main`: the squash leaves the commits of
+   `<branch>`, and the tag `v<new>`, out of its history.

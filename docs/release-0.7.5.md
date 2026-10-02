@@ -14,7 +14,7 @@ test runs.
 
 0.7.5 adds no cmdlet, no parameter and no configuration key. The configuration file format,
 the JSON report schema and the seven-file package layout are unchanged. The
-[0.7.0 notes](release-0.7.0.md) still describe the failed-test report and the concurrent
+[0.7.0 notes](archive/release-0.7.0.md) still describe the failed-test report and the concurrent
 requests. The IDs B1 to B13 and T1 to T13 point to the table under Bug fixes.
 
 ### Cmdlets and Core
@@ -157,15 +157,15 @@ that no longer matched the code were corrected.
 | `RichTextImageAlt` and `PartialTestCase` keep an ordinary space before a colon in French | Rendered reports hold them; they change only through the `update-goldens` skill, with the French wording reviewed. `FrenchTerminologyTests` lists them |
 | B5 was not run in a browser | The test reads the script text. Check 3 below does it |
 | The rollback of `Install-AdoToolkit.ps1` (T8) has no test of its own | The logic is that of `Move-AdoPackageDirectory`, which has one. Forcing a failed rename in the standalone script needs a seam that it does not have |
-| The findings of 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.7.0](release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
+| The findings of 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
 
 ### Known limitations
 
 | Limitation | Notes |
 | --- | --- |
-| Concurrent requests (V-33) | Unconfirmed at work, as in the [0.7.0 notes](release-0.7.0.md#known-limitations). If Server 2020 refuses or delays several requests, set `testResults.maximumConcurrentRequests` to `1` |
+| Concurrent requests (V-33) | Unconfirmed at work, as in the [0.7.0 notes](archive/release-0.7.0.md#known-limitations). If Server 2020 refuses or delays several requests, set `testResults.maximumConcurrentRequests` to `1` |
 | Server behavior behind V-14, V-19, V-27 and V-30 | The guides now say that these are unconfirmed. This release confirmed or contradicted none of them |
-| Limits carried over | The [0.7.0](release-0.7.0.md#known-limitations), [0.6.5](archive/release-0.6.5.md#known-limitations) and [0.6.0](archive/release-0.6.0.md#known-limitations) known limitations still apply, with V-31, V-32 and V-02 |
+| Limits carried over | The [0.7.0](archive/release-0.7.0.md#known-limitations), [0.6.5](archive/release-0.6.5.md#known-limitations) and [0.6.0](archive/release-0.6.0.md#known-limitations) known limitations still apply, with V-31, V-32 and V-02 |
 
 ## Work-PC Live checks
 
@@ -178,7 +178,7 @@ still apply: variables stay on the work PC, raw responses are not sent back, and
 | Rank | Check | Evidence to seek |
 | --- | --- | --- |
 | 1 | Record `Get-FileHash` of `%APPDATA%\AdoToolkit\config.json`, install 0.7.5, then run `Get-AdoProfile` and `Connect-Ado` | The hash is unchanged, no warning appears, and `Get-Module AdoToolkit -ListAvailable` shows 0.7.5 with seven files in its folder |
-| 2 | V-33, as in rank 2 of the [0.7.0 checks](release-0.7.0.md#work-pc-live-checks): the same build with the default configuration and with `maximumConcurrentRequests` at `1` | Equal counts, `Status` and diagnostic codes, and no refused or throttled request. Report the error ID, the counts and the two durations only |
+| 2 | V-33, as in rank 2 of the [0.7.0 checks](archive/release-0.7.0.md#work-pc-live-checks): the same build with the default configuration and with `maximumConcurrentRequests` at `1` | Equal counts, `Status` and diagnostic codes, and no refused or throttled request. Report the error ID, the counts and the two durations only |
 | 3 | `$set \| Export-AdoBuildTestFailure -Open` for a build whose tests link a bug of another project, in the browser used at work; open a history cell, then click **Expand all** | The bug link of an attempt opens the bug in its own project. **Expand all** shows the Details view with the cards opened. No Content Security Policy error in the console |
 | 4 | `TestFailures.Live.ps1` and `TestCase.Live.ps1` with the 0.7.5 package | One verdict per check ID, none printed twice. The verdicts of V-19 to V-25 and V-30, and of V-01, V-02, V-03, V-05, V-10 and V-13, as before. A missing field is named in a `FAIL` line, never a crash |
 | 5 | At the prompt, `Connect-Ado -Profile "<first letters of a real profile>` and `Connect-Ado -Project "<first letters of a project>`, then Tab, after `Get-AdoProject` | Each completes to a quoted, pasteable name, and no request is sent |

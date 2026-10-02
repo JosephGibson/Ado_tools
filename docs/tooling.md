@@ -225,6 +225,10 @@ git push <remote> :refs/tags/v<version>; git tag -d v<version>
 2. Installs the toolchain with the [setup action](#setup-action).
 3. Restores in locked mode and runs `verify`. Any exit code other than `0` fails the check.
 
+A pull request that passes is merged with Squash and merge, under the commit title GitHub
+proposes: the pull-request title, then ` (#<number>)`. The `release` skill sets the title
+of a release pull request, `AdoToolkit <version>: <summary>`.
+
 ### Setup action
 
 `.github/actions/setup/action.yml` is a composite action that both workflows run after

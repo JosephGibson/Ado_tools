@@ -2,7 +2,7 @@
 
 PowerShell toolkit for Azure DevOps Server 2020: compiled C# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 
-**Version 0.7.5** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.7.10** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
@@ -10,7 +10,9 @@ DevOps. Its cmdlets return typed objects that you can use in pipelines, and it w
 standalone HTML, Markdown or JSON reports when you need a document. All messages,
 report labels and help are available in English and French.
 
-Version 0.7.5 fixes defects that a repository audit found and adds no feature: a lost
+Version 0.7.10 changes how a release pull request is merged, not what AdoToolkit does: the
+cmdlets, the reports, the help and the configuration file are those of 0.7.5. Version 0.7.5
+fixed defects that a repository audit found and added no feature: a lost
 connection is reported as one, a bug of another project links to its own project in the
 failed-test report, a build definition ID of any integer type is accepted, and a
 whitespace-only `-Field` or `-Query` is refused before any request. Version 0.7.0 reworked
@@ -24,7 +26,7 @@ and history view with the history of each reported test. The cmdlets and their p
 are unchanged; the [changelog](CHANGELOG.md) says what a script can notice. Profiles hold
 your default project, branch, build definition, test plan and test suite; see the
 [configuration file](docs/guides/configuration.md#profiles). The
-[release notes](docs/release-0.7.5.md) list every change, the validation evidence and the
+[release notes](docs/release-0.7.10.md) list every change, the validation evidence and the
 remaining work-PC checks.
 
 > [!NOTE]
@@ -121,7 +123,7 @@ Profiles, connections and the other options are described in
 | Test Case JSON report format | [testcase.v1.schema.json](docs/schemas/testcase.v1.schema.json) |
 | Developer CLI, validation and prerequisites | [Developer tooling](docs/tooling.md) |
 | What changes for users in each version | [Changelog](CHANGELOG.md) |
-| Release notes | [Version 0.7.5](docs/release-0.7.5.md), with links to the earlier notes |
+| Release notes | [Version 0.7.10](docs/release-0.7.10.md), with links to the earlier notes |
 | Original specification, delivery plans, design notes and earlier release notes | [Archive](docs/archive/README.md) |
 | Rules for coding agents | [AGENTS.md](AGENTS.md) |
 

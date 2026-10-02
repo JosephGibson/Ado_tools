@@ -53,11 +53,18 @@ public sealed class ThemeContrastTests
     {
         string html = TestFailureReportFixture.Render();
         string css = Asset("test-failures.css");
-        foreach (string name in new[] { "report-brand", "section-heading", "count-label", "count-value", "attempt-title", "attempt-meta" })
+        foreach (string name in new[] { "report-brand", "section-heading", "count-label", "count-value", "attempt-title" })
         {
             Assert.Contains("class=\"" + name + "\"", html, StringComparison.Ordinal);
             Assert.Contains("." + name + " {", css, StringComparison.Ordinal);
         }
+        // The duration and the machine of an attempt share one class and each have their own.
+        foreach (string name in new[] { "attempt-duration", "attempt-machine" })
+        {
+            Assert.Contains("class=\"attempt-meta " + name + "\"", html, StringComparison.Ordinal);
+            Assert.Contains("." + name + " {", css, StringComparison.Ordinal);
+        }
+        Assert.Contains(".attempt-meta {", css, StringComparison.Ordinal);
         string print = css[css.IndexOf("@media print", StringComparison.Ordinal)..];
         Assert.Contains(".top-bar { max-height: none; overflow: visible; position: static; }", print, StringComparison.Ordinal);
         Assert.Contains(".code-section.hide-framework .framework-frame { display: inline; }", print, StringComparison.Ordinal);

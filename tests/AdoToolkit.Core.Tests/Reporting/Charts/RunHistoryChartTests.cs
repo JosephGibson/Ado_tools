@@ -20,8 +20,9 @@ public sealed class RunHistoryChartTests
         AdoBuildTestSummary[] history = [Summary(1, 3, 2, 1, 1), Summary(2, 0, 0, 0, 0, available: false), Summary(3, 1, 0, 1, 0, current: true)];
         string html = Render(history, culture);
         Assert.Contains("<svg", html, StringComparison.Ordinal);
-        Assert.Contains("<details class=\"history-data\">", html, StringComparison.Ordinal);
-        Assert.Contains("<table><caption>", html, StringComparison.Ordinal);
+        // The table is always visible: no <details> that only a script could open.
+        Assert.Contains("<div class=\"history-data\"><div class=\"table-scroll\"><table><caption>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<details", html, StringComparison.Ordinal);
         Assert.Contains("class=\"chart-current\"", html, StringComparison.Ordinal);
         Assert.Contains("class=\"chart-hatch\"", html, StringComparison.Ordinal);
         Assert.Contains(current, html, StringComparison.Ordinal);

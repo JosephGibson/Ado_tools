@@ -8,7 +8,8 @@ using AdoToolkit.Core.TestRuns;
 namespace AdoToolkit.Core.Tests.TestRuns;
 
 // Bugs of reported tests: associated with a result, or of a Bug-category type linked to the Test Case
-// by any work item link. Open means the state category is neither Completed nor Removed.
+// by any work item link. Open means the state category is neither Completed nor Removed; a closed
+// bug is left out of the set and of the report.
 public sealed class TestBugResolutionTests
 {
     private const string CustomType = "/workitemtypes/D%C3%A9faut%20de%20production/states";
@@ -25,8 +26,9 @@ public sealed class TestBugResolutionTests
         using FakeHttpMessageHandler handler = fixture.Handler();
         AdoBuildTestFailureSet set = await RetrieveAsync(handler);
         AdoTestFailure valid = Failure(set, "Valid");
-        // The User Story and Shared Steps are linked too, but only Bug-category types are bugs.
-        Assert.Equal([3001, 3002, 3080], valid.Bugs.Select(static bug => bug.Id));
+        // The User Story and Shared Steps are linked too, but only Bug-category types are bugs, and
+        // bug 3002 is closed.
+        Assert.Equal([3001, 3080], valid.Bugs.Select(static bug => bug.Id));
         AdoTestBug tested = valid.Bugs[0];
         Assert.Equal("Le total ignore la remise", tested.Title);
         Assert.Equal("Active", tested.State);
@@ -38,12 +40,10 @@ public sealed class TestBugResolutionTests
         Assert.True(tested.IsLinkedToTestCase);
         Assert.False(tested.IsAssociatedWithResult);
         Assert.Equal("https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/3001", tested.WebUrl.AbsoluteUri);
-        Assert.False(valid.Bugs[1].IsOpen);
-        Assert.Equal("Completed", valid.Bugs[1].StateCategory);
         // A custom link type to a custom type in the Bug category still counts.
-        Assert.Equal("Défaut de production", valid.Bugs[2].WorkItemType);
-        Assert.Equal("Proposed", valid.Bugs[2].StateCategory);
-        Assert.True(valid.Bugs[2].IsOpen);
+        Assert.Equal("Défaut de production", valid.Bugs[1].WorkItemType);
+        Assert.Equal("Proposed", valid.Bugs[1].StateCategory);
+        Assert.True(valid.Bugs[1].IsOpen);
         Assert.True(valid.HasOpenBug);
         Assert.All(set.Failures.Where(static failure => failure.ShortName != "Valid"), static failure => Assert.Empty(failure.Bugs));
         Assert.Empty(set.Diagnostics);
@@ -66,8 +66,10 @@ public sealed class TestBugResolutionTests
         using FakeHttpMessageHandler handler = fixture.Handler();
         AdoBuildTestFailureSet set = await RetrieveAsync(handler);
         AdoTestFailure valid = Failure(set, "Valid");
-        Assert.Equal([2001, 2002], valid.Bugs.Select(static bug => bug.Id));
-        AdoTestBug open = valid.Bugs[0];
+        // Bug 2002 is closed; the attempt still names it, because that list is the server's own.
+        AdoTestBug open = Assert.Single(valid.Bugs);
+        Assert.Equal(2001, open.Id);
+        Assert.Equal([2001, 2002], Assert.Single(valid.Attempts).AssociatedBugIds);
         Assert.Equal("Le panier perd un article", open.Title);
         Assert.True(open.IsAssociatedWithResult);
         Assert.False(open.IsLinkedToTestCase);
@@ -81,7 +83,7 @@ public sealed class TestBugResolutionTests
     }
 
     [Fact]
-    public async Task ClosedAndRemovedCategoriesAreNotOpenWhateverTheStateName()
+    public async Task BugsInTheCompletedAndRemovedCategoriesAreLeftOutWhateverTheStateName()
     {
         const string States = """{"count":4,"value":[{"name":"Nouveau","category":"Proposed"},{"name":"Corrigé","category":"Completed"},{"name":"Obsolète","category":"Removed"},{"name":"Vérifié","category":"Resolved"}]}""";
         TestRunFixture fixture = Scenario(Detail(101, null, 4001, 4002), Detail(102, null, 4003), Detail(103))
@@ -91,8 +93,8 @@ public sealed class TestBugResolutionTests
         using FakeHttpMessageHandler handler = fixture.Handler();
         AdoBuildTestFailureSet set = await RetrieveAsync(handler);
         AdoTestFailure valid = Failure(set, "Valid");
-        Assert.Equal(["Completed", "Removed"], valid.Bugs.Select(static bug => bug.StateCategory));
-        Assert.All(valid.Bugs, static bug => Assert.False(bug.IsOpen));
+        // Both of its bugs are closed, one by each category.
+        Assert.Empty(valid.Bugs);
         Assert.False(valid.HasOpenBug);
         // Resolved is not Completed, so a resolved bug is still open.
         AdoTestBug resolved = Assert.Single(Failure(set, "Missing").Bugs);
@@ -106,12 +108,13 @@ public sealed class TestBugResolutionTests
         // The overview and by-error rows mark only the test with an open bug.
         Assert.Equal(2, Count(html, ">Missing</a> <a class=\"open-bug-marker\" rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/4003\">Open bug</a>"));
         Assert.Equal(2, Count(html, "class=\"open-bug-marker\""));
-        Assert.Contains("<li data-bug=\"4001\"><a rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/4001\">#4001",
-            html, StringComparison.Ordinal);
-        Assert.Contains("<span class=\"bug-title\">Corrigé hier</span> <span class=\"bug-state\">Corrigé</span></li>", html, StringComparison.Ordinal);
+        foreach (string closed in new[] { "data-bug=\"4001\"", "data-bug=\"4002\"", "edit/4001", "edit/4002", "Corrigé hier", "Doublon" })
+            Assert.DoesNotContain(closed, html, StringComparison.Ordinal);
         Assert.Contains("<li data-bug=\"4003\" data-open-bug>", html, StringComparison.Ordinal);
-        Assert.Contains("<span class=\"bug-state\">Vérifié</span> <span class=\"bug-open\">Open</span></li>", html, StringComparison.Ordinal);
-        Assert.Equal(1, Count(html, "class=\"bug-open\""));
+        // Every listed bug is open, so the card says nothing more after the state.
+        Assert.Contains("<span class=\"bug-state\">Vérifié</span></li>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("class=\"bug-open\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("class=\"bug-unread\"", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -147,6 +150,8 @@ public sealed class TestBugResolutionTests
         Assert.Contains("Les bogues des tests du build 401 n’ont pas pu être lus", html, StringComparison.Ordinal);
         Assert.Contains("<li data-bug=\"2001\"><a rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/2001\">#2001",
             html, StringComparison.Ordinal);
+        // The card says that the bug was not read.
+        Assert.Contains("</a> <span class=\"bug-unread\">Non lu</span></li>", html, StringComparison.Ordinal);
         Assert.DoesNotContain("class=\"open-bug-marker\"", html, StringComparison.Ordinal);
         Assert.DoesNotContain("class=\"bug-open\"", html, StringComparison.Ordinal);
         Assert.DoesNotContain("data-open-bug", html, StringComparison.Ordinal);
@@ -162,11 +167,12 @@ public sealed class TestBugResolutionTests
         using FakeHttpMessageHandler handler = fixture.Handler();
         AdoBuildTestFailureSet set = await RetrieveAsync(handler);
         AdoTestFailure valid = Failure(set, "Valid");
-        // Only the type named Bug counts, so the custom bug type is not recognised.
-        Assert.Equal([3001, 3002], valid.Bugs.Select(static bug => bug.Id));
-        Assert.All(valid.Bugs, static bug => Assert.Null(bug.StateCategory));
-        Assert.True(valid.Bugs[0].IsOpen);
-        Assert.False(valid.Bugs[1].IsOpen);
+        // Only the type named Bug counts, so the custom bug type is not recognised, and bug 3002 is
+        // left out because Closed is a default closed state.
+        AdoTestBug kept = Assert.Single(valid.Bugs);
+        Assert.Equal(3001, kept.Id);
+        Assert.Null(kept.StateCategory);
+        Assert.True(kept.IsOpen);
         AdoDiagnostic diagnostic = Assert.Single(set.Diagnostics);
         Assert.Equal(DiagnosticCodes.BugMetadataUnavailable, diagnostic.Code);
         Assert.Equal(AdoDiagnosticSeverity.Warning, diagnostic.Severity);
@@ -193,6 +199,16 @@ public sealed class TestBugResolutionTests
         Assert.Equal(DiagnosticCodes.UnresolvedBug, diagnostic.Code);
         Assert.Equal(2003, diagnostic.WorkItemId);
         Assert.Equal(["2003"], diagnostic.Arguments);
+
+        // An unread bug may be open, so its ID stays linked in the card and in the attempt.
+        TestFailureReportModel model = TestFailureReportModelBuilder.Build(set, TestFailureReportFixture.Options("en-US"));
+        string html = TestFailureReportFixture.Render(model);
+        TestFailureReportValidator.Validate(new StringReader(html), model);
+        string card = Card(html, model.Failures.Single(static failure => failure.ShortName == "Valid"));
+        Assert.Contains("<li data-bug=\"2003\"><a rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/2003\">#2003",
+            card, StringComparison.Ordinal);
+        Assert.Equal(2, Count(card, "<dt>Associated bugs</dt>"));
+        Assert.Equal(2, Count(card, "_workitems/edit/2003\">#2003"));
     }
 
     [Fact]
@@ -208,9 +224,10 @@ public sealed class TestBugResolutionTests
         TestFailureRetrievalService service = TestRunFixture.Service(client);
         AdoBuildTestFailureSet set = await service.GetAsync(TestRunFixture.Build(), new TestFailureQuery { HistoryCount = 1 },
             CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
-        Assert.Equal([2001, 3001, 3002, 3080], Failure(set, "Valid").Bugs.Select(static bug => bug.Id));
-        Assert.Equal([2001, 2002], Failure(set, "Missing").Bugs.Select(static bug => bug.Id));
-        Assert.Equal([3001, 3002, 3080], Failure(set, "Invalid").Bugs.Select(static bug => bug.Id));
+        // The closed bugs 2002 and 3002 are read with the others and left out of every list.
+        Assert.Equal([2001, 3001, 3080], Failure(set, "Valid").Bugs.Select(static bug => bug.Id));
+        Assert.Equal([2001], Failure(set, "Missing").Bugs.Select(static bug => bug.Id));
+        Assert.Equal([3001, 3080], Failure(set, "Invalid").Bugs.Select(static bug => bug.Id));
         // Source flags describe each test's own relation to the bug.
         Assert.False(Failure(set, "Valid").Bugs[0].IsLinkedToTestCase);
         Assert.True(Failure(set, "Valid").Bugs[1].IsLinkedToTestCase);
@@ -229,16 +246,19 @@ public sealed class TestBugResolutionTests
     public async Task BugInAnotherProjectUsesThatProjectsStatesAndLink()
     {
         const string States = """{"count":2,"value":[{"name":"Actif","category":"InProgress"},{"name":"Fermé","category":"Completed"}]}""";
-        TestRunFixture fixture = Scenario(Detail(101, null, 2001, 5001), Detail(102), Detail(103))
-            .RouteBatch(TestRunFixture.BugBatch, Items([.. Catalog(2001), Item(5001, "Écran mobile vide", "Fermé", project: "Équipe Mobile")]))
+        TestRunFixture fixture = Scenario(Detail(101, null, 2001, 5001, 5002), Detail(102), Detail(103))
+            .RouteBatch(TestRunFixture.BugBatch, Items([.. Catalog(2001), Item(5001, "Écran mobile vide", "Actif", project: "Équipe Mobile"),
+                Item(5002, "Ancien écran mobile", "Fermé", project: "Équipe Mobile")]))
             .Route("workitemtype-states-bug.json", "/%C3%89quipe%20Web/_apis/wit/workitemtypes/Bug/states")
             .RouteBody(States, "/%C3%89quipe%20Mobile/_apis/wit/workitemtypes/Bug/states");
         using FakeHttpMessageHandler handler = fixture.Handler();
         AdoBuildTestFailureSet set = await RetrieveAsync(handler);
+        // Fermé is Completed in the other project only, so bug 5002 is left out by that project's states.
+        Assert.Equal([2001, 5001], Failure(set, "Valid").Bugs.Select(static bug => bug.Id));
         AdoTestBug other = Failure(set, "Valid").Bugs[1];
         Assert.Equal("Équipe Mobile", other.TeamProject);
-        Assert.Equal("Completed", other.StateCategory);
-        Assert.False(other.IsOpen);
+        Assert.Equal("InProgress", other.StateCategory);
+        Assert.True(other.IsOpen);
         Assert.Equal("https://ado.example.test/Collection/%C3%89quipe%20Mobile/_workitems/edit/5001", other.WebUrl.AbsoluteUri);
         Assert.Empty(set.Diagnostics);
     }
@@ -248,22 +268,24 @@ public sealed class TestBugResolutionTests
     [Fact]
     public async Task UnusableBugProjectFallsBackToTheBuildProject()
     {
-        TestRunFixture fixture = Scenario(Detail(101, null, 5001, 5002, 5003), Detail(102), Detail(103))
+        TestRunFixture fixture = Scenario(Detail(101, null, 5001, 5002, 5003, 5004), Detail(102), Detail(103))
             .RouteBatch(TestRunFixture.BugBatch, Items(Item(5001, "Sans projet", "Active", project: ""),
-                Item(5002, "Projet vide", "Active", project: "  "), Item(5003, "Hors collection", "Closed", project: "..")))
+                Item(5002, "Projet vide", "Active", project: "  "), Item(5003, "Hors collection", "Closed", project: ".."),
+                Item(5004, "Hors collection, ouvert", "Active", project: "..")))
             .Route("workitemtype-states-bug.json", "/Collection/%C3%89quipe%20Web/_apis/wit/workitemtypes/Bug/states");
         using FakeHttpMessageHandler handler = fixture.Handler();
         AdoBuildTestFailureSet set = await RetrieveAsync(handler);
         AdoTestFailure valid = Failure(set, "Valid");
-        Assert.Equal([5001, 5002, 5003], valid.Bugs.Select(static bug => bug.Id));
+        // Bug 5003 is closed by the build project's states, which its unusable project falls back to.
+        Assert.Equal([5001, 5002, 5004], valid.Bugs.Select(static bug => bug.Id));
         Assert.All(valid.Bugs, static bug =>
         {
             Assert.True(bug.IsResolved);
+            Assert.True(bug.IsOpen);
             Assert.Null(bug.TeamProject);
             Assert.Equal("https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/" + bug.Id.ToString(CultureInfo.InvariantCulture),
                 bug.WebUrl.AbsoluteUri);
         });
-        Assert.Equal([true, true, false], valid.Bugs.Select(static bug => bug.IsOpen));
         Assert.All(handler.Requests, static request => Assert.StartsWith("/Collection/", request.Uri.AbsolutePath, StringComparison.Ordinal));
         Assert.Single(handler.Requests, static request => request.Uri.AbsolutePath.EndsWith("/workitemtypes/Bug/states", StringComparison.Ordinal));
         Assert.Empty(set.Diagnostics);
@@ -271,8 +293,81 @@ public sealed class TestBugResolutionTests
         TestFailureReportModel model = TestFailureReportModelBuilder.Build(set, TestFailureReportFixture.Options("en-US"));
         string html = TestFailureReportFixture.Render(model);
         TestFailureReportValidator.Validate(new StringReader(html), model);
-        Assert.Contains("<li data-bug=\"5003\"><a rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/5003\">#5003",
+        Assert.Contains("<li data-bug=\"5004\" data-open-bug><a rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/5004\">#5004",
             html, StringComparison.Ordinal);
+        Assert.DoesNotContain("5003", html, StringComparison.Ordinal);
+    }
+
+    // A closed bug is gone from the set and from every place the report could show it: the card's bug
+    // list, the attempt's associated bugs and the card's searchable text.
+    [Fact]
+    public async Task ClosedAssociatedAndLinkedBugsAreAbsentFromTheSetAndTheCard()
+    {
+        TestRunFixture fixture = Scenario(Detail(101, "1010", 2001, 2002), Detail(102), Detail(103))
+            .RouteBatch(TestRunFixture.BugBatch, Items(Catalog(2001, 2002, 3001, 3002, 3050, 3060, 3080)))
+            .Route("workitemtypecategory-bug.json", "/workitemtypecategories/Microsoft.BugCategory")
+            .Route("workitemtype-states-bug.json", "/workitemtypes/Bug/states")
+            .RouteBody(CustomStates, CustomType);
+        using FakeHttpMessageHandler handler = fixture.Handler();
+        AdoBuildTestFailureSet set = await RetrieveAsync(handler);
+        AdoTestFailure valid = Failure(set, "Valid");
+        // 2002 is associated with the result and 3002 is linked to the Test Case; both are closed.
+        Assert.Equal([2001, 3001, 3080], valid.Bugs.Select(static bug => bug.Id));
+        Assert.All(valid.Bugs, static bug => Assert.True(bug.IsOpen));
+        Assert.Equal([2001, 2002], Assert.Single(valid.Attempts).AssociatedBugIds);
+        Assert.Empty(set.Diagnostics);
+
+        TestFailureReportModel model = TestFailureReportModelBuilder.Build(set, TestFailureReportFixture.Options("en-US"));
+        string html = TestFailureReportFixture.Render(model);
+        TestFailureReportValidator.Validate(new StringReader(html), model);
+        string card = Card(html, model.Failures.Single(static failure => failure.ShortName == "Valid"));
+        Assert.Equal(3, Count(card, "<li data-bug="));
+        // The attempt links its open associated bug and no other.
+        Assert.Equal(1, Count(card, "<dt>Associated bugs</dt>"));
+        Assert.Contains("<dt>Associated bugs</dt><dd><a rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/2001\">#2001",
+            card, StringComparison.Ordinal);
+        string text = TestFailureMarkup.Text(card);
+        foreach (string closed in new[] { "2002", "3002", "Ancien délai d’expiration", "Arrondi du total" })
+        {
+            Assert.DoesNotContain(closed, card, StringComparison.Ordinal);
+            Assert.DoesNotContain(closed, text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public async Task TestWhoseOnlyBugIsClosedHasNoOpenBugAndNoBugMarkup()
+    {
+        TestRunFixture fixture = Scenario(Detail(101, null, 2002), Detail(102), Detail(103)).RouteBatch(TestRunFixture.BugBatch, Items(Catalog(2002)))
+            .Route("workitemtype-states-bug.json", "/workitemtypes/Bug/states");
+        using FakeHttpMessageHandler handler = fixture.Handler();
+        AdoBuildTestFailureSet set = await RetrieveAsync(handler);
+        AdoTestFailure valid = Failure(set, "Valid");
+        Assert.Empty(valid.Bugs);
+        Assert.False(valid.HasOpenBug);
+        Assert.Empty(set.Diagnostics);
+
+        TestFailureReportModel model = TestFailureReportModelBuilder.Build(set, TestFailureReportFixture.Options("en-US"));
+        string html = TestFailureReportFixture.Render(model);
+        TestFailureReportValidator.Validate(new StringReader(html), model);
+        foreach (string absent in new[] { "data-open-bug", "class=\"card-bugs\"", "class=\"open-bug-marker\"", "data-bug=", "edit/2002", "<dt>Associated bugs</dt>" })
+            Assert.DoesNotContain(absent, html, StringComparison.Ordinal);
+    }
+
+    // The default closed state names apply when a project's states cannot be read, so the project
+    // named by the warning may have no bug left in the set.
+    [Fact]
+    public async Task ClosedBugIsLeftOutByTheDefaultStateNamesAndTheMetadataWarningStays()
+    {
+        TestRunFixture fixture = Scenario(Detail(101, null, 2002), Detail(102), Detail(103))
+            .RouteBatch(TestRunFixture.BugBatch, Items(Catalog(2002)))
+            .RouteStatus(404, "{\"message\":\"Not found.\"}", "/workitemtypes/");
+        using FakeHttpMessageHandler handler = fixture.Handler();
+        AdoBuildTestFailureSet set = await RetrieveAsync(handler);
+        Assert.All(set.Failures, static failure => Assert.Empty(failure.Bugs));
+        AdoDiagnostic diagnostic = Assert.Single(set.Diagnostics);
+        Assert.Equal(DiagnosticCodes.BugMetadataUnavailable, diagnostic.Code);
+        Assert.Equal(["Équipe Web"], diagnostic.Arguments);
+        Assert.Equal(AdoTestFailureStatus.Complete, set.Status);
     }
 
     // The report can leave only the tests that no open bug tracks yet. The filter appears only when
@@ -292,10 +387,13 @@ public sealed class TestBugResolutionTests
             "<article class=\"card failure-card\" id=\"f-([0-9]+)\"[^>]* data-open-bug(?:\\s[^>]*)?>"));
         Assert.Equal(model.Failures.Single(static failure => failure.HasOpenBug).Ordinal.ToString(CultureInfo.InvariantCulture), card.Groups[1].Value);
 
-        TestRunFixture closed = Scenario(Detail(101, null, 2002), Detail(102), Detail(103)).RouteBugs();
+        // The batch answers only the requested bug: an unrequested one would fail the lookup instead.
+        TestRunFixture closed = Scenario(Detail(101, null, 2002), Detail(102), Detail(103)).RouteBatch(TestRunFixture.BugBatch, Items(Catalog(2002)))
+            .Route("workitemtype-states-bug.json", "/workitemtypes/Bug/states");
         using FakeHttpMessageHandler closedHandler = closed.Handler();
-        string none = TestFailureReportFixture.Render(TestFailureReportModelBuilder.Build(await RetrieveAsync(closedHandler),
-            TestFailureReportFixture.Options(culture)));
+        AdoBuildTestFailureSet closedSet = await RetrieveAsync(closedHandler);
+        Assert.Empty(closedSet.Diagnostics);
+        string none = TestFailureReportFixture.Render(TestFailureReportModelBuilder.Build(closedSet, TestFailureReportFixture.Options(culture)));
         Assert.DoesNotContain("data-toggle=\"untracked\"", none, StringComparison.Ordinal);
         Assert.DoesNotContain(" data-open-bug>", none, StringComparison.Ordinal);
     }
@@ -308,6 +406,13 @@ public sealed class TestBugResolutionTests
     }
 
     private static AdoTestFailure Failure(AdoBuildTestFailureSet set, string name) => Assert.Single(set.Failures, failure => failure.ShortName == name);
+
+    private static string Card(string html, AdoTestFailure failure)
+    {
+        int start = html.IndexOf("<article class=\"card failure-card\" id=\"f-" + failure.Ordinal.ToString(CultureInfo.InvariantCulture) + "\"", StringComparison.Ordinal);
+        Assert.True(start >= 0);
+        return html[start..html.IndexOf("</article>", start, StringComparison.Ordinal)];
+    }
 
     private static int Count(string text, string value)
     {

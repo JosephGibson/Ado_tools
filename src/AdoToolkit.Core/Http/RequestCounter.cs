@@ -2,30 +2,45 @@ namespace AdoToolkit.Core.Http;
 
 // Counts issued requests so a stage can enforce its own request budget (§15.12).
 // Retries count individually: the budget limits work sent to the server.
+// Requests may be issued from several threads at once, so the limit is enforced atomically.
 internal sealed class RequestCounter
 {
+    private readonly RequestCounter? parent;
+    private readonly int limit;
     private int count;
+
+    internal RequestCounter() : this(null, int.MaxValue) { }
+
+    private RequestCounter(RequestCounter? parent, int limit)
+    {
+        this.parent = parent;
+        this.limit = limit;
+    }
+
     internal int Count => Volatile.Read(ref count);
 
-    private int limit = int.MaxValue;
+    // True once the limit is reached: every further request of this stage is refused.
+    internal bool IsSpent => Count >= limit;
 
+    // Counts one request here and in every enclosing counter, or refuses it when this counter's own
+    // limit is reached. A refusal therefore means that the budget is fully spent.
     internal void Increment()
     {
-        if (Count >= limit) throw new RequestBudgetExceededException();
-        Interlocked.Increment(ref count);
+        while (true)
+        {
+            int current = Volatile.Read(ref count);
+            if (current >= limit) throw new RequestBudgetExceededException();
+            if (Interlocked.CompareExchange(ref count, current + 1, current) == current) break;
+        }
+        parent?.Increment();
     }
 
-    // Retrieval stages are sequential. Dispose restores the enclosing stage's limit.
-    internal IDisposable Limit(int maximumRequests)
+    // A stage's own counter: at most maximumRequests requests, each also counted by this counter.
+    // Requests of other stages that run at the same time never spend the stage's budget.
+    internal RequestCounter Child(int maximumRequests)
     {
-        int previous = limit;
-        limit = (int)Math.Min(previous, (long)Count + maximumRequests);
-        return new BudgetScope(() => limit = previous);
-    }
-
-    private sealed class BudgetScope(Action restore) : IDisposable
-    {
-        public void Dispose() => restore();
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumRequests);
+        return new RequestCounter(this, maximumRequests);
     }
 }
 

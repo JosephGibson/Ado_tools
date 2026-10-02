@@ -12,6 +12,9 @@ public sealed class TestFailureExportOptions
     public bool NoClobber { get; init; }
     public bool SkipAttachments { get; init; }
     public bool AllRunAttachments { get; init; }
+    // JSON and text attachments of at most this size are downloaded from every run inside the
+    // window, whatever AllRunAttachments says. The same limit decides what a report previews.
+    public long MaximumInlineJsonBytes { get; init; } = 262144;
     // Attachments are listed and downloaded only for runs started this many days before GeneratedAt.
     public int AttachmentWindowDays { get; init; } = TestFailureReportOptions.DefaultAttachmentWindowDays;
     public bool IncludeFlaky { get; init; }

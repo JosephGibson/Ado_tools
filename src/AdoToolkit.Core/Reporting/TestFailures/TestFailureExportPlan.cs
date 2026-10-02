@@ -1,4 +1,5 @@
 using AdoToolkit.Core.IO;
+using AdoToolkit.Core.TestRuns;
 
 namespace AdoToolkit.Core.Reporting.TestFailures;
 
@@ -6,12 +7,12 @@ namespace AdoToolkit.Core.Reporting.TestFailures;
 public sealed class TestFailureExportPlan
 {
     internal TestFailureExportPlan(TestFailureReportModel model, GenerationFolderPlan commit, TestFailureExportOptions options,
-        bool downloadsAttachments, IReadOnlySet<int> attachmentRunIds)
+        bool downloadsAttachments, AttachmentSelection attachments)
     {
         Model = model;
         Commit = commit;
         Options = options;
-        AttachmentRunIds = attachmentRunIds;
+        Attachments = attachments;
         AttachmentDirectory = downloadsAttachments ? commit.FolderPath : null;
     }
 
@@ -24,6 +25,6 @@ public sealed class TestFailureExportPlan
     internal TestFailureReportModel Model { get; }
     internal GenerationFolderPlan Commit { get; }
     internal TestFailureExportOptions Options { get; }
-    // Runs whose JSON and text attachments are downloaded; DownloadsAttachments still gates the operation.
-    internal IReadOnlySet<int> AttachmentRunIds { get; }
+    // The JSON and text attachments that are downloaded; DownloadsAttachments still gates the operation.
+    internal AttachmentSelection Attachments { get; }
 }

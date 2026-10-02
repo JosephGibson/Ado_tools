@@ -5,8 +5,9 @@ using AdoToolkit.Core.TestRuns;
 namespace AdoToolkit;
 
 // One AdoBuildTestFailureSet per input build. The invocation cache is shared across records, so
-// piped builds of one definition read each earlier build's history once (§17). Session state is touched only
-// on the pipeline thread; the worker gets the leased client and the record's log.
+// piped builds of one definition read each earlier build's history, their Test Cases and the bug
+// metadata of each project once (§17). Session state is touched only on the pipeline thread; the
+// worker gets the leased client and the record's log, which it may call from several threads.
 // ByDefinition is the default so that a call without arguments uses the connected profile's
 // definition and branch; BuildId still binds by position and builds still bind from the pipeline.
 [Cmdlet(VerbsCommon.Get, "AdoBuildTestFailure", DefaultParameterSetName = "ByDefinition")]
@@ -66,6 +67,7 @@ public sealed class GetAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
             HistoryScope = HistoryScope ?? Scope(options.HistoryScope),
             MaximumReportedFailures = options.MaximumReportedFailures,
             MaximumHistoryRequests = options.MaximumHistoryRequests,
+            MaximumConcurrentRequests = options.MaximumConcurrentRequests,
         };
         CultureInfo culture = MessageCulture;
         // ByDefinition selects the latest completed build, as Get-AdoBuild -Latest does.

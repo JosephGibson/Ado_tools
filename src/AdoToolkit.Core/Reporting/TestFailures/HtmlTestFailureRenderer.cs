@@ -9,9 +9,9 @@ using AdoToolkit.Core.TestRuns;
 
 namespace AdoToolkit.Core.Reporting.TestFailures;
 
-// One scanned page per build: views for an overview table, failures grouped by error, compact
-// failure cards, and runs with history. Every section renders without scripts; the script only
-// switches views, filters and navigates. Every <details> starts closed.
+// One scanned page per build: views for an overview table, failures grouped by error, failures
+// grouped by bug, compact failure cards, and runs with history. Every section renders without
+// scripts; the script only switches views, filters and navigates. Every <details> starts closed.
 public static partial class HtmlTestFailureRenderer
 {
     private const int MaximumSummaryCharacters = 240;
@@ -99,9 +99,12 @@ public static partial class HtmlTestFailureRenderer
     [GeneratedRegex("[0-9]+", RegexOptions.CultureInvariant)]
     private static partial Regex Digits();
 
+    private sealed record BugEntry(AdoTestBug Bug, IReadOnlyList<(AdoTestFailure Failure, AdoTestBug Bug)> Tests);
+
     private sealed class Document(TestFailureReportModel model, TextWriter writer)
     {
-        private long inlined;
+        private HashSet<string>? previews;
+        private IReadOnlyList<BugEntry>? bugEntries;
         private CultureInfo Culture => model.Culture;
         private Uri Collection => model.Build.CollectionUri;
         private string Project => model.Build.TeamProject;
@@ -114,6 +117,8 @@ public static partial class HtmlTestFailureRenderer
         private static string N(int value) => value.ToString(CultureInfo.InvariantCulture);
         private static string Anchor(AdoTestFailure failure) => "f-" + N(failure.Ordinal);
         private static string Anchor(AdoTestFailure failure, AdoTestAttempt attempt) => Anchor(failure) + "-a" + N(attempt.Number);
+        private static string Anchor(AdoTestFailure failure, AdoTestAttempt attempt, AdoTestAttachment attachment) =>
+            Anchor(failure, attempt) + "-att" + N(attachment.Id);
         private string? Duration(TimeSpan? value) => value.HasValue ? F(AdoMessage.TestReportSeconds, value.Value.TotalSeconds) : null;
         // Server times are UTC; every time shows in the export's offset, like the generation time.
         private string? Date(DateTimeOffset? value) => value?.ToOffset(model.GeneratedAt.Offset).ToString("g", Culture);
@@ -146,10 +151,12 @@ public static partial class HtmlTestFailureRenderer
             W("<main id=\"report-content\">\n");
             Overview();
             ByError();
+            Bugs();
             Details();
             Runs();
             Diagnostics();
             W("</main>\n");
+            Footer();
             W("<p class=\"copy-feedback\" role=\"status\" data-copy-status hidden data-label-done=\""); T(L("Copied")); W("\" data-label-selected=\""); T(L("SelectCopy")); W("\"></p>\n");
             W("<script>"); W(script); W("</script>\n</body>\n</html>\n");
         }
@@ -169,7 +176,8 @@ public static partial class HtmlTestFailureRenderer
                 if (model.CommitUrl is not null) Link(model.CommitUrl, version[..7]); else T(version);
                 W("</span>");
             }
-            if (model.Build.Result is not null) { W("<span>"); T(model.Build.Result); W("</span>"); }
+            if (model.Build.Result is { } result)
+            { W("<span class=\"build-result" + (ResultStatus(result) is { } status ? " status-" + status : "") + "\">"); T(result); W("</span>"); }
             if (model.Build.FinishTime is not null) { W("<span>"); T(L("Finished") + " " + Date(model.Build.FinishTime)); W("</span>"); }
             W("<span class=\"results-link\">"); Link(model.ResultsUrl, L("Result")); W("</span>");
             Chip("failed", "✕ " + L("Failed"), model.FailedCount, null);
@@ -185,10 +193,19 @@ public static partial class HtmlTestFailureRenderer
             W("</div></header>\n");
         }
 
+        // The colour of the build result. The class comes from this list, never from the server's
+        // text; a value that is not listed has no colour.
+        private static string? ResultStatus(string result) =>
+            string.Equals(result, "succeeded", StringComparison.OrdinalIgnoreCase) ? "passed"
+            : string.Equals(result, "partiallySucceeded", StringComparison.OrdinalIgnoreCase) ? "flaky"
+            : string.Equals(result, "failed", StringComparison.OrdinalIgnoreCase) ? "failed"
+            : string.Equals(result, "canceled", StringComparison.OrdinalIgnoreCase) ? "other" : null;
+
         private IEnumerable<(string Id, string Label)> Views()
         {
             yield return ("overview", L("Overview"));
             yield return ("by-error", L("ByError"));
+            yield return ("bugs", L("OpenBugs") + " " + BugEntries.Count.ToString(Culture));
             yield return ("details", L("Details"));
             yield return ("runs", L("RunsAndHistory"));
             if (HasDiagnostics) yield return ("diagnostics", M(AdoMessage.ReportDiagnostics) + " " + model.Diagnostics.Count.ToString(Culture));
@@ -227,7 +244,7 @@ public static partial class HtmlTestFailureRenderer
         {
             W("<section class=\"view\" id=\"overview\" data-view>\n"); Heading(2, L("Overview"));
             if (model.Failures.Count == 0) { W("<p>"); T(L("NoFailures")); W("</p>\n</section>\n"); return; }
-            W("<p class=\"text-muted legend\">"); T(L("GroupLegend")); W("</p>\n<p data-no-matches hidden>"); T(L("NoMatches")); W("</p>\n");
+            Legend(); W("<p data-no-matches hidden>"); T(L("NoMatches")); W("</p>\n");
             W("<div class=\"table-scroll\"><table class=\"failure-table\">\n"); TableHead(error: true);
             W("<tbody>\n");
             foreach (AdoTestFailure failure in model.Failures) Row(failure, error: true, strip: true);
@@ -238,7 +255,7 @@ public static partial class HtmlTestFailureRenderer
         {
             W("<section class=\"view\" id=\"by-error\" data-view>\n"); Heading(2, L("ByError"));
             if (model.Failures.Count == 0) { W("<p>"); T(L("NoFailures")); W("</p>\n</section>\n"); return; }
-            W("<p data-no-matches hidden>"); T(L("NoMatches")); W("</p>\n<div class=\"table-scroll\"><table class=\"failure-table by-error\">\n");
+            Legend(); W("<p data-no-matches hidden>"); T(L("NoMatches")); W("</p>\n<div class=\"table-scroll\"><table class=\"failure-table by-error\">\n");
             TableHead(error: false);
             var clusters = model.Failures.Select(failure => (Failure: failure, Line: LatestError(failure)))
                 .GroupBy(item => item.Line is null ? null : ErrorKey(item.Line), StringComparer.Ordinal)
@@ -254,23 +271,68 @@ public static partial class HtmlTestFailureRenderer
             W("</table></div>\n</section>\n");
         }
 
-        private void TableHead(bool error)
+        // One entry per bug, each with the tests it is linked to. A bug that was read comes before one
+        // that was not; among read bugs the one with the most tests comes first. Ties follow the bug ID.
+        private IReadOnlyList<BugEntry> BugEntries => bugEntries ??= [.. model.Failures
+            .SelectMany(failure => failure.Bugs.Where(bug => bug.Id > 0).DistinctBy(bug => bug.Id).Select(bug => (Failure: failure, Bug: bug)))
+            .GroupBy(item => item.Bug.Id)
+            .Select(group => new BugEntry(group.First().Bug, [.. group]))
+            .OrderBy(entry => entry.Bug.IsOpen is null ? 1 : 0)
+            .ThenByDescending(entry => entry.Bug.IsOpen is null ? 0 : entry.Tests.Count)
+            .ThenBy(entry => entry.Bug.Id)];
+
+        // The By error table, clustered by bug. A test with several bugs has one row under each.
+        private void Bugs()
+        {
+            W("<section class=\"view\" id=\"bugs\" data-view>\n"); Heading(2, L("OpenBugs"));
+            if (model.Failures.Count == 0) { W("<p>"); T(L("NoFailures")); W("</p>\n</section>\n"); return; }
+            if (BugEntries.Count == 0) { W("<p>"); T(L("NoOpenBugs")); W("</p>\n</section>\n"); return; }
+            Legend(); W("<p data-no-matches hidden>"); T(L("NoMatches")); W("</p>\n<div class=\"table-scroll\"><table class=\"failure-table by-error by-bug\">\n");
+            TableHead(error: false, source: true);
+            int columns = 4 + (Grouping.IsGrouped ? Grouping.Labels.Count : 1);
+            foreach (BugEntry entry in BugEntries)
+            {
+                AdoTestBug bug = entry.Bug;
+                W("<tbody class=\"error-cluster\" data-bug=\"" + N(bug.Id) + "\"><tr class=\"cluster-heading\"><th scope=\"colgroup\" colspan=\"" + N(columns) + "\"><span class=\"cluster-count\">");
+                T(entry.Tests.Count.ToString(Culture)); W("</span> ");
+                // The bug's own project, as in the card: a bug can live in another project than the build.
+                Link(AdoWebLinks.WorkItem(Collection, bug.TeamProject ?? Project, bug.Id), "#" + bug.Id.ToString(Culture));
+                if (bug.Title is not null) { W(" <span class=\"bug-title\">"); T(bug.Title); W("</span>"); }
+                if (bug.State is not null) { W(" <span class=\"bug-state\">"); T(bug.State); W("</span>"); }
+                if (bug.IsOpen is null) { W(" <span class=\"bug-unread\">"); T(L("BugNotRead")); W("</span>"); }
+                W("</th></tr>\n");
+                foreach ((AdoTestFailure failure, AdoTestBug link) in entry.Tests) Row(failure, error: false, strip: false, marker: false, source: Source(link));
+                W("</tbody>\n");
+            }
+            W("</table></div>\n</section>\n");
+        }
+
+        // How one test is linked to a bug: through a test result, through its Test Case, or both.
+        private string Source(AdoTestBug bug) => string.Join(", ", new[] { bug.IsAssociatedWithResult ? L("Result") : null, bug.IsLinkedToTestCase ? L("TestCase") : null }
+            .Where(static label => label is not null));
+
+        // What the glyphs and the n/m counts mean, above every table of tests that shows them.
+        private void Legend() { W("<p class=\"text-muted legend\">"); T(L("GroupLegend")); W("</p>\n"); }
+
+        private void TableHead(bool error, bool source = false)
         {
             W("<thead><tr><th scope=\"col\">#</th><th scope=\"col\">"); T(L("Test")); W("</th><th scope=\"col\">"); T(L("TestCase")); W("</th>");
             if (Grouping.IsGrouped)
                 for (int index = 0; index < Grouping.Labels.Count; index++) { W("<th scope=\"col\">"); T(GroupLabel(index)); W("</th>"); }
             else { W("<th scope=\"col\">"); T(L("Attempts")); W("</th>"); }
             if (error) { W("<th scope=\"col\">"); T(L("LatestError")); W("</th>"); }
+            if (source) { W("<th scope=\"col\">"); T(L("BugSource")); W("</th>"); }
             W("</tr></thead>\n");
         }
 
-        private void Row(AdoTestFailure failure, bool error, bool strip)
+        // marker is the Open bug link after the name; source, when given, is one more cell at the end.
+        private void Row(AdoTestFailure failure, bool error, bool strip, bool marker = true, string? source = null)
         {
             string anchor = Anchor(failure);
-            W("<tr data-index-for=\"" + anchor + "\"><td class=\"col-number\">"); Glyph(Status(failure)); W(" " + N(failure.Ordinal) + "</td><td class=\"col-test\"><a href=\"#" + anchor + "\">");
+            W("<tr data-index-for=\"" + anchor + "\">"); Number(failure); W("<td class=\"col-test\"><a href=\"#" + anchor + "\">");
             T(failure.ShortName); W("</a>");
             // Before the class name, so a long name that is cut off never hides it.
-            if (failure.Bugs.Where(bug => bug.Id > 0 && bug.IsOpen == true).MinBy(bug => bug.Id) is { } openBug)
+            if (marker && failure.Bugs.Where(bug => bug.Id > 0 && bug.IsOpen == true).MinBy(bug => bug.Id) is { } openBug)
             {
                 W(" <a class=\"open-bug-marker\" rel=\"noreferrer\" href=\"");
                 T(AdoWebLinks.WorkItem(Collection, openBug.TeamProject ?? Project, openBug.Id).AbsoluteUri);
@@ -287,9 +349,21 @@ public static partial class HtmlTestFailureRenderer
                 for (int index = 0; index < Grouping.Labels.Count; index++)
                     GroupCell(failure, groups.FirstOrDefault(g => g.Group == index).Attempts ?? [], strip);
             else GroupCell(failure, failure.Attempts, strip);
-            if (error) { W("<td class=\"col-error\">"); T(LatestError(failure)); W("</td>"); }
+            if (error)
+            {
+                // The cell cuts a long line; the title holds all of it.
+                string? line = LatestError(failure);
+                W("<td class=\"col-error\"");
+                if (line is not null) { W(" title=\""); T(line); W("\""); }
+                W(">"); T(line); W("</td>");
+            }
+            if (source is not null) { W("<td class=\"col-source\">"); T(source); W("</td>"); }
             W("</tr>\n");
         }
+
+        // The status glyph and the ordinal, in a span of its own so that 1, 10 and 100 end at the same place.
+        private void Number(AdoTestFailure failure)
+        { W("<td class=\"col-number\">"); Glyph(Status(failure)); W(" <span class=\"ordinal\">" + N(failure.Ordinal) + "</span></td>"); }
 
         private void GroupCell(AdoTestFailure failure, IReadOnlyList<AdoTestAttempt> attempts, bool strip)
         {
@@ -350,7 +424,7 @@ public static partial class HtmlTestFailureRenderer
                 W(" data-failing=\"" + string.Join(' ', groups.Where(g => g.Group.HasValue && TestFailureGroups.Status(g.Attempts) == AdoTestHistoryOutcome.Failed)
                     .Select(g => N(g.Group!.Value))) + "\"");
             W(">\n<header><span class=\"failure-number\" aria-hidden=\"true\">" + N(failure.Ordinal) + "</span>"); StatusPresentation.Write(writer, Status(failure), Culture);
-            W("<h2 data-short-name>"); T(failure.ShortName); W("</h2>"); TestCaseHeading(failure.TestCase);
+            W("<h3 data-short-name>"); T(failure.ShortName); W("</h3>"); TestCaseHeading(failure.TestCase);
             W("<span class=\"card-links\">");
             if (failure.Attempts.Count > 0)
             { AdoTestAttempt last = failure.Attempts[^1]; Link(Result(last.RunId, last.ResultId), L("Result")); Link(AdoWebLinks.TestRun(Collection, Project, last.RunId), L("Run")); }
@@ -362,13 +436,12 @@ public static partial class HtmlTestFailureRenderer
             BugList(failure.Bugs);
             if (failure.History.Count > 0)
             { W("<div class=\"card-history\"><span class=\"strip-label\">"); T(L("History")); W("</span>"); HistoryStrip.Write(writer, failure.History, Collection, Project, Culture); W("</div>\n"); }
-            Dictionary<string, int> errors = new(StringComparer.Ordinal), stacks = new(StringComparer.Ordinal);
             foreach ((int? group, IReadOnlyList<AdoTestAttempt> attempts) in groups)
             {
                 if (!Grouping.IsGrouped)
                 {
                     PipelineNames(attempts);
-                    foreach (AdoTestAttempt attempt in attempts) Attempt(failure, attempt, errors, stacks);
+                    foreach (AdoTestAttempt attempt in attempts) Attempt(failure, attempt);
                     continue;
                 }
                 W("<details class=\"attempt-group\" id=\"" + anchor + "-g" + N((group ?? Grouping.Labels.Count) + 1) + "\"><summary><span class=\"group-label\">");
@@ -376,19 +449,19 @@ public static partial class HtmlTestFailureRenderer
                 W(" <span class=\"group-count\">"); T(F(AdoMessage.TestReportGroupFailed, attempts.Count(a => a.OutcomeClass == AdoTestOutcomeClass.Failure), attempts.Count)); W("</span>");
                 Strip(failure, attempts, links: false); W("</summary>\n");
                 PipelineNames(attempts);
-                foreach (AdoTestAttempt attempt in attempts) Attempt(failure, attempt, errors, stacks);
+                foreach (AdoTestAttempt attempt in attempts) Attempt(failure, attempt);
                 W("</details>\n");
             }
             W("</article>\n");
         }
 
-        private void Attempt(AdoTestFailure failure, AdoTestAttempt attempt, Dictionary<string, int> errors, Dictionary<string, int> stacks)
+        private void Attempt(AdoTestFailure failure, AdoTestAttempt attempt)
         {
             W("<details class=\"attempt\" id=\"" + Anchor(failure, attempt) + "\">");
             W("<summary><span class=\"attempt-title\">"); T(F(AdoMessage.TestReportAttemptOf, attempt.Number, failure.Attempts.Count)); W("</span> ");
             Outcome(attempt.Outcome, attempt.OutcomeClass);
-            if (attempt.Duration is not null) { W(" <span class=\"attempt-meta\">"); T(Duration(attempt.Duration)); W("</span>"); }
-            if (attempt.ComputerName is not null) { W(" <span class=\"attempt-meta\">"); T(attempt.ComputerName); W("</span>"); }
+            if (attempt.Duration is not null) { W(" <span class=\"attempt-meta attempt-duration\">"); T(Duration(attempt.Duration)); W("</span>"); }
+            if (attempt.ComputerName is not null) { W(" <span class=\"attempt-meta attempt-machine\">"); T(attempt.ComputerName); W("</span>"); }
             if (FirstLine(attempt.ErrorMessage) is { } line) { W(" <span class=\"attempt-error\">"); T(line); W("</span>"); }
             W("</summary>\n<dl class=\"metadata-grid\">");
             AdoTestRun? run = model.Runs.FirstOrDefault(r => r.Id == attempt.RunId);
@@ -400,27 +473,20 @@ public static partial class HtmlTestFailureRenderer
             Field(M(AdoMessage.ReportId), attempt.SubResultId); Field(L("RunBy"), Identity(attempt.RunBy));
             Field(L("FailureType"), attempt.FailureType); Field(L("Resolution"), attempt.ResolutionState);
             if (attempt.FailingSinceBuildId is > 0) FieldLink(L("FailingSince"), AdoWebLinks.Build(Collection, Project, attempt.FailingSinceBuildId.Value), attempt.FailingSinceBuildId.Value.ToString(Culture));
-            foreach (int bug in attempt.AssociatedBugIds.Where(id => id > 0).Distinct()) FieldLink(L("Bugs"), AdoWebLinks.WorkItem(Collection, Project, bug), "#" + bug.ToString(Culture));
+            // An associated ID that is not among the test's bugs is a closed bug, which the report leaves out.
+            foreach (int bug in attempt.AssociatedBugIds.Where(id => id > 0 && failure.Bugs.Any(known => known.Id == id)).Distinct())
+                FieldLink(L("Bugs"), AdoWebLinks.WorkItem(Collection, Project, bug), "#" + bug.ToString(Culture));
             Field(L("Comment"), attempt.Comment); W("</dl>\n");
-            // Text repeated from an earlier attempt of the same failure is referenced, not repeated.
-            int? sameError = attempt.ErrorMessage is { Length: > 0 } error && errors.TryGetValue(error, out int e) ? e : null;
-            int? sameStack = attempt.StackTrace is { Length: > 0 } stack && stacks.TryGetValue(stack, out int s) ? s : null;
-            if (sameError is int both && sameStack == both) SameAs(failure, "SameBoth", both);
-            else
-            {
-                if (sameError is int earlier) SameAs(failure, "SameError", earlier); else Code(attempt.ErrorMessage, CodeLanguage.ErrorMessage);
-                if (sameStack is int previous) SameAs(failure, "SameStack", previous); else Code(attempt.StackTrace, CodeLanguage.StackTrace);
-            }
-            if (!string.IsNullOrEmpty(attempt.ErrorMessage)) errors.TryAdd(attempt.ErrorMessage, attempt.Number);
-            if (!string.IsNullOrEmpty(attempt.StackTrace)) stacks.TryAdd(attempt.StackTrace, attempt.Number);
+            // Every attempt shows its own message and trace, even when an earlier attempt had the same text.
+            Code(attempt.ErrorMessage, CodeLanguage.ErrorMessage); Code(attempt.StackTrace, CodeLanguage.StackTrace);
             if (attempt.SubResults.Count > 0)
             {
-                Heading(3, L("SubResults"));
+                Heading(4, L("SubResults"));
                 foreach (AdoTestSubResult sub in attempt.SubResults) SubResult(sub);
             }
             if (attempt.Iterations.Count > 0)
             {
-                Heading(3, L("Iterations"));
+                Heading(4, L("Iterations"));
                 foreach (AdoTestIteration iteration in attempt.Iterations) Iteration(iteration);
             }
             AttachmentList(failure, attempt);
@@ -437,17 +503,7 @@ public static partial class HtmlTestFailureRenderer
             Field(L("Instance"), PipelineName(run.JobName)); W("</dl>\n");
         }
 
-        // The label holds {0} where the attempt link goes, so word order follows the culture.
-        private void SameAs(AdoTestFailure failure, string key, int number)
-        {
-            string template = L(key);
-            int slot = template.IndexOf("{0}", StringComparison.Ordinal);
-            W("<p class=\"same-as\">"); T(template[..slot]);
-            W("<a href=\"#" + Anchor(failure) + "-a" + N(number) + "\">"); T(number.ToString(Culture)); W("</a>");
-            T(template[(slot + 3)..]); W("</p>\n");
-        }
-
-        private void SubResult(AdoTestSubResult sub, int headingLevel = 4)
+        private void SubResult(AdoTestSubResult sub, int headingLevel = 5)
         {
             W("<section class=\"sub-result\" data-sub-result=\"" + N(sub.Id) + "\">"); Heading(headingLevel, sub.DisplayName ?? sub.Id.ToString(Culture));
             Outcome(sub.Outcome, sub.OutcomeClass);
@@ -461,11 +517,11 @@ public static partial class HtmlTestFailureRenderer
 
         private void Iteration(AdoTestIteration iteration)
         {
-            W("<section class=\"iteration\" data-iteration=\"" + N(iteration.Id) + "\"><h4>"); T(L("Iterations") + " " + iteration.Id.ToString(Culture)); W("</h4>");
+            W("<section class=\"iteration\" data-iteration=\"" + N(iteration.Id) + "\"><h5>"); T(L("Iterations") + " " + iteration.Id.ToString(Culture)); W("</h5>");
             W("<dl class=\"metadata-grid\">"); Field(L("Outcome"), iteration.Outcome); W("</dl>"); Code(iteration.ErrorMessage, CodeLanguage.ErrorMessage);
             if (iteration.Parameters.Count > 0)
             {
-                Heading(5, M(AdoMessage.ReportParameters)); W("<dl class=\"metadata-grid\">");
+                Heading(6, M(AdoMessage.ReportParameters)); W("<dl class=\"metadata-grid\">");
                 foreach (AdoTestIterationParameter parameter in iteration.Parameters) Field(parameter.Name, parameter.Value);
                 W("</dl>\n");
             }
@@ -481,16 +537,17 @@ public static partial class HtmlTestFailureRenderer
         private void AttachmentList(AdoTestFailure failure, AdoTestAttempt attempt)
         {
             if (attempt.Attachments.Count == 0) return;
-            Heading(3, L("Attachments")); W("<ul class=\"attachment-list\">\n");
+            Heading(4, L("Attachments")); W("<ul class=\"attachment-list\">\n");
             foreach (AdoTestAttachment attachment in attempt.Attachments)
             {
-                W("<li id=\"" + Anchor(failure, attempt) + "-att" + N(attachment.Id) + "\"");
+                string anchor = Anchor(failure, attempt, attachment);
+                W("<li id=\"" + anchor + "\"");
                 if (attachment.DownloadStatus != AdoTestAttachmentStatus.NotRequested)
                     W(" data-download-status=\"" + attachment.DownloadStatus.ToString().ToLowerInvariant() + "\"");
                 W(">");
                 // Browser navigation uses Windows authentication to download the original, for every file type.
                 Link(AdoWebLinks.TestResultAttachment(Collection, Project, attachment.RunId, attachment.ResultId, attachment.Id, attachment.SubResultId), attachment.FileName);
-                if (attachment.Size.HasValue) { W(" <span class=\"attachment-size\">"); T(F(AdoMessage.TestReportBytes, attachment.Size.Value)); W("</span>"); }
+                if (attachment.Size.HasValue) { W(" "); Size(attachment.Size.Value, " class=\"attachment-size\""); }
                 // GeneralAttachment is the default type of nearly every attachment, so only other types show.
                 string? type = string.Equals(attachment.AttachmentType, "GeneralAttachment", StringComparison.OrdinalIgnoreCase) ? null : attachment.AttachmentType;
                 if (attachment.Comment is not null || type is not null || attachment.SubResultId is not null)
@@ -498,15 +555,49 @@ public static partial class HtmlTestFailureRenderer
                     W("<dl class=\"metadata-grid\">"); Field(L("Comment"), attachment.Comment); Field(L("AttachmentType"), type);
                     Field(M(AdoMessage.ReportId), attachment.SubResultId); W("</dl>");
                 }
-                LocalAttachment(attachment);
+                LocalAttachment(attachment, anchor);
                 W("</li>\n");
             }
             W("</ul>\n");
         }
 
+        // The previews a report shows are chosen before anything is written: the attachments of the
+        // latest run first, then those of the other runs, each in the order the cards show them. One
+        // is admitted while the total stays within the inline limit; one that does not fit is passed
+        // over, and a later, smaller one can still fit. Each listing has its own anchor.
+        private HashSet<string> Previews => previews ??= ChoosePreviews();
+
+        private HashSet<string> ChoosePreviews()
+        {
+            HashSet<string> chosen = new(StringComparer.Ordinal);
+            if (model.LocalAttachments is not { } limits) return chosen;
+            IReadOnlyList<AdoTestRun> runs = AttemptGrouper.OrderRuns(model.Runs);
+            int? latest = runs.Count > 0 ? runs[^1].Id : null;
+            long total = 0;
+            for (int pass = 0; pass < 2; pass++)
+                foreach (AdoTestFailure failure in model.Failures)
+                    foreach (AdoTestAttempt attempt in Groups(failure).SelectMany(static group => group.Attempts))
+                        foreach (AdoTestAttachment attachment in attempt.Attachments)
+                        {
+                            if ((attachment.RunId == latest) != (pass == 0) || !Previewable(attachment, limits, out long length)
+                                || total + length > limits.MaximumInlineTotalBytes) continue;
+                            total += length;
+                            chosen.Add(Anchor(failure, attempt, attachment));
+                        }
+            return chosen;
+        }
+
+        // Verified JSON or text that was downloaded and is small enough to show.
+        private bool Previewable(AdoTestAttachment attachment, TestFailureLocalAttachments limits, out long length)
+        {
+            length = LocalFile(attachment)?.Length ?? 0;
+            return length > 0 && length <= limits.MaximumInlineJsonBytes && attachment.DownloadStatus == AdoTestAttachmentStatus.Downloaded
+                && attachment.Kind is AdoTestAttachmentKind.Json or AdoTestAttachmentKind.Text;
+        }
+
         // Writes the local link, status notes and a collapsed preview of verified JSON or text. Local
         // names and hrefs are toolkit-generated; the remote name appears only as encoded text.
-        private void LocalAttachment(AdoTestAttachment attachment)
+        private void LocalAttachment(AdoTestAttachment attachment, string anchor)
         {
             (string Href, string Name, long Length)? file = LocalFile(attachment);
             string? note = attachment.DownloadStatus switch
@@ -522,17 +613,16 @@ public static partial class HtmlTestFailureRenderer
                 && attachment.Kind is AdoTestAttachmentKind.Json or AdoTestAttachmentKind.Text;
             TestFailureLocalAttachments? limits = model.LocalAttachments;
             if (preview && file!.Value.Length > limits!.MaximumInlineJsonBytes) { note = L("NotInlinedSize"); preview = false; }
-            else if (preview && inlined + file!.Value.Length > limits!.MaximumInlineTotalBytes) { note = L("NotInlinedBudget"); preview = false; }
+            else if (preview && !Previews.Contains(anchor)) { note = L("NotInlinedBudget"); preview = false; }
             W("<div class=\"attachment-local\">");
             if (file is { } local)
             {
                 W("<a class=\"local-file\" data-local-file href=\""); T(local.Href); W("\">"); T(L("LocalCopy"));
-                W("</a> <code>"); T(local.Name); W("</code> <span>"); T(F(AdoMessage.TestReportBytes, local.Length)); W("</span>");
+                W("</a> <code>"); T(local.Name); W("</code> "); Size(local.Length);
             }
             if (note is not null) { W("<p class=\"attachment-status\">"); T(note); W("</p>"); }
             W("</div>");
             if (!preview || file is not { } source) return;
-            inlined += source.Length;
             // Display only: replacement decoding with byte order mark detection, so UTF-16 logs read too.
             string text;
             using (StreamReader reader = new(Path.Combine(limits!.SourceFolder, source.Name), new UTF8Encoding(false, false), detectEncodingFromByteOrderMarks: true))
@@ -559,6 +649,19 @@ public static partial class HtmlTestFailureRenderer
             return (Uri.EscapeDataString(local.FolderName) + "/" + Uri.EscapeDataString(name), name, length);
         }
 
+        // Bytes up to 1,024. Above that, kilobytes or megabytes with one decimal, and the exact
+        // number of bytes as the title.
+        private void Size(long bytes, string attributes = "")
+        {
+            string exact = F(AdoMessage.TestReportBytes, bytes);
+            if (bytes <= 1024) { W("<span" + attributes + ">"); T(exact); W("</span>"); return; }
+            double kilobytes = bytes / 1024d;
+            // A value that would print as 1,024.0 KB is a megabyte.
+            bool mega = Math.Round(kilobytes, 1, MidpointRounding.AwayFromZero) >= 1024;
+            W("<span" + attributes + " title=\""); T(exact); W("\">");
+            T(mega ? F(AdoMessage.TestReportMegabytes, kilobytes / 1024d) : F(AdoMessage.TestReportKilobytes, kilobytes)); W("</span>");
+        }
+
         private void Code(string? text, CodeLanguage language)
         {
             if (string.IsNullOrEmpty(text)) return;
@@ -572,7 +675,8 @@ public static partial class HtmlTestFailureRenderer
             W("</div>"); HighlightedCodeWriter.Write(writer, text, language, Culture); W("</div>\n");
         }
 
-        // Every bug of the test with its title and state; a bug that could not be read shows its ID link only.
+        // Every bug of the test with its title and state. Each one is open, except a bug that could
+        // not be read: it shows its ID link and says so.
         private void BugList(IReadOnlyList<AdoTestBug> bugs)
         {
             if (!bugs.Any(b => b.Id > 0)) return;
@@ -583,7 +687,7 @@ public static partial class HtmlTestFailureRenderer
                 Link(AdoWebLinks.WorkItem(Collection, bug.TeamProject ?? Project, bug.Id), "#" + bug.Id.ToString(Culture));
                 if (bug.Title is not null) { W(" <span class=\"bug-title\">"); T(bug.Title); W("</span>"); }
                 if (bug.State is not null) { W(" <span class=\"bug-state\">"); T(bug.State); W("</span>"); }
-                if (bug.IsOpen == true) { W(" <span class=\"bug-open\">"); T(L("Open")); W("</span>"); }
+                if (bug.IsOpen is null) { W(" <span class=\"bug-unread\">"); T(L("BugNotRead")); W("</span>"); }
                 W("</li>");
             }
             W("</ul></div>\n");
@@ -599,57 +703,144 @@ public static partial class HtmlTestFailureRenderer
             W("</span>");
         }
 
+        // The build's runs with what each one ran and holds, then the run history as a chart, as a
+        // table of builds and as a table of tests.
         private void Runs()
         {
             W("<section class=\"view\" id=\"runs\" data-view>\n"); Heading(2, L("RunsAndHistory"));
-            W("<p class=\"window-note\">"); T(F(AdoMessage.TestReportWindowNote, Date(model.AttachmentWindowStart)!, model.OmittedAttachmentCount)); W("</p>\n");
             // Runs of one group sit together, in attempt order; the name columns already say the group.
-            IReadOnlyList<AdoTestRun> runs = [.. AttemptGrouper.OrderRuns(model.Runs).Select((run, order) => (Run: run, Order: order))
+            IReadOnlyList<AdoTestRun> ordered = AttemptGrouper.OrderRuns(model.Runs);
+            IReadOnlyList<AdoTestRun> runs = [.. ordered.Select((run, order) => (Run: run, Order: order))
                 .OrderBy(item => Grouping.GroupOf(item.Run.Id) ?? int.MaxValue).ThenBy(item => item.Order).Select(item => item.Run)];
             if (runs.Count > 0)
             {
+                Heading(3, L("TestRuns"));
                 bool stage = runs.Any(r => PipelineName(r.StageName) is not null), job = runs.Any(r => PipelineName(r.PhaseName) is not null),
                     instance = runs.Any(r => PipelineName(r.JobName) is not null);
-                HashSet<int> downloaded = [.. model.Failures.SelectMany(f => f.Attempts).SelectMany(a => a.Attachments)
-                    .Where(a => LocalFile(a) is not null).Select(a => a.RunId)];
-                W("<div class=\"table-scroll\"><table class=\"runs-table\"><thead><tr><th scope=\"col\">"); T(L("Run")); W("</th>");
-                if (stage) { W("<th scope=\"col\">"); T(L("Stage")); W("</th>"); }
-                if (job) { W("<th scope=\"col\">"); T(L("Job")); W("</th>"); }
-                if (instance) { W("<th scope=\"col\">"); T(L("Instance")); W("</th>"); }
-                foreach (string key in new[] { "AttemptNumbers", "Started", "State", "Tests", "Passed", "Attachments" }) { W("<th scope=\"col\">"); T(L(key)); W("</th>"); }
+                // The state says something only when a run has not completed; otherwise every row repeats it.
+                bool state = runs.Any(static r => !string.Equals(r.State, "Completed", StringComparison.OrdinalIgnoreCase));
+                // The latest run is the one whose larger attachments are downloaded by default.
+                int latest = ordered[^1].Id;
+                W("<div class=\"table-scroll\"><table class=\"runs-table\"><thead><tr>");
+                ColumnHead(L("Run"));
+                if (stage) ColumnHead(L("Stage"));
+                if (job) ColumnHead(L("Job"));
+                if (instance) ColumnHead(L("Instance"));
+                ColumnHead(L("AttemptNumbers")); ColumnHead(L("Started")); ColumnHead(L("Duration"), numeric: true);
+                if (state) ColumnHead(L("State"));
+                ColumnHead(L("Tests"), numeric: true); ColumnHead(L("Passed"), numeric: true); ColumnHead(L("Failed"), numeric: true);
+                ColumnHead(L("ReportedTests"), numeric: true); ColumnHead(L("Attachments"));
                 W("</tr></thead>\n<tbody>\n");
                 foreach (AdoTestRun run in runs)
                 {
-                    W("<tr data-run=\"" + N(run.Id) + "\"><td>"); Link(AdoWebLinks.TestRun(Collection, Project, run.Id), run.Name.Length > 0 ? run.Name : run.Id.ToString(Culture));
-                    W(" <span class=\"text-muted\">"); T(run.Id.ToString(Culture)); W("</span></td>");
+                    bool inWindow = model.AttachmentRunIds.Contains(run.Id);
+                    W("<tr data-run=\"" + N(run.Id) + "\"" + (run.Id == latest ? " data-latest-run" : "") + (inWindow ? "" : " class=\"outside-window\"") + "><td>");
+                    Link(AdoWebLinks.TestRun(Collection, Project, run.Id), run.Name.Length > 0 ? run.Name : run.Id.ToString(Culture));
+                    W(" <span class=\"text-muted\">"); T(run.Id.ToString(Culture)); W("</span>");
+                    if (run.Id == latest) { W(" <span class=\"latest-run\">"); T(L("LatestRun")); W("</span>"); }
+                    W("</td>");
                     if (stage) Cell(PipelineName(run.StageName));
                     if (job) Cell(PipelineName(run.PhaseName));
                     if (instance) Cell(PipelineName(run.JobName));
-                    Cell(string.Join(" / ", new[] { run.StageAttempt, run.PhaseAttempt, run.PipelineAttempt }.Where(v => v.HasValue).Select(v => v!.Value.ToString(Culture))));
-                    Cell(Date(run.StartedDate)); Cell(run.State); Cell(run.TotalTests?.ToString(Culture)); Cell(run.PassedTests?.ToString(Culture));
-                    Cell(downloaded.Contains(run.Id) ? L("Downloaded") : model.AttachmentRunIds.Contains(run.Id) ? L("Listed") : L("OutsideWindow"));
+                    // Always three places, so a lone number cannot be read as another level's attempt.
+                    Cell(string.Join(" / ", new[] { run.StageAttempt, run.PhaseAttempt, run.PipelineAttempt }.Select(v => v?.ToString(Culture) ?? "–")));
+                    Cell(Date(run.StartedDate)); Cell(RunDuration(run), numeric: true);
+                    if (state) Cell(run.State);
+                    Cell(run.TotalTests?.ToString(Culture), numeric: true); Cell(run.PassedTests?.ToString(Culture), numeric: true);
+                    // Empty when the server sent no per-outcome statistics: an absent count is not zero.
+                    Cell(run.OutcomeCounts.Count == 0 ? null : run.OutcomeCounts.Where(static pair => OutcomeClassifier.Classify(pair.Key) == AdoTestOutcomeClass.Failure)
+                        .Sum(static pair => (long)pair.Value).ToString(Culture), numeric: true);
+                    Cell(model.Failures.Count(f => f.Attempts.Any(a => a.RunId == run.Id)).ToString(Culture), numeric: true);
+                    AdoTestAttachment[] listed = [.. model.Failures.SelectMany(f => f.Attempts).SelectMany(a => a.Attachments).Where(a => a.RunId == run.Id)
+                        .DistinctBy(static a => (a.ResultId, a.SubResultId, a.Id))];
+                    Cell(inWindow ? F(AdoMessage.TestReportRunAttachmentCounts, listed.Length, listed.Count(a => LocalFile(a) is not null)) : L("OutsideWindow"));
                     W("</tr>\n");
                 }
                 W("</tbody></table></div>\n");
             }
+            W("<p class=\"window-note\">"); T(F(AdoMessage.TestReportWindowNote, Date(model.AttachmentWindowStart)!, model.OmittedAttachmentCount)); W("</p>\n");
             W("<section class=\"history-panel\" id=\"history\">\n"); Heading(3, L("History"));
             RunHistoryChart.Write(writer, model.History, Collection, Project, Culture, model.GeneratedAt.Offset); W("\n</section>\n");
-            W("<dl class=\"secondary-line\">");
-            Field(M(AdoMessage.ReportGeneratedAt), Date(model.GeneratedAt)); Field(M(AdoMessage.ReportToolkitVersion), model.ToolkitVersion);
-            Field(M(AdoMessage.ReportServer), Collection.GetLeftPart(UriPartial.Authority)); Field(M(AdoMessage.ReportCollection), Collection.AbsolutePath);
-            Field(M(AdoMessage.ReportProject), Project); W("</dl>\n</section>\n");
+            HistoryByTest();
+            W("</section>\n");
         }
 
-        private void Cell(string? value) { W("<td>"); T(value); W("</td>"); }
+        // h:mm:ss, the same in every culture; null when the run has no start, no end, or ends before it starts.
+        private static string? RunDuration(AdoTestRun run) =>
+            run.CompletedDate - run.StartedDate is { } elapsed && elapsed >= TimeSpan.Zero
+                ? ((long)elapsed.TotalHours).ToString(CultureInfo.InvariantCulture) + elapsed.ToString(@"\:mm\:ss", CultureInfo.InvariantCulture) : null;
+
+        // One row per reported test with its outcome in every build of the history, oldest first, and
+        // the number of builds in a row, ending with this one, in which it failed or was flaky. The
+        // cards hold the same cells one test at a time; here they can be compared across tests.
+        private void HistoryByTest()
+        {
+            if (model.Failures.Count == 0 || model.History.Count == 0) return;
+            Heading(3, L("HistoryByTest"));
+            W("<div class=\"table-scroll\"><table class=\"failure-table history-by-test\">\n<thead><tr><th scope=\"col\">#</th>");
+            ColumnHead(L("Test"));
+            foreach (AdoBuildTestSummary build in model.History) { W("<th scope=\"col\" class=\"col-build\">"); T(build.BuildNumber); W("</th>"); }
+            ColumnHead(L("ConsecutiveFailures"), numeric: true);
+            W("</tr></thead>\n<tbody>\n");
+            foreach (AdoTestFailure failure in model.Failures)
+            {
+                string anchor = Anchor(failure);
+                W("<tr data-index-for=\"" + anchor + "\">"); Number(failure); W("<td class=\"col-test\"><a href=\"#" + anchor + "\">");
+                T(failure.ShortName); W("</a>");
+                if (AttemptGrouper.ClassName(failure.TestName) is { } type) { W(" <span class=\"text-muted\">"); T(type); W("</span>"); }
+                W("</td>");
+                // A result without an automated name has no history cells.
+                foreach (AdoBuildTestSummary build in model.History)
+                {
+                    W("<td class=\"col-build\">");
+                    if (failure.History.FirstOrDefault(entry => entry.BuildId == build.BuildId) is { } cell) Glyph(cell.Outcome);
+                    else W("<span class=\"text-muted\">—</span>");
+                    W("</td>");
+                }
+                W("<td class=\"num\">");
+                if (failure.History.Count == 0) W("<span class=\"text-muted\">—</span>");
+                else T(failure.History.Reverse().TakeWhile(static cell => cell.Outcome is AdoTestHistoryOutcome.Failed or AdoTestHistoryOutcome.Flaky).Count().ToString(Culture));
+                W("</td></tr>\n");
+            }
+            W("</tbody></table></div>\n");
+        }
+
+        // When and where the report was made, under every view.
+        private void Footer()
+        {
+            W("<footer class=\"report-footer\"><dl class=\"secondary-line\">");
+            Field(M(AdoMessage.ReportGeneratedAt), Date(model.GeneratedAt)); Field(M(AdoMessage.ReportToolkitVersion), model.ToolkitVersion);
+            Field(M(AdoMessage.ReportServer), Collection.GetLeftPart(UriPartial.Authority)); Field(M(AdoMessage.ReportCollection), Collection.AbsolutePath);
+            Field(M(AdoMessage.ReportProject), Project); W("</dl></footer>\n");
+        }
+
+        private void ColumnHead(string label, bool numeric = false)
+        { W(numeric ? "<th scope=\"col\" class=\"num\">" : "<th scope=\"col\">"); T(label); W("</th>"); }
+
+        private void Cell(string? value, bool numeric = false) { W(numeric ? "<td class=\"num\">" : "<td>"); T(value); W("</td>"); }
 
         private void Diagnostics()
         {
             if (!HasDiagnostics) return;
-            W("<section class=\"view\" id=\"diagnostics\" data-view>\n"); Heading(2, M(AdoMessage.ReportDiagnostics));
-            foreach (AdoDiagnostic diagnostic in model.Diagnostics)
+            W("<section class=\"view\" id=\"diagnostics\" data-view>\n<h2 class=\"section-heading\">"); T(M(AdoMessage.ReportDiagnostics));
+            // Errors, then warnings, then information; the sort keeps the order within each.
+            AdoDiagnostic[] ordered = [.. model.Diagnostics.OrderByDescending(static diagnostic => diagnostic.Severity)];
+            foreach (IGrouping<AdoDiagnosticSeverity, AdoDiagnostic> severity in ordered.GroupBy(static diagnostic => diagnostic.Severity))
             {
-                W("<div class=\"diagnostic\" data-severity=\""); T(diagnostic.Severity.ToString().ToLowerInvariant()); W("\" data-diagnostic=\""); T(diagnostic.Code); W("\"><strong>");
-                T(L(diagnostic.Severity.ToString())); W(" · "); T(diagnostic.Code); W("</strong><p>"); T(diagnostic.Message); W("</p></div>\n");
+                W(" <span class=\"diagnostic-count\" data-severity=\"" + severity.Key.ToString().ToLowerInvariant() + "\">"); T(L(severity.Key.ToString()));
+                W(" <strong>"); T(severity.Count().ToString(Culture)); W("</strong></span>");
+            }
+            W("</h2>\n");
+            if (ordered.Length > 0)
+            {
+                W("<ul class=\"diagnostic-list\">\n");
+                foreach (AdoDiagnostic diagnostic in ordered)
+                {
+                    W("<li data-severity=\"" + diagnostic.Severity.ToString().ToLowerInvariant() + "\" data-diagnostic=\""); T(diagnostic.Code);
+                    W("\"><span class=\"diagnostic-severity\">"); T(L(diagnostic.Severity.ToString())); W("</span> <code>"); T(diagnostic.Code);
+                    W("</code> <span class=\"diagnostic-message\">"); T(diagnostic.Message); W("</span></li>\n");
+                }
+                W("</ul>\n");
             }
             W("</section>\n");
         }
@@ -657,7 +848,7 @@ public static partial class HtmlTestFailureRenderer
         private void Fields(string label, IReadOnlyDictionary<string, object?> fields)
         {
             if (fields.Count == 0) return;
-            Heading(3, label); W("<dl class=\"metadata-grid\">");
+            Heading(4, label); W("<dl class=\"metadata-grid\">");
             foreach ((string key, object? value) in fields.OrderBy(pair => pair.Key, StringComparer.Ordinal)) Field(key, value);
             W("</dl>\n");
         }

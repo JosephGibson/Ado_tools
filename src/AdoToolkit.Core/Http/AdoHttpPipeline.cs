@@ -19,10 +19,13 @@ internal sealed class AdoHttpPipeline
     private readonly IAdoLog log;
     private readonly RetryPolicy retry;
     private readonly RequestCounter? counter;
+    private readonly RequestGate? gate;
 
+    // Without a gate every operation starts at once. With one, an operation waits for a free slot,
+    // and the log may be called from several threads.
     internal AdoHttpPipeline(HttpClient client, Uri collection, TimeSpan requestTimeout,
         IAdoLog? log = null, ISystemClock? clock = null, TimeSpan? downloadTimeout = null, TimeSpan? inactivityTimeout = null,
-        RequestCounter? counter = null)
+        RequestCounter? counter = null, RequestGate? gate = null)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(collection);
@@ -30,6 +33,7 @@ internal sealed class AdoHttpPipeline
             || requestTimeout > TimeSpan.FromSeconds(Connections.AdoConnection.MaximumRequestTimeoutSeconds))
             throw new ArgumentOutOfRangeException(nameof(requestTimeout));
         this.counter = counter;
+        this.gate = gate;
         this.client = client;
         if (this.client.Timeout != Timeout.InfiniteTimeSpan) this.client.Timeout = Timeout.InfiniteTimeSpan;
         this.collection = collection;
@@ -41,11 +45,14 @@ internal sealed class AdoHttpPipeline
         retry = new RetryPolicy(this.clock);
     }
 
+    // isComplete, for TopSkip only, receives the items read so far and the size of the page just
+    // read. When it returns true the listing ends there, without the request for the empty page
+    // that otherwise ends it (§6.4): the caller knows from other data that nothing follows.
     internal async Task<IReadOnlyList<TItem>> GetPagesAsync<TPage, TItem>(
         EndpointDefinition endpoint, JsonTypeInfo<TPage> jsonType, Func<TPage, IReadOnlyList<TItem>?> selectItems,
         Func<TItem, string> identity, CultureInfo culture, CancellationToken cancellationToken,
         IReadOnlyDictionary<string, string>? routes = null, int? top = null, int pageSize = 100,
-        IReadOnlyDictionary<string, string>? parameters = null) where TPage : class
+        IReadOnlyDictionary<string, string>? parameters = null, Func<int, int, bool>? isComplete = null) where TPage : class
     {
         if (top < 0) throw new ArgumentOutOfRangeException(nameof(top));
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
@@ -106,7 +113,7 @@ internal sealed class AdoHttpPipeline
             if (endpoint.Paging == PagingStrategy.None) return result;
             if (endpoint.Paging == PagingStrategy.TopSkip)
             {
-                if (items.Count == 0) return result;
+                if (items.Count == 0 || isComplete?.Invoke(result.Count, items.Count) == true) return result;
                 offset = checked(offset + items.Count);
             }
             else
@@ -168,6 +175,10 @@ internal sealed class AdoHttpPipeline
         IReadOnlyDictionary<string, string>? query, byte[]? body, CultureInfo culture,
         Func<HttpResponseMessage, CancellationToken, Task<T>> consume, CancellationToken callerToken)
     {
+        // The slot is taken before the operation timeout starts, so time spent waiting for it never
+        // counts as request time. It is held through retries and back-off, so a server that
+        // struggles sees fewer concurrent requests, not more.
+        using RequestGate.Slot slot = gate is null ? default : await gate.EnterAsync(callerToken).ConfigureAwait(false);
         using CancellationTokenSource operation = CancellationTokenSource.CreateLinkedTokenSource(callerToken);
         operation.CancelAfter(endpoint.Timeout == TimeoutClass.Download ? downloadTimeout : requestTimeout);
         CancellationToken token = operation.Token;

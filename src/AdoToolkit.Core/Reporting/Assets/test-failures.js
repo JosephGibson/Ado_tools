@@ -15,6 +15,8 @@
   const attempts = new Map(cards.map(card => [card, all('.attempt', card)]));
   const texts = new WeakMap();
   let current = null;
+  // The table row last reached by keyboard or focus: a test listed under two bugs has two rows in one view.
+  let currentRow = null;
   let copyTimer;
   let filterTimer;
   // Search text is the whole element, collapsed parts included, lowercased once on first use.
@@ -128,6 +130,8 @@
   document.addEventListener('focusin', event => {
     const card = event.target.closest('.failure-card');
     if (card) select(card);
+    const row = event.target.closest('tr[data-index-for]');
+    if (row) currentRow = row;
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && event.target === filter) {
@@ -145,11 +149,15 @@
       // Details moves between cards; the tables move between their visible rows.
       const items = details ? cards.filter(card => !card.hidden) : all('tr[data-index-for]', view).filter(row => !row.hidden);
       const cardOf = item => details ? item : document.getElementById(item.dataset.indexFor);
-      const position = items.findIndex(item => cardOf(item) === current);
+      // In a table, continue from the row itself while it is a row of the current test; otherwise
+      // from the first row of the current test.
+      const known = details || currentRow?.dataset.indexFor !== current?.id ? -1 : items.indexOf(currentRow);
+      const position = known >= 0 ? known : items.findIndex(item => cardOf(item) === current);
       const next = items[Math.max(0, Math.min(items.length - 1, position + (event.key === 'j' ? 1 : -1)))];
       if (!next) return;
       event.preventDefault();
       if (details) { focus(next); return; }
+      currentRow = next;
       select(cardOf(next));
       next.querySelector('.col-test a').focus();
     }
@@ -171,7 +179,6 @@
       if (row) {
         event.preventDefault();
         show('runs');
-        row.closest('details').open = true;
         row.scrollIntoView({ block: 'center' });
       }
     }

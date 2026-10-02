@@ -7,7 +7,9 @@ namespace AdoToolkit;
 
 // One report per input set (§15.8). Steps 1–2 of §13.4 and ShouldProcess run on the pipeline
 // thread; one ShouldProcess call covers steps 3–8, so -WhatIf names the report and attachment
-// folder and requests nothing. A connection is needed only when attachments are downloaded.
+// folder and requests nothing. A connection is needed only when attachments are downloaded, which
+// the configured limits decide: small JSON and text files of every run inside the window count.
+// The downloader reads several files at once and reports its progress from one thread at a time.
 [Cmdlet(VerbsData.Export, "AdoBuildTestFailure", SupportsShouldProcess = true, DefaultParameterSetName = "Input")]
 [OutputType(typeof(FileInfo))]
 public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
@@ -77,6 +79,7 @@ public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposabl
             Culture = Culture, ConfiguredCulture = configuration.Reporting.Culture, SessionCulture = MessageCulture,
             Path = resolvedPath, CreateDirectory = createDirectory, NoClobber = NoClobber, SkipAttachments = SkipAttachments, Open = Open,
             AllRunAttachments = AllRunAttachments, AttachmentWindowDays = AttachmentWindowDays, IncludeFlaky = IncludeFlaky,
+            MaximumInlineJsonBytes = configuration.TestResults.MaximumInlineJsonBytes,
             GeneratedAt = DateTimeOffset.Now,
             ToolkitVersion = typeof(ExportAdoBuildTestFailureCommand).Assembly.GetName().Version!.ToString(),
         });

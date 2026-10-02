@@ -12,6 +12,8 @@ public sealed class LatestRunAttachmentTests
     private static readonly CultureInfo Culture = CultureInfo.GetCultureInfo("en-US");
     private static readonly DateTimeOffset Generated = TestFailureReportFixture.Clock;
 
+    // Every file here is larger than the small-file limit of these tests, so the rule for large
+    // files decides: the latest run only, or every run with AllRunAttachments.
     [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]
@@ -35,7 +37,8 @@ public sealed class LatestRunAttachmentTests
             MaximumAttachmentBytes = 3, MaximumTotalAttachmentBytes = allRuns ? 6 : 3,
         }, log), log, TestContext.Current.CancellationToken);
 
-        int[] expected = skip ? [] : allRuns ? [51, 52] : [52];
+        // The latest run is downloaded first, then the older one.
+        int[] expected = skip ? [] : allRuns ? [52, 51] : [52];
         Assert.Equal(expected, fixture.RequestedIds());
         Assert.Empty(result.Diagnostics);
         Assert.Equal(expected.Length, log.ProgressEvents.Count);
@@ -65,8 +68,9 @@ public sealed class LatestRunAttachmentTests
         });
     }
 
-    // By default only JSON and text from the latest run are downloaded; -AllRunAttachments adds
-    // earlier runs. PNG, HTML and other kinds are never requested, whatever the switches.
+    // By default large JSON and text files are downloaded from the latest run only; -AllRunAttachments
+    // adds earlier runs, after the latest. PNG, HTML and other kinds are never requested, whatever
+    // the switches.
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -87,7 +91,7 @@ public sealed class LatestRunAttachmentTests
         TestFailureExportResult result = await exporter.ExportAsync(plan, fixture.Downloader(client, new TestResultOptions()), null,
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(allRuns ? [61, 73, 74, 75] : [73, 74, 75], fixture.RequestedIds());
+        Assert.Equal(allRuns ? [73, 74, 75, 61] : [73, 74, 75], fixture.RequestedIds());
         string[] expected = allRuns ? ["r201-11-a61.json", "r202-11-a73.json", "r202-11-a74.txt", "r202-11-a75.txt"]
             : ["r202-11-a73.json", "r202-11-a74.txt", "r202-11-a75.txt"];
         Assert.Equal(expected, Directory.GetFiles(result.AttachmentDirectory!.FullName).Select(Path.GetFileName).Order(StringComparer.Ordinal));
@@ -121,13 +125,13 @@ public sealed class LatestRunAttachmentTests
         string html = File.ReadAllText(result.Report.FullName);
         Assert.Contains("data-attempt-count=\"1\"", html, StringComparison.Ordinal);
         Assert.Equal(inside, html.Contains("run-201.log", StringComparison.Ordinal));
-        Assert.Contains(inside ? "are left out: 0." : "are left out: 1.", html, StringComparison.Ordinal);
+        Assert.Contains(inside ? "Left out from older runs: 0." : "Left out from older runs: 1.", html, StringComparison.Ordinal);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task NoEligibleRunDoesNotFallBackToOlderAttachments(bool noRuns)
+    public async Task NoEligibleRunDoesNotFallBackToOlderLargeAttachments(bool noRuns)
     {
         using TestDirectory directory = new();
         TestFailureExporter exporter = new(new RecordingLauncher());
@@ -161,14 +165,18 @@ public sealed class LatestRunAttachmentTests
             phase: precedence == "stage" ? 5 : null, job: precedence == "phase" ? 5 : null);
         TestFailureExportPlan plan = new TestFailureExporter(new RecordingLauncher())
             .Prepare(Set([latest, earlier], latestAttachments: true), Options(directory.Root));
-        Assert.Equal([202], plan.AttachmentRunIds);
+        Assert.Equal([202], plan.Attachments.FullRunIds);
+        Assert.Equal(202, plan.Attachments.LatestRunId);
+        Assert.Equal([201, 202], plan.Attachments.SmallRunIds.Order());
         Assert.True(plan.DownloadsAttachments);
     }
 
+    // The fixture files are three and four bytes long. A small-file limit of two bytes makes all of
+    // them large, which keeps the rule for large files under test; SmallAttachmentTests covers the rest.
     private static TestFailureExportOptions Options(string path, bool allRuns = false, bool skip = false, int windowDays = 7) => new()
     {
         Path = path, SessionCulture = Culture, Culture = Culture.Name, GeneratedAt = Generated, ToolkitVersion = "5.4.0-test",
-        AllRunAttachments = allRuns, SkipAttachments = skip, AttachmentWindowDays = windowDays,
+        AllRunAttachments = allRuns, SkipAttachments = skip, AttachmentWindowDays = windowDays, MaximumInlineJsonBytes = 2,
     };
 
     private static AdoTestRun Run(int id, DateTimeOffset? started = null, int? stage = null, int? phase = null, int? job = null) => new()

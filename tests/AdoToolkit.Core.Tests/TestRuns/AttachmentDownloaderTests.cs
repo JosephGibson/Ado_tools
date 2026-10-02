@@ -12,8 +12,10 @@ namespace AdoToolkit.Core.Tests.TestRuns;
 public sealed partial class AttachmentDownloaderTests
 {
     private static readonly CultureInfo Culture = CultureInfo.GetCultureInfo("en-US");
+    // One file at a time: these tests assert which requests were sent, and in which order, when a
+    // file fails. ParallelDownloadTests covers several files at once.
     private static readonly TestResultOptions Limits = new()
-    { MaximumAttachmentBytes = 2048, MaximumTotalAttachmentBytes = 1_000_000, MaximumInlineJsonBytes = 256 };
+    { MaximumAttachmentBytes = 2048, MaximumTotalAttachmentBytes = 1_000_000, MaximumInlineJsonBytes = 256, MaximumConcurrentRequests = 1 };
     private static readonly byte[] Png = AttachmentFixture.Bytes("pattern.png");
     private static readonly byte[] Other = AttachmentFixture.Bytes("other-bytes.txt");
     private static readonly byte[] LargeJson = Encoding.UTF8.GetBytes("[" + string.Join(",", Enumerable.Repeat("\"synthetic value\"", 66)) + "]");

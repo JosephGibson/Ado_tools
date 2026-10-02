@@ -10,24 +10,47 @@ BeforeAll {
         Get-Content -LiteralPath (Join-Path $PSScriptRoot "../Fixtures/TestRuns/$Name") -Raw -Encoding utf8
     }
     $script:EmptyPage = '{"count":0,"value":[]}'
-    # The thirteen responses of one two-run retrieval without history, in request order:
-    # result 201-1 lists bugs 2001 and 2002, read in one batch with one state list.
+    # The eleven responses of one two-run retrieval without history, in request order:
+    # result 201-1 lists bugs 2001 and 2002, read in one batch with one state list. Bug 2002 is
+    # closed, so it is read and then left out of the set. Both runs are completed and list as many
+    # results as they report, so neither result listing ends with a request for an empty page.
+    # -Piped is a later build of the same invocation: its Test Cases and the bug states come from
+    # the invocation cache, so those two requests are not sent.
     function Get-TwoRunResponses {
+        param([switch] $Piped)
         @(
-            @{ Body = Get-TestRunFixture 'runs-two.json' },
-            @{ Body = $script:EmptyPage },
-            @{ Body = Get-TestRunFixture 'results-run-201.json' },
-            @{ Body = $script:EmptyPage },
-            @{ Body = Get-TestRunFixture 'results-run-202.json' },
-            @{ Body = $script:EmptyPage },
-            @{ Body = Get-TestRunFixture 'result-detail-202-11.json' },
-            @{ Body = Get-TestRunFixture 'result-detail-201-1.json' },
-            @{ Body = Get-TestRunFixture 'attachments-empty.json' },
-            @{ Body = Get-TestRunFixture 'attachments-result.json' },
-            @{ Body = Get-TestRunFixture 'workitems-testcases.json' },
-            @{ Body = Get-TestRunFixture 'workitems-bugs.json' },
-            @{ Body = Get-TestRunFixture 'workitemtype-states-bug.json' }
+            @{ Body = Get-TestRunFixture 'runs-two.json' }
+            @{ Body = $script:EmptyPage }
+            @{ Body = Get-TestRunFixture 'results-run-201.json' }
+            @{ Body = Get-TestRunFixture 'results-run-202.json' }
+            @{ Body = Get-TestRunFixture 'result-detail-202-11.json' }
+            @{ Body = Get-TestRunFixture 'result-detail-201-1.json' }
+            @{ Body = Get-TestRunFixture 'attachments-empty.json' }
+            @{ Body = Get-TestRunFixture 'attachments-result.json' }
+            if (-not $Piped) { @{ Body = Get-TestRunFixture 'workitems-testcases.json' } }
+            @{ Body = Get-TestRunFixture 'workitems-bugs.json' }
+            if (-not $Piped) { @{ Body = Get-TestRunFixture 'workitemtype-states-bug.json' } }
         )
+    }
+    # The history of build 401 with -HistoryCount 3: the window, then builds 400 and 399. Each
+    # costs two run pages and one result page, because its run lists as many results as it reports.
+    function Get-HistoryResponses {
+        @(
+            @{ Body = Get-TestRunFixture 'builds-history.json' }
+            @{ Body = Get-TestRunFixture 'runs-history-400.json' }
+            @{ Body = $script:EmptyPage }
+            @{ Body = Get-TestRunFixture 'results-history-400.json' }
+            @{ Body = Get-TestRunFixture 'runs-history-399.json' }
+            @{ Body = $script:EmptyPage }
+            @{ Body = Get-TestRunFixture 'results-history-399.json' }
+        )
+    }
+    # The response lists are positional, so these tests send one request at a time. Extra settings
+    # are the body of testResults, for example '"historyScope":"1"'.
+    function Set-SequentialConfiguration {
+        param([string] $TestResults)
+        $settings = '"maximumConcurrentRequests":1' + $(if ($TestResults) { ',' + $TestResults })
+        Set-Content -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Encoding utf8 -Value ('{"schemaVersion":1,"testResults":{' + $settings + '}}')
     }
 }
 
@@ -105,7 +128,11 @@ Describe 'Test run listing' -Tag 'S5-1' {
 }
 
 Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
-    AfterEach { Disconnect-Ado }
+    BeforeEach { Set-SequentialConfiguration }
+    AfterEach {
+        Disconnect-Ado
+        Remove-Item -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Force -ErrorAction SilentlyContinue
+    }
 
     It 'prints the bugs of a failure as a table, one row per bug' {
         $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses))
@@ -114,25 +141,15 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
             $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
             $table = @((($set.Failures[1].Bugs | Out-String -Width 200) -split "`r?`n") | Where-Object { $_.Trim() })
             $table[0] | Should -Match '^\s*Id\s+IsOpen\s+State\s+WorkItemType\s+Title\s*$'
-            # The header, its underline and the two bugs.
-            $table.Count | Should -Be 4
+            # The header, its underline and the open bug; the closed bug 2002 is not in the set.
+            $table.Count | Should -Be 3
             $table[2] | Should -Match '^\s*2001\s+True\s+Active\s+Bug\s+Le panier perd un article\s*$'
         }
         finally { Stop-FakeAdoServer -Server $server }
     }
 
     It 'emits one set with failures, counts, history and Test Case links' {
-        $responses = @(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses) + @(
-            @{ Body = Get-TestRunFixture 'builds-history.json' },
-            @{ Body = Get-TestRunFixture 'runs-history-400.json' },
-            @{ Body = $script:EmptyPage },
-            @{ Body = Get-TestRunFixture 'results-history-400.json' },
-            @{ Body = $script:EmptyPage },
-            @{ Body = Get-TestRunFixture 'runs-history-399.json' },
-            @{ Body = $script:EmptyPage },
-            @{ Body = Get-TestRunFixture 'results-history-399.json' },
-            @{ Body = $script:EmptyPage }
-        )
+        $responses = @(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses) + (Get-HistoryResponses)
         $server = Start-FakeAdoServer -Responses $responses
         try {
             Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
@@ -145,13 +162,15 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
             $set.Failures.ShortName | Should -Be @('Totals', 'AddsItem')
             $set.Failures[0] | Should -BeOfType ([AdoToolkit.Core.TestRuns.AdoTestFailure])
             $set.Failures[1].TestCase.Title | Should -Be 'Vérifier le panier'
-            $set.Failures[1].Bugs.Id | Should -Be @(2001, 2002)
+            # Bug 2002 is closed: the attempt still names it, and the set leaves it out.
+            $set.Failures[1].Attempts[0].AssociatedBugIds | Should -Be @(2001, 2002)
+            $set.Failures[1].Bugs.Count | Should -Be 1
             $set.Failures[1].Bugs[0] | Should -BeOfType ([AdoToolkit.Core.TestRuns.AdoTestBug])
-            # PowerShell reads the typographic apostrophe as a quote, so this title needs double quotes.
-            $set.Failures[1].Bugs.Title | Should -Be @('Le panier perd un article', "Ancien délai d’expiration")
-            $set.Failures[1].Bugs.State | Should -Be @('Active', 'Closed')
-            $set.Failures[1].Bugs.StateCategory | Should -Be @('InProgress', 'Completed')
-            $set.Failures[1].Bugs.IsOpen | Should -Be @($true, $false)
+            $set.Failures[1].Bugs[0].Id | Should -Be 2001
+            $set.Failures[1].Bugs[0].Title | Should -Be 'Le panier perd un article'
+            $set.Failures[1].Bugs[0].State | Should -Be 'Active'
+            $set.Failures[1].Bugs[0].StateCategory | Should -Be 'InProgress'
+            $set.Failures[1].Bugs[0].IsOpen | Should -BeTrue
             $set.Failures[1].Bugs[0].IsAssociatedWithResult | Should -BeTrue
             $set.Failures[1].HasOpenBug | Should -BeTrue
             $set.Failures[0].HasOpenBug | Should -BeFalse
@@ -175,18 +194,8 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
     }
 
     It 'falls back to SameBranch for a configured scope that is not a scope name' {
-        Set-Content -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Encoding utf8 -Value '{"schemaVersion":1,"testResults":{"historyScope":"1"}}'
-        $responses = @(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses) + @(
-            @{ Body = Get-TestRunFixture 'builds-history.json' },
-            @{ Body = Get-TestRunFixture 'runs-history-400.json' },
-            @{ Body = $script:EmptyPage },
-            @{ Body = Get-TestRunFixture 'results-history-400.json' },
-            @{ Body = $script:EmptyPage },
-            @{ Body = Get-TestRunFixture 'runs-history-399.json' },
-            @{ Body = $script:EmptyPage },
-            @{ Body = Get-TestRunFixture 'results-history-399.json' },
-            @{ Body = $script:EmptyPage }
-        )
+        Set-SequentialConfiguration -TestResults '"historyScope":"1"'
+        $responses = @(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses) + (Get-HistoryResponses)
         $server = Start-FakeAdoServer -Responses $responses
         try {
             Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
@@ -196,16 +205,13 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
             $window.Count | Should -Be 1
             $window[0].Line | Should -Match 'branchName='
         }
-        finally {
-            Stop-FakeAdoServer -Server $server
-            Remove-Item -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Force
-        }
+        finally { Stop-FakeAdoServer -Server $server }
     }
 
     It 'emits one set per piped build' {
         $responses = @(@{ Body = Get-TestRunFixture 'builds-history.json' })
         $responses += Get-TwoRunResponses
-        $responses += Get-TwoRunResponses
+        $responses += Get-TwoRunResponses -Piped
         $server = Start-FakeAdoServer -Responses $responses
         try {
             Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
@@ -217,14 +223,20 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
                 $set.History.Count | Should -Be 1
                 $set.History[0].IsCurrent | Should -BeTrue
             }
-            # One build listing plus thirteen retrieval requests per set.
-            $server.Requests.Count | Should -Be 27
+            # One build listing, eleven retrieval requests for the first set and nine for the second,
+            # which takes its Test Cases and the bug states from the invocation cache.
+            $server.Requests.Count | Should -Be 21
+            # The second set still warns about the Test Case that the first one could not resolve.
+            foreach ($set in $sets) { $set.Diagnostics.Code | Should -Contain 'UnresolvedTestCase' }
+            @($server.Requests.ToArray() | Where-Object { $_.Body -match '\$expand' }).Count | Should -Be 1
         }
         finally { Stop-FakeAdoServer -Server $server }
     }
 
     It 'warns once and reports Partial when the configured failure maximum is exceeded' {
-        Set-Content -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Encoding utf8 -Value '{"schemaVersion":1,"testResults":{"maximumReportedFailures":2}}'
+        Set-SequentialConfiguration -TestResults '"maximumReportedFailures":2'
+        # Run 201 lists five results and reports three, so its listing still ends on an empty page;
+        # the listing of run 202 is empty at once.
         $responses = @(@{ Body = Get-TestRunFixture 'build-401.json' }, @{ Body = Get-TestRunFixture 'runs-two.json' },
             @{ Body = $script:EmptyPage }, @{ Body = Get-TestRunFixture 'results-outcomes.json' },
             @{ Body = $script:EmptyPage }, @{ Body = $script:EmptyPage })
@@ -246,9 +258,69 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
             # The identities beyond the maximum are still counted.
             $set.Summary.Failed | Should -Be 3
         }
-        finally {
-            Stop-FakeAdoServer -Server $server
-            Remove-Item -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Force
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+}
+
+# The same two-run build, answered by route instead of by position, so requests may arrive in any
+# order. A small latency makes the requests of one stage overlap; no wall time is asserted.
+Describe 'Concurrent failed test retrieval and download' {
+    BeforeAll {
+        function Get-TwoRunRoutes {
+            @(
+                @{ Line = '/_apis/build/builds/401\?'; Response = @{ Body = Get-TestRunFixture 'build-401.json' } }
+                @{ Line = '/_apis/test/runs\?.*%24skip=0&'; Response = @{ Body = Get-TestRunFixture 'runs-two.json' } }
+                @{ Line = '/Runs/201/results\?.*%24skip=0&'; Response = @{ Body = Get-TestRunFixture 'results-run-201.json' } }
+                @{ Line = '/Runs/202/results\?.*%24skip=0&'; Response = @{ Body = Get-TestRunFixture 'results-run-202.json' } }
+                @{ Line = '/Runs/(\d+)/results/(\d+)\?'; Responses = @{
+                        '201/1' = @{ Body = Get-TestRunFixture 'result-detail-201-1.json' }
+                        '202/11' = @{ Body = Get-TestRunFixture 'result-detail-202-11.json' }
+                    }
+                }
+                @{ Line = '/Runs/(201/Results/1|202/Results/11)/attachments\?'; Response = @{ Body = Get-TestRunFixture 'attachments-result.json' } }
+                @{ Line = '/attachments/5002\?'; Response = @{
+                        Bytes = [IO.File]::ReadAllBytes((Join-Path $PSScriptRoot '../Fixtures/Attachments/valid.json')); ContentType = 'application/octet-stream'
+                    }
+                }
+                @{ Line = '/_apis/wit/workitemsbatch\?'; Body = '"\$expand":"relations"'; Response = @{ Body = Get-TestRunFixture 'workitems-testcases.json' } }
+                @{ Line = '/_apis/wit/workitemsbatch\?'; Body = '"fields":'; Response = @{ Body = Get-TestRunFixture 'workitems-bugs.json' } }
+                @{ Line = '/_apis/wit/workitemtypes/Bug/states\?'; Response = @{ Body = Get-TestRunFixture 'workitemtype-states-bug.json' } }
+            )
         }
+    }
+    AfterEach {
+        Disconnect-Ado
+        Remove-Item -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Force -ErrorAction SilentlyContinue
+    }
+
+    It 'sends the same requests with <Bound> at a time and never more (peak <Peak>)' -ForEach @(
+        @{ Bound = 6; Peak = 2 },
+        @{ Bound = 1; Peak = 1 }
+    ) {
+        # Six is the default, so that case writes no configuration.
+        if ($Bound -ne 6) { Set-Content -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Encoding utf8 -Value ('{"schemaVersion":1,"testResults":{"maximumConcurrentRequests":' + $Bound + '}}') }
+        $server = Start-FakeAdoServer -Routes (Get-TwoRunRoutes) -LatencyMilliseconds 100 -Workers 8
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
+            $set.Failures.ShortName | Should -Be @('Totals', 'AddsItem')
+            $set.Failures[1].Bugs.Id | Should -Be @(2001)
+            $set.Diagnostics.Code | Should -Be @('UnresolvedTestCase')
+            # The build, two run pages, two result pages, two details, two attachment lists, the Test
+            # Cases, the bugs and one state list. Each stage of this build has two requests at most.
+            $server.Requests.Count | Should -Be 12
+            Get-FakeAdoServerPeak -Server $server -Reset | Should -Be $Peak
+            $lines = @($server.Requests.ToArray().Line)
+            @($lines | Sort-Object -Unique).Count | Should -Be 11
+            @($lines | Where-Object { $_ -match '/_apis/wit/workitemsbatch\?' }).Count | Should -Be 2
+
+            # The export reads the small JSON file of each run, both at once unless the bound is one.
+            # The fixture runs started in September 2026, so the attachment window is a year.
+            $file = $set | Export-AdoBuildTestFailure -Path (Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))) -AttachmentWindowDays 365 6> $null
+            $server.Requests.Count | Should -Be 14
+            Get-FakeAdoServerPeak -Server $server | Should -Be $Peak
+            @(Get-ChildItem -LiteralPath $file.AttachmentDirectory -File).Name | Sort-Object | Should -Be @('r201-1-a5002.json', 'r202-11-a5002.json')
+        }
+        finally { Stop-FakeAdoServer -Server $server }
     }
 }

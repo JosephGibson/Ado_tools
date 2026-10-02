@@ -8,6 +8,8 @@ namespace AdoToolkit.Core.Tests.TestRuns;
 public sealed class TestFailureRetrievalTests
 {
     private static readonly TestFailureQuery NoHistory = new() { HistoryCount = 1 };
+    // One request at a time, for the tests that assert the order of requests.
+    private static readonly TestFailureQuery Sequential = new() { HistoryCount = 1, MaximumConcurrentRequests = 1 };
 
     [Fact]
     public async Task NestedSubResultAttachmentsStayWithTheirOwningAttempt()
@@ -90,7 +92,7 @@ public sealed class TestFailureRetrievalTests
         using FakeHttpMessageHandler handler = fixture.Handler();
         using HttpClient client = new(handler);
         TestFailureRetrievalService service = TestRunFixture.Service(client);
-        AdoBuildTestFailureSet set = await service.GetAsync(TestRunFixture.Build(), NoHistory,
+        AdoBuildTestFailureSet set = await service.GetAsync(TestRunFixture.Build(), Sequential,
             CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
         Assert.Equal([201, 202], set.Runs.Select(static run => run.Id));
         Assert.Equal(3, set.Runs[0].TotalTests);
@@ -127,9 +129,10 @@ public sealed class TestFailureRetrievalTests
         Assert.Equal("Reviewed by the on-call.", attempt.Comment);
         Assert.Equal(399, attempt.FailingSinceBuildId);
         Assert.Equal([2001, 2002], attempt.AssociatedBugIds);
-        // Associated bugs are read in one batch: 2001 is open, 2002 is closed.
-        Assert.Equal([2001, 2002], cart.Bugs.Select(static bug => bug.Id));
-        Assert.Equal([true, false], cart.Bugs.Select(static bug => bug.IsOpen));
+        // Associated bugs are read in one batch: 2001 is open, and 2002 is closed and so left out.
+        AdoTestBug tracked = Assert.Single(cart.Bugs);
+        Assert.Equal(2001, tracked.Id);
+        Assert.True(tracked.IsOpen);
         Assert.True(cart.HasOpenBug);
         Assert.Equal("Équipe Web", cart.Owner!.DisplayName);
         Assert.Equal("equipe.web@contoso.test", cart.Owner.UniqueName);
@@ -158,19 +161,21 @@ public sealed class TestFailureRetrievalTests
             Assert.Null(item.SubResultId);
         });
         Assert.Empty(set.Failures[0].Attempts[0].Attachments);
-        // §15.9 bound: 2 run pages + 4 result pages + 2 details + 2 attachment lists + 1 Test Case batch,
-        // plus 1 bug batch and 1 state list for the one bug type.
-        Assert.Equal(13, handler.Requests.Count);
-        Assert.Equal(13, service.RequestCount);
+        // §15.9 bound: 2 run pages + 2 result pages + 2 details + 2 attachment lists + 1 Test Case batch,
+        // plus 1 bug batch and 1 state list for the one bug type. Both runs are completed and their
+        // single short page holds as many results as the run's total, so neither listing asks for
+        // the empty page that would otherwise end it.
+        Assert.Equal(11, handler.Requests.Count);
+        Assert.Equal(11, service.RequestCount);
         Assert.Equal("None", Parameter(handler.Requests[2].Uri, "detailsToInclude"));
         Assert.Equal("1000", Parameter(handler.Requests[2].Uri, "%24top"));
         Assert.DoesNotContain(handler.Requests, static request =>
             request.Uri.Query.Contains("outcomes=", StringComparison.OrdinalIgnoreCase));
         // Pass 2 follows report order, so the second run's failure is detailed first.
-        Assert.Equal("/Collection/%C3%89quipe%20Web/_apis/test/Runs/202/results/11", handler.Requests[6].Uri.AbsolutePath);
-        Assert.Equal("Iterations%2CWorkItems%2CSubResults", Parameter(handler.Requests[6].Uri, "detailsToInclude"));
+        Assert.Equal("/Collection/%C3%89quipe%20Web/_apis/test/Runs/202/results/11", handler.Requests[4].Uri.AbsolutePath);
+        Assert.Equal("Iterations%2CWorkItems%2CSubResults", Parameter(handler.Requests[4].Uri, "detailsToInclude"));
         Assert.Equal("/Collection/%C3%89quipe%20Web/_apis/test/Runs/201/Results/1/attachments",
-            handler.Requests[9].Uri.AbsolutePath);
+            handler.Requests[7].Uri.AbsolutePath);
     }
 
     // Test results fixture 9, resolution half of S5-8.
@@ -312,12 +317,14 @@ public sealed class TestFailureRetrievalTests
             request.Uri.Query.Contains("detailsToInclude=Iterations", StringComparison.Ordinal)));
     }
 
-    // Test results fixture 10: a short nonterminal page does not end enumeration.
+    // Test results fixture 10: a short nonterminal page does not end enumeration. Run 202 reports
+    // three tests, so its first page of two is not the end; its second page completes the total and
+    // ends the listing without a request for an empty page, as the single page of run 201 does.
     [Fact]
     public async Task ResultListingAdvancesBySkipAndAShortPageDoesNotEndEnumeration()
     {
         TestRunFixture fixture = new();
-        fixture.Route("runs-two.json", "/test/runs", "%24skip=0&")
+        fixture.RouteBody(TestRunFixture.Read("runs-two.json").Replace("\"totalTests\": 2", "\"totalTests\": 3", StringComparison.Ordinal), "/test/runs", "%24skip=0&")
             .Route("results-run-201.json", "/Runs/201/results", "%24skip=0&")
             .RouteBody(TestRunFixture.EmptyPage, "/Runs/201/results", "%24skip=3&")
             .Route("results-run-202.json", "/Runs/202/results", "%24skip=0&")
@@ -336,8 +343,51 @@ public sealed class TestFailureRetrievalTests
         // The identity on the short second page is retained and ordered with the rest.
         Assert.Equal(["Contoso.Orders.Tests.OrderTests.Rounding", "Contoso.Orders.Tests.OrderTests.Totals",
             "Contoso.Web.Tests.CartTests.AddsItem"], set.Failures.Select(static failure => failure.TestName));
-        Assert.Equal(["0", "3"], Skips(handler, "/Runs/201/results"));
-        Assert.Equal(["0", "2", "3"], Skips(handler, "/Runs/202/results"));
+        Assert.Equal(["0"], Skips(handler, "/Runs/201/results"));
+        Assert.Equal(["0", "2"], Skips(handler, "/Runs/202/results"));
+    }
+
+    // The empty page that ends a result listing is left out only when the run is completed, the last
+    // page was shorter than the page size and the results read equal the run's total.
+    [Theory]
+    [InlineData("Completed", 3, 3, new[] { "0" })]
+    [InlineData("completed", 3, 3, new[] { "0" })]
+    // More tests reported than read: the listing may not be complete.
+    [InlineData("Completed", 4, 3, new[] { "0", "3" })]
+    // Fewer tests reported than read: the total cannot be trusted.
+    [InlineData("Completed", 2, 3, new[] { "0", "3" })]
+    [InlineData("InProgress", 3, 3, new[] { "0", "3" })]
+    // No total at all.
+    [InlineData("Completed", null, 3, new[] { "0", "3" })]
+    // A full page is never the last one, even when it completes the total.
+    [InlineData("Completed", 1000, 1000, new[] { "0", "1000" })]
+    public async Task EmptyPageProbeIsSkippedOnlyForACompletedRunWhoseShortLastPageCompletesItsTotal(string state, int? total, int results, string[] skips)
+    {
+        string run = "{\"count\":1,\"value\":[{\"id\":201,\"name\":\"Synthetic run\",\"state\":\"" + state + "\""
+            + (total is int value ? ",\"totalTests\":" + value.ToString(CultureInfo.InvariantCulture) : "") + "}]}";
+        string page = "{\"count\":" + results.ToString(CultureInfo.InvariantCulture) + ",\"value\":[" + string.Join(',', Enumerable.Range(1, results).Select(static id =>
+            "{\"id\":" + id.ToString(CultureInfo.InvariantCulture) + ",\"outcome\":\"Passed\",\"automatedTestName\":\"Synthetic.Paging.Test"
+            + id.ToString(CultureInfo.InvariantCulture) + "\"}")) + "]}";
+        TestRunFixture fixture = new TestRunFixture().RouteBody(run, "/test/runs", "%24skip=0&").RouteBody(page, "/Runs/201/results", "%24skip=0&");
+        using FakeHttpMessageHandler handler = fixture.Handler();
+        using HttpClient client = new(handler);
+        AdoBuildTestFailureSet set = await TestRunFixture.Service(client).GetAsync(TestRunFixture.Build(), NoHistory,
+            CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
+        Assert.Equal(results, set.Summary.Passed);
+        Assert.Equal(skips, Skips(handler, "/Runs/201/results"));
+    }
+
+    // A history build's listings follow the same rule as the reported build's.
+    [Fact]
+    public async Task EmptyPageProbeIsSkippedForHistoryBuildsUnderTheSameConditions()
+    {
+        using FakeHttpMessageHandler handler = RunHistoryTests.History().Handler();
+        using HttpClient client = new(handler);
+        await TestRunFixture.Service(client).GetAsync(TestRunFixture.Build(), new TestFailureQuery { HistoryCount = 3 },
+            CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
+        // Run 261 of build 400 reports two tests and lists two; run 271 of build 399 reports one and lists one.
+        Assert.Equal(["0"], Skips(handler, "/Runs/261/results"));
+        Assert.Equal(["0"], Skips(handler, "/Runs/271/results"));
     }
 
     // Result IDs are unique only within a run: pipeline run attempts commonly repeat them.

@@ -8,26 +8,35 @@ using AdoToolkit.Core.TestRuns;
 namespace AdoToolkit.Core.Tests.TestRuns;
 
 // Attachment metadata comes from the list-shaped fixtures; content is served per attachment ID by
-// a fake handler. Every unrouted content request fails the test.
+// a fake handler. Every unrouted content request fails the test. Content may be requested from
+// several threads at once, so the response queues are locked.
 internal sealed class AttachmentFixture
 {
     internal const string Project = "Équipe Web";
     internal const string FolderName = "Build-401-TestFailures.files-20260916T133000000Z";
+    private readonly Lock gate = new();
     private readonly Dictionary<int, Queue<Func<HttpResponseMessage>>> content = [];
 
     internal FakeHttpMessageHandler Handler { get; } = new();
     internal FakeClock Clock { get; } = new();
+    // Waits before the content of an attachment is answered, so that bodies can arrive out of order.
+    internal Func<int, TimeSpan>? Delay { get; set; }
 
     internal AttachmentFixture()
     {
-        Handler.Fallback = (request, _) =>
+        Handler.Fallback = async (request, token) =>
         {
             string path = request.RequestUri!.AbsolutePath;
             int id = int.Parse(path[(path.LastIndexOf('/') + 1)..], CultureInfo.InvariantCulture);
-            if (!content.TryGetValue(id, out Queue<Func<HttpResponseMessage>>? responses) || responses.Count == 0)
-                throw new InvalidOperationException("No content route for " + path);
-            Func<HttpResponseMessage> next = responses.Count > 1 ? responses.Dequeue() : responses.Peek();
-            return Task.FromResult(next());
+            Func<HttpResponseMessage> next;
+            lock (gate)
+            {
+                if (!content.TryGetValue(id, out Queue<Func<HttpResponseMessage>>? responses) || responses.Count == 0)
+                    throw new InvalidOperationException("No content route for " + path);
+                next = responses.Count > 1 ? responses.Dequeue() : responses.Peek();
+            }
+            if (Delay is not null) await Task.Delay(Delay(id), token);
+            return next();
         };
     }
 
@@ -64,7 +73,7 @@ internal sealed class AttachmentFixture
 
     internal AttachmentFixture Serve(int id, params Func<HttpResponseMessage>[] responses)
     {
-        content[id] = new Queue<Func<HttpResponseMessage>>(responses);
+        lock (gate) content[id] = new Queue<Func<HttpResponseMessage>>(responses);
         return this;
     }
 

@@ -6,22 +6,24 @@ using AdoToolkit.Core.Http;
 
 namespace AdoToolkit.Core.TestRuns;
 
-// Two-pass retrieval for one build (§15.9). Every stage is sequential and observes cancellation.
+// Two-pass retrieval for one build (§15.9). The stages follow one another as §15.9 lists them, and
+// every stage observes cancellation. Unlike §1.4 and §15.9, which made every request sequential,
+// the requests of one stage now run together, at most MaximumConcurrentRequests at a time, and
+// the history read runs beside the main path. The set, its diagnostics and their order do not
+// depend on which request finished first; with a bound of one the requests are sent one after
+// another in the order of §15.9, history last.
 public sealed class TestFailureRetrievalService
 {
-    private const string CompletedState = "Completed";
     private readonly HttpClient client;
     private readonly AdoConnection connection;
     private readonly IAdoLog? log;
     private readonly IAdoLog progress;
     private readonly ISystemClock clock;
     private readonly TestFailureInvocationCache cache;
-    private readonly TestRunService runs;
-    private readonly TestCaseLinkResolver links;
-    private readonly TestBugResolver bugs;
     private readonly RequestCounter counter = new();
 
-    // The cache is shared across the pipeline records of one invocation (§17).
+    // The cache is shared across the pipeline records of one invocation (§17). With more than one
+    // request at a time, the log is called from several threads.
     public TestFailureRetrievalService(HttpClient client, AdoConnection connection, IAdoLog? log = null,
         TestFailureInvocationCache? cache = null)
         : this(client, connection, log, null, cache) { }
@@ -38,9 +40,6 @@ public sealed class TestFailureRetrievalService
         progress = log ?? new NullAdoLog();
         this.clock = clock ?? new SystemClock();
         this.cache = cache ?? new TestFailureInvocationCache();
-        runs = new TestRunService(client, connection, log, counter);
-        links = new TestCaseLinkResolver(client, connection, log, counter);
-        bugs = new TestBugResolver(client, connection, log, counter);
     }
 
     internal int RequestCount => counter.Count;
@@ -68,104 +67,65 @@ public sealed class TestFailureRetrievalService
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(query.HistoryCount);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(query.MaximumReportedFailures);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(query.MaximumHistoryRequests);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(query.MaximumConcurrentRequests);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(query.MaximumConcurrentRequests, Configuration.TestResultOptions.MaximumConcurrentRequestsLimit);
+        // The gate lives for this retrieval only; every pipeline below shares it. It is disposed after
+        // the main path and the history read have both ended.
+        using RequestGate gate = new(query.MaximumConcurrentRequests);
+        Stages stages = new(new TestRunService(client, connection, log, counter, gate),
+            new TestCaseLinkResolver(client, connection, log, counter, gate, cache),
+            new TestBugResolver(client, connection, log, counter, gate, cache, query.MaximumConcurrentRequests),
+            query.MaximumConcurrentRequests, build.TeamProject, culture);
         List<AdoDiagnostic> diagnostics = [];
-        string project = build.TeamProject;
-        IReadOnlyList<AdoTestRun> runList = await runs.GetRunsAsync(build, culture, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<AdoTestRun> runList = await stages.Runs.GetRunsAsync(build, culture, cancellationToken).ConfigureAwait(false);
         progress.Progress(new AdoProgress { Phase = AdoProgressPhase.TestRuns, Completed = runList.Count });
         if (runList.Count == 0)
             diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.NoTestRuns, culture,
                 arguments: [build.Id.ToString(CultureInfo.InvariantCulture)]));
         bool incomplete = !string.Equals(build.Status, "completed", StringComparison.OrdinalIgnoreCase)
-            || runList.Any(static run => !string.Equals(run.State, CompletedState, StringComparison.OrdinalIgnoreCase));
+            || runList.Any(static run => !string.Equals(run.State, TestRunService.CompletedState, StringComparison.OrdinalIgnoreCase));
         // An incomplete build warns even before it has runs: its results can still change.
         if (incomplete)
             diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.TestRunInProgress, culture,
                 arguments: [build.Id.ToString(CultureInfo.InvariantCulture)]));
-        // GetRunsAsync already returns runs in attempt order.
-        IReadOnlyList<AdoTestRun> ordered = runList;
-        PipelineGrouping grouping = PipelineGrouping.Create(ordered);
-        List<TestResultRecord> records = [];
-        int runOrder = 0;
-        foreach (AdoTestRun run in ordered)
+        // The earlier builds need only the current build, so their read starts here and runs beside
+        // the main path. Its progress is held back until the main path has reported its own, and its
+        // diagnostics are appended last, where the sequential order put them. With a bound of one
+        // the read waits for the main path instead, which reproduces the sequential request order.
+        RunHistoryService history = new(client, connection, cache, log, counter, query.MaximumHistoryRequests, gate, query.MaximumConcurrentRequests);
+        using CancellationTokenSource historyStop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        List<AdoProgress> heldProgress = [];
+        Task<EarlierHistory>? beside = query.HistoryCount > 1 && query.MaximumConcurrentRequests > 1
+            ? history.ReadEarlierAsync(build, query.HistoryCount, query.HistoryScope, culture, heldProgress.Add, historyStop.Token)
+            : null;
+        CurrentBuild current;
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            runOrder++;
-            foreach (TestResultDto result in await runs.GetResultsAsync(project, run.Id, culture, cancellationToken).ConfigureAwait(false))
-                records.Add(ToRecord(result, run, runOrder, grouping));
-            progress.Progress(new AdoProgress { Phase = AdoProgressPhase.TestResults, Completed = runOrder, Total = ordered.Count });
+            current = await ReadCurrentAsync(stages, build, runList, query, diagnostics, cancellationToken).ConfigureAwait(false);
         }
-        IReadOnlyList<TestIdentityGroup> groups = AttemptGrouper.Group(records, culture, diagnostics, cancellationToken);
-        IReadOnlyList<TestIdentityGroup> candidates = AttemptGrouper.ReportOrder(groups.Where(static group => group.IsCandidate));
-        int limit = Math.Min(candidates.Count, query.MaximumReportedFailures);
-        if (candidates.Count > limit)
-            diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.FailureLimitExceeded, culture, arguments:
-            [
-                candidates.Count.ToString(CultureInfo.InvariantCulture),
-                query.MaximumReportedFailures.ToString(CultureInfo.InvariantCulture),
-            ]));
-        List<DetailedIdentity> detailed = [];
-        int detailedResults = 0;
-        int totalResults = candidates.Take(limit).Sum(static group => group.Records.Count);
-        for (int index = 0; index < limit; index++)
+        catch
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            TestIdentityGroup group = candidates[index];
-            List<AdoTestAttempt> attempts = [];
-            List<TestResultDto> details = [];
-            foreach (TestResultRecord record in group.Records)
+            // The main path's error is the one reported, whatever the history read was doing: stop
+            // that read, wait for it, and drop its outcome.
+            if (beside is not null)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                TestResultDto detail = await runs.GetResultAsync(project, record.RunId, record.ResultId, culture, cancellationToken)
-                    .ConfigureAwait(false);
-                details.Add(detail);
-                progress.Progress(new AdoProgress
-                {
-                    Phase = AdoProgressPhase.TestDetail,
-                    Completed = ++detailedResults,
-                    Total = totalResults,
-                });
+                await historyStop.CancelAsync().ConfigureAwait(false);
+                await ((Task)beside).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
             }
-            bool multipleRecords = group.Records.Count > 1;
-            for (int recordIndex = 0; recordIndex < group.Records.Count; recordIndex++)
-            {
-                TestResultRecord record = group.Records[recordIndex];
-                TestResultDto detail = details[recordIndex];
-                Uri resultUrl = AdoWebLinks.BuildTestResult(connection.CollectionUri, project, build.Id, record.RunId, record.ResultId);
-                IReadOnlyList<TestSubResultDto> rerun = record.IsRerunGroup ? TestAttemptMapper.RerunAttempts(detail) : [];
-                if (rerun.Count > 0)
-                    foreach (TestSubResultDto sub in rerun)
-                        attempts.Add(TestAttemptMapper.FromSubResult(sub, detail, record.RunId, attempts.Count + 1, resultUrl, cancellationToken));
-                else
-                    attempts.Add(TestAttemptMapper.FromResult(detail, record.RunId, attempts.Count + 1,
-                        multipleRecords ? AdoTestAttemptSource.RunAttempt : AdoTestAttemptSource.Single, resultUrl, cancellationToken));
-            }
-            detailed.Add(new DetailedIdentity(group, attempts, details));
+            throw;
         }
-        await AddAttachmentsAsync(detailed, project, culture, cancellationToken).ConfigureAwait(false);
-        IReadOnlyDictionary<int, AdoTestCaseLink> resolved = await ResolveLinksAsync(detailed, project, culture, diagnostics, cancellationToken)
-            .ConfigureAwait(false);
-        // Only identities that really hold a failure-class attempt are reported (§15.6).
-        List<DetailedIdentity> reported = detailed
-            .Where(static item => item.Attempts.Any(static attempt => attempt.OutcomeClass == AdoTestOutcomeClass.Failure))
-            .OrderBy(static item => item.Classification == AdoTestFailureClassification.Failed ? 0 : 1)
-            .ThenBy(static item => item.Group.Storage ?? "", StringComparer.Ordinal)
-            .ThenBy(static item => item.Group.Name ?? "", StringComparer.Ordinal)
-            .ThenBy(static item => item.Group.FirstResultId)
-            .ToList();
-        // One lookup for every reported test, after the Test Case read that supplies the linked work items.
-        IReadOnlyList<IReadOnlyList<AdoTestBug>> reportedBugs = await bugs.ResolveAsync([.. reported.Select(item => new TestBugReferences(
-                item.Attempts.SelectMany(static attempt => attempt.AssociatedBugIds).ToHashSet(),
-                (item.TestCaseId is int testCaseId ? links.LinkedWorkItems(testCaseId) : []).ToHashSet()))],
-            build.Id, project, culture, diagnostics, cancellationToken).ConfigureAwait(false);
-        HistoryBuildData currentData = CurrentBuildData(groups, detailed, cancellationToken);
-        RunHistoryService history = new(client, connection, cache, log, counter);
-        IReadOnlyList<HistoryEntry> entries = await history.GetHistoryAsync(build, currentData, query.HistoryCount,
-            query.HistoryScope, query.MaximumHistoryRequests, culture, diagnostics, cancellationToken).ConfigureAwait(false);
+        EarlierHistory earlier = beside is not null ? await beside.ConfigureAwait(false)
+            : await history.ReadEarlierAsync(build, query.HistoryCount, query.HistoryScope, culture, progress.Progress, cancellationToken)
+                .ConfigureAwait(false);
+        foreach (AdoProgress held in heldProgress) progress.Progress(held);
+        diagnostics.AddRange(earlier.Diagnostics);
+        IReadOnlyList<HistoryEntry> entries = [.. earlier.Entries, RunHistoryService.Current(build, current.Data)];
+        string project = build.TeamProject;
         List<AdoTestFailure> failures = [];
-        for (int index = 0; index < reported.Count; index++)
+        for (int index = 0; index < current.Reported.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            DetailedIdentity item = reported[index];
+            DetailedIdentity item = current.Reported[index];
             TestResultDto last = item.Details[^1];
             failures.Add(new AdoTestFailure
             {
@@ -176,8 +136,8 @@ public sealed class TestFailureRetrievalService
                 Storage = item.Group.Storage,
                 Title = item.Group.Title,
                 Attempts = item.Attempts.AsReadOnly(),
-                TestCase = item.TestCaseId is int id && resolved.TryGetValue(id, out AdoTestCaseLink? link) ? link : null,
-                Bugs = reportedBugs[index],
+                TestCase = item.TestCaseId is int id && current.Links.TryGetValue(id, out AdoTestCaseLink? link) ? link : null,
+                Bugs = current.Bugs[index],
                 History = Cells(item.Group.Identity, entries, project),
                 Owner = last.Owner?.ToDomain(),
                 Priority = last.Priority,
@@ -202,31 +162,130 @@ public sealed class TestFailureRetrievalService
         };
     }
 
-    // Attachment metadata for each detailed result and for its attempt and iteration sub-results
-    // (§15.9 step 5). Result-level attachments belong to the first attempt of their record.
-    private async Task AddAttachmentsAsync(List<DetailedIdentity> detailed, string project, CultureInfo culture,
-        CancellationToken cancellationToken)
+    // The main path: both passes, the attachment lists, the Test Case links and the bugs of the build.
+    // Each fan-out returns its values in request order, and only this method writes to the lists.
+    private async Task<CurrentBuild> ReadCurrentAsync(Stages stages, AdoBuild build, IReadOnlyList<AdoTestRun> runList,
+        TestFailureQuery query, List<AdoDiagnostic> diagnostics, CancellationToken cancellationToken)
     {
-        int total = detailed.Sum(static item => item.Details.Count);
-        int completed = 0;
-        foreach (DetailedIdentity item in detailed)
+        CultureInfo culture = stages.Culture;
+        string project = stages.Project;
+        // GetRunsAsync already returns runs in attempt order.
+        IReadOnlyList<AdoTestRun> ordered = runList;
+        PipelineGrouping grouping = PipelineGrouping.Create(ordered);
+        // Pass 1: one listing per run, joined in run order.
+        ProgressCount listed = new(progress, AdoProgressPhase.TestResults, ordered.Count);
+        IReadOnlyList<IReadOnlyList<TestResultDto>> listings = await OrderedParallel.RunAsync(ordered, stages.Concurrency, async (run, token) =>
         {
-            List<AdoTestAttachment> collected = [];
+            IReadOnlyList<TestResultDto> results = await stages.Runs.GetResultsAsync(project, run, culture, token).ConfigureAwait(false);
+            listed.Advance();
+            return results;
+        }, cancellationToken).ConfigureAwait(false);
+        List<TestResultRecord> records = [];
+        for (int index = 0; index < ordered.Count; index++)
+            foreach (TestResultDto result in listings[index])
+                records.Add(ToRecord(result, ordered[index], index + 1, grouping));
+        IReadOnlyList<TestIdentityGroup> groups = AttemptGrouper.Group(records, culture, diagnostics, cancellationToken);
+        IReadOnlyList<TestIdentityGroup> candidates = AttemptGrouper.ReportOrder(groups.Where(static group => group.IsCandidate));
+        // The failure limit is applied before any detail request, so it bounds every fan-out below.
+        int limit = Math.Min(candidates.Count, query.MaximumReportedFailures);
+        if (candidates.Count > limit)
+            diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.FailureLimitExceeded, culture, arguments:
+            [
+                candidates.Count.ToString(CultureInfo.InvariantCulture),
+                query.MaximumReportedFailures.ToString(CultureInfo.InvariantCulture),
+            ]));
+        // Pass 2: one request per result record of the reported tests, in report order.
+        List<TestResultRecord> detailRecords = [.. candidates.Take(limit).SelectMany(static group => group.Records)];
+        ProgressCount read = new(progress, AdoProgressPhase.TestDetail, detailRecords.Count);
+        IReadOnlyList<TestResultDto> fetched = await OrderedParallel.RunAsync(detailRecords, stages.Concurrency, async (record, token) =>
+        {
+            TestResultDto detail = await stages.Runs.GetResultAsync(project, record.RunId, record.ResultId, culture, token).ConfigureAwait(false);
+            read.Advance();
+            return detail;
+        }, cancellationToken).ConfigureAwait(false);
+        List<DetailedIdentity> detailed = [];
+        int next = 0;
+        for (int index = 0; index < limit; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            TestIdentityGroup group = candidates[index];
+            List<AdoTestAttempt> attempts = [];
+            List<TestResultDto> details = [];
+            for (int recordIndex = 0; recordIndex < group.Records.Count; recordIndex++) details.Add(fetched[next++]);
+            bool multipleRecords = group.Records.Count > 1;
+            for (int recordIndex = 0; recordIndex < group.Records.Count; recordIndex++)
+            {
+                TestResultRecord record = group.Records[recordIndex];
+                TestResultDto detail = details[recordIndex];
+                Uri resultUrl = AdoWebLinks.BuildTestResult(connection.CollectionUri, project, build.Id, record.RunId, record.ResultId);
+                IReadOnlyList<TestSubResultDto> rerun = record.IsRerunGroup ? TestAttemptMapper.RerunAttempts(detail) : [];
+                if (rerun.Count > 0)
+                    foreach (TestSubResultDto sub in rerun)
+                        attempts.Add(TestAttemptMapper.FromSubResult(sub, detail, record.RunId, attempts.Count + 1, resultUrl, cancellationToken));
+                else
+                    attempts.Add(TestAttemptMapper.FromResult(detail, record.RunId, attempts.Count + 1,
+                        multipleRecords ? AdoTestAttemptSource.RunAttempt : AdoTestAttemptSource.Single, resultUrl, cancellationToken));
+            }
+            detailed.Add(new DetailedIdentity(group, attempts, details));
+        }
+        await AddAttachmentsAsync(stages, detailed, cancellationToken).ConfigureAwait(false);
+        IReadOnlyDictionary<int, AdoTestCaseLink> resolved = await ResolveLinksAsync(stages, detailed, diagnostics, cancellationToken)
+            .ConfigureAwait(false);
+        // Only identities that really hold a failure-class attempt are reported (§15.6).
+        List<DetailedIdentity> reported = detailed
+            .Where(static item => item.Attempts.Any(static attempt => attempt.OutcomeClass == AdoTestOutcomeClass.Failure))
+            .OrderBy(static item => item.Classification == AdoTestFailureClassification.Failed ? 0 : 1)
+            .ThenBy(static item => item.Group.Storage ?? "", StringComparer.Ordinal)
+            .ThenBy(static item => item.Group.Name ?? "", StringComparer.Ordinal)
+            .ThenBy(static item => item.Group.FirstResultId)
+            .ToList();
+        // One lookup for every reported test, after the Test Case read that supplies the linked work items.
+        IReadOnlyList<IReadOnlyList<AdoTestBug>> reportedBugs = await stages.Bugs.ResolveAsync([.. reported.Select(item => new TestBugReferences(
+                item.Attempts.SelectMany(static attempt => attempt.AssociatedBugIds).ToHashSet(),
+                (item.TestCaseId is int testCaseId ? stages.Links.LinkedWorkItems(project, testCaseId) : []).ToHashSet()))],
+            build.Id, project, culture, diagnostics, cancellationToken).ConfigureAwait(false);
+        return new CurrentBuild(reported, resolved, reportedBugs, CurrentBuildData(groups, detailed, cancellationToken));
+    }
+
+    // Attachment metadata for each detailed result and for its attempt and iteration sub-results
+    // (§15.9 step 5). Result-level attachments belong to the first attempt of their record. Every
+    // list is one request; they run together and are assigned in the order they were asked for.
+    private async Task AddAttachmentsAsync(Stages stages, List<DetailedIdentity> detailed, CancellationToken cancellationToken)
+    {
+        List<AttachmentListing> work = [];
+        List<int> pending = [];
+        for (int itemIndex = 0; itemIndex < detailed.Count; itemIndex++)
+        {
+            DetailedIdentity item = detailed[itemIndex];
             for (int recordIndex = 0; recordIndex < item.Details.Count; recordIndex++)
             {
-                cancellationToken.ThrowIfCancellationRequested();
                 // Result IDs are unique only within a run, so every match also compares the run.
                 int runId = item.Group.Records[recordIndex].RunId;
                 int resultId = item.Details[recordIndex].Id;
-                AdoTestAttempt[] owners = item.Attempts
-                    .Where(attempt => attempt.RunId == runId && attempt.ResultId == resultId).ToArray();
-                collected.AddRange(await runs.GetAttachmentsAsync(project, runId, resultId, null, culture, cancellationToken)
-                    .ConfigureAwait(false));
-                foreach (int subId in owners.SelectMany(AttachmentSubResultIds).Distinct())
-                    collected.AddRange(await runs.GetAttachmentsAsync(project, runId, resultId, subId, culture, cancellationToken)
-                        .ConfigureAwait(false));
-                progress.Progress(new AdoProgress { Phase = AdoProgressPhase.Attachments, Completed = ++completed, Total = total });
+                int record = pending.Count, before = work.Count;
+                work.Add(new AttachmentListing(itemIndex, record, runId, resultId, null));
+                foreach (int subId in item.Attempts.Where(attempt => attempt.RunId == runId && attempt.ResultId == resultId)
+                    .SelectMany(AttachmentSubResultIds).Distinct())
+                    work.Add(new AttachmentListing(itemIndex, record, runId, resultId, subId));
+                pending.Add(work.Count - before);
             }
+        }
+        // Progress counts result records, as before: a record is done when its last list is read.
+        int[] remaining = [.. pending];
+        ProgressCount listed = new(progress, AdoProgressPhase.Attachments, remaining.Length);
+        IReadOnlyList<IReadOnlyList<AdoTestAttachment>> lists = await OrderedParallel.RunAsync(work, stages.Concurrency, async (listing, token) =>
+        {
+            IReadOnlyList<AdoTestAttachment> list = await stages.Runs
+                .GetAttachmentsAsync(stages.Project, listing.RunId, listing.ResultId, listing.SubResultId, stages.Culture, token).ConfigureAwait(false);
+            if (Interlocked.Decrement(ref remaining[listing.Record]) == 0) listed.Advance();
+            return list;
+        }, cancellationToken).ConfigureAwait(false);
+        List<AdoTestAttachment>[] collectedByItem = [.. detailed.Select(static _ => new List<AdoTestAttachment>())];
+        for (int index = 0; index < work.Count; index++) collectedByItem[work[index].Item].AddRange(lists[index]);
+        for (int itemIndex = 0; itemIndex < detailed.Count; itemIndex++)
+        {
+            DetailedIdentity item = detailed[itemIndex];
+            List<AdoTestAttachment> collected = collectedByItem[itemIndex];
             if (collected.Count == 0) continue;
             for (int index = 0; index < item.Attempts.Count; index++)
             {
@@ -261,8 +320,8 @@ public sealed class TestFailureRetrievalService
         }
     }
 
-    private async Task<IReadOnlyDictionary<int, AdoTestCaseLink>> ResolveLinksAsync(List<DetailedIdentity> detailed,
-        string project, CultureInfo culture, List<AdoDiagnostic> diagnostics, CancellationToken cancellationToken)
+    private async Task<IReadOnlyDictionary<int, AdoTestCaseLink>> ResolveLinksAsync(Stages stages, List<DetailedIdentity> detailed,
+        List<AdoDiagnostic> diagnostics, CancellationToken cancellationToken)
     {
         List<int> ids = [];
         foreach (DetailedIdentity item in detailed)
@@ -275,7 +334,7 @@ public sealed class TestFailureRetrievalService
                 if (string.IsNullOrWhiteSpace(reference)) continue;
                 if (!TestCaseLinkResolver.TryParseReference(reference, out int id))
                 {
-                    diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.InvalidTestCaseReference, culture, arguments:
+                    diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.InvalidTestCaseReference, stages.Culture, arguments:
                     [
                         detail.Id.ToString(CultureInfo.InvariantCulture),
                         item.Group.Records[recordIndex].RunId.ToString(CultureInfo.InvariantCulture),
@@ -288,7 +347,7 @@ public sealed class TestFailureRetrievalService
         }
         return ids.Count == 0
             ? new Dictionary<int, AdoTestCaseLink>()
-            : await links.ResolveAsync(ids, project, culture, diagnostics, progress, cancellationToken).ConfigureAwait(false);
+            : await stages.Links.ResolveAsync(ids, stages.Project, stages.Culture, diagnostics, progress, cancellationToken).ConfigureAwait(false);
     }
 
     // The current build's bars and cells use the final classification for detailed identities and
@@ -366,6 +425,31 @@ public sealed class TestFailureRetrievalService
                 WebUrl = AdoWebLinks.Build(connection.CollectionUri, project, entry.Build.Id),
             });
         return summaries.AsReadOnly();
+    }
+
+    // The services of one retrieval, all built on its gate, with what every stage needs to call them.
+    private sealed record Stages(TestRunService Runs, TestCaseLinkResolver Links, TestBugResolver Bugs, int Concurrency, string Project,
+        CultureInfo Culture);
+
+    // What the main path hands back: the reported tests in report order, with their links, bugs and
+    // the current build's history data.
+    private sealed record CurrentBuild(IReadOnlyList<DetailedIdentity> Reported, IReadOnlyDictionary<int, AdoTestCaseLink> Links,
+        IReadOnlyList<IReadOnlyList<AdoTestBug>> Bugs, HistoryBuildData Data);
+
+    // One attachment list to request: for a result, or for one of its sub-results. Record numbers
+    // the result records across all tests, for progress.
+    private readonly record struct AttachmentListing(int Item, int Record, int RunId, int ResultId, int? SubResultId);
+
+    // Progress from requests that end in any order: the count only ever rises, one step at a time.
+    private sealed class ProgressCount(IAdoLog log, AdoProgressPhase phase, int total)
+    {
+        private readonly Lock gate = new();
+        private int completed;
+
+        internal void Advance()
+        {
+            lock (gate) log.Progress(new AdoProgress { Phase = phase, Completed = ++completed, Total = total });
+        }
     }
 
     private sealed class DetailedIdentity(TestIdentityGroup group, List<AdoTestAttempt> attempts, List<TestResultDto> details)

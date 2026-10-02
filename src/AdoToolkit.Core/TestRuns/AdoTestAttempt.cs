@@ -23,6 +23,7 @@ public sealed class AdoTestAttempt
     public string? ResolutionState { get; init; }
     public string? Comment { get; init; }
     public int? FailingSinceBuildId { get; init; }
+    // The server's list as sent, closed bugs included; the failure's Bugs holds the ones that count.
     public IReadOnlyList<int> AssociatedBugIds { get; init; } = Array.Empty<int>();
     public IReadOnlyList<AdoTestSubResult> SubResults { get; init; } = Array.Empty<AdoTestSubResult>();
     public IReadOnlyList<AdoTestIteration> Iterations { get; init; } = Array.Empty<AdoTestIteration>();

@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Runtime.ExceptionServices;
 using AdoToolkit.Core.Builds;
 using AdoToolkit.Core.Connections;
 using AdoToolkit.Core.Http;
@@ -7,42 +8,60 @@ namespace AdoToolkit.Core.TestRuns;
 
 internal sealed record HistoryEntry(HistoryBuild Build, bool IsCurrent, HistoryBuildData Data);
 
+// The earlier builds of one history read, oldest first, with the warnings the read produced.
+internal sealed record EarlierHistory(IReadOnlyList<HistoryEntry> Entries, IReadOnlyList<AdoDiagnostic> Diagnostics)
+{
+    internal static EarlierHistory None { get; } = new([], []);
+}
+
 // The current build plus up to HistoryCount - 1 earlier builds of the same definition (§15.12).
-// History never changes Status and never fails the report.
+// History never changes Status and never fails the report. Reading the earlier builds needs only
+// the current build, so the retrieval may run it beside its main path; the current entry is added
+// afterwards, from data the main path computes.
+//
+// Builds are read one after another, newest first, and the result lists of one build together.
+// The request budget is the service's own counter: requests of the main path never spend it.
 internal sealed class RunHistoryService
 {
     private readonly AdoHttpPipeline pipeline;
     private readonly TestRunService runs;
     private readonly TestFailureInvocationCache cache;
-    private readonly RequestCounter counter;
-    private readonly IAdoLog progress;
+    private readonly RequestCounter budget;
+    private readonly int maximumRequests;
+    private readonly int concurrency;
 
+    // counter is the retrieval's counter; the history budget is a child of it, so every history
+    // request still counts in the retrieval's total.
     internal RunHistoryService(HttpClient client, AdoConnection connection, TestFailureInvocationCache cache,
-        IAdoLog? log, RequestCounter counter)
+        IAdoLog? log, RequestCounter counter, int maximumRequests, RequestGate? gate = null, int concurrency = 1)
     {
         this.cache = cache;
-        this.counter = counter;
-        progress = log ?? new NullAdoLog();
+        this.maximumRequests = maximumRequests;
+        this.concurrency = concurrency;
+        budget = counter.Child(maximumRequests);
         pipeline = new AdoHttpPipeline(client, connection.CollectionUri, TimeSpan.FromSeconds(connection.RequestTimeoutSeconds),
-            log, counter: counter);
-        runs = new TestRunService(client, connection, log, counter);
+            log, counter: budget, gate: gate);
+        runs = new TestRunService(client, connection, log, budget, gate);
     }
 
-    internal async Task<IReadOnlyList<HistoryEntry>> GetHistoryAsync(AdoBuild current, HistoryBuildData currentData,
-        int historyCount, AdoTestHistoryScope scope, int maximumRequests, CultureInfo culture,
-        List<AdoDiagnostic> diagnostics, CancellationToken cancellationToken)
+    internal static HistoryEntry Current(AdoBuild current, HistoryBuildData data) => new(new HistoryBuild
     {
-        HistoryEntry currentEntry = new(new HistoryBuild
-        {
-            Id = current.Id,
-            BuildNumber = current.BuildNumber,
-            SourceBranch = current.SourceBranch,
-            FinishTime = current.FinishTime,
-            Result = current.Result,
-        }, true, currentData);
-        if (historyCount <= 1) return Array.AsReadOnly(new[] { currentEntry });
-        int budgetStart = counter.Count;
-        using IDisposable budget = counter.Limit(maximumRequests);
+        Id = current.Id,
+        BuildNumber = current.BuildNumber,
+        SourceBranch = current.SourceBranch,
+        FinishTime = current.FinishTime,
+        Result = current.Result,
+    }, true, data);
+
+    // report receives one progress event per earlier build, in order. The caller decides whether
+    // it is shown at once or held back until its own progress has ended.
+    internal async Task<EarlierHistory> ReadEarlierAsync(AdoBuild current, int historyCount, AdoTestHistoryScope scope,
+        CultureInfo culture, Action<AdoProgress> report, CancellationToken cancellationToken)
+    {
+        if (historyCount <= 1) return EarlierHistory.None;
+        List<AdoDiagnostic> diagnostics = [];
+        AdoDiagnostic LimitExceeded() => DiagnosticMessageRenderer.Create(DiagnosticCodes.HistoryLimitExceeded, culture,
+            arguments: [maximumRequests.ToString(CultureInfo.InvariantCulture)]);
         IReadOnlyList<HistoryBuild> window;
         try
         {
@@ -50,16 +69,15 @@ internal sealed class RunHistoryService
         }
         catch (RequestBudgetExceededException)
         {
-            diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.HistoryLimitExceeded, culture,
-                arguments: [maximumRequests.ToString(CultureInfo.InvariantCulture)]));
-            return Array.AsReadOnly(new[] { currentEntry });
+            diagnostics.Add(LimitExceeded());
+            return new EarlierHistory([], diagnostics.AsReadOnly());
         }
         catch (Exception error) when (IsRecoverable(error, cancellationToken))
         {
             // Without the window there are no earlier builds to report; the current build stands alone.
             diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.HistoryUnavailable, culture,
                 arguments: [current.Id.ToString(CultureInfo.InvariantCulture)]));
-            return Array.AsReadOnly(new[] { currentEntry });
+            return new EarlierHistory([], diagnostics.AsReadOnly());
         }
         // Newest first, so the request budget is spent on the most recent builds and the
         // remaining older ones become Unavailable.
@@ -69,8 +87,8 @@ internal sealed class RunHistoryService
         foreach (HistoryBuild build in window)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            // The window holds the earlier builds only; the current build is already read.
-            progress.Progress(new AdoProgress
+            // The window holds the earlier builds only; the current build is read by the main path.
+            report(new AdoProgress
             {
                 Phase = AdoProgressPhase.History,
                 Completed = ++completed,
@@ -84,12 +102,11 @@ internal sealed class RunHistoryService
                 earlier.Add(new HistoryEntry(build, false, cached));
                 continue;
             }
-            if (counter.Count - budgetStart >= maximumRequests)
+            if (budget.IsSpent)
             {
                 if (!limitReported)
                 {
-                    diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.HistoryLimitExceeded, culture,
-                        arguments: [maximumRequests.ToString(CultureInfo.InvariantCulture)]));
+                    diagnostics.Add(LimitExceeded());
                     limitReported = true;
                 }
                 earlier.Add(new HistoryEntry(build, false, HistoryBuildData.Unavailable));
@@ -103,10 +120,11 @@ internal sealed class RunHistoryService
             }
             catch (RequestBudgetExceededException)
             {
+                // A request is refused only when the budget is fully spent, so every older build is
+                // unavailable too, whichever of this build's requests was the one refused.
                 if (!limitReported)
                 {
-                    diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.HistoryLimitExceeded, culture,
-                        arguments: [maximumRequests.ToString(CultureInfo.InvariantCulture)]));
+                    diagnostics.Add(LimitExceeded());
                     limitReported = true;
                 }
                 exhausted = true;
@@ -123,8 +141,7 @@ internal sealed class RunHistoryService
             earlier.Add(new HistoryEntry(build, false, data));
         }
         earlier.Reverse();
-        earlier.Add(currentEntry);
-        return earlier.AsReadOnly();
+        return new EarlierHistory(earlier.AsReadOnly(), diagnostics.AsReadOnly());
     }
 
     // Authentication, authorization and cancellation still fail the whole retrieval (§15.12).
@@ -190,15 +207,24 @@ internal sealed class RunHistoryService
             .GetRunsAsync(project, build.Id, buildUri, culture, cancellationToken).ConfigureAwait(false);
         if (buildRuns.Count == 0) return HistoryBuildData.Unavailable;
         PipelineGrouping grouping = PipelineGrouping.Create(buildRuns);
+        OrderedParallelOutcome<IReadOnlyList<TestResultDto>> lists = await OrderedParallel.TryRunAsync(buildRuns, concurrency,
+            (run, token) => runs.GetResultsAsync(project, run, culture, token), cancellationToken).ConfigureAwait(false);
+        if (lists.Failures.Count > 0) ExceptionDispatchInfo.Capture(Decisive(lists.Failures, cancellationToken)).Throw();
         List<TestResultRecord> records = [];
-        int order = 0;
-        foreach (AdoTestRun run in buildRuns)
+        for (int index = 0; index < buildRuns.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            order++;
-            foreach (TestResultDto result in await runs.GetResultsAsync(project, run.Id, culture, cancellationToken).ConfigureAwait(false))
-                records.Add(TestFailureRetrievalService.ToRecord(result, run, order, grouping));
+            foreach (TestResultDto result in lists.Results[index])
+                records.Add(TestFailureRetrievalService.ToRecord(result, buildRuns[index], index + 1, grouping));
         }
         return HistoryBuildData.FromGroups(AttemptGrouper.Group(records, culture, null, cancellationToken), cancellationToken);
     }
+
+    // Several result lists of one build can fail at once. The failure that decides the build is
+    // chosen by kind, never by which arrived first: an error that fails the whole retrieval, then
+    // the spent budget, then an error that only makes this build unavailable. Within a kind the
+    // earliest run decides.
+    private static Exception Decisive(IReadOnlyList<(int Index, Exception Error)> failures, CancellationToken cancellationToken) => failures
+        .OrderBy(failure => failure.Error is RequestBudgetExceededException ? 1 : IsRecoverable(failure.Error, cancellationToken) ? 2 : 0)
+        .ThenBy(static failure => failure.Index).First().Error;
 }

@@ -78,7 +78,7 @@ HelpMessage: ''
 
 ### -Profile
 
-Nom d’un profil local enregistré. La complétion lit uniquement la configuration locale.
+Nom d’un profil local enregistré. La complétion lit uniquement la configuration locale et accepte les préfixes entre guillemets simples ou doubles.
 
 ```yaml
 Type: System.String
@@ -99,7 +99,7 @@ HelpMessage: ''
 
 ### -Project
 
-Projet par défaut de cette connexion. La complétion utilise uniquement le cache de projets de l’espace d’exécution, et un nom complété est placé entre guillemets simples de sorte qu’il puisse être exécuté tel quel. Une commande qui utilise un projet nommé . ou .. échoue avec une erreur de configuration avant toute requête.
+Projet par défaut de cette connexion. La complétion utilise uniquement le cache de projets de l’espace d’exécution et accepte les préfixes entre guillemets simples ou doubles; le nom complété est placé entre guillemets simples de sorte qu’il puisse être exécuté tel quel. Une commande qui utilise un projet nommé . ou .. échoue avec une erreur de configuration avant toute requête.
 
 ```yaml
 Type: System.String

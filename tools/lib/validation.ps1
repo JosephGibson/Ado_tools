@@ -207,8 +207,7 @@ function Get-DocumentationOutcome {
                 $paths++
                 # As for a link: a path that leaves the repository or names a sensitive file is not probed.
                 $named = [System.IO.Path]::GetFullPath((Join-Path $root $reference.Target.TrimEnd('/')))
-                if (-not (Test-IsRepositoryPath -Path $named -Root $root) -or
-                    -not (Test-IsAgentSafePath -Path $named -Root $root) -or -not (Test-Path -LiteralPath $named)) {
+                if (-not (Test-IsSafeRepositoryTarget -Path $named -Root $root)) {
                     [void] $failures.Add("${location}: path '$($reference.Target)' does not exist.")
                 }
                 continue
@@ -221,8 +220,7 @@ function Get-DocumentationOutcome {
             if ($target) {
                 try { $resolved = [System.IO.Path]::GetFullPath((Join-Path $document.File.DirectoryName ([uri]::UnescapeDataString($target)))) }
                 catch { $resolved = $null }
-                if (-not $resolved -or -not (Test-IsRepositoryPath -Path $resolved -Root $root) -or
-                    -not (Test-IsAgentSafePath -Path $resolved -Root $root) -or -not (Test-Path -LiteralPath $resolved)) {
+                if (-not $resolved -or -not (Test-IsSafeRepositoryTarget -Path $resolved -Root $root)) {
                     [void] $failures.Add("${location}: link '$($reference.Target)' does not resolve.")
                     continue
                 }

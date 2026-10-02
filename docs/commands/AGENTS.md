@@ -1,9 +1,8 @@
 # Cmdlet help sources
 
 `docs/commands/en-US/` and `docs/commands/fr-CA/` each hold one PlatyPS Markdown topic per
-cmdlet. `tools/package/Publish-AdoToolkitPackage.ps1` compiles them into the package as
-`en-US/` and `fr/AdoToolkit.PowerShell.dll-Help.xml`. They are shipped, end-user content:
-keep the explanation.
+cmdlet. `tools/package/Publish-AdoToolkitPackage.ps1` compiles them into
+`AdoToolkit.PowerShell.dll-Help.xml` in the package's `en-US` and `fr` folders.
 
 ## Rules
 
@@ -19,7 +18,7 @@ keep the explanation.
   every parameter. The text under an example describes what its code does.
 - Put a blank line before and after each heading and each code fence.
 - Set `ms.date` (`MM-dd-yyyy`) to the day of the change in each file you change.
-- French terms follow the Strings section of `src/AGENTS.md`. In help, a non-terminating
+- French terms follow `src/AGENTS.md`. In help, a non-terminating
   error is « erreur non bloquante », the platform is « sous Windows », a pipeline stage is
   « phase », and no space precedes `;`.
 

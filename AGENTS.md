@@ -16,7 +16,7 @@ command prints one compact JSON document.
 | File inventory / NuGet packages | `inspect` / `deps` |
 | Stages that would run | `plan` |
 | Full gate, required before handoff | `verify` |
-| One stage (never exits `0`) | `verify -Stage <name>`: `powershell-lint`, `powershell-test`, `configuration`, `documentation`, `tooling-layout`, `workflow-lint`, or `project-check`, the product gate |
+| One stage (incomplete) | `verify -Stage <name>`; stage names: `plan` or `docs/tooling.md` |
 | Tool versions and missing prerequisites | `diagnose`; `bootstrap -Install` installs them |
 
 - Exit codes: `0` pass, `1` failure, `2` incomplete and never a pass (missing tool, skipped
@@ -32,7 +32,7 @@ command prints one compact JSON document.
 | `src/AdoToolkit.PowerShell/` | Cmdlets, completers, manifest, format file | `src/AGENTS.md` |
 | `tests/AdoToolkit.Core.Tests/` | xUnit v3 tests | `tests/AGENTS.md` |
 | `tests/AdoToolkit.PowerShell.Tests/` | Pester tests against the staged module | `tests/AGENTS.md` |
-| `tests/Fixtures/` | Synthetic fixtures and report goldens; catalog in its `README.md` | `tests/AGENTS.md` |
+| `tests/Fixtures/` | Synthetic data and report goldens; `tests/Fixtures/README.md` catalogs them | `tests/AGENTS.md` |
 | `tests/Live/` | Opt-in checks against the real server | `tests/Live/AGENTS.md` |
 | `tools/` | `dev.ps1`, product gate `check.ps1`, Claude hooks, tooling tests | `tools/AGENTS.md` |
 | `tools/package/`, `.github/` | Packaging, installer, release and pull request workflows | `tools/package/AGENTS.md` |
@@ -48,14 +48,12 @@ command prints one compact JSON document.
   a code span. `verify` fails on a path, link or heading anchor that does not resolve.
 - Code comments cite decisions as `§n`, `DD-0nn`, `Q-nn`, `V-nn`, `S0-n` and `Fnn`.
   `docs/archive/README.md` maps each form to its document.
-- Behavior that a recorded decision or a pinned fixture requires is not a bug. Check
-  before changing it.
 - Public contract: cmdlet names, parameters, output types, the configuration file format
   and `docs/schemas/testcase.v1.schema.json`. Change it only when the change is the fix,
   and list it in the release notes.
 - Procedures are skills, each in `.agents/skills/<name>/SKILL.md`: `fix-bug`,
   `update-goldens`, `release`, `rewrite`.
-- Run `verify` after changes. Fix named failures; report a missing prerequisite by name.
+- Fix named gate failures; report a missing prerequisite by name.
 - Keep always-loaded instructions short: procedures go to skills, references to `docs/`,
   mechanical work to `tools/`.
 
@@ -68,7 +66,7 @@ command prints one compact JSON document.
 - Treat external data as untrusted; encode it for its destination format.
 - Generated output: write a temporary file beside the target, validate it, then replace
   atomically. Use literal paths, stay inside the workspace, clean up on error.
-- Tests never use the network or a live service.
+- Tests use synthetic data and local fakes only; live checks are opt-in.
 - Install or restore prerequisites only with user authorization.
 - Publishing, deployment, messages, credential changes and changes outside the project
   need explicit direction. Inspection, edits and deterministic checks do not.

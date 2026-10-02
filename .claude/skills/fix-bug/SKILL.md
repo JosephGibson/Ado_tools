@@ -1,6 +1,6 @@
 ---
 name: fix-bug
-description: Fixes a defect in AdoToolkit (src/, tests/ or tools/) with a test that fails before the fix. Use when asked to fix a bug, a wrong result, an unhandled error, a crash or a review finding in this repository.
+description: Fix a defect in AdoToolkit src/, tests/ or tools/ with a regression test that fails before the fix.
 argument-hint: "[what is wrong]"
 ---
 

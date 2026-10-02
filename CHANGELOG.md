@@ -16,7 +16,7 @@ section of a version also opens the text of its
 
 ### Changed
 
-- `Get-AdoBuildTestFailure` sends up to six requests at the same time instead of one and returns the same result; how Azure DevOps Server 2020 answers them is not confirmed yet, and the value `1` restores the earlier behavior.
+- `Get-AdoBuildTestFailure` sends up to six requests at the same time instead of one and combines results in input order; how Azure DevOps Server 2020 answers them is not confirmed yet, and the value `1` restores the earlier behavior. Near the history request limit, a failed history build can leave a different budget for older builds; see the release notes.
 - `Get-AdoBuildTestFailure` leaves closed bugs out of `Bugs`: a listed bug is open, or could not be read.
 - `Export-AdoBuildTestFailure` downloads by default the JSON and text attachments of up to 256 KiB from every test run inside the attachment window, not only from the latest run, starting with the latest run and several files at a time.
 - The failed-test report shows the full error message and stack trace of every attempt instead of a reference to an earlier attempt with the same text, so a report with many retries is larger.
@@ -25,6 +25,10 @@ section of a version also opens the text of its
 ### Removed
 
 - The Open mark on the bugs of a failed-test report card: every listed bug is open, and a bug that could not be read is marked Not read.
+
+### Fixed
+
+- Project and profile names complete correctly from double-quoted prefixes as well as single-quoted ones.
 
 Details: [release notes](docs/release-0.7.0.md)
 

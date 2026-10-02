@@ -39,6 +39,7 @@ the deepest canceled records. `Path` shows the stage › job › task chain. Add
 ## Save logs
 
 ```powershell
+[void](New-Item -ItemType Directory -Path .\triage -Force)
 $build | Get-AdoBuildFailure | Save-AdoBuildLog -Tail 200 -Path .\triage
 ```
 
@@ -94,7 +95,7 @@ confirmed on Azure DevOps Server 2020 (V-19).
 
 Each failure keeps all its attempts, with error messages, stack traces,
 attachment metadata, any linked Test Case and its bugs. Run history covers the current build
-and earlier builds of the same definition. It uses 10 runs on the same branch by
+and earlier builds of the same definition. It uses 10 builds on the same branch by
 default. Change that with `-HistoryCount` (1–50) and `-HistoryScope AllBranches`.
 A result set with problems, such as more failing tests than the configured maximum,
 has `Status` set to `Partial` and details in `Diagnostics`.
@@ -120,7 +121,8 @@ has `StateCategory`, `TeamProject`, `WebUrl`, and `IsAssociatedWithResult` and
 `IsLinkedToTestCase`, which say where it was found. `IsOpen` is `True`, or empty for a bug
 that could not be read; such a bug stays in the list because it may be open. An attempt's
 `AssociatedBugIds` is still the server's own list and can name a closed bug. The lookup
-never fails the retrieval:
+reports recoverable lookup problems as warnings. Authentication, authorization and
+cancellation still stop the retrieval:
 
 | Warning | What happened |
 | --- | --- |

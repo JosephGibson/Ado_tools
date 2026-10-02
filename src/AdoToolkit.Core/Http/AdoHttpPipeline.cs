@@ -127,7 +127,6 @@ internal sealed class AdoHttpPipeline
         throw PagingError(endpoint, culture);
     }
 
-
     internal Task<FileInfo> DownloadFileAsync(EndpointDefinition endpoint, IReadOnlyDictionary<string, string> routes,
         IReadOnlyDictionary<string, string>? query, string destination, AtomicFileWriter writer, Action<string> validate,
         CultureInfo culture, CancellationToken cancellationToken) =>

@@ -8,7 +8,7 @@
 
 ## Data
 
-- Fixtures are hand-written and synthetic. Never copy work data (DD-010, DD-022).
+- Fixtures are hand-written; never copy work data (DD-010, DD-022).
 - Hosts end in `.test`, for example `ado.example.test`.
 - Every fixture file has one entry in `tests/Fixtures/README.md`; `FixtureCatalogTests`
   enforces it. Delete a fixture that no test reads.
@@ -34,6 +34,4 @@
 - xUnit `Assert` only. Pass `TestContext.Current.CancellationToken` to async calls.
 - An acceptance test carries its real ID: `[Trait("Acceptance", "S5-3")]` or `-Tag 'S5-3'`.
   A test without an acceptance ID carries no tag.
-- A bug fix adds a test that fails before the fix (skill `fix-bug`).
-- Report goldens in `tests/Fixtures/Reports/` change only through the `update-goldens`
-  skill.
+- Report goldens in `tests/Fixtures/Reports/` change only through the `update-goldens` skill.

@@ -67,6 +67,25 @@ Describe 'tools/dev.ps1' {
         Test-IsAgentSafePath -Path (Join-Path $repository 'src\notes.txt') -Root $repository | Should -BeTrue
     }
 
+    It 'excludes every .env prefix in both discovery implementations' -ForEach @(
+        @{ UseRipgrep = $true }
+        @{ UseRipgrep = $false }
+    ) {
+        $repository = Join-Path $TestDrive "env-prefix-$UseRipgrep"
+        New-TestFile -Path (Join-Path $repository 'src/worker.ps1') -Content 'SyntheticMarker'
+        foreach ($name in @('.env', '.env.local', '.envrc', '.environment')) {
+            New-TestFile -Path (Join-Path $repository $name) -Content 'SyntheticMarker'
+            New-TestFile -Path (Join-Path $repository "nested/$name/notes.txt") -Content 'SyntheticMarker'
+            Test-IsAgentSafePath -Path (Join-Path $repository $name) -Root $repository | Should -BeFalse
+        }
+        if (-not $UseRipgrep) { Mock Get-FirstCommand { $null } -ParameterFilter { $Names -contains 'rg' } }
+
+        $result = Find-ProjectSource -Query 'SyntheticMarker' -Root $repository
+
+        $result.Results.Path | Should -Be @('src/worker.ps1')
+        @(Get-RepositoryFiles -Root $repository).Count | Should -Be 1
+    }
+
     It 'finds safe content in hidden repository configuration' {
         $repository = Join-Path $TestDrive 'hidden-find-sample'
         New-TestFile -Path (Join-Path $repository '.claude\rules\workflow.md') -Content 'Use deterministic discovery.'
@@ -612,7 +631,7 @@ exit 0
         $globs = @(Get-RepositoryExclusionGlobs)
         $searchArguments = @(Get-RepositorySearchGlobs)
 
-        foreach ($expected in @('!artifacts/**', '!**/artifacts/**', '!secret/**', '!secrets/**', '!**/.env', '!*.log')) {
+        foreach ($expected in @('!artifacts/**', '!**/artifacts/**', '!secret/**', '!secrets/**', '!**/.env*', '!*.log')) {
             $globs | Should -Contain $expected
         }
         $searchArguments | Should -Contain '--no-ignore'

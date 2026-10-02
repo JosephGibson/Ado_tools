@@ -1,55 +1,42 @@
 ---
 name: update-goldens
-description: Regenerates the golden report files in tests/Fixtures/Reports after an intended change to rendered report output, and reviews the difference. Use when a golden report test fails because report markup, text, styles or French wording changed on purpose.
+description: Regenerate and review tests/Fixtures/Reports after an intended change to report markup, text, styles or French wording.
 ---
 
-# Update the report goldens
+# Update report goldens
 
-`tests/Fixtures/Reports/` holds 50 golden reports. Three test classes compare rendered
-bytes with them and rewrite them only when `ADOTOOLKIT_UPDATE_GOLDEN` is `1`.
+The 50 goldens in `tests/Fixtures/Reports/` are written only by these tests:
 
 | Test | Goldens |
 | --- | --- |
-| `GoldenReportTests` | `testcase-<variant>.<culture>.<html\|md\|json>`, 30 files, and `testcase-<rich\|detailed>.<culture>.html`, 4 files |
-| `MultiCaseDocumentTests.MultiCaseDocumentMatchesReviewedGolden` | `testcases-multi.<culture>.<html\|md\|json>`, 6 files |
-| `GoldenTestFailureReportTests` | `testfailures-<variant>.<culture>.html`, 10 files |
+| `GoldenReportTests` | 30 HTML/Markdown/JSON reports; 4 HTML-only rich/detailed reports |
+| `MultiCaseDocumentTests.MultiCaseDocumentMatchesReviewedGolden` | 6 multi-case reports |
+| `GoldenTestFailureReportTests` | 10 failed-test HTML reports |
 
-## Steps
-
-1. Make the product change and write its own test first. A golden shows that output
-   changed, not that the change is right.
-2. See which goldens differ:
+1. Write the change's own regression test and make the product change. Golden differences
+   show changed bytes, not correctness.
+2. Run the comparison:
 
    ```powershell
    dotnet test tests/AdoToolkit.Core.Tests --configuration Release --no-restore --filter "FullyQualifiedName~GoldenReportTests|FullyQualifiedName~GoldenTestFailureReportTests|FullyQualifiedName~MultiCaseDocumentMatchesReviewedGolden"
    ```
 
-3. Regenerate, with the variable set for that one command only:
+3. Repeat with `ADOTOOLKIT_UPDATE_GOLDEN=1` for that command only. Restore its previous
+   environment value in `finally`; never edit a golden by hand.
+4. Inspect `git diff --stat -- tests/Fixtures/Reports` and every changed file's diff.
+   Fix unrelated differences in the implementation and regenerate.
+5. Repeat step 2 without the update flag, then run
+   `pwsh -NoProfile -File .\tools\dev.ps1 verify`, requiring exit `0`.
+   The gate clears the flag and compares in both cultures.
 
-   ```powershell
-   $env:ADOTOOLKIT_UPDATE_GOLDEN = '1'
-   try { dotnet test tests/AdoToolkit.Core.Tests --configuration Release --no-restore --filter "FullyQualifiedName~GoldenReportTests|FullyQualifiedName~GoldenTestFailureReportTests|FullyQualifiedName~MultiCaseDocumentMatchesReviewedGolden" }
-   finally { $env:ADOTOOLKIT_UPDATE_GOLDEN = $null }
-   ```
+Goldens use UTF-8 without BOM and LF endings. HTML goldens replace the script body with
+`__SCRIPT_ASSET__` and its hash with `sha256-__SCRIPT_SHA256__`; the tests restore them
+for comparison. Rich/detailed variants show HTML-only formatting and `-IncludeDetail`.
 
-4. Review every changed file: `git diff --stat -- tests/Fixtures/Reports`, then
-   `git diff -- tests/Fixtures/Reports/<file>`. Each changed line must follow from the
-   intended change. Any other difference is a defect: fix the code and regenerate.
-5. Run the command from step 2 again, without the variable. It passes.
-6. Run `pwsh -NoProfile -File .\tools\dev.ps1 verify`. The gate clears the variable and
-   compares the goldens under `en-US` and `fr-CA`.
+A new variant needs a model in `ReportFixture`, `MultiCaseFixture` or
+`TestFailureReportFixture`, inclusion in the test's variant list, and a catalog entry in
+`tests/Fixtures/README.md`.
 
-## Rules
-
-- Never edit a golden by hand.
-- A golden is exact UTF-8 without a BOM and with LF line ends.
-- In an HTML golden the script body is `__SCRIPT_ASSET__` and its hash is
-  `sha256-__SCRIPT_SHA256__`; the test puts them into the rendered report before comparing.
-- `rich` and `detailed` are HTML-only variants of `GoldenReportTests`: they show formatted
-  steps and the details of `-IncludeDetail`, which Markdown and JSON do not render.
-- A new variant needs its model in `ReportFixture`, `MultiCaseFixture` or
-  `TestFailureReportFixture`, its name in the test's variant list and an entry in
-  `tests/Fixtures/README.md`.
-- Report which goldens changed and why. A change to layout or wording needs the user's
-  review of the rendered English and French reports: name the files in the handoff. The
-  `release` skill lists them under "Existing tests changed" in the release notes.
+Report which files changed and why. For layout or wording changes, name the rendered
+English and French files for developer review in the handoff; release notes list these
+under "Existing tests changed".

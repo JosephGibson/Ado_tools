@@ -54,6 +54,30 @@ function Test-IsSafeRepositoryFile {
     return $true
 }
 
+# Check each component before descending, including directory targets used by documentation.
+function Test-IsSafeRepositoryTarget {
+    param([Parameter(Mandatory = $true)][string] $Path, [Parameter(Mandatory = $true)][string] $Root)
+
+    try {
+        $current = [System.IO.Path]::GetFullPath($Root)
+        $target = [System.IO.Path]::GetFullPath($Path)
+        if (-not (Test-IsRepositoryPath -Path $target -Root $current) -or
+            -not (Test-IsAgentSafePath -Path $target -Root $current)) { return $false }
+        $item = Get-Item -LiteralPath $current -Force -ErrorAction Stop
+        if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { return $false }
+        $relative = (Get-RelativeRepositoryPath -Path $target -Root $current).TrimEnd('/')
+        if ($relative -eq '.') { return $true }
+        foreach ($part in $relative.Split('/')) {
+            $current = Join-Path $current $part
+            $item = Get-Item -LiteralPath $current -Force -ErrorAction Stop
+            if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { return $false }
+            if ($item -is [System.IO.DirectoryInfo] -and (Test-IsExcludedDirectoryName -Name $part)) { return $false }
+        }
+        return $true
+    }
+    catch { return $false }
+}
+
 function Test-IsExcludedDirectoryName {
     param([Parameter(Mandatory = $true)][string] $Name)
 

@@ -1,9 +1,7 @@
 # Developer tooling
 
-Reference for `tools/` and the agent setup. Daily work needs only the command table in
-`AGENTS.md`; read this before changing a command, a stage, the product gate, packaging or
-the agent setup. The rules for those files are in `tools/AGENTS.md` and
-`tools/package/AGENTS.md`.
+Reference for tooling and agent setup; subtree rules are in `tools/AGENTS.md` and
+`tools/package/AGENTS.md`. Daily commands are in `AGENTS.md`.
 
 ```powershell
 pwsh -NoProfile -File .\tools\dev.ps1 <command>
@@ -24,7 +22,7 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
 | `verify -Stage <name>` | Only the named stages. Never a pass: `incomplete`, or `fail` |
 | `verify -SkipTests` | Every check except tests. Never a pass: `incomplete`, or `fail` |
 | `diagnose` | Presence and version of each required tool and of ripgrep |
-| `bootstrap [-Install]` | The same list. `-Install` installs what is missing: Pester 5.x, PSScriptAnalyzer and PlatyPS 1.x from PSGallery for the current user, actionlint and ripgrep with winget. It does not install the .NET SDK |
+| `bootstrap [-Install]` | Diagnostics; `-Install` installs missing modules from PSGallery for the current user and actionlint/ripgrep with winget. Never installs the .NET SDK |
 
 - `Status` decides the exit code: `ok` or `pass` is `0`, `fail` is `1`, `incomplete` or
   `unavailable` is `2`.
@@ -37,7 +35,8 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
   the lists in `tools/dev.ps1` and ignore `.gitignore` and user ripgrep settings, so the
   result does not depend on the tool.
 - Excluded: build and output directories (`ExcludedDirectoryNames`), `secret` and
-  `secrets` directories, sensitive file names (`SensitiveFileGlobs`), and links. A
+  `secrets` directories, sensitive file names (`SensitiveFileGlobs`, including every
+  `.env*` name), and links. A
   directory named like a sensitive file is excluded with everything in it.
 - Hidden shared configuration such as `.claude/` and `.github/` is included.
 - Content search skips binary files and files above 1 MiB. Nothing is indexed or cached.
@@ -75,16 +74,14 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
 `verify` shows the lines of `tools/check.ps1` that start with `check: ` as the stage
 summary. The gate:
 
-1. Exits `2` when the .NET SDK, restored package assets, Pester 5.x or PlatyPS 1.x is
-   missing.
+1. Checks the SDK, restored assets and required build modules; missing prerequisites exit `2`.
 2. Builds `AdoToolkit.slnx` in Release without restoring.
 3. Runs the Core tests twice, with `ADOTOOLKIT_TEST_CULTURE` set to `en-US`, then `fr-CA`,
    and `ADOTOOLKIT_UPDATE_GOLDEN` cleared. Each run writes TRX results to a new folder
    under `artifacts/verify/`; `Get-AdoTestOutcome` reads the counters. A skipped or
    undiscovered test, or a missing counter, exits `2`.
-4. Stages the package with `tools/package/Publish-AdoToolkitPackage.ps1 -NoBuild` and
-   checks it with `Assert-AdoPackage`: the exact seven files, help for all 22 commands,
-   the manifest and the assembly versions.
+4. Stages with `tools/package/Publish-AdoToolkitPackage.ps1 -NoBuild` and validates with
+   `Assert-AdoPackage` (see [Packaging and releases](#packaging-and-releases)).
 5. Runs `tests/AdoToolkit.PowerShell.Tests/*.Pester.ps1` against the staged module in a
    child process (`Invoke-AdoReportingChild`). The child writes its result lines to the
    file named by `ADOTOOLKIT_GATE_REPORT`, so nothing a cmdlet prints reaches the gate's
@@ -92,6 +89,17 @@ summary. The gate:
    `ADOTOOLKIT_CONFIG_PATH` names a file that does not exist.
 
 With `-SkipTests`, the gate builds and stages the package only.
+
+### Stage contracts
+
+Definitions live in `tools/lib/validation.ps1`.
+
+| Kind | Fields | Result |
+| --- | --- | --- |
+| In-process | `Name`, `Action`, `ActionArguments` | `Failures`, `Summary`, `Warnings`, optional `Unavailable` |
+| External | `Name`, `Executable`, `Arguments`, optional `TimeoutSeconds` (1–3600) and `ExitCodeContract` | Exit code and bounded output; `ExitCodeContract = 'dev'` maps exit `2` to incomplete |
+
+Script blocks receive state through arguments; `GetNewClosure()` loses library scope.
 
 ## Prerequisites
 
@@ -131,8 +139,7 @@ With `-SkipTests`, the gate builds and stages the package only.
 
 ## Packaging and releases
 
-The `release` skill is the procedure. It runs no Git write and ends with the two commands
-that the developer runs: one commits, tags and pushes, the other opens the pull request.
+Use `.agents/skills/release/SKILL.md` to prepare a release.
 
 | File | Purpose |
 | --- | --- |
@@ -218,8 +225,6 @@ git push <remote> :refs/tags/v<version>; git tag -d v<version>
 2. Installs the toolchain with the [setup action](#setup-action).
 3. Restores in locked mode and runs `verify`. Any exit code other than `0` fails the check.
 
-A pull request is therefore verified with the toolchain that the release is verified with.
-
 ### Setup action
 
 `.github/actions/setup/action.yml` is a composite action that both workflows run after
@@ -273,22 +278,18 @@ completely; an unsigned one is accepted.
 | File | Holds |
 | --- | --- |
 | `AGENTS.md` | The always-loaded contract; `CLAUDE.md` imports it |
-| `src/AGENTS.md`, `tests/AGENTS.md`, `tests/Live/AGENTS.md`, `tools/AGENTS.md`, `tools/package/AGENTS.md`, `docs/AGENTS.md`, `docs/commands/AGENTS.md` | Rules for one subtree. Codex reads them by directory |
+| Nested `AGENTS.md` files | Subtree rules; the root map lists them |
 | `.claude/rules/*.md` | One `@` import of a nested file each, with the `paths` globs that make Claude load it |
 | `.agents/skills/<name>/SKILL.md` | The body of a skill; Codex reads it |
 | `.claude/skills/<name>/SKILL.md` | A wrapper with the same name and description that tells Claude to read the body |
 | `.claude/settings.json` | Permissions and hooks for Claude |
 
-| Skill | Use | Invoked by |
-| --- | --- | --- |
-| `fix-bug` | Fix a defect with a test that fails first | The agent or the user |
-| `update-goldens` | Regenerate and review the report goldens | The agent or the user |
-| `release` | Bump the version, archive old notes, write the release notes and the `CHANGELOG.md` section, validate the package, hand over the commit, tag, push and pull request commands | The user only |
-| `rewrite` | Turn a draft into a prompt for another session | The user only |
+Skill purposes and procedures live in their bodies. `release` and `rewrite` require
+explicit invocation; `fix-bug` and `update-goldens` may be selected automatically.
 
 | Hook | Event | Behavior |
 | --- | --- | --- |
-| `tools/guard-git.ps1` | Before a shell command | Blocks every Git command except `status`, `diff`, `log`, `show` and `blame`, and those with an option that runs a program. It reads the command text, so it is a speed bump, not a boundary |
+| `tools/guard-git.ps1` | Before a shell command | Checks command text against the Git boundary in `AGENTS.md`; not a sandbox |
 | `tools/validate-edit.ps1` | After an edit | Parses the edited PowerShell, JSON or XML file and reports a syntax error, or that `tools/dev.ps1`, which it loads, does not load. The file is already written; the hook cannot undo it |
 
 - `.claude/settings.json` denies reading and editing secret-like paths, and allows the
@@ -297,5 +298,3 @@ completely; an unsigned one is accepted.
   its own permissions.
 - To add a rule: write it into the nested `AGENTS.md` of the subtree. A new nested file
   also needs a `.claude/rules/` import and a row in the map of `AGENTS.md`.
-- To add a skill: write the body, then the wrapper. `tooling-layout` fails when one is
-  missing or the descriptions differ.

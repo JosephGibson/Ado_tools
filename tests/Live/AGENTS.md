@@ -1,8 +1,7 @@
 # Live checks
 
 `tests/Live/*.Live.ps1` run only when the developer starts them at work, against the newest
-AdoToolkit release installed for the account. `verify` never runs them, and an agent never
-runs them.
+AdoToolkit release installed for the account. An agent never runs them.
 
 - Print only `PASS`, `FAIL`, `INCONCLUSIVE`, `NOTE` or `SHAPE` lines: a check ID (`V-nn`,
   `S0-n`, `SMOKE-n`, `SHAPE-n`), then structural notes: `UPPER_SNAKE_CASE` words, counts,

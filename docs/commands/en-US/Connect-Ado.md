@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Connect-Ado
 ---
@@ -78,7 +78,7 @@ HelpMessage: ''
 
 ### -Profile
 
-Name of a saved local profile. Completion reads the local configuration only.
+Name of a saved local profile. Completion reads the local configuration only and accepts prefixes in single or double quotes.
 
 ```yaml
 Type: System.String
@@ -99,7 +99,7 @@ HelpMessage: ''
 
 ### -Project
 
-Default project for this connection. Completion uses the runspace project cache only, and a completed name is quoted so that it can be run as shown. A command that uses a project named . or .. fails with a configuration error before any request.
+Default project for this connection. Completion uses the runspace project cache only and accepts prefixes in single or double quotes; the completed name is quoted so that it can be run as shown. A command that uses a project named . or .. fails with a configuration error before any request.
 
 ```yaml
 Type: System.String

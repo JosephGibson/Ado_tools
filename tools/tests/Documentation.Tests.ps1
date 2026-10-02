@@ -122,6 +122,51 @@ A span: `[text](missing.md)`.
         $outcome.Summary | Should -Be @('1 Markdown file(s), 0 link(s) and 0 path reference(s) checked')
     }
 
+    It 'rejects excluded paths and links even without a heading anchor' {
+        $root = Join-Path $TestDrive 'excluded-targets'
+        New-Fixture (Join-Path $root 'src/bin/generated.md') '# Generated'
+        New-Fixture (Join-Path $root 'README.md') @'
+# Sample
+
+[generated](src/bin/generated.md)
+[output directory](src/bin/)
+`src/bin/generated.md` and `src/bin/`
+'@
+        (Get-Outcome $root).Failures | Should -Be @(
+            "README.md:3: link 'src/bin/generated.md' does not resolve.",
+            "README.md:4: link 'src/bin/' does not resolve.",
+            "README.md:5: path 'src/bin/generated.md' does not exist.",
+            "README.md:5: path 'src/bin/' does not exist.")
+    }
+
+    It 'accepts ordinary files named like excluded output directories' {
+        $root = Join-Path $TestDrive 'output-name-files'
+        New-Fixture (Join-Path $root 'src/build') 'Synthetic source file'
+        New-Fixture (Join-Path $root 'README.md') '[file](src/build) and `src/build`'
+
+        (Get-Outcome $root).Failures | Should -BeNullOrEmpty
+    }
+
+    It 'rejects paths and links through junctions without reading their targets' {
+        $root = Join-Path $TestDrive 'junction-targets'
+        $outside = Join-Path $TestDrive 'junction-outside'
+        New-Fixture (Join-Path $outside 'notes.md') '# Outside'
+        New-Fixture (Join-Path $root 'src/inside.md') '# Inside'
+        [void] (New-Item -ItemType Junction -Path (Join-Path $root 'src/linked') -Target $outside)
+        New-Fixture (Join-Path $root 'README.md') @'
+# Sample
+
+[outside](src/linked/notes.md)
+[directory](src/linked/)
+`src/linked/notes.md` and `src/linked/`
+'@
+        (Get-Outcome $root).Failures | Should -Be @(
+            "README.md:3: link 'src/linked/notes.md' does not resolve.",
+            "README.md:4: link 'src/linked/' does not resolve.",
+            "README.md:5: path 'src/linked/notes.md' does not exist.",
+            "README.md:5: path 'src/linked/' does not exist.")
+    }
+
     It 'checks links but not paths in a dated document and skips archived documents and fixtures' {
         $root = Join-Path $TestDrive 'history'
         # An entry of the changelog, like the notes of a release, describes the repository of its day.

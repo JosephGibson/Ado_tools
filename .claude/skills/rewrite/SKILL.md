@@ -1,6 +1,6 @@
 ---
 name: rewrite
-description: Rewrites a draft prompt into a concise, unambiguous prompt ready to paste into a fresh Claude Code session or a later turn. Resolves vague references against the repository, asks clarifying questions only when the draft has a material ambiguity, and returns the result as one copyable text block. Use when the user runs /rewrite, or asks to rewrite, tighten, or improve a prompt before sending it to an agent.
+description: Rewrite a draft prompt for a fresh agent session, grounding repository references and preserving the user's requirements. Use for /rewrite or requests to improve a prompt; do not execute its task.
 argument-hint: "[draft prompt]"
 disable-model-invocation: true
 disallowed-tools: Edit Write NotebookEdit

@@ -16,7 +16,6 @@ internal static class OutcomeClassifier
     internal static bool IsRerunGroup(string? resultGroupType) =>
         string.Equals(resultGroupType, RerunGroup, StringComparison.OrdinalIgnoreCase);
 
-
     // The deciding outcome takes each pipeline group's last attempt, then the worst of them: a
     // failure in any group decides Failure, then Other; Pass only when every group ends passing.
     // With one group this is the last attempt, as §15.10 describes.

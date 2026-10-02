@@ -10,7 +10,7 @@ public sealed class ProfileNameCompleter : IArgumentCompleter
         ArgumentNullException.ThrowIfNull(wordToComplete);
         try
         {
-            WildcardPattern pattern = new(WildcardPattern.Escape(wordToComplete.Trim('\'')) + "*", WildcardOptions.IgnoreCase | WildcardOptions.CultureInvariant);
+            WildcardPattern pattern = NameCompletion.PrefixPattern(wordToComplete);
             return new ConfigurationStore().Load(CultureInfo.InvariantCulture).Profiles.Keys.Where(pattern.IsMatch)
                 .Order(StringComparer.OrdinalIgnoreCase).Select(name => new CompletionResult("'" + CodeGeneration.EscapeSingleQuotedStringContent(name) + "'", name, CompletionResultType.ParameterValue, name)).ToArray();
         }

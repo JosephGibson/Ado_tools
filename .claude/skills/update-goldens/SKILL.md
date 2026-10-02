@@ -1,6 +1,6 @@
 ---
 name: update-goldens
-description: Regenerates the golden report files in tests/Fixtures/Reports after an intended change to rendered report output, and reviews the difference. Use when a golden report test fails because report markup, text, styles or French wording changed on purpose.
+description: Regenerate and review tests/Fixtures/Reports after an intended change to report markup, text, styles or French wording.
 ---
 
 # Update the report goldens

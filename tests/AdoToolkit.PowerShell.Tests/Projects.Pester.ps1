@@ -74,6 +74,28 @@ Describe 'Project command surface' -Tag 'S0-3' {
         finally { Stop-FakeAdoServer -Server $server }
     }
 
+    It 'completes a quoted project prefix <Prefix> without making requests' -ForEach @(
+        @{ Prefix = "'Équipe d''Al" }
+        @{ Prefix = "'Équipe d''Al'" }
+        @{ Prefix = '"Équipe d''Al' }
+        @{ Prefix = '"Équipe d''Al"' }
+    ) {
+        $name = "Équipe d'Alice"
+        $server = Start-FakeAdoServer -Responses @(
+            @{ Body = '{"value":[{"id":"11111111-1111-1111-1111-111111111111","name":"' + $name + '"}]}' },
+            @{ Body = '{"value":[]}' }
+        )
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -WarningAction SilentlyContinue | Out-Null
+            (Get-AdoProject).Name | Should -Be $name
+            $line = 'Connect-Ado -Project ' + $Prefix
+            $completion = [System.Management.Automation.CommandCompletion]::CompleteInput($line, $line.Length, $null)
+            @($completion.CompletionMatches | ForEach-Object CompletionText) | Should -Be @("'Équipe d''Alice'")
+            $server.Requests.Count | Should -Be 2
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
     # "." and ".." collapse in a URL path, so such a project would send requests above the collection.
     It 'rejects the dot-segment project <Project> before any request' -TestCases @(@{ Project = '..' }, @{ Project = '.' }) {
         param($Project)

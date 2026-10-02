@@ -18,8 +18,7 @@ Read it before changing one, and correct it in the same change.
 - `tools/package/Install-AdoToolkit.ps1` is self-contained: it dot-sources nothing.
 - Resolve every path with `Resolve-AdoPackagePath`: FileSystem provider, inside the permitted
   root, no link traversed.
-- Stage beside the target, validate, then move. Never extract or copy over a live folder,
-  and never delete the only previous copy: when a rollback fails, its backup stays.
+- Never extract or copy over a live folder. When a rollback fails, keep its backup.
 - These scripts never download. Only `tools/package/Publish-AdoToolkitPackage.ps1`
   restores, with `--locked-mode`, and not with `-NoBuild` or `-NoRestore`.
 - Every action is pinned by commit, with its version in a comment. A new action in a new

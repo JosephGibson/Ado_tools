@@ -29,13 +29,7 @@ and correct it in the same change.
 - Never follow links. Never parse a sensitive file. XML is read with DTDs prohibited and a
   null resolver.
 - `verify` never installs or restores anything.
-- A built-in stage goes into `tools/lib/validation.ps1`. An in-process stage has `Name`,
-  `Action` and `ActionArguments` and returns `Failures`, `Summary`, `Warnings` and
-  optionally `Unavailable`. An external stage has `Name`, `Executable`, `Arguments` and
-  optionally `TimeoutSeconds` (1 to 3600) and `ExitCodeContract = 'dev'`, which reads
-  exit `2` as incomplete.
-- A stage script block receives its state as arguments. `GetNewClosure()` loses the
-  library scope.
+- Stage definitions and outcome fields follow the [stage contracts](../docs/tooling.md#stage-contracts).
 - A product check goes into `tools/check.ps1`: call executables with argument arrays,
   test the exit code at once, print one `check: ` line per result, exit `0`, `1` or `2`,
   and never call `verify`.

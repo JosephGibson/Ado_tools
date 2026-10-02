@@ -7,7 +7,9 @@ the failed-test report and the two commands behind it, `Get-AdoBuildTestFailure`
 is an offline review. No Azure DevOps Server connection or `tests/Live/*.Live.ps1` run was
 attempted, so nothing below is confirmed live. In particular, the concurrent requests were
 exercised and timed against the synthetic server of the tests only. The areas the README
-lists as confirmed are still connections, projects, builds and test runs.
+lists as confirmed are still connections, projects, builds and test runs. The
+[repository QA follow-up](#repository-qa-follow-up--2026-10-02) records later corrections
+on branch `0.7.5`; the module version remains `0.7.0`.
 
 ## What changed
 
@@ -21,7 +23,7 @@ layout are unchanged.
 | --- | --- |
 | Concurrent requests | The requests of one stage (result listings, result details, attachment lists, bug metadata) are sent together, at most `testResults.maximumConcurrentRequests` at a time: 6 by default, 1 to 16. 0.6.5 sent each request after the previous one was answered. With `1`, 0.7.0 does the same |
 | Run history | Read while the main requests run. The earlier builds are read one after another and the test runs of one build together. `testResults.maximumHistoryRequests` limits it as before |
-| Same result at every value | The set, its diagnostics and their order do not depend on the value or on the order in which the server answers. History diagnostics come last. When the main requests and the history both fail, the error of the main requests is reported. Authentication, authorization and cancellation still stop the command |
+| Result order | Results and diagnostics are combined in input order; history diagnostics come last. Near the history budget, cancelled requests can change the budget left for older builds; see Findings not fixed. When the main requests and history both fail, the main error is reported. Authentication, authorization and cancellation still stop the command |
 | Fewer requests | The listing of a test run ends without the request for an empty page when the run is completed, its last page is short and the results read equal its `totalTests`. In every other case the empty page is requested as before. When several builds are piped in, a Test Case, a Bug category and the state categories that were already read are not requested again |
 | Closed bugs | `Bugs` holds the open bugs of a test and the bugs that could not be read. A bug whose state is in the Completed or Removed category is left out; 0.6.5 listed it with `IsOpen` false. `AssociatedBugIds` of an attempt stays the server's own list |
 | Progress | The progress of the history is shown after the progress of the main requests, as in 0.6.5 |
@@ -157,8 +159,9 @@ report of this build is 9,587,562 bytes; 0.6.5 wrote 4,778,084 bytes, or 6,869,3
 
 ## Bug fixes
 
-None. 0.7.0 changes behavior by decision; it corrects no defect that was reported against
-0.6.5. The flaws of display that it removes, such as stripes that restarted in every group
+The initial 0.7.0 changes were behavior changes by decision, rather than reported defects
+against 0.6.5. The later QA fixes are listed below. The display flaws removed initially,
+such as stripes that restarted in every group
 and attempt squares that lost their color after a visit, are listed under "Failed-test
 report" above.
 
@@ -237,11 +240,40 @@ still apply: variables stay on the work PC, raw responses are not sent back, and
 | 5 | `TestFailures.Live.ps1` with the 0.7.0 package | The verdicts of V-19 to V-25 and V-30 as before. The bug count of V-30 holds open and unread bugs only |
 | 6 | Checks 2 to 9 of the [0.6.0 notes](archive/release-0.6.0.md#work-pc-live-checks), with the 0.7.0 package | As listed there: V-31 and V-32, V-02, V-01, V-03, the `-Open` warning, custom fields, Markdown line breaks, and the 0.5.0 checks. All still pending |
 
-## Local validation and developer handoff
+## Repository QA follow-up — 2026-10-02
+
+An offline audit of the current tree found and fixed three defects. Each regression
+failed against the unchanged implementation before its fix; no live check ran.
+
+| Area | Finding and fix | Regression evidence |
+| --- | --- | --- |
+| Discovery | `tools/dev.ps1` excluded `.env` and `.env.*`, but missed names such as `.envrc`. The shared policy now excludes every `.env*` file and directory name | Two cases in `tools/tests/Dev.Tests.ps1` failed on the safety predicate; they now cover both ripgrep and fallback discovery |
+| Documentation validation | `tools/lib/validation.ps1` accepted excluded paths and junction targets without an anchor. `tools/lib/discovery.ps1` now checks every path component before descending, for files and directories | Two tests in `tools/tests/Documentation.Tests.ps1` expected failures for links and code-span paths; the old validator returned none |
+| Completion | `src/AdoToolkit.PowerShell/Completion/ProfileNameCompleter.cs` and `src/AdoToolkit.PowerShell/Completion/ProjectNameCompleter.cs` stripped only single quotes. Both now use `NameCompletion` to remove the surrounding quote pair | Four double-quoted cases in `tests/AdoToolkit.PowerShell.Tests/Profiles.Pester.ps1` and `tests/AdoToolkit.PowerShell.Tests/Projects.Pester.ps1` returned no completion before the fix; all eight single/double-quoted cases pass |
+
+Small improvements correct comments about package feeds and history-budget ordering,
+remove redundant whitespace, shorten the shared instructions and skills, and keep their
+Claude wrappers in sync. The help cultures have identical syntax, example code and
+parameter YAML. Guides clarify expansion thresholds, single-case filenames, paged detail
+requests, configuration reads and authentication failures.
+
+No public contract changed. Rendered report assets and all 50 goldens are unchanged.
+The existing concurrent-history budget limitation remains for developer review; making
+budget consumption independent of cancelled requests requires a separate design decision.
+
+Validation of this follow-up: full `verify` exits `0`, with 276 tooling Pester tests,
+1,392 Core tests under each culture and 160 product Pester tests, all passing without skips.
+The repository gate checks documentation and skill layout. The supplemental
+`skill-creator` Python validator could not run because PyYAML is absent; no prerequisite
+was installed. Release archives and portable/browser/live checks were not rerun; the
+asset sizes and checksums below belong to the initial build and need regeneration before
+publishing the updated tree.
+
+## Initial validation and developer handoff — 2026-10-01
 
 | Check | Result |
 | --- | --- |
-| `pwsh -NoProfile -File .\tools\dev.ps1 verify`, the final run after every change | Exit 0. All seven stages pass without a warning: 61 PowerShell files linted, 254 tooling Pester tests, 147 configuration files, 82 Markdown files, the hook and skill layout, 2 workflow files linted with actionlint, and the product check. The session that ran it had started before actionlint was installed, so the folder of actionlint was put on its `PATH` first |
+| `pwsh -NoProfile -File .\tools\dev.ps1 verify`, after the initial report changes | Exit 0. All seven stages pass without a warning: 61 PowerShell files linted, 254 tooling Pester tests, 147 configuration files, 82 Markdown files, the hook and skill layout, 2 workflow files linted with actionlint, and the product check. The session that ran it had started before actionlint was installed, so the folder of actionlint was put on its `PATH` first |
 | The same with `ADOTOOLKIT_RELEASE_BUILD=1`, as both workflows run it | Exit 0 with the exact module pins in `tools/BuildModules.psd1` |
 | Core tests in the final gate | 1360 passed under en-US and 1360 under fr-CA, with no failures or skips. 151 are new: 38 in `StylingTests`, 23 in `RunsViewTests`, 20 in `RetrievalConcurrencyTests`, 19 in `ParallelDownloadTests`, 14 in `SmallAttachmentTests`, 10 in `OrderedParallelTests`, 7 in `BugsViewTests`, 6 in `RequestGateTests`, 2 in `ErrorTextTests` and 12 in existing classes |
 | Product Pester tests against the staged module | 149, all passed. 4 are new: two cases of the concurrent retrieval and download, at the values 6 and 1, and two of the default downloads |
@@ -266,8 +298,9 @@ Local assets:
 
 The two `.sha256` files hold these hashes.
 
-No Live script was run, and no tag or GitHub release exists for 0.7.0. Every change is
-uncommitted on the branch `0.7.0`. The developer owns the rest of the release:
+These assets and release steps were recorded for the initial review on branch `0.7.0`.
+After the QA follow-up, the developer should rebuild the assets and prepare a fresh
+handoff with `.agents/skills/release/SKILL.md`. The developer owns publication:
 
 1. Review the rendered failed-test reports in English and French, and the French labels
    listed above, which are proposals: `tests/Fixtures/Reports/testfailures-*.html`. A golden

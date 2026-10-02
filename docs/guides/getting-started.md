@@ -160,6 +160,11 @@ Test-AdoConnection                           # calls the server and reports the 
 Get-AdoProject -Name 'W*'
 ```
 
+Project names complete from the runspace cache after `Get-AdoProject` has listed them;
+profile names complete from the local configuration. You can start either kind of name
+with single or double quotes. Completion inserts a quoted, pasteable argument and sends
+no server request.
+
 When the check fails, the error or the result's `Hint` points to likely causes, such
 as the Windows identity in use, the collection URL or the proxy. For example, after
 connecting to `https://ado.example.test/DefaultCollection/Web` by mistake, the hint is:

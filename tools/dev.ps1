@@ -45,7 +45,7 @@ $script:RepositoryRoot = Split-Path -Parent $PSScriptRoot
 # change depending on whether ripgrep happens to be installed.
 $script:ExcludedDirectoryNames = @('.git', '.vs', '.idea', 'bin', 'obj', 'artifacts', 'dist', 'build', 'coverage', 'TestResults', 'target', '.cache', '.nuget')
 $script:SensitiveDirectoryNames = @('secret', 'secrets')
-$script:SensitiveFileGlobs = @('.env', '.env.*', 'id_rsa*', 'id_ed25519*', '*.pem', '*.pfx', '*.p12', '*.key', '*.log', '*credentials*', '*.local.*', '.npmrc', '.pypirc', '.netrc')
+$script:SensitiveFileGlobs = @('.env*', 'id_rsa*', 'id_ed25519*', '*.pem', '*.pfx', '*.p12', '*.key', '*.log', '*credentials*', '*.local.*', '.npmrc', '.pypirc', '.netrc')
 # A sensitive name is rejected wherever it occurs in a path: ripgrep applies a file glob to
 # directory names too, so a directory named like a sensitive file hides what it holds. The
 # pattern is built from the two lists above and remains a final safety check even when the

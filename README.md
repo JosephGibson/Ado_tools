@@ -140,8 +140,8 @@ the layout of the agent tooling, lints the GitHub workflows, builds the solution
 the Core tests under `en-US` and `fr-CA`. It then stages the package and runs the product
 Pester tests against it. All tests run offline against synthetic data.
 
-To build release assets locally, run `tools\package\Publish-AdoToolkitPackage.ps1` and
-then `tools\package\New-AdoToolkitRelease.ps1`. Pushing a `v<version>` tag runs the same
+To build release assets locally, run `tools/package/Publish-AdoToolkitPackage.ps1` and
+then `tools/package/New-AdoToolkitRelease.ps1`. Pushing a `v<version>` tag runs the same
 steps in GitHub Actions and publishes the release, whose text opens with that version's
 section of the [changelog](CHANGELOG.md). A pull request to `main` runs `verify` in GitHub
 Actions. For details and the other `dev.ps1` commands, see

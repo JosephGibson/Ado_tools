@@ -7,7 +7,6 @@ public static class CollectionUrlNormalizer
         "_apis", "_git", "_workitems", "_build", "_testPlans", "_testManagement", "_settings",
     };
 
-
     public static CollectionUrlNormalizationResult Normalize(string input, CultureInfo culture)
     {
         ArgumentNullException.ThrowIfNull(input);

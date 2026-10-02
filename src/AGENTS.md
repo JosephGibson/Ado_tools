@@ -2,7 +2,6 @@
 
 ## All code
 
-- C# 14, .NET 10. The binary module targets PowerShell 7.6 on Windows.
 - `AdoToolkit.Core` never references `System.Management.Automation`. Runtime dependencies
   are BCL-only (DD-011); the PowerShell package is a compile-time reference only.
 - One public type per file.
@@ -14,8 +13,9 @@
 
 ## Strings
 
-- `src/AdoToolkit.Core/Resources/Strings.resx` (English) and `Strings.fr.resx` are the only
-  catalog. Every key is an `AdoMessage` member or a `DiagnosticCodes` constant, in both files,
+- `src/AdoToolkit.Core/Resources/Strings.resx` (English) and
+  `src/AdoToolkit.Core/Resources/Strings.fr.resx` (French) are the only catalog.
+  Every key is an `AdoMessage` member or a `DiagnosticCodes` constant, in both files,
   with the same placeholders. `ResourceParityTests` enforces this.
 - Read a string with `Messages.Get(AdoMessage.<Key>, culture, args)`. No string literal inside
   `WriteWarning`, `WriteVerbose`, `WriteDebug`, `WriteInformation`, `ProgressRecord`,
@@ -34,7 +34,7 @@
 - Typed pipeline input: call `EnsureInput(input, input.CollectionUri, connection)` before
   using it. It reports a hand-made incomplete object and an object from another collection.
 - `-Name` wildcard filters use `NameFilter` and declare `[SupportsWildcards]`.
-- A new or changed parameter also changes both help cultures (`docs/commands/AGENTS.md`).
+- Parameter help follows `docs/commands/AGENTS.md`.
 
 ## Core
 
@@ -44,4 +44,3 @@
   enters a script element, a path or a URL; links are built from the connection and IDs.
 - Files are written through `AtomicFileWriter`, `AtomicFileReplace` (the configuration
   file) or `GenerationFolderCommit`.
-- A change to rendered report output changes the goldens: use the `update-goldens` skill.

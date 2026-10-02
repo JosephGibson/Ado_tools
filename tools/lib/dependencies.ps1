@@ -10,7 +10,7 @@ function Get-DependencyInventory {
     $manifests = New-Object System.Collections.ArrayList
     $errors = New-Object System.Collections.ArrayList
 
-    # NuGet is the only package source: project files and the central props files declare it.
+    # Package references come from project files and central props/targets; nuget.config owns feeds.
     foreach ($file in $projectProfile.Files | Where-Object { $_.Extension -in @('.csproj', '.props', '.targets') }) {
         $relative = Get-RelativeRepositoryPath -Path $file.FullName -Root $Root
         [void] $manifests.Add($relative)

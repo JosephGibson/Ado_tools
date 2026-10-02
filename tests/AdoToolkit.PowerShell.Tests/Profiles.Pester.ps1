@@ -62,6 +62,18 @@ Describe 'Local profiles' -Tag 'S0-5' {
         $ast.EndBlock.Statements[0].PipelineElements[0].CommandElements[2].Value | Should -Be $name
     }
 
+    It 'completes a quoted profile prefix <Prefix>' -ForEach @(
+        @{ Prefix = "'Équipe d''Al" }
+        @{ Prefix = "'Équipe d''Al'" }
+        @{ Prefix = '"Équipe d''Al' }
+        @{ Prefix = '"Équipe d''Al"' }
+    ) {
+        Set-AdoProfile -Name "Équipe d'Alice" -CollectionUrl 'https://ado.example.test/Collection' | Out-Null
+        $line = 'Connect-Ado -Profile ' + $Prefix
+        $completion = [System.Management.Automation.CommandCompletion]::CompleteInput($line, $line.Length, $null)
+        @($completion.CompletionMatches | ForEach-Object CompletionText) | Should -Be @("'Équipe d''Alice'")
+    }
+
     # -Name is a wildcard filter (§11.5): composed and decomposed accents match, and an accent
     # stays significant.
     It 'filters profile names with wildcards, matching decomposed accents' {

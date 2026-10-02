@@ -20,8 +20,9 @@ defaults apply.
 - Manage profiles with `Set-AdoProfile` and `Remove-AdoProfile`, as described in
   [Getting started](getting-started.md#save-a-profile). These cmdlets keep all other
   settings, and they validate the file before replacing it atomically.
-- Edit other sections by hand. Settings are read each time a cmdlet runs, and a
-  profile is read when `Connect-Ado` runs.
+- Edit other sections by hand. Retrieval and export commands reread their settings
+  when they need them. Connections keep a copy of their profile defaults; run
+  `Connect-Ado` again after changing a profile.
 - If the file is invalid, commands that read it fail with a configuration error.
   Examples are malformed JSON, a property named twice in the same object, a limit of
   zero, an empty default branch, a default test plan ID of zero or an unsupported
@@ -97,7 +98,7 @@ changing them. A connection made with `Connect-Ado -CollectionUrl` has no defaul
 | Key | Default | Meaning | Parameter |
 | --- | --- | --- | --- |
 | `testCases.maximumSharedStepDepth` | `10` | Deepest Shared Steps nesting that is expanded | `-MaximumSharedStepDepth` |
-| `testCases.maximumExpandedSteps` | `5000` | Most expanded rows per Test Case | `-MaximumExpandedSteps` |
+| `testCases.maximumExpandedSteps` | `5000` | Expansion threshold per Test Case; the row crossing it is kept, then a `Truncated` marker ends expansion | `-MaximumExpandedSteps` |
 | `testCases.maximumResolvedWorkItems` | `10000` | Most additional work items (Shared Steps and shared parameter sets) retrieved per `Get-AdoTestCase` call | none |
 
 ### Test results
@@ -112,7 +113,7 @@ changing them. A connection made with `Connect-Ado -CollectionUrl` has no defaul
 | `testResults.maximumTotalAttachmentBytes` | `524288000` (500 MiB) | Total attachment download size per report | none |
 | `testResults.maximumInlineJsonBytes` | `262144` (256 KiB) | Largest JSON or text attachment shown inline, and so searchable, in the failed-test report. Also the largest one that the export downloads from test runs other than the most recent | none |
 | `testResults.maximumInlineTotalBytes` | `8388608` (8 MiB) | Total JSON and text shown inline per failed-test report; attachments that no longer fit are linked only, those of older runs first | none |
-| `testResults.maximumConcurrentRequests` | `6` | Requests that `Get-AdoBuildTestFailure` has in progress at the same time, and attachments that `Export-AdoBuildTestFailure` downloads at the same time, 1–16. With `1`, every request waits for the previous one. The result is the same at every value; lower it if the server answers several requests at once badly. How Server 2020 answers several requests at once is not confirmed at work (V-33) | none |
+| `testResults.maximumConcurrentRequests` | `6` | Requests that `Get-AdoBuildTestFailure` has in progress at the same time, and attachments that `Export-AdoBuildTestFailure` downloads at the same time, 1–16. With `1`, every request waits for the previous one. Results are combined in input order. Near the history request limit, a failed history build cancels requests still in progress, so the budget left for older builds can depend on response order. Lower the value if the server handles concurrent requests poorly; Server 2020 concurrency is not confirmed at work (V-33) | none |
 
 ### Reporting
 

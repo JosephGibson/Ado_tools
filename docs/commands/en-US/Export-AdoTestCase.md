@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoTestCase
 ---
@@ -187,7 +187,7 @@ HelpMessage: ''
 
 ### -IncludeDetail
 
-Reads more about each received case and shows it in the HTML report: description, tags, created by and date, automated test name, storage and type, the work items it links to with their type, title and state, its hyperlinks and attachment names, and its test points (plan, suite, configuration, tester, latest outcome and test run). These are the only requests of an export: the cases with their relations and the linked work items in batches of 200, and one test points query per project and 50 cases. They are sent only for a report that will be written, so not with WhatIf. A lookup that fails is a warning and a diagnostic in the report, which is written without that part; an authentication or authorization failure stops the export before any file is written. HTML only: another format produces a terminating InvalidArgument error before export.
+Reads more about each received case and shows it in the HTML report: description, tags, created by and date, automated test name, storage and type, the work items it links to with their type, title and state, its hyperlinks and attachment names, and its test points (plan, suite, configuration, tester, latest outcome and test run). These are the only requests of an export: the cases with their relations and the linked work items in batches of 200, and a paged test points query per project and batch of up to 50 cases. A query may make several requests. They are sent only for a report that will be written, so not with WhatIf. A lookup that fails is a warning and a diagnostic in the report, which is written without that part; an authentication or authorization failure stops the export before any file is written. HTML only: another format produces a terminating InvalidArgument error before export.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter

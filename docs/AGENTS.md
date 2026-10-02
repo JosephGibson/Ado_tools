@@ -17,8 +17,7 @@
 - Examples use synthetic data: hosts ending in `.test`, invented names and IDs.
 - The changelog and release notes may name a path that has since gone; their links must
   still resolve.
-- State a fact once and link to it. The guides link to the help topics under
-  `docs/commands/en-US/`.
+- Guides link to help topics under `docs/commands/en-US/`.
 - Server behavior that is not confirmed at work is marked with its `V-nn` item.
 - An error is named by its error ID, such as `AdoConnectionMismatch`, or by its category,
   such as `ObjectNotFound`.

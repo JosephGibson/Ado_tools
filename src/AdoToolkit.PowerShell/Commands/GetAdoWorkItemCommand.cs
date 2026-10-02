@@ -16,7 +16,7 @@ public sealed class GetAdoWorkItemCommand : AdoCmdletBase
     public int[] Id { get; set; } = [];
 
     [Parameter(ParameterSetName = "Fields")]
-    [ValidateNotNullOrEmpty]
+    [ValidateNotNullOrWhiteSpace]
     public string[]? Field { get; set; }
 
     [Parameter(Mandatory = true, ParameterSetName = "Relations")]

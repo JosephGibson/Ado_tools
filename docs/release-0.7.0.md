@@ -21,7 +21,7 @@ layout are unchanged.
 | --- | --- |
 | Concurrent requests | The requests of one stage (result listings, result details, attachment lists, bug metadata) are sent together, at most `testResults.maximumConcurrentRequests` at a time: 6 by default, 1 to 16. 0.6.5 sent each request after the previous one was answered. With `1`, 0.7.0 does the same |
 | Run history | Read while the main requests run. The earlier builds are read one after another and the test runs of one build together. `testResults.maximumHistoryRequests` limits it as before |
-| Same result at every value | The set, its diagnostics and their order do not depend on the value or on the order in which the server answers. History diagnostics come last. When the main requests and the history both fail, the error of the main requests is reported. Authentication, authorization and cancellation still stop the command |
+| Result order | Results and diagnostics are combined in input order; history diagnostics come last. Near the history budget, cancelled requests can change the budget left for older builds; see Findings not fixed. When the main requests and history both fail, the main error is reported. Authentication, authorization and cancellation still stop the command |
 | Fewer requests | The listing of a test run ends without the request for an empty page when the run is completed, its last page is short and the results read equal its `totalTests`. In every other case the empty page is requested as before. When several builds are piped in, a Test Case, a Bug category and the state categories that were already read are not requested again |
 | Closed bugs | `Bugs` holds the open bugs of a test and the bugs that could not be read. A bug whose state is in the Completed or Removed category is left out; 0.6.5 listed it with `IsOpen` false. `AssociatedBugIds` of an attempt stays the server's own list |
 | Progress | The progress of the history is shown after the progress of the main requests, as in 0.6.5 |
@@ -206,7 +206,7 @@ the figures of 0.6.5 above come from the unchanged module.
 | A report of many retries with long error text is large | By decision: every attempt holds its text. The size guard pins 46.9 MB for 200 failures of 14 attempts |
 | When a history build fails for a reason other than the budget, the result listings of its other runs are cancelled, so the budget that build used can differ from one run to the next when the budget is nearly spent | The result is the same in every case where the budget is not reached. Reading the runs of a build one after another would remove it and the gain |
 | The lines of the Diagnostics view use the CSS subgrid | Without it the three parts of a line are stacked, and still readable |
-| The findings of 0.6.5 and 0.6.0 | Unchanged; see the [0.6.5](release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
+| The findings of 0.6.5 and 0.6.0 | Unchanged; see the [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
 
 ### Known limitations
 
@@ -218,7 +218,7 @@ the figures of 0.6.5 above come from the unchanged module.
 | Sizes | KB and MB are multiples of 1,024 bytes. The tooltip with the exact size needs a pointer |
 | Files without a declared size | From an older run they are read up to the small-file limit before they are dropped, so a large one costs that much transfer |
 | The script of the report | Loaded in Microsoft Edge only, from the rendered fixtures. The filters, the keys and copying were not exercised again for this release |
-| Limits carried over | The [0.6.5](release-0.6.5.md#known-limitations) and [0.6.0](archive/release-0.6.0.md#known-limitations) known limitations still apply, with V-31, V-32 and V-02 |
+| Limits carried over | The [0.6.5](archive/release-0.6.5.md#known-limitations) and [0.6.0](archive/release-0.6.0.md#known-limitations) known limitations still apply, with V-31, V-32 and V-02 |
 
 ## Work-PC Live checks
 

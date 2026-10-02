@@ -50,6 +50,8 @@ public abstract class AdoCmdletBase : PSCmdlet
         if (supplied is not null)
         {
             (string Type, string Member)? missing = InputGuard.FindMissing(supplied);
+            if (missing is null && !(supplied.CollectionUri.IsAbsoluteUri && supplied.CollectionUri.Scheme is "http" or "https"))
+                missing = (nameof(AdoConnection), nameof(AdoConnection.CollectionUri));
             if (missing is null && supplied.RequestTimeoutSeconds is < 1 or > AdoConnection.MaximumRequestTimeoutSeconds)
                 missing = (nameof(AdoConnection), nameof(AdoConnection.RequestTimeoutSeconds));
             if (missing is { } invalid)
@@ -77,11 +79,14 @@ public abstract class AdoCmdletBase : PSCmdlet
         return (selector.Id, selector.Name);
     }
 
-    // -Definition accepts a positive ID or a definition name.
+    // -Definition accepts a positive ID or a definition name. The ID may be any integer type:
+    // ConvertFrom-Json, for one, reads every integer as Int64.
     private protected BuildDefinitionSelector ToDefinitionSelector(object definition)
     {
         object? value = definition is PSObject wrapped ? wrapped.BaseObject : definition;
-        if (value is int number && number > 0) return BuildDefinitionSelector.FromId(number);
+        if (value is sbyte or byte or short or ushort or int or uint or long or ulong
+            && Convert.ToDecimal(value, CultureInfo.InvariantCulture) is >= 1 and <= int.MaxValue and decimal number)
+            return BuildDefinitionSelector.FromId((int)number);
         if (value is string text && !string.IsNullOrWhiteSpace(text)) return BuildDefinitionSelector.FromName(text);
         throw new AdoRequestException(Messages.Get(AdoMessage.InvalidBuildDefinition, MessageCulture));
     }

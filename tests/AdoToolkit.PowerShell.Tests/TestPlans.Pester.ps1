@@ -237,13 +237,14 @@ Describe 'WIQL command' -Tag 'S3-3' {
         }
     }
 
-    It 'validates Top locally' {
+    It 'validates Top and Query locally' {
         $server = Start-FakeAdoServer
         try {
             Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
             { Invoke-AdoWiql -Query $query -Top 0 -ErrorAction Stop } | Should -Throw -ErrorId 'ParameterArgumentValidationError,AdoToolkit.InvokeAdoWiqlCommand'
             { Invoke-AdoWiql -Query $query -Top 20001 -ErrorAction Stop } | Should -Throw -ErrorId 'ParameterArgumentValidationError,AdoToolkit.InvokeAdoWiqlCommand'
             { Invoke-AdoWiql -Query '' -ErrorAction Stop } | Should -Throw
+            { Invoke-AdoWiql -Query ' ' -ErrorAction Stop } | Should -Throw -ErrorId 'ParameterArgumentValidationError,AdoToolkit.InvokeAdoWiqlCommand'
             $server.Requests.Count | Should -Be 0
         }
         finally { Stop-FakeAdoServer -Server $server }

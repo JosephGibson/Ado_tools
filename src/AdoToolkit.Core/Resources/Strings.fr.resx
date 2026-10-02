@@ -1,8 +1,8 @@
 <root>
   <data name="BuildLogIdRange" xml:space="preserve"><value>L’identifiant du journal doit être un entier de 1 à 2147483647, ou une valeur nulle pour un échec sans journal.</value></data>
-  <data name="BuildLogTailUnknown" xml:space="preserve"><value>Build {0}, journal {1} : le nombre de lignes est inconnu; téléchargement du journal complet.</value></data>
-  <data name="BuildLogNotAvailable" xml:space="preserve"><value>Build {0} : cet échec ne possède aucun journal à télécharger.</value></data>
-  <data name="BuildLogDirectoryRequired" xml:space="preserve"><value>Indiquez un dossier existant pour le journal du build : {0}</value></data>
+  <data name="BuildLogTailUnknown" xml:space="preserve"><value>Build {0}, journal {1} : le nombre de lignes est inconnu; téléchargement du journal complet.</value></data>
+  <data name="BuildLogNotAvailable" xml:space="preserve"><value>Build {0} : cet échec ne possède aucun journal à télécharger.</value></data>
+  <data name="BuildLogDirectoryRequired" xml:space="preserve"><value>Indiquez un dossier existant pour le journal du build : {0}</value></data>
   <data name="SaveBuildLog" xml:space="preserve"><value>Enregistrer le journal du build</value></data>
   <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
   <resheader name="version"><value>2.0</value></resheader>
@@ -10,10 +10,10 @@
   <data name="InvalidCollectionUrl" xml:space="preserve"><value>Indiquez une URL de collection HTTP ou HTTPS absolue, sans informations utilisateur, paramètres de requête, fragment ni segments d’API ou d’interface.</value></data>
   <data name="ServicesUnsupported" xml:space="preserve"><value>Azure DevOps Services n’est pas pris en charge. Indiquez une URL de collection Azure DevOps Server.</value></data>
   <data name="PlainHttp" xml:space="preserve"><value>Cette collection utilise HTTP. Les échanges d’authentification Windows ne sont pas protégés par TLS.</value></data>
-  <data name="InvalidConfiguration" xml:space="preserve"><value>La configuration n’est pas valide : {0}</value></data>
-  <data name="UnknownConfiguration" xml:space="preserve"><value>Propriété de configuration inconnue conservée : {0}</value></data>
+  <data name="InvalidConfiguration" xml:space="preserve"><value>La configuration n’est pas valide : {0}</value></data>
+  <data name="UnknownConfiguration" xml:space="preserve"><value>Propriété de configuration inconnue conservée : {0}</value></data>
   <data name="NewerConfiguration" xml:space="preserve"><value>Le schéma de configuration {0} est plus récent que le schéma 1 pris en charge. Les modifications sont refusées.</value></data>
-  <data name="FileOutput" xml:space="preserve"><value>Impossible d’écrire le fichier : {0}</value></data>
+  <data name="FileOutput" xml:space="preserve"><value>Impossible d’écrire le fichier : {0}</value></data>
   <data name="UnsupportedCulture" xml:space="preserve"><value>La culture {0} n’est pas prise en charge ; l’anglais sera utilisé.</value></data>
   <data name="MissingProfile" xml:space="preserve"><value>Le profil {0} est introuvable.</value></data>
   <data name="NoConnection" xml:space="preserve"><value>Connectez-vous avec Connect-Ado ou indiquez une connexion.</value></data>
@@ -23,8 +23,9 @@
   <data name="Authorization" xml:space="preserve"><value>L’accès a été refusé. Vérifiez les autorisations de la collection et du projet.</value></data>
   <data name="NotFound" xml:space="preserve"><value>La ressource demandée est introuvable.</value></data>
   <data name="Request" xml:space="preserve"><value>Le serveur a rejeté la requête.</value></data>
+  <data name="Transport" xml:space="preserve"><value>Le serveur est injoignable, ou la connexion a été interrompue.</value></data>
   <data name="RegistryMismatch" xml:space="preserve"><value>Vérifiez le registre des points de terminaison et la version d’API demandée.</value></data>
-  <data name="Redirect" xml:space="preserve"><value>Une redirection a été bloquée. Destination : {0}</value></data>
+  <data name="Redirect" xml:space="preserve"><value>Une redirection a été bloquée. Destination : {0}</value></data>
   <data name="Throttled" xml:space="preserve"><value>Le serveur limite les requêtes. Réessayez plus tard.</value></data>
   <data name="Server" xml:space="preserve"><value>Le serveur n’a pas pu traiter la requête.</value></data>
   <data name="Timeout" xml:space="preserve"><value>L’opération a dépassé le délai imparti.</value></data>
@@ -32,7 +33,7 @@
   <data name="PagingGuard" xml:space="preserve"><value>La pagination n’a pas progressé ou a dépassé la limite de pages.</value></data>
   <data name="Retry" xml:space="preserve"><value>Nouvelle tentative pour {0} ; tentative {1}, motif {2}.</value></data>
   <data name="RequestLog" xml:space="preserve"><value>{0} {1} {2} {3} ms tentative={4}</value></data>
-  <data name="PageLog" xml:space="preserve"><value>{0} : page {1}, éléments {2}.</value></data>
+  <data name="PageLog" xml:space="preserve"><value>{0} : page {1}, éléments {2}.</value></data>
   <data name="ConnectionHint" xml:space="preserve"><value>L’appel des projets a échoué. Vérifiez que l’URL indiquée correspond à une collection plutôt qu’à un projet.</value></data>
   <data name="SetProfile" xml:space="preserve"><value>Enregistrer le profil</value></data>
   <data name="RemoveProfile" xml:space="preserve"><value>Supprimer le profil</value></data>
@@ -116,9 +117,9 @@
   <data name="ReportQuerySource" xml:space="preserve"><value>Requête WIQL ou liste d’ID</value></data>
   <data name="ReportCaseCount" xml:space="preserve"><value>Cas de test</value></data>
   <data name="ProgressActivity" xml:space="preserve"><value>Récupération des cas de test</value></data>
-  <data name="ProgressEnumeration" xml:space="preserve"><value>Lecture des cas des suites : {0} suite(s) sur {1}</value></data>
-  <data name="ProgressFetch" xml:space="preserve"><value>Récupération des éléments de travail : {0} lot(s)</value></data>
-  <data name="ProgressExpansion" xml:space="preserve"><value>Développement des cas de test : {0} sur {1}</value></data>
+  <data name="ProgressEnumeration" xml:space="preserve"><value>Lecture des cas des suites : {0} suite(s) sur {1}</value></data>
+  <data name="ProgressFetch" xml:space="preserve"><value>Récupération des éléments de travail : {0} lot(s)</value></data>
+  <data name="ProgressExpansion" xml:space="preserve"><value>Développement des cas de test : {0} sur {1}</value></data>
   <data name="ProgressCompleted" xml:space="preserve"><value>{0} cas de test récupéré(s).</value></data>
   <data name="InputNotTestCase" xml:space="preserve"><value>L’entrée {0} est un plan ou une suite de tests ; son Id n’est donc pas un ID de cas de test. Transmettez des objets AdoTestSuite obtenus avec Get-AdoTestSuite.</value></data>
   <data name="IncompleteInput" xml:space="preserve"><value>L’entrée {0} est incomplète : {1} n’a pas de valeur valide. Transmettez un objet retourné par une commande AdoToolkit.</value></data>
@@ -134,7 +135,7 @@
   <data name="UnresolvedTestCase" xml:space="preserve"><value>Le cas de test {0} est introuvable ou inaccessible; le lien vers son ID est conservé.</value></data>
   <data name="BugLookupFailed" xml:space="preserve"><value>Les bogues des tests du build {0} n’ont pas pu être lus; les ID de bogues des résultats de test restent des liens, sans titre, état ni indication de bogue ouvert.</value></data>
   <data name="UnresolvedBug" xml:space="preserve"><value>Le bogue {0} est introuvable ou inaccessible; le lien vers son ID est conservé.</value></data>
-  <data name="BugMetadataUnavailable" xml:space="preserve"><value>Les types de bogues ou les catégories d’états du projet {0} n’ont pas pu être lus : un élément de travail lié compte comme bogue seulement si son type est Bug, et un bogue est ouvert sauf si son état est Closed, Done ou Removed.</value></data>
+  <data name="BugMetadataUnavailable" xml:space="preserve"><value>Les types de bogues ou les catégories d’états du projet {0} n’ont pas pu être lus : un élément de travail lié compte comme bogue seulement si son type est Bug, et un bogue est ouvert sauf si son état est Closed, Done ou Removed.</value></data>
   <data name="HistoryUnavailable" xml:space="preserve"><value>Le build {0} n’a pas pu être lu; sa barre et ses cellules d’historique sont indisponibles.</value></data>
   <data name="HistoryLimitExceeded" xml:space="preserve"><value>Le maximum de {0} requête(s) d’historique est atteint; les entrées d’historique plus anciennes sont indisponibles.</value></data>
   <data name="ProgressTestFailureActivity" xml:space="preserve"><value>Récupération des tests en échec</value></data>

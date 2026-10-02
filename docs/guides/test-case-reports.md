@@ -37,7 +37,9 @@ Get-AdoTestSuite -PlanId 812 -SuiteId 813 | Get-AdoTestCase
   `Diagnostics`. AdoToolkit also writes one summary warning. Use `-Strict` to get
   an error instead.
 - `-MaximumSharedStepDepth` (default 10) and `-MaximumExpandedSteps` (default
-  5,000 rows) guard against very large expansions. To change the defaults, see
+  5,000 rows) guard against very large expansions. The row that crosses the row
+  limit is kept, followed by one `Truncated` marker; no later rows are emitted.
+  To change the defaults, see
   [Configuration](configuration.md#settings).
 
 ## Export one Test Case
@@ -45,7 +47,7 @@ Get-AdoTestSuite -PlanId 812 -SuiteId 813 | Get-AdoTestCase
 ```powershell
 Get-AdoTestCase -Id 1234 | Export-AdoTestCase -Open
 Get-AdoTestCase -Id 1234 | Export-AdoTestCase -IncludeDetail -Open
-Get-AdoTestCase -Id 1234 | Export-AdoTestCase -Format Json -IncludeSource -Path .\out
+Get-AdoTestCase -Id 1234 | Export-AdoTestCase -Format Json -IncludeSource -Path .\case-1234.json
 ```
 
 | Format | Output |
@@ -107,8 +109,10 @@ step, including collapsed groups.
 Get-AdoTestCase -PlanId 812 -SuiteId 813 -Recurse | Export-AdoTestCase -IncludeDetail -Path .\release-12.html
 ```
 
-- These are the only requests of an export: two batch requests per 200 cases, and one
-  test points query per project and 50 cases. Nothing is requested with `-WhatIf`.
+- These are the only requests of an export: the cases with their relations and the work
+  items they link to, in batches of 200, and a paged test points query per project
+  and batch of up to 50 cases. A query may make several requests. Nothing is
+  requested with `-WhatIf`.
 - A lookup that fails becomes a warning and a diagnostic in the report, which is written
   without that part. An authentication or authorization failure stops the export before a
   file is written.
@@ -136,8 +140,9 @@ $query = "SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = 'Test 
 Invoke-AdoWiql -Query $query | Get-AdoTestCase | Export-AdoTestCase -Format Markdown
 ```
 
-When all cases come from one suite, the default file name is
+For several cases that all come from one suite, the default file name is
 `TestSuite-<suiteId>-Steps.<ext>`. Otherwise, it is `TestCases-<yyyyMMdd-HHmmss>.<ext>`.
+One case always uses `TestCase-<id>-Steps.<ext>`, even when it comes from a suite.
 If no case arrives, you get a warning and no file is written. See
 [Work items and WIQL](work-items.md#run-a-wiql-query) for query limits.
 

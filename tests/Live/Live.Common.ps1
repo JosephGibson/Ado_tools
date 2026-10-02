@@ -5,6 +5,17 @@ function Get-AdoLivePropertyValue {
     return $null
 }
 
+# The checks, of those given, that have no verdict among the printed lines. A NOTE or SHAPE line
+# is not a verdict.
+function Get-AdoLivePendingCheck {
+    param([Parameter(Mandatory = $true)][string[]] $Id, [AllowEmptyCollection()][string[]] $Line = @())
+    $settled = @(foreach ($text in $Line) {
+            $words = $text.Split(' ')
+            if ($words.Count -gt 1 -and $words[0] -in @('PASS', 'FAIL', 'INCONCLUSIVE')) { $words[1] }
+        })
+    return @($Id | Where-Object { $settled -cnotcontains $_ })
+}
+
 function Get-AdoLiveAttemptTuple {
     param([AllowNull()][object] $Run)
     $pipeline = Get-AdoLivePropertyValue $Run 'pipelineReference'

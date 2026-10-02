@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-22-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoTestCase
 ---
@@ -351,7 +351,7 @@ HelpMessage: ''
 
 ### -CollectionUri
 
-Hidden provenance parameter bound from objects with an Id property. A different collection produces ConnectionMismatch before that input is queried. Typed suites, WIQL results and work items are checked with their own CollectionUri.
+Hidden provenance parameter bound from objects with an Id property. A different collection produces AdoConnectionMismatch before that input is queried. Typed suites, WIQL results and work items are checked with their own CollectionUri.
 
 ```yaml
 Type: System.Uri

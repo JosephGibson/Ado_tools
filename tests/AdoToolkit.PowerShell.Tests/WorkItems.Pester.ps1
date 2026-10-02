@@ -45,6 +45,7 @@ Describe 'Work item command' -Tag 'S1-1' {
             { Get-AdoWorkItem -Id 1 -Field System.Title -IncludeRelations -ErrorAction Stop } | Should -Throw -ErrorId 'AmbiguousParameterSet,AdoToolkit.GetAdoWorkItemCommand'
             { Get-AdoWorkItem -Id 0 -ErrorAction Stop } | Should -Throw
             { Get-AdoWorkItem -Id -1 -ErrorAction Stop } | Should -Throw
+            { Get-AdoWorkItem -Id 1 -Field ' ' -ErrorAction Stop } | Should -Throw -ErrorId 'ParameterArgumentValidationError,AdoToolkit.GetAdoWorkItemCommand'
             $server.Requests.Count | Should -Be 0
         }
         finally { Stop-FakeAdoServer -Server $server }

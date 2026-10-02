@@ -108,17 +108,14 @@ public sealed class SuiteTraversalTests
     {
         BulkFixture fixture = new();
         using FakeHttpMessageHandler handler = fixture.Handler();
-        HttpClient client = new(handler, disposeHandler: false);
-        using (client)
-        {
-            Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> fallback = handler.Fallback!;
-            handler.Fallback = (request, token) => request.RequestUri!.AbsolutePath.EndsWith("/TestCase", StringComparison.Ordinal)
-                ? Task.FromResult(FakeHttpMessageHandler.Response(body)) : fallback(request, token);
-            AdoResponseFormatException error = await Assert.ThrowsAsync<AdoResponseFormatException>(() => new SuiteMembershipService(client, BulkFixture.Connection)
-                .GetMembershipsAsync(new TestSuiteSelection { Project = BulkFixture.Project, PlanId = 812, SuiteId = 814 }, CultureInfo.InvariantCulture,
-                    TestContext.Current.CancellationToken));
-            Assert.Equal("SuiteTestCaseList", error.Operation);
-        }
+        using HttpClient client = new(handler);
+        Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> fallback = handler.Fallback!;
+        handler.Fallback = (request, token) => request.RequestUri!.AbsolutePath.EndsWith("/TestCase", StringComparison.Ordinal)
+            ? Task.FromResult(FakeHttpMessageHandler.Response(body)) : fallback(request, token);
+        AdoResponseFormatException error = await Assert.ThrowsAsync<AdoResponseFormatException>(() => new SuiteMembershipService(client, BulkFixture.Connection)
+            .GetMembershipsAsync(new TestSuiteSelection { Project = BulkFixture.Project, PlanId = 812, SuiteId = 814 }, CultureInfo.InvariantCulture,
+                TestContext.Current.CancellationToken));
+        Assert.Equal("SuiteTestCaseList", error.Operation);
     }
 
     [Fact]

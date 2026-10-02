@@ -60,6 +60,20 @@ public sealed class RunHistoryChartTests
     }
 
     [Fact]
+    public void AFinishTimeAtTheLimitOfTheCalendarKeepsItsOwnOffset()
+    {
+        CultureInfo culture = CultureInfo.GetCultureInfo("en-US");
+        AdoBuildTestSummary summary = new()
+        {
+            BuildId = 1, BuildNumber = "20260916.1", FinishTime = DateTimeOffset.MinValue, Passed = 1, IsAvailable = true,
+            WebUrl = new Uri("https://remote.example.test/wrong"),
+        };
+        using StringWriter writer = new(culture);
+        RunHistoryChart.Write(writer, [summary], TestRunFixture.Connection.CollectionUri, "Équipe Web", culture, TimeSpan.FromHours(-4));
+        Assert.Contains(DateTimeOffset.MinValue.ToString("g", culture), writer.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void HostileLabelsAreOnlyEncodedAndCannotSupplyLinks()
     {
         string html = Render([Summary(1, 2, 1, 0, 0)], CultureInfo.GetCultureInfo("en-US"));

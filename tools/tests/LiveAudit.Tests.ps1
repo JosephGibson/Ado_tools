@@ -18,10 +18,6 @@ BeforeAll {
         $ast = Read-LiveAst $Name
         $definitions = @($ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true) |
             ForEach-Object { $_.Extent.Text })
-        $opaque = $ast.FindAll({ param($node)
-                $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and $node.Left.Extent.Text -eq '$opaqueObjects'
-            }, $true)
-        $definitions += @($opaque | ForEach-Object { $_.Extent.Text })
         return [scriptblock]::Create($definitions -join "`n")
     }
     function Get-LiveSection {
@@ -38,8 +34,7 @@ BeforeAll {
     . (Get-LiveDefinitions 'Shape')
     . (Get-LiveDefinitions 'Triage')
     . (Get-LiveDefinitions 'TestCaseDetail')
-    $common = Join-Path $liveRoot 'Live.Common.ps1'
-    if (Test-Path -LiteralPath $common) { . $common }
+    . (Join-Path $liveRoot 'Live.Common.ps1')
 }
 
 Describe 'Approved live-check audit regressions with synthetic data only' {
@@ -104,6 +99,22 @@ Describe 'Approved live-check audit regressions with synthetic data only' {
         }
         $lines = @(. (Get-LiveSection 'TestFailures' 'BUILD_FIELDS_MISSING'))
         $lines -join "`n" | Should -Match '^INCONCLUSIVE V-25'
+    }
+
+    It 'names the field that an attachment lacks instead of failing on its absence' {
+        $detail = [pscustomobject]@{ id = 2 }
+        Mock Invoke-AdoTestRequest { [pscustomobject]@{ Content = '{"value":[{"fileName":"sample.txt"}]}' } }
+        $lines = @(. (Get-LiveSection 'TestFailures' 'ATTACHMENT_FIELDS_MISSING'))
+        $lines | Should -Be @('FAIL V-23 ATTACHMENT_FIELDS_MISSING id')
+        Should -Invoke Invoke-AdoTestRequest -Exactly -Times 1
+    }
+
+    It 'names the field that a build lacks instead of failing on its absence' {
+        $buildText = '401'
+        Mock Invoke-AdoTestRequest { [pscustomobject]@{ Content = '{"id":401,"buildNumber":"synthetic"}' } }
+        $lines = @(. (Get-LiveSection 'TestFailures' 'BUILD_FIELDS_MISSING'))
+        $lines | Should -Be @('FAIL V-25 BUILD_FIELDS_MISSING definition')
+        Should -Invoke Invoke-AdoTestRequest -Exactly -Times 1
     }
 
     It 'F12 never confirms retries just because two build IDs were supplied' {
@@ -202,7 +213,7 @@ Describe 'Approved live-check audit regressions with synthetic data only' {
         $start = $source.IndexOf('$validReferences = $true', [StringComparison]::Ordinal)
         $end = $source.IndexOf('$parameterCases = @($case)', [StringComparison]::Ordinal)
         $lines = @(. ([scriptblock]::Create($source.Substring($start, $end - $start))))
-        $lines -join "`n" | Should -Not -Match 'FAIL V-02'
+        $lines | Should -Contain 'INCONCLUSIVE V-02 FORMAT_FLAGS_OBSERVED_VISUAL_COMPARISON_REQUIRED'
     }
 
     # V-01: the toolkit skips the children of a shared-step reference. That is right only when
@@ -236,6 +247,26 @@ Describe 'Approved live-check audit regressions with synthetic data only' {
         $text = @(. ([scriptblock]::Create($source.Substring($start, $end - $start)))) -join "`n"
         $text | Should -Match ('(?m)^' + [regex]::Escape($Verdict) + '$')
         $text | Should -Not -Match 'Customer'
+    }
+
+    It 'holds a check pending until it has a verdict' {
+        Get-AdoLivePendingCheck -Id @('V-01', 'V-02', 'V-03') -Line @('PASS V-02 SYNTHETIC', 'NOTE V-03 COUNTS=1') | Should -Be @('V-01', 'V-03')
+        Get-AdoLivePendingCheck -Id @('V-01', 'V-02') -Line @() | Should -Be @('V-01', 'V-02')
+        Get-AdoLivePendingCheck -Id @('V-01') -Line @('FAIL V-01 SYNTHETIC', 'INCONCLUSIVE V-02 SYNTHETIC') | Should -BeNullOrEmpty
+    }
+
+    # A check that printed its verdict before a later step threw must not be reported a second time.
+    It 'reports CHECK_FAILED for a Test Case check only when it has no verdict yet' {
+        . (Get-LiveDefinitions 'TestCase')
+        $items = @('V-01', 'V-02', 'V-03', 'V-05', 'V-10', 'V-13')
+        $checkLines = [System.Collections.Generic.List[string]]::new()
+        $null = Write-AdoLiveResult 'PASS V-05 OMITTED'
+        $null = Write-AdoLiveResult 'INCONCLUSIVE V-10 CONTROL_REQUEST_FAILED'
+        $loop = (Read-LiveAst 'TestCase').FindAll({ param($node)
+                $node -is [System.Management.Automation.Language.ForEachStatementAst] -and $node.Extent.Text.Contains('CHECK_FAILED')
+            }, $true) | Select-Object -First 1
+        $lines = @(. ([scriptblock]::Create($loop.Extent.Text)))
+        $lines | Should -Be @('FAIL V-01 CHECK_FAILED', 'FAIL V-02 CHECK_FAILED', 'FAIL V-03 CHECK_FAILED', 'FAIL V-13 CHECK_FAILED')
     }
 
     It 'V-01 stays inconclusive when the referenced Shared Steps were not read' {

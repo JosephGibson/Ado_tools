@@ -76,6 +76,7 @@ function Assert-AdoPackage {
         'AdoToolkit.Core.dll', 'AdoToolkit.PowerShell.dll', 'fr/AdoToolkit.Core.resources.dll',
         'en-US/AdoToolkit.PowerShell.dll-Help.xml', 'fr/AdoToolkit.PowerShell.dll-Help.xml'
     )
+    $PackagePath = Resolve-AdoPackagePath -Path $PackagePath
     $files = @(Get-AdoPackageFile -PackagePath $PackagePath)
     $names = @($files | ForEach-Object { [System.IO.Path]::GetRelativePath($PackagePath, $_.FullName).Replace('\', '/') })
     if (@(Compare-Object -ReferenceObject $required -DifferenceObject $names).Count -ne 0) { throw 'Package files differ from the required layout.' }
@@ -129,6 +130,12 @@ function Remove-AdoPackageDirectory {
     }
 }
 
+# The one rename behind Move-AdoPackageDirectory, so that a test can make a rename fail.
+function Move-AdoDirectory {
+    param([Parameter(Mandatory = $true)][string] $Source, [Parameter(Mandatory = $true)][string] $Destination)
+    [System.IO.Directory]::Move($Source, $Destination)
+}
+
 function Move-AdoPackageDirectory {
     param([Parameter(Mandatory = $true)][string] $Staging,
         [Parameter(Mandatory = $true)][string] $Destination,
@@ -142,12 +149,13 @@ function Move-AdoPackageDirectory {
     try {
         if (Test-Path -LiteralPath $target) {
             Get-AdoPackageFile -PackagePath $target | Out-Null
-            [System.IO.Directory]::Move($target, $backup)
+            Move-AdoDirectory -Source $target -Destination $backup
             $hasBackup = $true
         }
-        try { [System.IO.Directory]::Move($source, $target) }
+        try { Move-AdoDirectory -Source $source -Destination $target }
         catch {
-            if ($hasBackup) { [System.IO.Directory]::Move($backup, $target); $hasBackup = $false }
+            # Never discard the only old copy: when the rollback fails too, the backup stays.
+            if ($hasBackup) { $hasBackup = $false; Move-AdoDirectory -Source $backup -Destination $target }
             throw
         }
     }
@@ -166,10 +174,9 @@ function Get-AdoModuleRoot {
     return Join-Path $documents 'PowerShell/Modules/AdoToolkit'
 }
 
-# Zips a validated package as AdoToolkit/<version>/... and writes a sha256sum-style checksum file.
-# All assets are staged beside their targets and validated before any target is replaced.
-# File systems do not offer multi-file atomic replacement; backups restore the previous set
-# on a failed commit. A process crash may leave backups for manual recovery.
+# Replaces the release assets with their staged copies. File systems do not offer multi-file
+# atomic replacement; backups restore the previous set on a failed commit. A process crash
+# may leave backups for manual recovery.
 function Publish-AdoReleaseFiles {
     param([Parameter(Mandatory = $true)][object[]] $Files, [Parameter(Mandatory = $true)][string] $Root)
     $backups = [System.Collections.Generic.List[object]]::new()
@@ -200,6 +207,8 @@ function Publish-AdoReleaseFiles {
     foreach ($backup in $backups) { [IO.File]::Delete($backup.Source) }
 }
 
+# Zips a validated package as AdoToolkit/<version>/... and writes a sha256sum-style checksum file.
+# All assets are staged beside their targets and validated before any target is replaced.
 function New-AdoReleaseArchive {
     param([Parameter(Mandatory = $true)][string] $PackagePath, [Parameter(Mandatory = $true)][string] $OutputRoot,
         [string] $InstallerPath, [string] $PowerShellArchivePath, [string] $PowerShellChecksumPath, [string] $PowerShellVersion)

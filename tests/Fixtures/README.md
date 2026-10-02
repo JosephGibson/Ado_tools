@@ -21,10 +21,11 @@ Fixture rules are in `tests/AGENTS.md`. Every fixture file has exactly one entry
 | `ExpansionFixture.Xml(name)` | `Steps/` |
 | `TestRunFixture.Route(fixture, fragments)`, `TestRunFixture.Read(name)` | `TestRuns/` |
 | `AttachmentFixture.Bytes(name)` | `Attachments/` |
+| `AttachmentFixture.Metadata(fixture, runId, resultId)` | An attachment list in any folder: `Attachments/attachments-download.json` and `TestRuns/attachments-hostile.json` |
 | `BuildFailureDeriverTests.Timeline(name)` | `Timelines/` |
 | `LexerFixtures.EveryText()` | Every `.txt` and `.json` file in `TestRuns/` and `Attachments/`, as lexer round-trip input |
 | The three golden test classes | `Reports/`; see the `update-goldens` skill |
-| A helper at the top of each `*.Pester.ps1` file | `Rest/`, `TestRuns/`, `Attachments/` |
+| A helper at the top of each `*.Pester.ps1` file | `Rest/`, `Timelines/`, `TestRuns/`, `Attachments/` |
 
 ## Rest/
 
@@ -33,7 +34,7 @@ HTTP pipeline, work items, WIQL, test plans, builds. Tests add continuation and
 
 | File | Represents | V-item |
 | --- | --- | --- |
-| `Rest/success.json`, `Rest/projects-second.json`, `Rest/projects-empty.json` | Project pages: a full page, a short page and an empty page | V-14 |
+| `Rest/success.json`, `Rest/projects-second.json`, `Rest/projects-empty.json` | Project pages: two short pages of one project each and an empty page | V-14 |
 | `Rest/iis-unauthenticated.html.txt` | IIS-like 401 HTML body, which must never be echoed | V-07 |
 | `Rest/forbidden.json`, `Rest/not-found.json`, `Rest/bad-version.json` | 403, 404 and API-version rejection bodies | V-07 |
 | `Rest/redirect.json` | Redirect body; the test supplies the `Location` header | — |
@@ -118,7 +119,7 @@ Build timelines (§15.3). Stage, Phase, Job and Task are YAML timeline assumptio
 
 ## TestRuns/
 
-Test runs, results, attachments lists, history and bugs of one build (§15.9 to §15.13).
+Test runs, results, attachment lists, history and bugs of one build (§15.9 to §15.13).
 The folder is not named `TestResults` (DD-024).
 
 | File | Represents | V-item |
@@ -160,7 +161,6 @@ Attachment content and the download list (§15.13). Only JSON and text are downl
 | `Attachments/malformed.json.txt` | Malformed JSON served for a `.json` name: a content mismatch | V-23 |
 | `Attachments/other-bytes.txt` | Text content; also the payload of the partial-body retry | V-23 |
 | `Attachments/pattern.png` | A valid 16 × 12 PNG, 94 bytes: served for `binary.log`, whose text check then fails | V-23 |
-| `Attachments/test-output.html` | HTML with a harmless script: linked, never embedded | V-23 |
 
 ## Reports/
 
@@ -179,11 +179,11 @@ have no other format. They change only through the `update-goldens` skill.
 | `Reports/testcase-rich.*` | Test Case report, HTML only: formatted steps with lists, tables, emphasis, a link, preformatted text, a quote, an image placeholder and markup escaped twice; a step that is not formatted; a parameter with two iterations | V-02, V-15 |
 | `Reports/testcase-detailed.*` | Test Case report, HTML only, with the details of `-IncludeDetail`: description, tags, automation fields, linked work items, hyperlinks, attachments, test points of every outcome and one lookup warning | V-15, V-31, V-32 |
 | `Reports/testcases-multi.*` | One document for three cases in two suites; case 10 is in both, one case is partial | V-15 |
-| `Reports/testfailures-failed.*` | Failed-test report: one failed test with every attempt field, data-driven sub-results, custom fields, a resolved Test Case and attachment metadata | V-16, V-21, V-23, V-26, V-29 |
+| `Reports/testfailures-failed.*` | Failed-test report: one failed test with every attempt field, data-driven sub-results, custom fields, a resolved Test Case, an open bug and attachment metadata | V-16, V-21, V-23, V-26, V-29, V-30 |
 | `Reports/testfailures-flaky.*` | Failed and flaky tests, history strips and the history chart | V-16, V-22, V-26 |
-| `Reports/testfailures-partial.*` | The failure limit, counted-only failures, the partial banner, an unresolved Test Case, diagnostics | V-16, V-26 |
+| `Reports/testfailures-partial.*` | The failure limit, counted-only failures, the partial banner, an unresolved Test Case, a bug that could not be read, diagnostics | V-16, V-26, V-30 |
 | `Reports/testfailures-hostile.*` | Closing script tags, handler text, quoted attributes, traversal names, unsafe response URLs, French spacing, an invalid Test Case reference | V-16, V-26, V-29 |
-| `Reports/testfailures-grouped.*` | English and French stages, a run outside the attachment window, a passing retry, a repeated message and trace, text and JSON attachments | V-19, V-22 |
+| `Reports/testfailures-grouped.*` | English and French stages, a run outside the attachment window, a passing retry, a repeated message and trace, text and JSON attachments, a Resolved bug linked through the Test Case | V-19, V-22, V-30 |
 
 In an HTML golden, of either report, the script body is `__SCRIPT_ASSET__` and its CSP hash
 is `sha256-__SCRIPT_SHA256__`; an exported report carries the real script and hash.

@@ -20,11 +20,16 @@ $script:ReadOnlySubcommands = @('status', 'diff', 'log', 'show', 'blame')
 $script:ForbiddenGitOptions = @('-c', '--config-env', '--exec-path', '--ext-diff', '--textconv', '--output', '--open-files-in-pager')
 $script:GitOptionsWithValues = @('-C', '-c', '--git-dir', '--work-tree', '--namespace', '--super-prefix', '--config-env', '--exec-path')
 
-# Programs that run their argument as a command, so the real program is further along.
-$script:CommandWrappers = @('env', 'sudo', 'doas', 'xargs', 'time', 'timeout', 'nice', 'nohup', 'stdbuf', 'command', 'builtin')
+# Programs that run their argument as a command, so the real program is further along. The
+# shell words then and elif stand here too: the PowerShell parser reads them as a command name.
+$script:CommandWrappers = @('env', 'sudo', 'doas', 'xargs', 'time', 'timeout', 'nice', 'nohup', 'stdbuf', 'command', 'builtin', 'exec', 'then', 'elif')
 
 # Shells that take a command as a string; their arguments are re-parsed and re-checked.
-$script:ShellWrappers = @('bash', 'sh', 'zsh', 'dash', 'ksh', 'pwsh', 'powershell', 'cmd')
+$script:ShellWrappers = @('bash', 'sh', 'zsh', 'dash', 'ksh', 'pwsh', 'powershell', 'cmd', 'eval')
+
+# A command substitution: $(...) with balanced parentheses, or `...`. To the PowerShell parser
+# the first is part of a word when it follows NAME=, and a backtick is the escape character.
+$script:SubstitutionPattern = '\$\((?<text>(?>[^()]+|\((?<open>)|\)(?<-open>))*(?(open)(?!)))\)|`(?<text>[^`]+)`'
 
 try { $raw = [Console]::In.ReadToEnd() } catch { exit 0 }
 if ([string]::IsNullOrWhiteSpace($raw)) { exit 0 }
@@ -80,6 +85,8 @@ function Get-ShellCommandArgument {
     $arguments = New-Object System.Collections.ArrayList
     for ($cursor = $StartIndex + 1; $cursor -lt $Element.Count; $cursor++) {
         $text = Get-CommandElementText -Element $Element[$cursor]
+        # What follows -File is a script and its arguments: data, which no shell parses.
+        if ($text -eq '-File') { break }
         if ([string]::IsNullOrWhiteSpace($text) -or $text.StartsWith('-') -or $text.StartsWith('/')) { continue }
         [void] $arguments.Add($text)
     }
@@ -134,7 +141,6 @@ function Get-GitInvocation {
         if ([string]::IsNullOrWhiteSpace($value)) { break }
         if ($value.StartsWith('-')) {
             $optionName = ($value -split '=', 2)[0]
-            if ($optionName -cin $script:ForbiddenGitOptions) { $hasForbiddenOption = $true }
             if ($optionName -in $script:GitOptionsWithValues -and -not $value.Contains('=')) {
                 $cursor++
                 if ($cursor -ge $elements.Count) { break }
@@ -179,6 +185,10 @@ function Test-IsBlockedGitCommand {
         foreach ($script in $invocation.Scripts) {
             if (Test-IsBlockedGitCommand -CommandText $script -Depth ($Depth + 1)) { return $true }
         }
+    }
+
+    foreach ($substitution in [regex]::Matches($CommandText, $script:SubstitutionPattern)) {
+        if (Test-IsBlockedGitCommand -CommandText $substitution.Groups['text'].Value -Depth ($Depth + 1)) { return $true }
     }
 
     return $false

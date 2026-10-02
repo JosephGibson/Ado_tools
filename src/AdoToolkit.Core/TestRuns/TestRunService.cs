@@ -9,8 +9,9 @@ namespace AdoToolkit.Core.TestRuns;
 
 public sealed class TestRunService
 {
-    // Largest documented page for detailsToInclude=None [Verify V-20]. A short page never ends
-    // enumeration: TopSkip advances by the number actually returned and stops on an empty page.
+    // Largest documented page for detailsToInclude=None [Verify V-20]. A short page alone never
+    // ends enumeration: TopSkip advances by the number actually returned and stops on an empty
+    // page. The one exception is described at GetResultsAsync.
     internal const int ResultPageSize = 1000;
     internal const int RunPageSize = 100;
     internal const string CompletedState = "Completed";

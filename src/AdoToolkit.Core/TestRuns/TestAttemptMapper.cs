@@ -153,8 +153,13 @@ internal static class TestAttemptMapper
         Dictionary<string, object?> fields = new(StringComparer.Ordinal);
         // An attempt's own values take precedence; missing fields inherit result metadata.
         foreach (CustomFieldDto field in (values ?? []).Concat(fallback ?? []))
-            if (field is not null && !string.IsNullOrEmpty(field.FieldName) && field.Value.ValueKind != JsonValueKind.Undefined)
-                fields.TryAdd(field.FieldName, FieldValueMapper.MapValue(field.Value));
+        {
+            if (field is null || string.IsNullOrEmpty(field.FieldName) || field.Value.ValueKind == JsonValueKind.Undefined) continue;
+            // A value that cannot be mapped, such as an object that repeats a property, is left
+            // out like an absent one (F07): a custom field never fails the result.
+            try { fields.TryAdd(field.FieldName, FieldValueMapper.MapValue(field.Value)); }
+            catch (Exception error) when (error is JsonException or InvalidOperationException) { }
+        }
         return new ReadOnlyDictionary<string, object?>(fields);
     }
 

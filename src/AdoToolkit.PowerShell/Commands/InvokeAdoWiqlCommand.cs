@@ -8,7 +8,7 @@ namespace AdoToolkit;
 public sealed class InvokeAdoWiqlCommand : AdoCmdletBase
 {
     [Parameter(Mandatory = true, Position = 0)]
-    [ValidateNotNullOrEmpty]
+    [ValidateNotNullOrWhiteSpace]
     public string Query { get; set; } = "";
 
     [Parameter]

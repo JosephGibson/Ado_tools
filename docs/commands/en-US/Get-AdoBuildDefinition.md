@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoBuildDefinition
 ---
@@ -87,7 +87,7 @@ HelpMessage: ''
 
 ### -Project
 
-Project name. Defaults to the active connection’s project. For piped objects, the owning project is used.
+Project name. Defaults to the active connection’s project.
 
 ```yaml
 Type: System.String
@@ -141,7 +141,7 @@ Supports common parameters including ErrorAction, ErrorVariable, Verbose, and De
 
 ## NOTES
 
-Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Timeline shapes and paging await server confirmation (V-11, V-14). Web links await confirmation at work.
+Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Paging awaits server confirmation (V-14). Web links await confirmation at work (V-26).
 
 ## RELATED LINKS
 

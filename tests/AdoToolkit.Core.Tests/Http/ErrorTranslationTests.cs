@@ -88,6 +88,7 @@ public sealed class ErrorTranslationTests
     [InlineData(403, "{broken", "application/json", typeof(AdoAuthorizationException))]
     [InlineData(404, "{\"message\":42,\"typeKey\":false}", "application/json", typeof(AdoNotFoundException))]
     [InlineData(403, "[]", "application/json", typeof(AdoAuthorizationException))]
+    [InlineData(403, "{\"message\":\"abc\\ud83d\"}", "application/json", typeof(AdoAuthorizationException))]
     [InlineData(403, "<html>NEVER ECHO</html>", "text/html", typeof(AdoAuthorizationException))]
     public async Task MissingOrMalformedErrorFieldsDoNotHideKnownStatus(int status, string body, string media, Type expected)
     {

@@ -1,4 +1,3 @@
-using AdoToolkit.Core.Connections;
 using AdoToolkit.Core.Reporting.TestFailures;
 using AdoToolkit.Core.TestRuns;
 

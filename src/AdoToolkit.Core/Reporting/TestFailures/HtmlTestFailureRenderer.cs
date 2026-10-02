@@ -11,7 +11,8 @@ namespace AdoToolkit.Core.Reporting.TestFailures;
 
 // One scanned page per build: views for an overview table, failures grouped by error, failures
 // grouped by bug, compact failure cards, and runs with history. Every section renders without
-// scripts; the script only switches views, filters and navigates. Every <details> starts closed.
+// scripts; the script switches views, filters, navigates, expands, wraps and copies. Every
+// <details> starts closed.
 public static partial class HtmlTestFailureRenderer
 {
     private const int MaximumSummaryCharacters = 240;
@@ -121,7 +122,8 @@ public static partial class HtmlTestFailureRenderer
             Anchor(failure, attempt) + "-att" + N(attachment.Id);
         private string? Duration(TimeSpan? value) => value.HasValue ? F(AdoMessage.TestReportSeconds, value.Value.TotalSeconds) : null;
         // Server times are UTC; every time shows in the export's offset, like the generation time.
-        private string? Date(DateTimeOffset? value) => value?.ToOffset(model.GeneratedAt.Offset).ToString("g", Culture);
+        private string? Date(DateTimeOffset? value) =>
+            value is { } time ? ReportTime.InOffset(time, model.GeneratedAt.Offset).ToString("g", Culture) : null;
         private static int Attachments(AdoTestFailure failure) => failure.Attempts.Sum(a => a.Attachments.Count);
         private static AdoTestHistoryOutcome Status(AdoTestFailure failure) => failure.Classification == AdoTestFailureClassification.Flaky
             ? AdoTestHistoryOutcome.Flaky : AdoTestHistoryOutcome.Failed;
@@ -374,7 +376,7 @@ public static partial class HtmlTestFailureRenderer
             W("</td>");
         }
 
-        // Glyph, hidden status word and failed/total count, for a table cell or group summary.
+        // Glyph, hidden status word and failed/total count, for a table cell.
         private void GroupStatus(IReadOnlyList<AdoTestAttempt> attempts)
         {
             AdoTestHistoryOutcome status = TestFailureGroups.Status(attempts);
@@ -474,8 +476,10 @@ public static partial class HtmlTestFailureRenderer
             Field(L("FailureType"), attempt.FailureType); Field(L("Resolution"), attempt.ResolutionState);
             if (attempt.FailingSinceBuildId is > 0) FieldLink(L("FailingSince"), AdoWebLinks.Build(Collection, Project, attempt.FailingSinceBuildId.Value), attempt.FailingSinceBuildId.Value.ToString(Culture));
             // An associated ID that is not among the test's bugs is a closed bug, which the report leaves out.
-            foreach (int bug in attempt.AssociatedBugIds.Where(id => id > 0 && failure.Bugs.Any(known => known.Id == id)).Distinct())
-                FieldLink(L("Bugs"), AdoWebLinks.WorkItem(Collection, Project, bug), "#" + bug.ToString(Culture));
+            // A bug can live in another project than the build.
+            foreach (int bug in attempt.AssociatedBugIds.Where(id => id > 0).Distinct())
+                if (failure.Bugs.FirstOrDefault(known => known.Id == bug) is { } known)
+                    FieldLink(L("Bugs"), AdoWebLinks.WorkItem(Collection, known.TeamProject ?? Project, bug), "#" + bug.ToString(Culture));
             Field(L("Comment"), attempt.Comment); W("</dl>\n");
             // Every attempt shows its own message and trace, even when an earlier attempt had the same text.
             Code(attempt.ErrorMessage, CodeLanguage.ErrorMessage); Code(attempt.StackTrace, CodeLanguage.StackTrace);

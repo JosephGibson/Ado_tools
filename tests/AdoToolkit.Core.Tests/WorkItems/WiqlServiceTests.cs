@@ -166,13 +166,14 @@ public sealed class WiqlServiceTests
         Assert.Equal(450, ids.Distinct().Count());
         using FakeHttpMessageHandler handler = new();
         handler.Enqueue(FakeHttpMessageHandler.Response(FlatResponse(ids)));
+        JsonNode template = JsonNode.Parse(ParserFixture.Read("Rest/workitem-fields.json"))!["value"]![0]!;
         handler.Fallback = async (request, token) =>
         {
             using JsonDocument body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(token));
             JsonArray values = [];
             foreach (int id in body.RootElement.GetProperty("ids").EnumerateArray().Select(v => v.GetInt32()).Reverse())
             {
-                JsonNode item = JsonNode.Parse(File.ReadAllText(Path.Combine(TestDirectory.RepositoryRoot, "tests/Fixtures/Rest/workitem-fields.json")))!["value"]![0]!.DeepClone();
+                JsonNode item = template.DeepClone();
                 item["id"] = id;
                 values.Add(item);
             }

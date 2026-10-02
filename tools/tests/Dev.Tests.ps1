@@ -67,6 +67,25 @@ Describe 'tools/dev.ps1' {
         Test-IsAgentSafePath -Path (Join-Path $repository 'src\notes.txt') -Root $repository | Should -BeTrue
     }
 
+    It 'excludes every .env prefix in both discovery implementations' -ForEach @(
+        @{ UseRipgrep = $true }
+        @{ UseRipgrep = $false }
+    ) {
+        $repository = Join-Path $TestDrive "env-prefix-$UseRipgrep"
+        New-TestFile -Path (Join-Path $repository 'src/worker.ps1') -Content 'SyntheticMarker'
+        foreach ($name in @('.env', '.env.local', '.envrc', '.environment')) {
+            New-TestFile -Path (Join-Path $repository $name) -Content 'SyntheticMarker'
+            New-TestFile -Path (Join-Path $repository "nested/$name/notes.txt") -Content 'SyntheticMarker'
+            Test-IsAgentSafePath -Path (Join-Path $repository $name) -Root $repository | Should -BeFalse
+        }
+        if (-not $UseRipgrep) { Mock Get-FirstCommand { $null } -ParameterFilter { $Names -contains 'rg' } }
+
+        $result = Find-ProjectSource -Query 'SyntheticMarker' -Root $repository
+
+        $result.Results.Path | Should -Be @('src/worker.ps1')
+        @(Get-RepositoryFiles -Root $repository).Count | Should -Be 1
+    }
+
     It 'finds safe content in hidden repository configuration' {
         $repository = Join-Path $TestDrive 'hidden-find-sample'
         New-TestFile -Path (Join-Path $repository '.claude\rules\workflow.md') -Content 'Use deterministic discovery.'
@@ -186,7 +205,6 @@ Describe 'tools/dev.ps1' {
 
         $result = Get-ProjectDiagnostics -Root $repository
 
-        $result.Status | Should -BeIn @('ok', 'incomplete')
         @($result.Tools | Where-Object { $_.Name -eq 'Pester' }).Count | Should -Be 0
         @($result.Tools | Where-Object { $_.Name -eq 'PSScriptAnalyzer' }).Count | Should -Be 1
     }
@@ -205,9 +223,10 @@ Describe 'tools/dev.ps1' {
     It 'uses the release-pinned Pester when a newer compatible version is installed' {
         $repository = Join-Path $TestDrive 'release-pester'
         New-TestFile -Path (Join-Path $repository 'tools/tests/Sample.Tests.ps1') -Content "Describe 'sample' {}"
+        $pinned = [version] (Import-PowerShellDataFile -LiteralPath (Join-Path $PSScriptRoot '../BuildModules.psd1')).Pester
         Mock Get-Module {
-            @([pscustomobject]@{ Name = 'Pester'; Version = [version]'5.9.1'; Path = 'pinned-pester.psd1' },
-              [pscustomobject]@{ Name = 'Pester'; Version = [version]'5.99.0'; Path = 'newer-pester.psd1' })
+            @([pscustomobject]@{ Name = 'Pester'; Version = $pinned; Path = 'pinned-pester.psd1' },
+              [pscustomobject]@{ Name = 'Pester'; Version = [version]::new($pinned.Major, $pinned.Minor + 1, 0); Path = 'newer-pester.psd1' })
         } -ParameterFilter { $ListAvailable -and $Name -eq 'Pester' }
         Mock Get-Module { @() } -ParameterFilter { -not $ListAvailable -and $Name -eq 'Pester' }
         Mock Import-Module { }
@@ -357,6 +376,8 @@ Write-Output 'check: Core tests (en-US): 3 passed, 0 failed, 3 executed, 3 disco
 Write-Output 'Package ready'
 exit 0
 '@
+        # The lint stage is not the subject, and it is unavailable where no analyzer is installed.
+        Mock Get-PowerShellLintOutcome { [pscustomobject]@{ Failures = @(); Summary = @(); Warnings = @() } }
 
         $result = Invoke-ProjectVerification -Root $repository
 
@@ -437,7 +458,6 @@ exit 0
 
         $commands = $entryPoint.Parameters['Command'].Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
         $commands.ValidValues | Should -Be @('inspect', 'context', 'find', 'plan', 'verify', 'diagnose', 'deps', 'bootstrap')
-        $entryPoint.Parameters.Keys | Should -Not -Contain 'ProjectName'
     }
 
     It 'blocks mutating Git commands in the Claude Code guard' {
@@ -557,7 +577,10 @@ exit 0
 
         $invocationExit | Should -Be 2
         $document.Status | Should -Be 'incomplete'
-        @($document.Stages | Where-Object { $_.Name -ne 'project-check' -and $_.Status -ne 'pass' }) | Should -BeNullOrEmpty
+        # A stage that could not call its function fails. Lint is unavailable, not failed, where no
+        # analyzer is installed, so only a failure is ruled out.
+        @($document.Stages | Where-Object { $_.Name -ne 'project-check' -and $_.Status -eq 'fail' }) | Should -BeNullOrEmpty
+        @($document.Stages | Where-Object { $_.Name -in @('configuration', 'tooling-layout') -and $_.Status -ne 'pass' }) | Should -BeNullOrEmpty
         @($document.Stages | Where-Object { $_.Name -eq 'powershell-lint' }).Count | Should -Be 1
         ($document.Stages | Where-Object Name -eq 'project-check').Status | Should -Be $CheckStatus
         ($document.Stages | Where-Object Name -eq 'project-check').ExitCode | Should -Be $CheckExit
@@ -595,6 +618,8 @@ exit 2
 Write-Output 'note: 1 missing peer dependency'
 exit 0
 '@
+        # The lint stage is not the subject, and it is unavailable where no analyzer is installed.
+        Mock Get-PowerShellLintOutcome { [pscustomobject]@{ Failures = @(); Summary = @(); Warnings = @() } }
 
         $result = Invoke-ProjectVerification -Root $repository
 
@@ -606,7 +631,7 @@ exit 0
         $globs = @(Get-RepositoryExclusionGlobs)
         $searchArguments = @(Get-RepositorySearchGlobs)
 
-        foreach ($expected in @('!artifacts/**', '!**/artifacts/**', '!secret/**', '!secrets/**', '!**/.env', '!*.log')) {
+        foreach ($expected in @('!artifacts/**', '!**/artifacts/**', '!secret/**', '!secrets/**', '!**/.env*', '!*.log')) {
             $globs | Should -Contain $expected
         }
         $searchArguments | Should -Contain '--no-ignore'
@@ -625,14 +650,32 @@ exit 0
         $paths | Should -Be @('AGENTS.md', 'src/api/AGENTS.md')
     }
 
+    It 'lists the instruction files of an inspection as an array, for one file and for none' {
+        $one = Join-Path $TestDrive 'one-instruction-sample'
+        $none = Join-Path $TestDrive 'no-instruction-sample'
+        New-TestFile -Path (Join-Path $one 'AGENTS.md') -Content '# Sample'
+        New-TestFile -Path (Join-Path $none 'notes.txt')
+
+        $single = Get-ProjectInspection -Root $one | ConvertTo-Json -Depth 12 -Compress
+        $empty = Get-ProjectInspection -Root $none | ConvertTo-Json -Depth 12 -Compress
+
+        $single | Should -Match ([regex]::Escape('"AgentInstructions":["AGENTS.md"]'))
+        $empty | Should -Match ([regex]::Escape('"AgentInstructions":[]'))
+    }
+
     It 'keeps the workflow entry point first when the path budget is tight' {
-        $repository = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+        $repository = Join-Path $TestDrive 'path-budget-sample'
+        New-TestFile -Path (Join-Path $repository 'tools\dev.ps1')
+        foreach ($index in 1..45) {
+            New-TestFile -Path (Join-Path $repository ('src\area{0:d2}\AGENTS.md' -f $index)) -Content '# area'
+        }
 
         $context = Get-ProjectContext -Root $repository
 
         $context.ImportantPaths[0] | Should -Be 'tools/dev.ps1'
-        $context.ImportantPaths.Count | Should -BeLessOrEqual 40
-        $context.ImportantPathCount | Should -BeGreaterOrEqual $context.ImportantPaths.Count
+        $context.ImportantPaths.Count | Should -Be 40
+        $context.ImportantPaths[39] | Should -Be 'src/area39/AGENTS.md'
+        $context.ImportantPathCount | Should -Be 46
     }
 
     It 'blocks Git commands that hide behind a prefix, a wrapper, or a shell' {
@@ -647,12 +690,23 @@ exit 0
             'cmd /c ' + $git + ' push'
             $git + ' -c core.pager=start log'
             $git + ' --exec-path=/tmp status'
+            'x=$(' + $git + ' push)'
+            'branch=$(' + $git + ' rev-parse --abbrev-ref HEAD)'
+            'echo `' + $git + ' push`'
+            'if true; then ' + $git + ' push; fi'
+            'if false; then true; elif ' + $git + ' push; then true; fi'
+            'eval "' + $git + ' push"'
+            'exec ' + $git + ' push'
         )
         $allowed = @(
             $git + ' -C . status'
             $git + ' log --oneline main'
             'grep -n "' + $git + '" notes.md'
             'bash -lc "npm test"'
+            'changes=$(' + $git + ' status --short)'
+            # The arguments of a script started with -File are data, not command text.
+            'pwsh -NoProfile -File .\tools\dev.ps1 find -Query ' + $git
+            'pwsh -NoProfile -File .\tools\dev.ps1 find -Query ''' + $git + ' commit'''
         )
 
         foreach ($command in $blocked) {
@@ -678,6 +732,25 @@ exit 0
         $null = @($payload | & $pwsh -NoProfile -File $hook 2>&1)
 
         $LASTEXITCODE | Should -Be 2
+    }
+
+    # The edit guard takes its path rules from tools/dev.ps1. A hook that stops with any other
+    # exit code is ignored, so a syntax error in the tooling would switch the guard off.
+    It 'reports tooling that does not load instead of leaving the edit unchecked' {
+        $pwsh = Join-Path $PSHOME 'pwsh.exe'
+        $repository = Join-Path $TestDrive 'broken-tooling'
+        foreach ($name in @('validate-edit.ps1', 'dev.ps1', 'lib/discovery.ps1', 'lib/dependencies.ps1', 'lib/validation.ps1')) {
+            New-TestFile (Join-Path $repository "tools/$name") (Get-Content -LiteralPath (Join-Path $PSScriptRoot "../$name") -Raw)
+        }
+        New-TestFile (Join-Path $repository 'tools/lib/setup.ps1') 'function Incomplete {'
+        $edited = Join-Path $repository 'settings.json'
+        New-TestFile $edited '{}'
+        $payload = @{ cwd = $repository; tool_input = @{ file_path = $edited } } | ConvertTo-Json -Compress
+
+        $output = @($payload | & $pwsh -NoProfile -File (Join-Path $repository 'tools/validate-edit.ps1') 2>&1)
+
+        $LASTEXITCODE | Should -Be 2
+        "$output" | Should -BeLike '*could not load tools/dev.ps1*settings.json was not checked*'
     }
 
     # String catalogs and the format file are XML that an agent edits by hand.

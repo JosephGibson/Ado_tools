@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net.Http;
 using System.Text.Json.Nodes;
 using AdoToolkit.Core.TestManagement;

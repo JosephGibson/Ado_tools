@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -13,7 +13,7 @@ title: Export-AdoBuildTestFailure
 
 ## SYNOPSIS
 
-Écrit un rapport HTML compact des tests en échec par ensemble et télécharge ses pièces jointes JSON et texte : les petites de chaque série de tests récente et les plus volumineuses de la série la plus récente.
+Écrit un rapport HTML compact des tests en échec par ensemble et télécharge ses pièces jointes JSON et texte : les petites de chaque série de tests récente et les plus volumineuses de la série la plus récente.
 
 ## SYNTAX
 
@@ -32,7 +32,7 @@ Aucun alias.
 Produit, pour chaque `AdoBuildTestFailureSet` reçu de `Get-AdoBuildTestFailure`, un
 rapport HTML sombre dans la culture du rapport. Le rapport compte cinq vues, et une
 sixième pour les diagnostics lorsqu’il y en a. Vue d’ensemble est un tableau d’une ligne
-par test en échec : son numéro de cas de test lié à l’élément de travail, l’état de chaque
+par test en échec : son numéro de cas de test lié à l’élément de travail, l’état de chaque
 groupe de tentatives qui l’a exécuté et la première ligne de sa dernière erreur. Un test
 qui a au moins un bogue ouvert porte après son nom un lien Bogue ouvert vers le bogue ouvert
 de plus petit numéro. Par erreur regroupe les mêmes lignes sous leur dernière erreur.
@@ -59,7 +59,7 @@ rapport.
 Lorsque les séries de tests du build portent des noms de phase, de travail ou de série
 différents, par exemple une phase par langue, chaque fiche regroupe ses tentatives selon ces
 noms et la vue d’ensemble affiche une colonne d’état par groupe. L’étiquette utilise le nom
-le plus court qui distingue les groupes : le nom de la phase, puis celui du travail, puis
+le plus court qui distingue les groupes : le nom de la phase, puis celui du travail, puis
 celui de l’instance du travail, puis celui de la série. Une série nommée comme une autre
 série du même travail suivie de ` (attempt N)`, où N est sa tentative de travail, est une
 nouvelle tentative de cette série et reste dans son groupe. Les séries sans noms distincts
@@ -69,7 +69,7 @@ Les tests instables sont omis sauf avec `-IncludeFlaky`; l’en-tête les compte
 Le rapport est complet lorsque les scripts sont bloqués. Un petit script statique, autorisé
 par une stratégie de sécurité du contenu fondée sur des hachages, ajoute le changement de
 vue, la recherche, la navigation au clavier et la copie. La recherche compare chaque mot
-saisi à toute la fiche, tentatives réduites comprises : messages d’erreur, arborescences
+saisi à toute la fiche, tentatives réduites comprises : messages d’erreur, arborescences
 des appels, pièces jointes JSON et texte affichées, noms de phase et de travail, champs
 des séries de tests et des tentatives, et titres et états des bogues. Un ID de cas de test
 correspond avec ou sans `#`. Lorsqu’au moins un test a un bogue ouvert, le filtre Sans
@@ -87,7 +87,7 @@ quels que soient les paramètres. Par défaut, les fichiers JSON et texte d’au
 et les plus volumineux seulement de la série la plus récente. Cette série est la dernière
 dans l’ordre des tentatives de phase, de travail et d’instance du travail, puis de la date
 de début et de l’ID de série. Un fichier plus volumineux d’une série plus ancienne reste un
-lien : l’exportation ne se rabat pas sur une série précédente pour ceux-là. Un fichier
+lien : l’exportation ne se rabat pas sur une série précédente pour ceux-là. Un fichier
 d’une série plus ancienne qui ne déclare aucune taille est téléchargé et conservé seulement
 s’il fait au plus `maximumInlineJsonBytes`. Lorsqu’aucune série n’a de fichier à
 télécharger, aucun dossier de pièces jointes n’est créé et aucune connexion n’est requise.
@@ -106,7 +106,7 @@ Les fichiers locaux utilisent les noms
 `r<série>-<résultat>[-s<sous-résultat>]-a<pièce jointe>.<ext>`; les fichiers `.log` sont
 enregistrés en `.txt`. Les noms distants sont affichés et ne deviennent jamais des chemins.
 
-Le contenu téléchargé est vérifié avant l’aperçu : un JSON doit être valide, et un texte
+Le contenu téléchargé est vérifié avant l’aperçu : un JSON doit être valide, et un texte
 doit être en UTF-8 ou en UTF-16 avec marque d’ordre des octets. Un contenu non conforme est
 enregistré en `.bin` et lié sans aperçu. Un aperçu n’est affiché, et donc cherchable, que
 pour les fichiers d’au plus `maximumInlineJsonBytes` et tant que le total affiché du
@@ -116,10 +116,9 @@ plus anciennes. Les limites de taille (`maximumAttachmentBytes`,
 `maximumTotalAttachmentBytes`) et les téléchargements en échec produisent des
 avertissements; les pièces jointes concernées
 conservent leur nom Azure DevOps, leur taille et le lien de téléchargement. Les erreurs
-d’authentification ou d’autorisation et l’annulation interrompent l’exportation. Un build
-d’historique illisible ne l’interrompt pas.
+d’authentification ou d’autorisation et l’annulation interrompent l’exportation.
 
-L’enregistrement suit cet ordre : téléchargement dans un dossier temporaire,
+L’enregistrement suit cet ordre : téléchargement dans un dossier temporaire,
 rendu et validation d’un rapport temporaire, renommage du dossier, puis remplacement
 du rapport. Un échec avant le remplacement laisse le rapport précédent et son
 dossier inchangés. Les anciens dossiers de génération du même rapport sont supprimés
@@ -351,7 +350,7 @@ HelpMessage: ''
 
 ### -Connection
 
-Connexion explicite utilisée pour télécharger les pièces jointes; remplace la connexion active de l’espace d’exécution. Un ensemble d’une autre collection produit une erreur propre à cette entrée.
+Connexion explicite utilisée pour télécharger les pièces jointes; remplace la connexion active de l’espace d’exécution. Lorsque des pièces jointes sont téléchargées, un ensemble d’une autre collection produit une erreur propre à cette entrée.
 
 ```yaml
 Type: AdoToolkit.Core.Connections.AdoConnection
@@ -430,7 +429,7 @@ Le rapport validé et enregistré. Lorsque des pièces jointes ont été téléc
 
 ## NOTES
 
-Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase, de travail et de série utilisés pour le regroupement et le suffixe de nouvelle tentative des noms de série (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27).
+Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. La façon dont Server 2020 répond à plusieurs téléchargements simultanés n’a pas été confirmée au travail (V-33). Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase, de travail et de série utilisés pour le regroupement et le suffixe de nouvelle tentative des noms de série (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27).
 
 ## RELATED LINKS
 

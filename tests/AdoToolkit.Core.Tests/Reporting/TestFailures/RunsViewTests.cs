@@ -6,14 +6,13 @@ using AdoToolkit.Core.TestRuns;
 
 namespace AdoToolkit.Core.Tests.Reporting.TestFailures;
 
-// The Runs and history view, one test per change, on the grouped and partial fixtures. The grouped
-// build has four runs in two stages, the first of them outside the attachment window, and no
-// earlier build. The partial build has one run and three earlier builds.
+// The Runs and history view, on the grouped and partial fixtures. The grouped build has four runs
+// in two stages, the first of them outside the attachment window, and no earlier build. The
+// partial build has one run and three earlier builds.
 public sealed class RunsViewTests
 {
     private static readonly CultureInfo English = CultureInfo.GetCultureInfo("en-US");
 
-    // Item 1.
     [Theory]
     [InlineData("grouped", "en-US", "Test runs")]
     [InlineData("partial", "fr-CA", "Séries de tests")]
@@ -25,7 +24,6 @@ public sealed class RunsViewTests
         Assert.True(view.IndexOf("<section class=\"history-panel\" id=\"history\">", StringComparison.Ordinal) > runs);
     }
 
-    // Item 2.
     [Fact]
     public void RunsTableShowsFailedDurationAndReportedTests()
     {
@@ -43,7 +41,6 @@ public sealed class RunsViewTests
         Assert.Equal(["", "40", "38", "", "1"], Numbers(Row(view, 203)));
     }
 
-    // Item 3.
     [Theory]
     [InlineData("grouped")]
     [InlineData("partial")]
@@ -59,7 +56,6 @@ public sealed class RunsViewTests
         Assert.Matches(@"\.history-data th:nth-child\(n\+4\):nth-child\(-n\+7\), \.history-data td:nth-child\(n\+4\):nth-child\(-n\+7\) \{ text-align: end; \}", html);
     }
 
-    // Item 4.
     [Fact]
     public void AttemptNumbersAlwaysShowThreePlaces()
     {
@@ -71,7 +67,6 @@ public sealed class RunsViewTests
         Assert.Contains("<td>– / – / –</td>", Row(View(Render(Model("partial"))), 201), StringComparison.Ordinal);
     }
 
-    // Item 5.
     [Fact]
     public void StateColumnAppearsOnlyWhenARunIsNotCompleted()
     {
@@ -87,7 +82,6 @@ public sealed class RunsViewTests
         Assert.Contains("<td>Completed</td>", Row(running, 201), StringComparison.Ordinal);
     }
 
-    // Item 6.
     [Fact]
     public void AttachmentCellCountsListedAndDownloadedFiles()
     {
@@ -116,7 +110,6 @@ public sealed class RunsViewTests
         Assert.Contains("<td>2 répertoriées, 0 téléchargées</td>", Row(View(Render(Model("grouped", "fr-CA"))), 202), StringComparison.Ordinal);
     }
 
-    // Item 7.
     [Theory]
     [InlineData("en-US", "Latest run")]
     [InlineData("fr-CA", "Dernière série de tests")]
@@ -136,7 +129,6 @@ public sealed class RunsViewTests
         Assert.StartsWith("<tr data-run=\"201\" data-latest-run>", Row(View(Render(Model("partial", culture))), 201), StringComparison.Ordinal);
     }
 
-    // Item 8.
     [Theory]
     [InlineData("grouped", "en-US", 1)]
     [InlineData("grouped", "fr-CA", 1)]
@@ -155,7 +147,6 @@ public sealed class RunsViewTests
         Assert.StartsWith(culture == "en-US" ? "Attachments are listed for runs started on or after " : "Les pièces jointes sont répertoriées pour les séries de tests commencées le ", text, StringComparison.Ordinal);
     }
 
-    // Item 9.
     [Theory]
     [InlineData("en-US", "History by test", "Consecutive failures")]
     [InlineData("fr-CA", "Historique par test", "Échecs consécutifs")]
@@ -182,7 +173,7 @@ public sealed class RunsViewTests
         Assert.Equal(8, Regex.Count(table, "<td class=\"col-build\"><span class=\"status-glyph status-[a-z]+\" role=\"img\" aria-label=\"[^\"]+\">"));
     }
 
-    // Item 9, the grouped fixture: its tests carry no history cells, and the streak ends at a pass.
+    // The grouped fixture: its tests carry no history cells, and the streak ends at a pass.
     [Fact]
     public void HistoryByTestShowsDashesWithoutCellsAndStopsTheStreakAtAnyOtherOutcome()
     {
@@ -213,7 +204,6 @@ public sealed class RunsViewTests
         Assert.DoesNotContain("history-by-test\"", View(Render(empty)), StringComparison.Ordinal);
     }
 
-    // Item 10.
     [Fact]
     public void ChartIsDrawnAtItsNaturalSizeAndGrowsWithTheBuilds()
     {
@@ -233,7 +223,6 @@ public sealed class RunsViewTests
         Assert.Contains("<div class=\"chart-scroll\"><svg class=\"history-chart\"", one, StringComparison.Ordinal);
     }
 
-    // Item 11.
     [Fact]
     public void BarsAreLabelledWithTheBuildNumberAndTheSlotFitsTheLongestOne()
     {
@@ -261,7 +250,6 @@ public sealed class RunsViewTests
         Assert.Equal(2, Regex.Count(cut, name));
     }
 
-    // Item 12.
     [Fact]
     public void FailedSegmentStaysVisibleItsCountStandsAboveTheBarAndTheChartHasALegend()
     {
@@ -290,7 +278,6 @@ public sealed class RunsViewTests
         Assert.Contains(">✕ 0</text>", html, StringComparison.Ordinal);
     }
 
-    // Item 13.
     [Theory]
     [InlineData("grouped")]
     [InlineData("partial")]
@@ -308,7 +295,15 @@ public sealed class RunsViewTests
         Assert.Contains("show('runs');\n        row.scrollIntoView", script, StringComparison.Ordinal);
     }
 
-    // Item 14.
+    // A history cell shows the Runs view and leaves the hash on #details. Expand all and Collapse
+    // all then cannot rely on a hash change to show the Details view again.
+    [Fact]
+    public void ExpandAllShowsTheDetailsViewWhenTheHashAlreadyNamesIt()
+    {
+        string script = TestFailureAssets.Read("test-failures.js");
+        Assert.Contains("if (location.hash === '#details') show('details');\n        else location.hash = 'details';", script, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("grouped", "en-US", "Generated on")]
     [InlineData("partial", "fr-CA", "Généré le")]

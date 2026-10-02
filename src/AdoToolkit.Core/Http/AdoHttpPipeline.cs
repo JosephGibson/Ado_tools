@@ -45,9 +45,10 @@ internal sealed class AdoHttpPipeline
         retry = new RetryPolicy(this.clock);
     }
 
-    // isComplete, for TopSkip only, receives the items read so far and the size of the page just
-    // read. When it returns true the listing ends there, without the request for the empty page
-    // that otherwise ends it (§6.4): the caller knows from other data that nothing follows.
+    // isComplete, for TopSkip only, receives the number of items read so far and the size of the
+    // page just read. When it returns true the listing ends there, without the request for the
+    // empty page that otherwise ends it (§6.4): the caller knows from other data that nothing
+    // follows.
     internal async Task<IReadOnlyList<TItem>> GetPagesAsync<TPage, TItem>(
         EndpointDefinition endpoint, JsonTypeInfo<TPage> jsonType, Func<TPage, IReadOnlyList<TItem>?> selectItems,
         Func<TItem, string> identity, CultureInfo culture, CancellationToken cancellationToken,
@@ -126,28 +127,6 @@ internal sealed class AdoHttpPipeline
         throw PagingError(endpoint, culture);
     }
 
-    internal Task<byte[]> DownloadAsync(EndpointDefinition endpoint, CultureInfo culture, CancellationToken cancellationToken) =>
-        ExecuteAsync(endpoint, null, null, null, culture, async (response, token) =>
-        {
-            using Stream source = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
-            using MemoryStream output = new();
-            byte[] buffer = new byte[81920];
-            while (true)
-            {
-                using CancellationTokenSource inactivity = CancellationTokenSource.CreateLinkedTokenSource(token);
-                inactivity.CancelAfter(inactivityTimeout);
-                int read;
-                try { read = await source.ReadAsync(buffer, inactivity.Token).ConfigureAwait(false); }
-                catch (OperationCanceledException error) when (!token.IsCancellationRequested)
-                {
-                    throw new AdoTimeoutException(Messages.Get(AdoMessage.Timeout, culture), error) { Operation = endpoint.Name };
-                }
-                if (read == 0) break;
-                await output.WriteAsync(buffer.AsMemory(0, read), token).ConfigureAwait(false);
-            }
-            return output.ToArray();
-        }, cancellationToken);
-
     internal Task<FileInfo> DownloadFileAsync(EndpointDefinition endpoint, IReadOnlyDictionary<string, string> routes,
         IReadOnlyDictionary<string, string>? query, string destination, AtomicFileWriter writer, Action<string> validate,
         CultureInfo culture, CancellationToken cancellationToken) =>
@@ -218,7 +197,7 @@ internal sealed class AdoHttpPipeline
                 {
                     callerToken.ThrowIfCancellationRequested();
                     if (!RetryPolicy.IsTransient(error) || !endpoint.IsSafeToRetry || attempt == 3)
-                        throw new AdoRequestException(Messages.Get(AdoMessage.Request, culture), error)
+                        throw new AdoRequestException(Messages.Get(AdoMessage.Transport, culture), error)
                         { Operation = endpoint.Name, IsRetryable = endpoint.IsSafeToRetry && RetryPolicy.IsTransient(error) };
                     delay = retry.Delay(null, attempt);
                     reason = error.GetType().Name;

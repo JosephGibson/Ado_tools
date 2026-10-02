@@ -16,8 +16,10 @@ Describe 'Saving build logs' -Tag 'S4-3' {
         $server = Start-FakeAdoServer
         try {
             Connect-Ado -CollectionUrl $server.Uri -Project Web -WarningAction SilentlyContinue | Out-Null
-            @(Save-AdoBuildLog -BuildId 401 -LogId 11 -Tail 200 -Path $TestDrive -WhatIf).Count | Should -Be 0
-            @(Get-ChildItem -LiteralPath $TestDrive -Force).Count | Should -Be 0
+            $target = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+            [void] [IO.Directory]::CreateDirectory($target)
+            @(Save-AdoBuildLog -BuildId 401 -LogId 11 -Tail 200 -Path $target -WhatIf).Count | Should -Be 0
+            @(Get-ChildItem -LiteralPath $target -Force).Count | Should -Be 0
             { Save-AdoBuildLog -BuildId 401 -LogId 11 -Path Env: -WhatIf -ErrorAction Stop } | Should -Throw
             { Save-AdoBuildLog -BuildId 401 -LogId 11 -Path (Join-Path $TestDrive 'missing') -WhatIf -ErrorAction Stop } | Should -Throw
             $file = Join-Path $TestDrive 'existing.txt'

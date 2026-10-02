@@ -74,6 +74,8 @@ Describe 'Hand-made pipeline input' {
 
     It 'a connection without a usable <Member> is a configuration error' -TestCases @(
         @{ Member = 'CollectionUri'; Bag = @{ DefaultProject = 'Équipe Web' } }
+        @{ Member = 'CollectionUri'; Bag = @{ CollectionUri = 'Collection' } }
+        @{ Member = 'CollectionUri'; Bag = @{ CollectionUri = 'ftp://ado.example.test/Collection' } }
         @{ Member = 'RequestTimeoutSeconds'; Bag = @{ CollectionUri = 'http://127.0.0.1:9/Collection'; RequestTimeoutSeconds = 0 } }
     ) {
         param($Member, $Bag)

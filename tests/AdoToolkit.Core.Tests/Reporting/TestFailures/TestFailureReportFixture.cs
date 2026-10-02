@@ -1,6 +1,4 @@
 using AdoToolkit.Core.Builds;
-using AdoToolkit.Core.Connections;
-using AdoToolkit.Core.Reporting;
 using AdoToolkit.Core.Reporting.TestFailures;
 using AdoToolkit.Core.TestRuns;
 
@@ -33,8 +31,8 @@ internal static class TestFailureReportFixture
     {
         if (variant == "grouped") return GroupedSet();
         bool hostile = variant == "hostile";
-        bool partial = variant is "partial" or "review";
-        bool flaky = variant is "flaky" or "review";
+        bool partial = variant == "partial";
+        bool flaky = variant == "flaky";
         List<AdoDiagnostic> diagnostics = [];
         if (partial) diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.FailureLimitExceeded, CultureInfo.GetCultureInfo("en-US"), arguments: ["8", "1"]));
         if (partial || hostile) diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.UnresolvedTestCase, CultureInfo.GetCultureInfo("en-US"), 902, ["902"]));

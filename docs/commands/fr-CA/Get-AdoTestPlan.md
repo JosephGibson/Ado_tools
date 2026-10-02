@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoTestPlan
 ---
@@ -53,7 +53,7 @@ Récupère un plan du projet par défaut et liste toute son arborescence de suit
 
 ### -Name
 
-Modèle générique pour les noms de plan. Sans distinction de casse, mais avec distinction des accents ; les deux côtés sont normalisés en forme composée avant la comparaison.
+Modèle générique pour les noms de plan. Sans distinction de casse, mais avec distinction des accents; les deux côtés sont normalisés en forme composée avant la comparaison.
 
 ```yaml
 Type: System.String
@@ -74,7 +74,7 @@ HelpMessage: ''
 
 ### -Project
 
-Nom du projet. Par défaut, le projet par défaut de la connexion ; une erreur est produite si aucun n’est disponible.
+Nom du projet. Par défaut, le projet par défaut de la connexion; une erreur est produite si aucun n’est disponible.
 
 ```yaml
 Type: System.String
@@ -116,7 +116,7 @@ HelpMessage: ''
 
 ### -Connection
 
-Objet de connexion explicite ; remplace la connexion active de l’espace d’exécution.
+Objet de connexion explicite; remplace la connexion active de l’espace d’exécution.
 
 ```yaml
 Type: AdoToolkit.Core.Connections.AdoConnection

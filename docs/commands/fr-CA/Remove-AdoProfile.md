@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Remove-AdoProfile
 ---
@@ -45,7 +45,7 @@ Supprime le profil nommé ou reçu du pipeline par une écriture atomique de la 
 Get-AdoProfile -Name work | Remove-AdoProfile -WhatIf
 ```
 
-Supprime un profil de connexion local.
+Indique le profil qui serait supprimé. Avec -WhatIf, rien n’est supprimé.
 
 ## PARAMETERS
 
@@ -94,7 +94,7 @@ HelpMessage: ''
 
 ### -Name
 
-Nom du profil; il ne peut pas être vide. Get-AdoProfile accepte les caractères génériques sans distinction de casse ; les écritures utilisent le nom littéral.
+Nom du profil; il ne peut pas être vide. Get-AdoProfile accepte les caractères génériques sans distinction de casse; les écritures utilisent le nom littéral.
 
 ```yaml
 Type: System.String
@@ -137,9 +137,10 @@ HelpMessage: ''
 
 ### CommonParameters
 
-Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVariable,
+Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVariable,
 -InformationAction, -InformationVariable, -OutBuffer, -OutVariable, -PipelineVariable,
--ProgressAction, -Verbose, -WarningAction et -WarningVariable.
+-ProgressAction, -Verbose, -WarningAction et -WarningVariable. Pour en savoir plus, consultez
+[about_CommonParameters](https://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 

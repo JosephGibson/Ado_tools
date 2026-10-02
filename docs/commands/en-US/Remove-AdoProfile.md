@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Remove-AdoProfile
 ---
@@ -45,7 +45,7 @@ Removes the named profile or a profile received from the pipeline using an atomi
 Get-AdoProfile -Name work | Remove-AdoProfile -WhatIf
 ```
 
-Removes a local connection profile.
+Shows which profile would be removed. With -WhatIf, nothing is removed.
 
 ## PARAMETERS
 

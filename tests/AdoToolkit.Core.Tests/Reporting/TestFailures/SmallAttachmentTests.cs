@@ -1,7 +1,6 @@
 using System.Net.Http;
 using AdoToolkit.Core.IO;
 using AdoToolkit.Core.Reporting.TestFailures;
-using AdoToolkit.Core.Tests.Http;
 using AdoToolkit.Core.Tests.TestRuns;
 using AdoToolkit.Core.TestRuns;
 

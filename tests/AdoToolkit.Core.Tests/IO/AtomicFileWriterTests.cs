@@ -34,6 +34,46 @@ public sealed class AtomicFileWriterTests
         Assert.Empty(Directory.GetFiles(directory.Root, ".*.tmp"));
     }
 
+    // A temporary file that cannot be deleted, here because it is still open, must not replace the
+    // failure being reported with a raw I/O error.
+    [Fact]
+    public void ALockedTemporaryFileStillReportsAFileOutputError()
+    {
+        using TestDirectory directory = new();
+        string path = Path.Combine(directory.Root, "report.json");
+        FileStream? held = null;
+        try
+        {
+            AtomicFileWriter writer = new((stage, temporary) =>
+            {
+                if (stage != AtomicWriteStage.Validated) return;
+                held = new FileStream(temporary, FileMode.Open, FileAccess.Read, FileShare.Read);
+                throw new IOException("Injected failure");
+            });
+            Assert.Throws<AdoFileOutputException>(() => writer.Write(path, output => output.Write("{\"schemaVersion\":1}"),
+                temporary => ReportOutputValidator.ValidateJson(temporary, CultureInfo.InvariantCulture), CultureInfo.InvariantCulture,
+                cancellationToken: TestContext.Current.CancellationToken));
+        }
+        finally { held?.Dispose(); }
+    }
+
+    [Fact]
+    public void ALockedTemporaryFileOfADirectReplaceStillReportsAFileOutputError()
+    {
+        using TestDirectory directory = new();
+        string path = Path.Combine(directory.Root, "config.json");
+        FileStream? held = null;
+        try
+        {
+            Assert.Throws<AdoFileOutputException>(() => AtomicFileReplace.Write(path, "{}"u8, CultureInfo.InvariantCulture, temporary =>
+            {
+                held = new FileStream(temporary, FileMode.Open, FileAccess.Read, FileShare.Read);
+                throw new IOException("Injected failure");
+            }));
+        }
+        finally { held?.Dispose(); }
+    }
+
     [Fact]
     public void ValidationFailureLeavesExistingBytesUntouched()
     {

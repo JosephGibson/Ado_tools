@@ -45,11 +45,13 @@ $script:RepositoryRoot = Split-Path -Parent $PSScriptRoot
 # change depending on whether ripgrep happens to be installed.
 $script:ExcludedDirectoryNames = @('.git', '.vs', '.idea', 'bin', 'obj', 'artifacts', 'dist', 'build', 'coverage', 'TestResults', 'target', '.cache', '.nuget')
 $script:SensitiveDirectoryNames = @('secret', 'secrets')
-$script:SensitiveFileGlobs = @('.env', '.env.*', 'id_rsa*', 'id_ed25519*', '*.pem', '*.pfx', '*.p12', '*.key', '*.log', '*credentials*', '*.local.*', '.npmrc', '.pypirc', '.netrc')
-# Sensitive directories must be rejected wherever they occur in a path; sensitive file
-# names are rejected at the final path component. This remains a final safety check even
-# when the walker or ripgrep globs already excluded the path earlier.
-$script:SensitivePathPattern = '(?:^|[\\/])(?:\.env(?:\.[^\\/]*)?|secrets?)(?:[\\/]|$)|(?:^|[\\/])(?:id_(?:rsa|ed25519)[^\\/]*|[^\\/]*credentials[^\\/]*|[^\\/]*\.local\.[^\\/]*|\.(?:npmrc|pypirc|netrc)|[^\\/]*\.(?:pem|pfx|p12|key|log))$'
+$script:SensitiveFileGlobs = @('.env*', 'id_rsa*', 'id_ed25519*', '*.pem', '*.pfx', '*.p12', '*.key', '*.log', '*credentials*', '*.local.*', '.npmrc', '.pypirc', '.netrc')
+# A sensitive name is rejected wherever it occurs in a path: ripgrep applies a file glob to
+# directory names too, so a directory named like a sensitive file hides what it holds. The
+# pattern is built from the two lists above and remains a final safety check even when the
+# walker or the ripgrep globs already excluded the path earlier.
+$script:SensitivePathPattern = '(?:^|[\\/])(?:' + ((@($script:SensitiveDirectoryNames) + @($script:SensitiveFileGlobs) |
+        ForEach-Object { [regex]::Escape($_).Replace('\*', '[^\\/]*') }) -join '|') + ')(?:[\\/]|$)'
 $script:ConfigurationExtensions = @('.json', '.xml', '.config', '.csproj', '.props', '.targets', '.slnx', '.resx', '.ps1xml')
 # Markdown that the documentation stage does not check: archived history, apart from its two
 # index files, and test fixtures, apart from their catalog. In a dated file, the changelog or

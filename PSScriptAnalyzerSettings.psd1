@@ -10,13 +10,18 @@
         # The scripts are single-file tools and dot-sourced libraries, not modules: a variable
         # assigned in one of them is often read by another.
         'PSUseDeclaredVarsMoreThanAssignments',
-        # Formatting is enforced by .editorconfig/editor tooling rather than this gate.
+        # Formatting is left to .editorconfig and the editor rather than this gate.
         'PSPlaceOpenBrace',
         'PSPlaceCloseBrace',
         'PSUseConsistentIndentation',
+        # The functions are helpers of scripts and tests, not cmdlets of a module: a plural noun
+        # is allowed, and a New-, Set- or Remove- helper takes no -WhatIf.
         'PSUseSingularNouns',
-        'PSReviewUnusedParameter',
         'PSUseShouldProcessForStateChangingFunctions',
+        # The rule does not see a parameter that another script block reads (a mock, a function
+        # of the same script), and a Pester test case declares every value of its row.
+        'PSReviewUnusedParameter',
+        # Files are UTF-8 without a byte order mark, as .editorconfig sets.
         'PSUseBOMForUnicodeEncodedFile'
     )
 

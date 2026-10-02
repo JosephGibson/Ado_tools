@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoBuildTimeline
 ---
@@ -35,7 +35,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Lit la chronologie Build avec la version 6.0 de l’API et émet les parents avant leurs enfants, en triant les enfants selon order. Tous les enregistrements, y compris les tentatives antérieures, conservent leurs identifiants, parents, historique des tentatives, problèmes et identifiants de journaux. Un build reçu du pipeline fournit son projet. Une autre collection produit une erreur ConnectionMismatch avant toute requête.
+Lit la chronologie Build avec la version 6.0 de l’API et émet les parents avant leurs enfants, en triant les enfants selon order. Tous les enregistrements, y compris les tentatives antérieures, conservent leurs identifiants, ceux de leurs parents, leur valeur identifier, leur historique des tentatives, leurs problèmes et leurs identifiants de journaux. Un build reçu du pipeline fournit son projet. Une autre collection produit une erreur AdoConnectionMismatch avant toute requête.
 
 ## EXAMPLES
 
@@ -147,7 +147,7 @@ Prend en charge les paramètres communs, dont ErrorAction, ErrorVariable, Verbos
 
 ## NOTES
 
-Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les formes de chronologie et la pagination restent à confirmer sur le serveur (V-11, V-14). Les liens web restent à confirmer au travail.
+Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les types d’enregistrements de la chronologie et les champs de nouvelle tentative restent à confirmer sur le serveur (V-11).
 
 ## RELATED LINKS
 

@@ -84,6 +84,7 @@ public enum AdoMessage
     WiqlResultLimit,
     WiqlLimitHint,
     Request,
+    Transport,
     RegistryMismatch,
     Redirect,
     Throttled,

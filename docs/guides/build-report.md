@@ -156,7 +156,8 @@ the run name from the run itself; when every run has the same names, attempts st
 A run is a retry of another run of the same job only when its name is that run's name plus
 ` (attempt N)` and `N` is its job attempt, for example `UI tests (attempt 2)` on attempt 2.
 It then stays in the group of the run it retries. Any other difference, such as `Suite 1`
-and `Suite 2` or a change of case, makes a separate group.
+and `Suite 2` or a change of case, makes a separate group. Whether Azure DevOps Server 2020
+sends these names and this suffix is not confirmed at work (V-19).
 
 Grouping also decides the classification. A test that fails in every French attempt stays
 `Failed` even when an English retry passes last. It is `Flaky` only when every group ends
@@ -193,7 +194,8 @@ attachments are left out, and a run without a start date counts as outside.
 
 Only JSON and text (`.txt`, `.log`) attachments are ever downloaded by the export. Every
 attachment name, PNG, HTML and other types included, links to the file in Azure DevOps, which
-the browser downloads with your Windows sign-in. By default the export downloads:
+the browser downloads with your Windows sign-in (not confirmed under the work browser
+policy, V-27). By default the export downloads:
 
 - from every run inside the window, the JSON and text files of at most
   `testResults.maximumInlineJsonBytes` (256 KiB), which are the ones the report can show;
@@ -220,7 +222,7 @@ when a total runs out it is the older runs that go without.
 | Item | Where |
 | --- | --- |
 | The report | `<-Path>\Build-<id>-TestFailures.html`, or your Downloads folder with no `-Path` |
-| Attachments | `Build-<id>-TestFailures.files-<UTC stamp>` beside the report |
+| Attachments | `<report name>.files-<UTC stamp>` beside the report, so `Build-<id>-TestFailures.files-<UTC stamp>` by default |
 | Nothing else | No temporary files survive a failed export |
 
 A missing `-Path` directory is created when the report is written. Pass an `.html` file
@@ -266,9 +268,9 @@ failed". `Save-AdoBuildLog` needs an existing directory, unlike the export.
 
 | Symptom | Cause |
 | --- | --- |
-| `Build 12345 was not found.` | The ID belongs to another project. Add `-Project`, or check the project segment of the build URL |
-| `ConnectionMismatch` | The set came from a different collection than the connection used for the export |
-| A path error naming the report | `-Path` has an extension other than `.html`, or names an existing file |
+| An `AdoNotFound` error for the build | The ID belongs to another project. Add `-Project`, or check the project segment of the build URL |
+| `AdoConnectionMismatch` | The set came from a different collection than the connection used for the export |
+| A path error naming the report | `-Path` has an extension other than `.html`, or names an existing file that is not an `.html` file |
 | `Status` is `Partial` | Read `Diagnostics`. A common cause is more failing tests than `testResults.maximumReportedFailures` |
 | Warnings about attachment size | The attachment or the total exceeded the configured limit. Those attachments are listed in the report but not downloaded |
 | A flaky test is missing | Flaky tests are left out by default. Add `-IncludeFlaky` |

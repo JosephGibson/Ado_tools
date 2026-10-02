@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-15-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoBuildDefinition
 ---
@@ -29,7 +29,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Lit toutes les pages de définitions avec la version 6.0 de l’API. Id et Name filtrent localement. Les caractères génériques ignorent la casse, distinguent les accents et comparent les noms normalisés en NFC. Les noms d’origine sont conservés. WebUrl est reconstruit à partir de la connexion, du projet et de l’identifiant. Un Id absent produit une erreur ObjectNotFound.
+Lit toutes les pages de définitions avec la version 6.0 de l’API. Id et Name filtrent localement. Les caractères génériques ignorent la casse, distinguent les accents et comparent les noms normalisés en NFC. Les noms d’origine sont conservés. WebUrl est reconstruit à partir de la connexion, du projet et de l’identifiant; les liens fournis par le serveur sont ignorés. Un Id absent produit une erreur ObjectNotFound.
 
 ## EXAMPLES
 
@@ -87,7 +87,7 @@ HelpMessage: ''
 
 ### -Project
 
-Nom du projet. Par défaut, utilise le projet de la connexion active. Pour les objets reçus du pipeline, utilise leur projet d’origine.
+Nom du projet. Par défaut, utilise le projet de la connexion active.
 
 ```yaml
 Type: System.String
@@ -141,7 +141,7 @@ Prend en charge les paramètres communs, dont ErrorAction, ErrorVariable, Verbos
 
 ## NOTES
 
-Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les formes de chronologie et la pagination restent à confirmer sur le serveur (V-11, V-14). Les liens web restent à confirmer au travail.
+Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. La pagination reste à confirmer sur le serveur (V-14). Les liens Web restent à confirmer au travail (V-26).
 
 ## RELATED LINKS
 

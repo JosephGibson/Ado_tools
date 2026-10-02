@@ -299,7 +299,7 @@ public sealed class GenerationFolderCommitTests
             .ToDictionary(path => Path.GetRelativePath(root, path), path => Directory.Exists(path) ? "<dir>"
                 : Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path))), StringComparer.Ordinal);
 
-    // DD-024 / plan: junctions need no elevation; a failure here fails the test loudly.
+    // Plan: junctions need no elevation; a failure here fails the test loudly.
     private static void CreateJunction(string link, string target)
     {
         ProcessStartInfo start = new("cmd.exe") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };

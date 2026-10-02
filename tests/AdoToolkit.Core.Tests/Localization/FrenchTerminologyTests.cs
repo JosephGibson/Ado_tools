@@ -3,10 +3,14 @@ using System.Text.RegularExpressions;
 namespace AdoToolkit.Core.Tests.Localization;
 
 // The toolkit's French follows one glossary (§3.6): "build" is masculine, and a test run is a
-// « série de tests ». « Exécution » is kept for a pipeline run.
+// « série de tests ». « Exécution » is kept for a pipeline run. A no-break space precedes a colon.
 public sealed partial class FrenchTerminologyTests
 {
     private const string Catalog = "Strings.fr.resx";
+
+    // These two strings are part of the rendered reports and still have an ordinary space: the
+    // goldens that hold them change only through the update-goldens skill.
+    private static readonly string[] ColonsHeldByGoldens = ["RichTextImageAlt", "PartialTestCase"];
 
     private static readonly string[] TestRunKeys =
     [
@@ -33,6 +37,15 @@ public sealed partial class FrenchTerminologyTests
     {
         foreach ((string location, string text) in Read(source))
             Assert.False(FeminineBuild().IsMatch(text), location + ": " + text);
+    }
+
+    [Theory]
+    [MemberData(nameof(Sources))]
+    public void ANoBreakSpacePrecedesAColon(string source)
+    {
+        foreach ((string location, string text) in Read(source))
+            if (source != Catalog || !ColonsHeldByGoldens.Contains(location))
+                Assert.False(text.Contains(" :", StringComparison.Ordinal), location + ": " + text);
     }
 
     [Fact]

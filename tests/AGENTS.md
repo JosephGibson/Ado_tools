@@ -8,7 +8,7 @@
 
 ## Data
 
-- Fixtures are hand-written and synthetic. Never copy work data (DD-010, DD-022).
+- Fixtures are hand-written; never copy work data (DD-010, DD-022).
 - Hosts end in `.test`, for example `ado.example.test`.
 - Every fixture file has one entry in `tests/Fixtures/README.md`; `FixtureCatalogTests`
   enforces it. Delete a fixture that no test reads.
@@ -21,19 +21,17 @@
 
 ## Isolation
 
-- No network and no live service. Core HTTP tests use `FakeHttpMessageHandler`; Pester
-  tests use `tests/AdoToolkit.PowerShell.Tests/Support/FakeAdoServer.ps1`, bound to
-  `127.0.0.1`.
+- Core HTTP tests use `FakeHttpMessageHandler`; Pester tests use
+  `tests/AdoToolkit.PowerShell.Tests/Support/FakeAdoServer.ps1`, bound to `127.0.0.1`.
 - No test reads the developer's configuration: the Core test assembly and the gate both
   point `ADOTOOLKIT_CONFIG_PATH` at a file that does not exist. A test that writes
   configuration uses `TestDirectory` (Core) or a path under `$TestDrive` (Pester).
-- A test that needs a culture sets it explicitly.
+- A test that needs a culture sets it explicitly. A test that needs a recent date computes
+  it from the clock: a fixed date ages out of the window.
 
 ## Style
 
 - xUnit `Assert` only. Pass `TestContext.Current.CancellationToken` to async calls.
 - An acceptance test carries its real ID: `[Trait("Acceptance", "S5-3")]` or `-Tag 'S5-3'`.
   A test without an acceptance ID carries no tag.
-- A bug fix adds a test that fails before the fix (skill `fix-bug`).
-- Report goldens in `tests/Fixtures/Reports/` change only through the `update-goldens`
-  skill.
+- Report goldens in `tests/Fixtures/Reports/` change only through the `update-goldens` skill.

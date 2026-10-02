@@ -31,7 +31,9 @@ internal static class ErrorTranslator
                             document.RootElement.TryGetProperty("message", out JsonElement message) && message.ValueKind == JsonValueKind.String)
                             remote = Sanitize(message.GetString(), 1024);
                     }
-                    catch (JsonException) { }
+                    // A string that cannot be read, such as one cut inside a surrogate pair, is an
+                    // InvalidOperationException; the message is optional, so the status still decides.
+                    catch (Exception error) when (error is JsonException or InvalidOperationException or RegexMatchTimeoutException) { }
             }
         }
         catch (Exception error) when (error is IOException or HttpRequestException or OperationCanceledException)

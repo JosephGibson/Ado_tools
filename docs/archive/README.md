@@ -15,6 +15,7 @@ documentation starts at the [README](../../README.md).
 | [release-0.4.0.md](release-0.4.0.md) | 0.4.0 release notes: bugs of failed tests, security fixes and V-30 |
 | [release-0.5.0.md](release-0.5.0.md) | 0.5.0 release notes: profile defaults for builds and test plans, report grouping by named test run |
 | [release-0.6.0.md](release-0.6.0.md) | 0.6.0 release notes: Test Case report redesign, `-IncludeDetail`, the repository review, V-31 and V-32 |
+| [release-0.6.5.md](release-0.6.5.md) | 0.6.5 release notes: the changelog, the pull request check, workflow lint and the release handoff; no product change |
 
 Release notes for the current and the previous version are in `docs/`.
 

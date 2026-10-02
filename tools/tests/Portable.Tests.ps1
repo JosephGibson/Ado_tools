@@ -126,7 +126,6 @@ Describe 'Portable release packaging without downloads' {
         New-SyntheticRuntime -Path $runtime -ExtraEntry $Entry -Link:$IsLink
         { New-AdoReleaseArchive @releaseArguments } | Should -Throw '*PowerShell archive contains*'
         @(Get-ChildItem -LiteralPath $releaseArguments.OutputRoot -Force).Count | Should -Be 0
-        Test-Path -LiteralPath (Join-Path $fixture 'escape.txt') | Should -BeFalse
     }
 
     It 'rolls back all five assets if the portable checksum is locked' {

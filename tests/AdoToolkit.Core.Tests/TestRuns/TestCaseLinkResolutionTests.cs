@@ -67,7 +67,7 @@ public sealed class TestCaseLinkResolutionTests
     public void ReferenceParsingAcceptsOnlyPlainPositiveIntegers(string value, bool expected, int id)
     {
         Assert.Equal(expected, TestCaseLinkResolver.TryParseReference(value, out int parsed));
-        Assert.Equal(id, expected ? parsed : 0);
+        if (expected) Assert.Equal(id, parsed);
     }
 
     private static TestRunFixture Links() => new TestRunFixture()

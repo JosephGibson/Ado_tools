@@ -8,7 +8,7 @@ public sealed class JsonLexerTests
     [Fact]
     public void FormattingPrecedesLexingAndBothOriginalAndFormattedTextRoundTrip()
     {
-        string original = LexerFixtures.Read("Attachments/valid.json");
+        string original = ParserFixture.Read("Attachments/valid.json");
         Assert.True(JsonLexer.TryFormat(original, 262144, out string pretty));
         Assert.Contains("\n  \"title\":", pretty, StringComparison.Ordinal);
         Assert.DoesNotContain('\r', pretty);
@@ -77,6 +77,6 @@ public sealed class JsonLexerTests
         const string exact = "\"é\"";
         Assert.True(JsonLexer.TryFormat(exact, 4, out _));
         Assert.False(JsonLexer.TryFormat(exact, 3, out _));
-        Assert.False(JsonLexer.TryFormat(LexerFixtures.Read("Attachments/malformed.json.txt"), 262144, out _));
+        Assert.False(JsonLexer.TryFormat(ParserFixture.Read("Attachments/malformed.json.txt"), 262144, out _));
     }
 }

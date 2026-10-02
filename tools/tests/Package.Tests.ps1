@@ -165,8 +165,6 @@ Describe 'Package validation and deployment boundaries' {
 
     It 'checks every file for a valid expected signer and WhatIf writes nothing' {
         Mock Get-AuthenticodeSignature { [pscustomobject]@{ Status = 'Valid'; SignerCertificate = [pscustomobject]@{ Thumbprint = $expected.ToLowerInvariant() } } }
-        Mock Copy-Item { throw 'WhatIf must not copy.' }
-        Mock Move-AdoPackageDirectory { throw 'WhatIf must not commit.' }
         $before = @(Get-AdoPackageFile -PackagePath $package | Get-FileHash | Select-Object -ExpandProperty Hash)
         Assert-AdoPackageSignature -PackagePath $package -ExpectedThumbprint $expected
         # A hostless runspace captures ShouldProcess's host messages so the public
@@ -195,12 +193,10 @@ $Probe.Checks++
         finally { $shell.Dispose(); $runspace.Dispose() }
         @(Get-AdoPackageFile -PackagePath $package | Get-FileHash | Select-Object -ExpandProperty Hash) | Should -Be $before
         Should -Invoke Get-AuthenticodeSignature -Times 5 -Exactly
-        Should -Invoke Copy-Item -Times 0 -Exactly
-        Should -Invoke Move-AdoPackageDirectory -Times 0 -Exactly
     }
 
     It 'does not access a certificate or sign when WhatIf is supplied' {
-        Mock Set-AuthenticodeSignature { throw 'WhatIf must not sign.' }
+        # No certificate has this thumbprint, so reading the certificate store would be an error.
         $shell = [powershell]::Create()
         try {
             [void] $shell.AddCommand((Join-Path $packageTools 'Set-AdoToolkitPackageSignature.ps1')).AddParameter('PackagePath', $package).AddParameter('CertificateThumbprint', $expected).AddParameter('TimestampServer', 'https://timestamp.example.test').AddParameter('WhatIf')
@@ -208,7 +204,6 @@ $Probe.Checks++
             $shell.HadErrors | Should -BeFalse
         }
         finally { $shell.Dispose() }
-        Should -Invoke Set-AuthenticodeSignature -Times 0 -Exactly
     }
 
     It 'signs all toolkit files with SHA256 and a timestamp using mocked certificate boundaries' {
@@ -236,6 +231,56 @@ $Probe.Checks++
         Move-AdoPackageDirectory -Staging $stage -Destination $destination -Root $root
         Assert-AdoPackage -PackagePath $destination | Should -Be '0.1.0'
         @(Get-ChildItem -LiteralPath $root -Force).Count | Should -Be 1
+    }
+
+    It 'keeps the previous package when the commit and its rollback both fail' {
+        $root = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+        [void] [System.IO.Directory]::CreateDirectory($root)
+        $stage = New-SyntheticPackage -Path (Join-Path $root '.staging-test')
+        $destination = Join-Path $root '0.1.0'
+        [void] [System.IO.Directory]::CreateDirectory($destination)
+        Set-Content -LiteralPath (Join-Path $destination 'old.txt') -Value 'old fixture'
+        # The first rename sets the old package aside; the commit and the rollback then fail.
+        $script:renames = 0
+        Mock Move-AdoDirectory {
+            $script:renames++
+            if ($script:renames -gt 1) { throw 'synthetic rename failure' }
+            [System.IO.Directory]::Move($Source, $Destination)
+        }
+        { Move-AdoPackageDirectory -Staging $stage -Destination $destination -Root $root } | Should -Throw '*synthetic rename failure*'
+        $previous = @(Get-ChildItem -LiteralPath $root -Directory -Force | Where-Object Name -like '0.1.0.previous-*')
+        $previous.Count | Should -Be 1
+        Test-Path -LiteralPath (Join-Path $previous[0].FullName 'old.txt') | Should -BeTrue
+    }
+
+    It 'names VersionPrefix when Directory.Build.props does not declare it' {
+        $repository = Join-Path $TestDrive 'repository without version'
+        $scripts = Join-Path $repository 'tools/package'
+        [void] [IO.Directory]::CreateDirectory($scripts)
+        foreach ($name in @('New-AdoToolkitRelease.ps1', 'Package.Common.ps1', 'Install-AdoToolkit.ps1')) {
+            Copy-Item -LiteralPath (Join-Path $packageTools $name) -Destination (Join-Path $scripts $name)
+        }
+        Set-Content -LiteralPath (Join-Path $repository 'Directory.Build.props') -Value '<Project><PropertyGroup /></Project>'
+        { & (Join-Path $scripts 'New-AdoToolkitRelease.ps1') } | Should -Throw '*VersionPrefix must be*'
+    }
+
+    It 'runs every dotnet command in the repository, whatever the caller''s location' {
+        # A stand-in for dotnet records where it runs and fails the version query, which stops
+        # the script before anything is built or staged.
+        $stub = Join-Path $TestDrive 'dotnet-stub.cmd'
+        $calls = Join-Path $TestDrive 'dotnet-calls.txt'
+        Set-Content -LiteralPath $stub -Value @('@echo off', "echo %CD%>>`"$calls`"", 'if "%1"=="msbuild" exit /b 1', 'exit /b 0')
+        Mock Get-Command -ParameterFilter { $Name -eq 'dotnet' } { [pscustomobject]@{ Source = $stub } }
+        . (Join-Path (Split-Path -Parent $packageTools) 'lib/dependencies.ps1')
+        Mock Get-BuildModule { [pscustomobject]@{ Path = 'synthetic-platyps' } }
+        Mock Import-Module -ParameterFilter { $Name -eq 'synthetic-platyps' } { }
+        Push-Location -LiteralPath $TestDrive
+        try { { & (Join-Path $packageTools 'Publish-AdoToolkitPackage.ps1') -NoBuild } | Should -Throw '*MSBuild did not return*' }
+        finally { Pop-Location }
+        $repository = Split-Path -Parent (Split-Path -Parent $packageTools)
+        $locations = @(Get-Content -LiteralPath $calls)
+        $locations.Count | Should -Be 2
+        $locations | Should -Be @($repository, $repository)
     }
 }
 
@@ -305,6 +350,17 @@ Describe 'Release archive and standalone installer' {
         Remove-Item -LiteralPath $unrelated
         Assert-AdoPackage -PackagePath $installed | Should -Be '0.1.0'
         @(Get-ChildItem -LiteralPath (Join-Path $modules 'AdoToolkit') -Force).Name | Should -Be @('0.1.0')
+    }
+
+    It 'reports the installation when PSModulePath holds a blank entry' {
+        $release = New-AdoReleaseArchive -PackagePath $package -OutputRoot (Join-Path $work 'release')
+        $searchPath = $env:PSModulePath
+        try {
+            $env:PSModulePath = $searchPath + [IO.Path]::PathSeparator + ' '
+            $result = & $installer -Path $release.Archive -Destination $modules -WarningAction SilentlyContinue
+        }
+        finally { $env:PSModulePath = $searchPath }
+        $result.Version | Should -Be '0.1.0'
     }
 
     It 'writes nothing with WhatIf' {

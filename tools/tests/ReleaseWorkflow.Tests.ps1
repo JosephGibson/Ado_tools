@@ -2,7 +2,9 @@ BeforeAll {
     Set-StrictMode -Version 2.0
     $ErrorActionPreference = 'Stop'
     . (Join-Path $PSScriptRoot '../lib/dependencies.ps1')
+    # Pester mocks only a command that exists; neither tool has to be installed for these tests.
     function gh { throw 'Unexpected GitHub request.' }
+    function dotnet { throw 'Unexpected dotnet call.' }
     $repositoryRoot = Join-Path $PSScriptRoot '../..'
     $workflowPath = Join-Path $repositoryRoot '.github/workflows/release.yml'
     # The composite action that installs the toolchain for release.yml and verify.yml.
@@ -41,12 +43,18 @@ BeforeAll {
         return $output
     }
     # What verify requires of CHANGELOG.md for a version: the heading that the release skill
-    # prescribes, a section that the publish step accepts, and the link to the notes in the text
-    # that step writes.
+    # prescribes, an entry under it, a section that the publish step accepts, and the link to
+    # the notes in the text that step writes.
     function Assert-ChangelogSection {
         param([string[]] $Changelog, [string] $Version)
         $heading = '^## ' + [regex]::Escape($Version) + ' - \d{4}-\d{2}-\d{2}$'
         @($Changelog | Where-Object { $_ -cmatch $heading }).Count | Should -Be 1 -Because "CHANGELOG.md needs one heading '## $Version - <yyyy-MM-dd>'"
+        $inSection = $false
+        $entries = @(foreach ($line in $Changelog) {
+                if ($line -cmatch '^## ') { $inSection = $line -cmatch $heading }
+                elseif ($inSection -and $line -cmatch '^- \S') { $line }
+            })
+        $entries.Count | Should -BeGreaterThan 0 -Because 'the section needs at least one entry'
         $env:VERSION = $Version
         $env:RELEASE_TAG = "v$Version"
         $null = Set-PublishInput -Changelog $Changelog -Version $Version
@@ -312,7 +320,8 @@ Describe 'Release workflow external contracts without network calls' {
     It 'rejects a CHANGELOG.md section that the release skill would not write (<Case>)' -TestCases @(
         @{ Case = 'no section'; Changelog = @('# Changelog', '', '## 0.1.0 - 2026-01-01', '', '- A change.', '', 'Details: [release notes](docs/release-0.1.0.md)') },
         @{ Case = 'heading without a date'; Changelog = @('# Changelog', '', '## 0.2.0', '', '- A change.', '', 'Details: [release notes](docs/release-0.2.0.md)') },
-        @{ Case = 'no entries'; Changelog = @('# Changelog', '', '## 0.2.0 - 2026-01-15', '', '## 0.1.0 - 2026-01-01', '', '- A change.') },
+        @{ Case = 'an empty section'; Changelog = @('# Changelog', '', '## 0.2.0 - 2026-01-15', '', '## 0.1.0 - 2026-01-01', '', '- A change.') },
+        @{ Case = 'no entry'; Changelog = @('# Changelog', '', '## 0.2.0 - 2026-01-15', '', 'Details: [release notes](docs/release-0.2.0.md)', '', '## 0.1.0 - 2026-01-01', '', '- A change.') },
         @{ Case = 'no link to the notes'; Changelog = @('# Changelog', '', '## 0.2.0 - 2026-01-15', '', '- A change.') }
     ) {
         param($Case, $Changelog)

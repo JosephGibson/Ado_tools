@@ -44,6 +44,7 @@ public sealed class PlainTextConverterTests
     [InlineData("<unknown>A</unknown><br/>B", "A\nB", false)]
     [InlineData("<ul><li><p>A</p></li><li><div>B</div></li></ul>", "- A\n- B", false)]
     [InlineData("<table><tr><td><p>A</p><p>B</p></td><td><div>C</div></td></tr></table>", "A B | C", false)]
+    [InlineData("<table><tr><td>x <a href='https://docs.example.test/a'></td></a></table>", "x (https://docs.example.test/a)", false)]
     public void TagAndWhitespaceRulesAreStable(string input, string expected, bool nested)
     {
         PlainTextResult result = PlainTextConverter.Convert(input, English, 42);

@@ -66,13 +66,8 @@ public static class HtmlTestCaseRenderer
         private string F(AdoMessage key, params object[] arguments) => Messages.Get(key, Culture, arguments);
         private static string N(int value) => value.ToString(CultureInfo.InvariantCulture);
         // Server times are UTC; every time shows in the export's offset, like the generation time.
-        // A time too close to the limits of the calendar to be shifted keeps its own offset.
-        private string? Date(DateTimeOffset? value)
-        {
-            if (value is not { } time) return null;
-            long shifted = time.UtcTicks + model.GeneratedAt.Offset.Ticks;
-            return (shifted < DateTime.MinValue.Ticks || shifted > DateTime.MaxValue.Ticks ? time : time.ToOffset(model.GeneratedAt.Offset)).ToString("g", Culture);
-        }
+        private string? Date(DateTimeOffset? value) =>
+            value is { } time ? ReportTime.InOffset(time, model.GeneratedAt.Offset).ToString("g", Culture) : null;
 
         internal void Write()
         {

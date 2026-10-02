@@ -20,24 +20,23 @@ internal sealed class TestRunFixture
 
     internal static string Read(string name) => ParserFixture.Read("TestRuns/" + name);
 
-    internal static AdoBuild Build(int id = 401, string status = "completed", string? branch = "refs/heads/main",
-        bool hasUri = true, bool finished = true) => new()
-        {
-            Id = id,
-            BuildNumber = "20260915.1",
-            Definition = new AdoBuildDefinitionRef { Id = 42, Name = "Tâches" },
-            SourceBranch = branch,
-            SourceVersion = new string('a', 40),
-            Status = status,
-            Result = "failed",
-            QueueTime = new DateTimeOffset(2026, 9, 15, 9, 0, 0, TimeSpan.Zero),
-            FinishTime = finished ? new DateTimeOffset(2026, 9, 15, 10, 0, 0, TimeSpan.Zero) : null,
-            Uri = hasUri ? new Uri("vstfs:///Build/Build/" + id.ToString(CultureInfo.InvariantCulture)) : null,
-            TeamProject = Project,
-            WebUrl = new Uri("https://ado.example.test/Collection/%C3%89quipe%20Web/_build/results?buildId="
-                + id.ToString(CultureInfo.InvariantCulture)),
-            CollectionUri = Connection.CollectionUri,
-        };
+    internal static AdoBuild Build(int id = 401, string status = "completed", bool hasUri = true, bool finished = true) => new()
+    {
+        Id = id,
+        BuildNumber = "20260915.1",
+        Definition = new AdoBuildDefinitionRef { Id = 42, Name = "Tâches" },
+        SourceBranch = "refs/heads/main",
+        SourceVersion = new string('a', 40),
+        Status = status,
+        Result = "failed",
+        QueueTime = new DateTimeOffset(2026, 9, 15, 9, 0, 0, TimeSpan.Zero),
+        FinishTime = finished ? new DateTimeOffset(2026, 9, 15, 10, 0, 0, TimeSpan.Zero) : null,
+        Uri = hasUri ? new Uri("vstfs:///Build/Build/" + id.ToString(CultureInfo.InvariantCulture)) : null,
+        TeamProject = Project,
+        WebUrl = new Uri("https://ado.example.test/Collection/%C3%89quipe%20Web/_build/results?buildId="
+            + id.ToString(CultureInfo.InvariantCulture)),
+        CollectionUri = Connection.CollectionUri,
+    };
 
     // Matches every fragment against the escaped path and query, in registration order.
     internal TestRunFixture Route(string fixture, params string[] fragments)

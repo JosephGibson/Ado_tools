@@ -2,7 +2,7 @@
 
 PowerShell toolkit for Azure DevOps Server 2020: compiled C# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 
-**Version 0.7.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.7.5** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
@@ -10,7 +10,11 @@ DevOps. Its cmdlets return typed objects that you can use in pipelines, and it w
 standalone HTML, Markdown or JSON reports when you need a document. All messages,
 report labels and help are available in English and French.
 
-Version 0.7.0 reworks the failed-test report and the commands behind it.
+Version 0.7.5 fixes defects that a repository audit found and adds no feature: a lost
+connection is reported as one, a bug of another project links to its own project in the
+failed-test report, a build definition ID of any integer type is accepted, and a
+whitespace-only `-Field` or `-Query` is refused before any request. Version 0.7.0 reworked
+the failed-test report and the commands behind it.
 `Get-AdoBuildTestFailure` sends up to six requests at the same time, and
 `Export-AdoBuildTestFailure` downloads attachments the same way and now takes the small
 JSON and text files of every recent test run, not only of the latest one. The report has a
@@ -20,12 +24,13 @@ and history view with the history of each reported test. The cmdlets and their p
 are unchanged; the [changelog](CHANGELOG.md) says what a script can notice. Profiles hold
 your default project, branch, build definition, test plan and test suite; see the
 [configuration file](docs/guides/configuration.md#profiles). The
-[release notes](docs/release-0.7.0.md) list every change, the validation evidence and the
+[release notes](docs/release-0.7.5.md) list every change, the validation evidence and the
 remaining work-PC checks.
 
 > [!NOTE]
 > Live validation against Azure DevOps Server 2020 is in progress. Connections, projects,
-> builds and test runs have been confirmed; the opt-in checks in `tests/Live` cover the rest.
+> builds and test runs have been confirmed; the opt-in checks in `tests/Live` and the manual
+> checks in the release notes cover the rest.
 
 ## Features
 
@@ -116,7 +121,7 @@ Profiles, connections and the other options are described in
 | Test Case JSON report format | [testcase.v1.schema.json](docs/schemas/testcase.v1.schema.json) |
 | Developer CLI, validation and prerequisites | [Developer tooling](docs/tooling.md) |
 | What changes for users in each version | [Changelog](CHANGELOG.md) |
-| Release notes | [Version 0.7.0](docs/release-0.7.0.md), with links to the earlier notes |
+| Release notes | [Version 0.7.5](docs/release-0.7.5.md), with links to the earlier notes |
 | Original specification, delivery plans, design notes and earlier release notes | [Archive](docs/archive/README.md) |
 | Rules for coding agents | [AGENTS.md](AGENTS.md) |
 
@@ -134,14 +139,13 @@ pwsh -NoProfile -File .\tools\dev.ps1 verify
 `verify` is the complete gate. It prints one JSON document and exits with `0` when
 all checks pass, `1` when a check fails, and `2` when the run is incomplete, for
 example because a prerequisite is missing. It lints the PowerShell code, runs the
-tooling tests, checks configuration files and the links and paths in the documentation,
-lints the GitHub workflows, builds the solution, and runs the Core tests under `en-US` and
-`fr-CA`. It then stages
-the package and runs the product Pester tests against it. All tests run offline against
-synthetic data.
+tooling tests, checks configuration files, the links and paths in the documentation and
+the layout of the agent tooling, lints the GitHub workflows, builds the solution, and runs
+the Core tests under `en-US` and `fr-CA`. It then stages the package and runs the product
+Pester tests against it. All tests run offline against synthetic data.
 
-To build release assets locally, run `tools\package\Publish-AdoToolkitPackage.ps1` and
-then `tools\package\New-AdoToolkitRelease.ps1`. Pushing a `v<version>` tag runs the same
+To build release assets locally, run `tools/package/Publish-AdoToolkitPackage.ps1` and
+then `tools/package/New-AdoToolkitRelease.ps1`. Pushing a `v<version>` tag runs the same
 steps in GitHub Actions and publishes the release, whose text opens with that version's
 section of the [changelog](CHANGELOG.md). A pull request to `main` runs `verify` in GitHub
 Actions. For details and the other `dev.ps1` commands, see
@@ -153,9 +157,9 @@ Actions. For details and the other `dev.ps1` commands, see
 | --- | --- |
 | `src/AdoToolkit.Core` | HTTP pipeline, services, domain model, parsers and report renderers; no dependencies beyond the .NET base class library |
 | `src/AdoToolkit.PowerShell` | Cmdlets, argument completers, format views and the module manifest |
-| `tests/AdoToolkit.Core.Tests` | xUnit tests, including golden report files |
+| `tests/AdoToolkit.Core.Tests` | xUnit tests, including the golden report tests |
 | `tests/AdoToolkit.PowerShell.Tests` | Pester tests against the staged module and a loopback fake server |
-| `tests/Fixtures` | Synthetic fixtures, listed in [tests/Fixtures/README.md](tests/Fixtures/README.md) |
+| `tests/Fixtures` | Synthetic fixtures and golden report files, listed in [tests/Fixtures/README.md](tests/Fixtures/README.md) |
 | `tests/Live` | Optional checks against a live server; `verify` never runs them |
 | `tools` | `dev.ps1` developer CLI, product gate, packaging and release scripts, tooling tests |
 | `.github` | The release workflow, the pull request check, their shared setup action and the Dependabot configuration |

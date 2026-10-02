@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Test-AdoConnection
 ---
@@ -29,7 +29,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Appelle l’API des projets en version 6.0 et retourne le succès, la durée, la version d’API demandée et des conseils. Connection remplace la connexion active et accepte une entrée de pipeline. Les échecs d’authentification, d’autorisation et de configuration sont bloquants. Les autres échecs produisent une erreur et un résultat d’échec ; ErrorAction Stop interrompt la commande. Un échec peut suggérer une URL de projet sans affirmer qu’elle en est la cause. Lorsque la ressource est introuvable et que l’URL se termine par le nom d’un projet de la collection parente, le résultat indique la commande Connect-Ado exacte à utiliser; cette vérification envoie une requête de projets de plus à l’URL parente.
+Appelle l’API des projets en version 6.0 et retourne le succès, la durée, la version d’API demandée et des conseils. Connection remplace la connexion active et accepte une entrée de pipeline. Les échecs d’authentification, d’autorisation et de configuration sont bloquants. Les autres échecs produisent une erreur et un résultat d’échec; ErrorAction Stop interrompt la commande. Un échec peut suggérer une URL de projet sans affirmer qu’elle en est la cause. Lorsque la ressource est introuvable et que l’URL se termine par le nom d’un projet de la collection parente, le résultat indique la commande Connect-Ado exacte à utiliser; cette vérification envoie une requête de projets de plus à l’URL parente.
 
 ## EXAMPLES
 
@@ -45,7 +45,7 @@ Vérifie l’accès aux projets avec la connexion sélectionnée.
 
 ### -Connection
 
-Objet de connexion explicite ; remplace la connexion active de l’espace d’exécution.
+Objet de connexion explicite; remplace la connexion active de l’espace d’exécution.
 
 ```yaml
 Type: AdoToolkit.Core.Connections.AdoConnection
@@ -66,9 +66,10 @@ HelpMessage: ''
 
 ### CommonParameters
 
-Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVariable,
+Cette commande accepte les paramètres communs : -Debug, -ErrorAction, -ErrorVariable,
 -InformationAction, -InformationVariable, -OutBuffer, -OutVariable, -PipelineVariable,
--ProgressAction, -Verbose, -WarningAction et -WarningVariable.
+-ProgressAction, -Verbose, -WarningAction et -WarningVariable. Pour en savoir plus, consultez
+[about_CommonParameters](https://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 

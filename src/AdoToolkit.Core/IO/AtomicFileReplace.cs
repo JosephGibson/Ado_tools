@@ -5,6 +5,16 @@ public static class AtomicFileReplace
     internal static void Commit(string temporary, string destination, bool noClobber = false) =>
         File.Move(temporary, destination, overwrite: !noClobber);
 
+    // A temporary file that cannot be deleted is a file output failure, never a raw I/O error.
+    internal static void DeleteTemporary(string temporary, string destination, CultureInfo culture)
+    {
+        try { File.Delete(temporary); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            throw new AdoFileOutputException(Messages.Get(AdoMessage.FileOutput, culture, destination), error);
+        }
+    }
+
     public static void Write(string destination, ReadOnlySpan<byte> contents, CultureInfo culture, Action<string>? validate = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(destination);
@@ -29,7 +39,7 @@ public static class AtomicFileReplace
         }
         finally
         {
-            if (File.Exists(temporary)) File.Delete(temporary);
+            if (File.Exists(temporary)) DeleteTemporary(temporary, path, culture);
         }
     }
 }

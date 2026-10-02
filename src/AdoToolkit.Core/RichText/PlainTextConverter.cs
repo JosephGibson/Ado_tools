@@ -126,6 +126,8 @@ public static class PlainTextConverter
                 else if (links.Count > 0)
                 {
                     (int start, string href) = links.Pop();
+                    // A cell that closed inside the link has trimmed the output to before its start.
+                    start = Math.Min(start, output.Length);
                     string label = output.ToString(start, output.Length - start).Trim();
                     if (Uri.TryCreate(href, UriKind.Absolute, out Uri? uri) && uri.Scheme is "http" or "https"
                         && !string.Equals(label, href, StringComparison.Ordinal)) output.Append(" (").Append(href).Append(')');

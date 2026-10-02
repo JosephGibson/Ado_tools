@@ -1,3 +1,5 @@
+#Requires -Version 7.6
+#Requires -PSEdition Core
 [CmdletBinding(SupportsShouldProcess = $true, DefaultParameterSetName = 'Timestamp')]
 param(
     [Parameter(Mandatory = $true)][string] $PackagePath,

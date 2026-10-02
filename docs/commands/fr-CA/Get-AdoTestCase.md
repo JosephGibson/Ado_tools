@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 09-22-2026
+ms.date: 10-02-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoTestCase
 ---
@@ -53,7 +53,7 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Regroupe toutes les entrées de l’invocation, puis récupère une seule fois chaque cas de test distinct : éléments de travail racines par lots de 200, une seule résolution des étapes partagées pour toutes les racines avec un cache commun, et un seul développement par cas. Les suites sont lues avec SuiteTestCaseList; avec Recurse, les suites enfants sont parcourues en profondeur et les cas suivent le champ order de la suite. Un cas présent dans plusieurs suites est produit une fois par suite; chaque copie a sa propriété Suite et partage les étapes développées. Les identifiants conservent l’ordre d’entrée et sont dédoublonnés; un cas est aussi produit au plus une fois par suite. Les identifiants absents produisent des erreurs ObjectNotFound; les autres types produisent des erreurs NotAStepContainer; un plan ou une suite introuvable produit une erreur ObjectNotFound pour cette entrée. Les diagnostics d’erreur produisent un objet Partial et un avertissement indiquant le nombre de diagnostics. Strict remplace chaque objet partiel par une erreur non bloquante contenant ses diagnostics. La progression est signalée pour la lecture des suites, les lots d’éléments de travail et le développement. Les suites, résultats WIQL et éléments de travail typés se lient à leur propre jeu de paramètres par valeur depuis le pipeline; un identifiant de suite n’est jamais utilisé comme identifiant de cas de test. BySuite est le jeu de paramètres par défaut : sans PlanId, la valeur defaultTestPlanId du profil connecté est utilisée, et sans SuiteId, sa valeur defaultTestSuiteId. La suite du profil n’est utilisée qu’avec le plan du profil; un PlanId explicite exige donc un SuiteId explicite. Un plan ou une suite manquant produit une erreur de configuration avant toute requête.
+Regroupe toutes les entrées de l’invocation, puis récupère une seule fois chaque cas de test distinct : éléments de travail racines par lots de 200, une seule résolution des étapes partagées pour toutes les racines avec un cache commun, et un seul développement par cas. Les suites sont lues avec SuiteTestCaseList; avec Recurse, les suites enfants sont parcourues en profondeur et les cas suivent le champ order de la suite. Un cas présent dans plusieurs suites est produit une fois par suite; chaque copie a sa propriété Suite et partage les étapes développées. Les identifiants conservent l’ordre d’entrée et sont dédoublonnés; un cas est aussi produit au plus une fois par suite. Les identifiants absents produisent des erreurs ObjectNotFound; les autres types produisent des erreurs NotAStepContainer; un plan ou une suite introuvable produit une erreur ObjectNotFound pour cette entrée. Les diagnostics d’erreur produisent un objet Partial et un avertissement indiquant le nombre de diagnostics. Strict remplace chaque objet partiel par une erreur non bloquante contenant ses diagnostics. La progression est signalée pour la lecture des suites, les lots d’éléments de travail et le développement. Les suites, résultats WIQL et éléments de travail typés se lient à leur propre jeu de paramètres par valeur depuis le pipeline; un identifiant de suite n’est jamais utilisé comme identifiant de cas de test. BySuite est le jeu de paramètres par défaut : sans PlanId, la valeur defaultTestPlanId du profil connecté est utilisée, et sans SuiteId, sa valeur defaultTestSuiteId. La suite du profil n’est utilisée qu’avec le plan du profil; un PlanId explicite exige donc un SuiteId explicite. Un plan ou une suite manquant produit une erreur de configuration avant toute requête.
 
 ## EXAMPLES
 
@@ -351,7 +351,7 @@ HelpMessage: ''
 
 ### -CollectionUri
 
-Paramètre de provenance masqué, lié aux objets ayant une propriété Id. Une autre collection produit ConnectionMismatch avant toute requête pour cette entrée. Les suites, résultats WIQL et éléments de travail typés sont vérifiés avec leur propre CollectionUri.
+Paramètre de provenance masqué, lié aux objets ayant une propriété Id. Une autre collection produit AdoConnectionMismatch avant toute requête pour cette entrée. Les suites, résultats WIQL et éléments de travail typés sont vérifiés avec leur propre CollectionUri.
 
 ```yaml
 Type: System.Uri
@@ -436,7 +436,7 @@ Métadonnées du cas de test, lignes développées, paramètres, références d�
 
 ## NOTES
 
-Les identifiants sont propres à la collection. Les recherches de catégories utilisent le projet de chaque élément. Les limites par défaut proviennent de la configuration : profondeur de 10 et 5 000 lignes. Le budget de résolution par défaut est de 10 000 éléments de travail supplémentaires par invocation. La taille est vérifiée après chaque nœud et son développement récursif; la ligne qui dépasse la limite est conservée, suivie d’un seul marqueur Truncated. Aucune ligne ultérieure n’est produite. Les listes de plans et de suites sont lues une fois par projet et par plan pour chaque invocation. Les routes testplan et l’ordre des suites restent provisoires en attendant V-04; les formats des paramètres partagés restent provisoires en attendant V-03.
+Les identifiants sont propres à la collection. Les recherches de catégories utilisent le projet de chaque élément. Les limites par défaut proviennent de la configuration : profondeur de 10 et 5 000 lignes. Le budget de résolution par défaut est de 10 000 éléments de travail supplémentaires par invocation. La taille est vérifiée après chaque nœud et son développement récursif; la ligne qui dépasse la limite est conservée, suivie d’un seul marqueur Truncated. Aucune ligne ultérieure n’est produite. Les listes de plans et de suites sont lues une fois par projet et par plan pour chaque invocation. Les routes testplan et l’ordre des suites restent provisoires en attendant V-04; les formats des paramètres partagés restent provisoires en attendant V-03.
 
 ## RELATED LINKS
 

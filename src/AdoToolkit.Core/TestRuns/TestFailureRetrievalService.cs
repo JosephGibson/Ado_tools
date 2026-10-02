@@ -9,9 +9,9 @@ namespace AdoToolkit.Core.TestRuns;
 // Two-pass retrieval for one build (§15.9). The stages follow one another as §15.9 lists them, and
 // every stage observes cancellation. Unlike §1.4 and §15.9, which made every request sequential,
 // the requests of one stage now run together, at most MaximumConcurrentRequests at a time, and
-// the history read runs beside the main path. The set, its diagnostics and their order do not
-// depend on which request finished first; with a bound of one the requests are sent one after
-// another in the order of §15.9, history last.
+// the history read runs beside the main path. Stage results and diagnostics are combined in
+// input order; near the history budget, cancelled requests can change what remains for older
+// builds. With a bound of one requests follow the order of §15.9, history last.
 public sealed class TestFailureRetrievalService
 {
     private readonly HttpClient client;
@@ -55,7 +55,6 @@ public sealed class TestFailureRetrievalService
         AutomatedTestStorage = result.AutomatedTestStorage,
         TestCaseTitle = result.TestCaseTitle,
         ResultGroupType = result.ResultGroupType,
-        StartedDate = result.StartedDate,
     };
 
     public async Task<AdoBuildTestFailureSet> GetAsync(AdoBuild build, TestFailureQuery query, CultureInfo culture,

@@ -41,7 +41,7 @@ public sealed class BugsViewTests
         Assert.Equal(["Test result, Test Case", "Test result", "Test Case"],
             Regex.Matches(Entry(view, 801), "<td class=\"col-source\">([^<]*)</td>").Select(m => m.Groups[1].Value));
         // The heading spans every column: number, test, Test Case, attempts and the source.
-        Assert.Contains("<tr class=\"cluster-heading\"><th scope=\"colgroup\" colspan=\"5\">", view, StringComparison.Ordinal);
+        Assert.Contains("<tr class=\"cluster-heading\"><th scope=\"rowgroup\" colspan=\"5\">", view, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public sealed class BugsViewTests
         TestFailureReportValidator.Validate(new StringReader(html), model);
         string view = View(html);
         Assert.Contains("<th scope=\"col\">Tests_EN</th><th scope=\"col\">Tests_FR</th><th scope=\"col\">Linked through</th></tr></thead>", view, StringComparison.Ordinal);
-        Assert.Contains("<tbody class=\"error-cluster\" data-bug=\"804\"><tr class=\"cluster-heading\"><th scope=\"colgroup\" colspan=\"6\">", view, StringComparison.Ordinal);
+        Assert.Contains("<tbody class=\"error-cluster\" data-bug=\"804\"><tr class=\"cluster-heading\"><th scope=\"rowgroup\" colspan=\"6\">", view, StringComparison.Ordinal);
         Assert.Equal(["f-1"], Rows(Entry(view, 804)));
         Assert.Contains("<td class=\"col-source\">Test Case</td>", view, StringComparison.Ordinal);
     }

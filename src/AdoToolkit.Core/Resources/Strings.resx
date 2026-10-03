@@ -30,6 +30,7 @@
   <data name="Server" xml:space="preserve"><value>The server could not complete the request.</value></data>
   <data name="Timeout" xml:space="preserve"><value>The operation exceeded its time limit.</value></data>
   <data name="ResponseFormat" xml:space="preserve"><value>The server response has an invalid format.</value></data>
+  <data name="ResponseTooLarge" xml:space="preserve"><value>The server response is larger than {0} MB.</value></data>
   <data name="PagingGuard" xml:space="preserve"><value>Paging did not advance or exceeded the page limit.</value></data>
   <data name="Retry" xml:space="preserve"><value>Retrying {0}; attempt {1}, reason {2}.</value></data>
   <data name="RequestLog" xml:space="preserve"><value>{0} {1} {2} {3} ms attempt={4}</value></data>
@@ -146,6 +147,20 @@
   <data name="ProgressTestCaseLinks" xml:space="preserve"><value>Resolving Test Case links: {0} batch(es)</value></data>
   <data name="ProgressHistory" xml:space="preserve"><value>Reading run history: {0} of {1} build(s)</value></data>
   <data name="ProgressTestFailureCompleted" xml:space="preserve"><value>Retrieved {0} failed or flaky test(s).</value></data>
+  <data name="RetrievalStageBuild" xml:space="preserve"><value>Build read: {0} request(s), {1} ms.</value></data>
+  <data name="RetrievalStageRuns" xml:space="preserve"><value>Test runs read: {0} request(s), {1} ms.</value></data>
+  <data name="RetrievalStageResults" xml:space="preserve"><value>Test results listed: {0} request(s), {1} ms.</value></data>
+  <data name="RetrievalStageDetails" xml:space="preserve"><value>Failure details read: {0} request(s), {1} ms.</value></data>
+  <data name="RetrievalStageAttachments" xml:space="preserve"><value>Attachment lists read: {0} request(s), {1} ms.</value></data>
+  <data name="RetrievalStageTestCases" xml:space="preserve"><value>Test Case links resolved: {0} request(s), {1} ms.</value></data>
+  <data name="RetrievalStageBugs" xml:space="preserve"><value>Bugs read: {0} request(s), {1} ms.</value></data>
+  <data name="RetrievalStageHistory" xml:space="preserve"><value>Run history read: {0} request(s), {1} ms.</value></data>
+  <data name="RetrievalSummary" xml:space="preserve"><value>Build {0}: {1} failed or flaky test(s) retrieved with {2} request(s) in {3} ms.</value></data>
+  <data name="ExportStageDownloads" xml:space="preserve"><value>Attachments downloaded: {0} file(s), {1} request(s), {2} ms.</value></data>
+  <data name="ExportStageRender" xml:space="preserve"><value>Report rendered: {0} byte(s), {1} ms.</value></data>
+  <data name="ExportStageValidation" xml:space="preserve"><value>Report checked: {0} ms.</value></data>
+  <data name="ExportStageCommit" xml:space="preserve"><value>Report moved into place: {0} ms.</value></data>
+  <data name="ExportSummary" xml:space="preserve"><value>Build {0}: report written with {1} downloaded attachment(s) and {2} request(s) in {3} ms.</value></data>
   <data name="PartialTestFailureSet" xml:space="preserve"><value>Build {0}: the failed-test result is partial ({1} error(s), {2} warning(s), {3} information item(s)).</value></data>
   <data name="TestTextTruncated" xml:space="preserve"><value>The message or stack trace exceeds the display limit; only its beginning is shown.</value></data>
   <data name="TestReportPassed" xml:space="preserve"><value>Passed</value></data>
@@ -244,7 +259,6 @@
   <data name="TestReportStage" xml:space="preserve"><value>Stage</value></data>
   <data name="TestReportJob" xml:space="preserve"><value>Job</value></data>
   <data name="TestReportInstance" xml:space="preserve"><value>Job instance</value></data>
-  <data name="TestReportAttemptNumbers" xml:space="preserve"><value>Attempts (stage / job / instance)</value></data>
   <data name="TestReportState" xml:space="preserve"><value>State</value></data>
   <data name="TestReportTests" xml:space="preserve"><value>Tests</value></data>
   <data name="TestReportOutsideWindow" xml:space="preserve"><value>Outside the window</value></data>
@@ -268,6 +282,17 @@
   <data name="TestReportConsecutiveFailures" xml:space="preserve"><value>Consecutive failures</value></data>
   <data name="TestReportKilobytes" xml:space="preserve"><value>{0:N1} KB</value></data>
   <data name="TestReportMegabytes" xml:space="preserve"><value>{0:N1} MB</value></data>
+  <data name="TestReportNotListed" xml:space="preserve"><value>not listed</value></data>
+  <data name="TestReportRunAttachmentsNotListed" xml:space="preserve"><value>Not listed</value></data>
+  <data name="TestReportAttachmentsNotListedNote" xml:space="preserve"><value>Attachments were not listed: the failed tests were gathered with Get-AdoBuildTestFailure -SkipAttachments.</value></data>
+  <data name="TestReportLabelValue" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="TestReportNew" xml:space="preserve"><value>New</value></data>
+  <data name="TestReportInARow" xml:space="preserve"><value>{0} in a row</value></data>
+  <data name="TestReportInARowSince" xml:space="preserve"><value>{0} in a row since {1}</value></data>
+  <data name="TestReportAttemptLevels" xml:space="preserve"><value>Attempts ({0})</value></data>
+  <data name="TestReportStageLevel" xml:space="preserve"><value>stage</value></data>
+  <data name="TestReportJobLevel" xml:space="preserve"><value>job</value></data>
+  <data name="TestReportInstanceLevel" xml:space="preserve"><value>instance</value></data>
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Export failed-test report</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Export failed-test report and download attachments to {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Downloading attachments: {0} of {1}</value></data>

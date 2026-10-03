@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Net.Http;
 using AdoToolkit.Core.Builds;
 using AdoToolkit.Core.Connections;
@@ -10,8 +11,13 @@ namespace AdoToolkit.Core.TestRuns;
 // every stage observes cancellation. Unlike §1.4 and §15.9, which made every request sequential,
 // the requests of one stage now run together, at most MaximumConcurrentRequests at a time, and
 // the history read runs beside the main path. Stage results and diagnostics are combined in
-// input order; near the history budget, cancelled requests can change what remains for older
-// builds. With a bound of one requests follow the order of §15.9, history last.
+// input order. The history read sets its result pages aside build by build before sending them
+// (RunHistoryService), so the builds it keeps depend neither on the bound nor on response order,
+// except near its budget when a request no count foresaw, a retry or a page beyond totalTests,
+// is sent. With a bound of one requests follow the order of §15.9, history last.
+//
+// The log receives one Verbose line per stage, with its requests and milliseconds, in stage
+// order whatever the bound, then a summary of the whole retrieval.
 public sealed class TestFailureRetrievalService
 {
     private readonly HttpClient client;
@@ -44,7 +50,7 @@ public sealed class TestFailureRetrievalService
 
     internal int RequestCount => counter.Count;
 
-    internal static TestResultRecord ToRecord(TestResultDto result, AdoTestRun run, int runOrder, PipelineGrouping grouping) => new()
+    internal static TestResultRecord ToRecord(TestResultListingDto result, AdoTestRun run, int runOrder, PipelineGrouping grouping) => new()
     {
         RunId = run.Id,
         ResultId = result.Id,
@@ -61,6 +67,28 @@ public sealed class TestFailureRetrievalService
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(build);
+        Validate(query, culture);
+        return await RetrieveAsync(build, query, culture, new RetrievalStart(Stopwatch.GetTimestamp(), counter.Count), cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    // As above, with the build read first through the BuildService given to readBuild, so that its
+    // requests and time count in the stage lines and the summary.
+    public async Task<AdoBuildTestFailureSet> GetAsync(Func<BuildService, CancellationToken, Task<AdoBuild>> readBuild,
+        TestFailureQuery query, CultureInfo culture, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(readBuild);
+        Validate(query, culture);
+        RetrievalStart start = new(Stopwatch.GetTimestamp(), counter.Count);
+        StageClock stage = new(progress, counter, culture);
+        AdoBuild build = await readBuild(new BuildService(client, connection, log, counter), cancellationToken).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(build, nameof(readBuild));
+        stage.End(AdoMessage.RetrievalStageBuild);
+        return await RetrieveAsync(build, query, culture, start, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static void Validate(TestFailureQuery query, CultureInfo culture)
+    {
         ArgumentNullException.ThrowIfNull(query);
         ArgumentNullException.ThrowIfNull(culture);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(query.HistoryCount);
@@ -68,15 +96,24 @@ public sealed class TestFailureRetrievalService
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(query.MaximumHistoryRequests);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(query.MaximumConcurrentRequests);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(query.MaximumConcurrentRequests, Configuration.TestResultOptions.MaximumConcurrentRequestsLimit);
+    }
+
+    private async Task<AdoBuildTestFailureSet> RetrieveAsync(AdoBuild build, TestFailureQuery query, CultureInfo culture,
+        RetrievalStart start, CancellationToken cancellationToken)
+    {
         // The gate lives for this retrieval only; every pipeline below shares it. It is disposed after
         // the main path and the history read have both ended.
         using RequestGate gate = new(query.MaximumConcurrentRequests);
-        Stages stages = new(new TestRunService(client, connection, log, counter, gate),
-            new TestCaseLinkResolver(client, connection, log, counter, gate, cache),
-            new TestBugResolver(client, connection, log, counter, gate, cache, query.MaximumConcurrentRequests),
-            query.MaximumConcurrentRequests, build.TeamProject, culture);
+        // The main path counts its requests apart from the history read beside it. Its stages follow
+        // one another, so each stage line gives exactly the requests of that stage.
+        RequestCounter main = counter.Child(int.MaxValue);
+        Stages stages = new(new TestRunService(client, connection, log, main, gate),
+            new TestCaseLinkResolver(client, connection, log, main, gate, cache),
+            new TestBugResolver(client, connection, log, main, gate, cache, query.MaximumConcurrentRequests),
+            query.MaximumConcurrentRequests, build.TeamProject, culture, new StageClock(progress, main, culture));
         List<AdoDiagnostic> diagnostics = [];
         IReadOnlyList<AdoTestRun> runList = await stages.Runs.GetRunsAsync(build, culture, cancellationToken).ConfigureAwait(false);
+        stages.Clock.End(AdoMessage.RetrievalStageRuns);
         progress.Progress(new AdoProgress { Phase = AdoProgressPhase.TestRuns, Completed = runList.Count });
         if (runList.Count == 0)
             diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.NoTestRuns, culture,
@@ -94,8 +131,8 @@ public sealed class TestFailureRetrievalService
         RunHistoryService history = new(client, connection, cache, log, counter, query.MaximumHistoryRequests, gate, query.MaximumConcurrentRequests);
         using CancellationTokenSource historyStop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         List<AdoProgress> heldProgress = [];
-        Task<EarlierHistory>? beside = query.HistoryCount > 1 && query.MaximumConcurrentRequests > 1
-            ? history.ReadEarlierAsync(build, query.HistoryCount, query.HistoryScope, culture, heldProgress.Add, historyStop.Token)
+        Task<(EarlierHistory History, long Milliseconds)>? beside = query.HistoryCount > 1 && query.MaximumConcurrentRequests > 1
+            ? ReadHistoryAsync(history, build, query, culture, heldProgress.Add, historyStop.Token)
             : null;
         CurrentBuild current;
         try
@@ -113,10 +150,11 @@ public sealed class TestFailureRetrievalService
             }
             throw;
         }
-        EarlierHistory earlier = beside is not null ? await beside.ConfigureAwait(false)
-            : await history.ReadEarlierAsync(build, query.HistoryCount, query.HistoryScope, culture, progress.Progress, cancellationToken)
-                .ConfigureAwait(false);
+        (EarlierHistory earlier, long historyMilliseconds) = beside is not null ? await beside.ConfigureAwait(false)
+            : await ReadHistoryAsync(history, build, query, culture, progress.Progress, cancellationToken).ConfigureAwait(false);
         foreach (AdoProgress held in heldProgress) progress.Progress(held);
+        // After the main path's lines, as its progress is. Read beside the main path, its time overlaps theirs.
+        progress.Verbose(Messages.Get(AdoMessage.RetrievalStageHistory, culture, history.RequestCount, historyMilliseconds));
         diagnostics.AddRange(earlier.Diagnostics);
         IReadOnlyList<HistoryEntry> entries = [.. earlier.Entries, RunHistoryService.Current(build, current.Data)];
         string project = build.TeamProject;
@@ -144,6 +182,8 @@ public sealed class TestFailureRetrievalService
             });
         }
         IReadOnlyList<AdoBuildTestSummary> summaries = Summaries(entries, project);
+        progress.Verbose(Messages.Get(AdoMessage.RetrievalSummary, culture, build.Id, failures.Count, counter.Count - start.Requests,
+            Milliseconds(start.Timestamp, Stopwatch.GetTimestamp())));
         return new AdoBuildTestFailureSet
         {
             Build = build,
@@ -158,11 +198,13 @@ public sealed class TestFailureRetrievalService
             Diagnostics = diagnostics.AsReadOnly(),
             RetrievedAt = clock.UtcNow,
             CollectionUri = connection.CollectionUri,
+            AttachmentsListed = !query.SkipAttachments,
         };
     }
 
-    // The main path: both passes, the attachment lists, the Test Case links and the bugs of the build.
-    // Each fan-out returns its values in request order, and only this method writes to the lists.
+    // The main path: both passes, the attachment lists unless the query skips them, the Test Case
+    // links and the bugs of the build. Each fan-out returns its values in request order, and only
+    // this method writes to the lists.
     private async Task<CurrentBuild> ReadCurrentAsync(Stages stages, AdoBuild build, IReadOnlyList<AdoTestRun> runList,
         TestFailureQuery query, List<AdoDiagnostic> diagnostics, CancellationToken cancellationToken)
     {
@@ -173,15 +215,15 @@ public sealed class TestFailureRetrievalService
         PipelineGrouping grouping = PipelineGrouping.Create(ordered);
         // Pass 1: one listing per run, joined in run order.
         ProgressCount listed = new(progress, AdoProgressPhase.TestResults, ordered.Count);
-        IReadOnlyList<IReadOnlyList<TestResultDto>> listings = await OrderedParallel.RunAsync(ordered, stages.Concurrency, async (run, token) =>
+        IReadOnlyList<IReadOnlyList<TestResultListingDto>> listings = await OrderedParallel.RunAsync(ordered, stages.Concurrency, async (run, token) =>
         {
-            IReadOnlyList<TestResultDto> results = await stages.Runs.GetResultsAsync(project, run, culture, token).ConfigureAwait(false);
+            IReadOnlyList<TestResultListingDto> results = await stages.Runs.GetResultsAsync(project, run, culture, token).ConfigureAwait(false);
             listed.Advance();
             return results;
         }, cancellationToken).ConfigureAwait(false);
         List<TestResultRecord> records = [];
         for (int index = 0; index < ordered.Count; index++)
-            foreach (TestResultDto result in listings[index])
+            foreach (TestResultListingDto result in listings[index])
                 records.Add(ToRecord(result, ordered[index], index + 1, grouping));
         IReadOnlyList<TestIdentityGroup> groups = AttemptGrouper.Group(records, culture, diagnostics, cancellationToken);
         IReadOnlyList<TestIdentityGroup> candidates = AttemptGrouper.ReportOrder(groups.Where(static group => group.IsCandidate));
@@ -193,6 +235,7 @@ public sealed class TestFailureRetrievalService
                 candidates.Count.ToString(CultureInfo.InvariantCulture),
                 query.MaximumReportedFailures.ToString(CultureInfo.InvariantCulture),
             ]));
+        stages.Clock.End(AdoMessage.RetrievalStageResults);
         // Pass 2: one request per result record of the reported tests, in report order.
         List<TestResultRecord> detailRecords = [.. candidates.Take(limit).SelectMany(static group => group.Records)];
         ProgressCount read = new(progress, AdoProgressPhase.TestDetail, detailRecords.Count);
@@ -227,9 +270,13 @@ public sealed class TestFailureRetrievalService
             }
             detailed.Add(new DetailedIdentity(group, attempts, details));
         }
-        await AddAttachmentsAsync(stages, detailed, cancellationToken).ConfigureAwait(false);
+        stages.Clock.End(AdoMessage.RetrievalStageDetails);
+        // Skipped lists still have their stage line, with no request, so the lines keep their order.
+        if (!query.SkipAttachments) await AddAttachmentsAsync(stages, detailed, cancellationToken).ConfigureAwait(false);
+        stages.Clock.End(AdoMessage.RetrievalStageAttachments);
         IReadOnlyDictionary<int, AdoTestCaseLink> resolved = await ResolveLinksAsync(stages, detailed, diagnostics, cancellationToken)
             .ConfigureAwait(false);
+        stages.Clock.End(AdoMessage.RetrievalStageTestCases);
         // Only identities that really hold a failure-class attempt are reported (§15.6).
         List<DetailedIdentity> reported = detailed
             .Where(static item => item.Attempts.Any(static attempt => attempt.OutcomeClass == AdoTestOutcomeClass.Failure))
@@ -243,6 +290,7 @@ public sealed class TestFailureRetrievalService
                 item.Attempts.SelectMany(static attempt => attempt.AssociatedBugIds).ToHashSet(),
                 (item.TestCaseId is int testCaseId ? stages.Links.LinkedWorkItems(project, testCaseId) : []).ToHashSet()))],
             build.Id, project, culture, diagnostics, cancellationToken).ConfigureAwait(false);
+        stages.Clock.End(AdoMessage.RetrievalStageBugs);
         return new CurrentBuild(reported, resolved, reportedBugs, CurrentBuildData(groups, detailed, cancellationToken));
     }
 
@@ -426,9 +474,53 @@ public sealed class TestFailureRetrievalService
         return summaries.AsReadOnly();
     }
 
+    // The history read with its own elapsed time, wherever it ran.
+    private static async Task<(EarlierHistory History, long Milliseconds)> ReadHistoryAsync(RunHistoryService history, AdoBuild build,
+        TestFailureQuery query, CultureInfo culture, Action<AdoProgress> report, CancellationToken cancellationToken)
+    {
+        long started = Stopwatch.GetTimestamp();
+        EarlierHistory read = await history.ReadEarlierAsync(build, query.HistoryCount, query.HistoryScope, culture, report, cancellationToken)
+            .ConfigureAwait(false);
+        return (read, Milliseconds(started, Stopwatch.GetTimestamp()));
+    }
+
+    private static long Milliseconds(long started, long ended) => (long)Math.Round(Stopwatch.GetElapsedTime(started, ended).TotalMilliseconds);
+
     // The services of one retrieval, all built on its gate, with what every stage needs to call them.
     private sealed record Stages(TestRunService Runs, TestCaseLinkResolver Links, TestBugResolver Bugs, int Concurrency, string Project,
-        CultureInfo Culture);
+        CultureInfo Culture, StageClock Clock);
+
+    // When the retrieval started and the requests counted before it, for the summary line.
+    private readonly record struct RetrievalStart(long Timestamp, int Requests);
+
+    // Times stages that follow one another on one path. A stage ends where the next begins, so the
+    // lines of a path add up to its time; each gives the requests counted since the previous line.
+    private sealed class StageClock
+    {
+        private readonly IAdoLog log;
+        private readonly RequestCounter requests;
+        private readonly CultureInfo culture;
+        private long started;
+        private int counted;
+
+        internal StageClock(IAdoLog log, RequestCounter requests, CultureInfo culture)
+        {
+            this.log = log;
+            this.requests = requests;
+            this.culture = culture;
+            started = Stopwatch.GetTimestamp();
+            counted = requests.Count;
+        }
+
+        internal void End(AdoMessage stage)
+        {
+            long now = Stopwatch.GetTimestamp();
+            int count = requests.Count;
+            log.Verbose(Messages.Get(stage, culture, count - counted, Milliseconds(started, now)));
+            started = now;
+            counted = count;
+        }
+    }
 
     // What the main path hands back: the reported tests in report order, with their links, bugs and
     // the current build's history data.

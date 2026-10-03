@@ -29,7 +29,7 @@ namespace AdoToolkit.Core.Http;
 [JsonSerializable(typeof(BuildLogPageDto))]
 [JsonSerializable(typeof(BuildDto))]
 [JsonSerializable(typeof(TestRunPageDto))]
-[JsonSerializable(typeof(TestResultPageDto))]
+[JsonSerializable(typeof(TestResultListingPageDto))]
 [JsonSerializable(typeof(TestResultDto))]
 [JsonSerializable(typeof(TestAttachmentPageDto))]
 internal sealed partial class AdoJsonContext : JsonSerializerContext { }

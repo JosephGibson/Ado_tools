@@ -108,7 +108,7 @@ public sealed class TestRunService
     // request is left out only when three things hold: the run is completed, the page just read
     // was shorter than the page size, and the results read so far equal the run's total. In any
     // other case the empty page is requested, as before.
-    internal Task<IReadOnlyList<TestResultDto>> GetResultsAsync(string project, AdoTestRun run,
+    internal Task<IReadOnlyList<TestResultListingDto>> GetResultsAsync(string project, AdoTestRun run,
         CultureInfo culture, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(run);
@@ -117,12 +117,22 @@ public sealed class TestRunService
         return GetResultsAsync(project, run.Id, culture, cancellationToken, isComplete);
     }
 
+    // The requests GetResultsAsync sends for a run whose listing holds its totalTests results: full
+    // pages, then a short one or, after a full last page, the empty page. Null when that rule does
+    // not apply, so the listing ends only on an empty page whose place is unknown.
+    internal static int? ResultPages(AdoTestRun run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        return string.Equals(run.State, CompletedState, StringComparison.OrdinalIgnoreCase) && run.TotalTests is int total
+            ? total / ResultPageSize + 1 : null;
+    }
+
     // Pass 1: lightweight fields only. The server outcomes filter is never used (§15.9 step 3).
-    internal async Task<IReadOnlyList<TestResultDto>> GetResultsAsync(string project, int runId,
+    internal async Task<IReadOnlyList<TestResultListingDto>> GetResultsAsync(string project, int runId,
         CultureInfo culture, CancellationToken cancellationToken, Func<int, int, bool>? isComplete = null)
     {
-        IReadOnlyList<TestResultDto> values = await pipeline.GetPagesAsync(EndpointRegistry.TestResultsList,
-            AdoJsonContext.Default.TestResultPageDto, static page => page.Value,
+        IReadOnlyList<TestResultListingDto> values = await pipeline.GetPagesAsync(EndpointRegistry.TestResultsList,
+            AdoJsonContext.Default.TestResultListingPageDto, static page => page.Value,
             static item => item.Id.ToString(CultureInfo.InvariantCulture), culture, cancellationToken,
             new Dictionary<string, string>
             {
@@ -131,7 +141,7 @@ public sealed class TestRunService
             }, null, ResultPageSize,
             new Dictionary<string, string> { ["detailsToInclude"] = "None" }, isComplete).ConfigureAwait(false);
         HashSet<int> seen = [];
-        foreach (TestResultDto value in values)
+        foreach (TestResultListingDto value in values)
             if (value.Id < 1 || !seen.Add(value.Id)) throw FormatError(culture, "TestResultsList");
         return values;
     }
@@ -149,9 +159,8 @@ public sealed class TestRunService
             {
                 try
                 {
-                    string body = await ResponseJson.ReadAsync(response, token).ConfigureAwait(false);
-                    TestResultDto result = JsonSerializer.Deserialize(body, AdoJsonContext.Default.TestResultDto)
-                        ?? throw new JsonException();
+                    TestResultDto result = await ResponseJson.DeserializeAsync(response, AdoJsonContext.Default.TestResultDto,
+                        EndpointRegistry.TestResultGet, culture, token).ConfigureAwait(false) ?? throw new JsonException();
                     return result.Id == resultId ? result : throw new JsonException();
                 }
                 catch (JsonException error)

@@ -108,12 +108,17 @@ changing them. A connection made with `Connect-Ado -CollectionUrl` has no defaul
 | `testResults.historyCount` | `10` | Builds in the run history, including the current one; values above 50 are treated as 50 | `-HistoryCount` |
 | `testResults.historyScope` | `SameBranch` | `SameBranch` or `AllBranches`; other values mean `SameBranch` | `-HistoryScope` |
 | `testResults.maximumReportedFailures` | `1000` | Most failing tests detailed per build; the rest are counted and the result is `Partial` | none |
-| `testResults.maximumHistoryRequests` | `400` | Most requests spent on run history; older entries show as unavailable | none |
+| `testResults.maximumHistoryRequests` | `500` | Most requests spent on run history; older entries show as unavailable. Earlier builds are read newest first, one at a time, while the result pages of newer builds are read. A build's run list counts as it is sent; its result pages are then counted from the `totalTests` of its runs and set aside at once, so a build whose pages do not fit shows as unavailable, with every older build, before any of its pages is requested. Requests set aside are never given back, even when a page fails, so the builds kept do not depend on response order. The pages of a run without `totalTests` or not completed, retries, and pages beyond `totalTests` take from what is left when they are sent; near the limit, retries and such extra pages can still depend on response order | none |
 | `testResults.maximumAttachmentBytes` | `52428800` (50 MiB) | Largest attachment that is downloaded | none |
 | `testResults.maximumTotalAttachmentBytes` | `524288000` (500 MiB) | Total attachment download size per report | none |
 | `testResults.maximumInlineJsonBytes` | `262144` (256 KiB) | Largest JSON or text attachment shown inline, and so searchable, in the failed-test report. Also the largest one that the export downloads from test runs other than the most recent | none |
 | `testResults.maximumInlineTotalBytes` | `8388608` (8 MiB) | Total JSON and text shown inline per failed-test report; attachments that no longer fit are linked only, those of older runs first | none |
-| `testResults.maximumConcurrentRequests` | `6` | Requests that `Get-AdoBuildTestFailure` has in progress at the same time, and attachments that `Export-AdoBuildTestFailure` downloads at the same time, 1–16. With `1`, every request waits for the previous one. Results are combined in input order. Near the history request limit, a failed history build cancels requests still in progress, so the budget left for older builds can depend on response order. Lower the value if the server handles concurrent requests poorly; Server 2020 concurrency is not confirmed at work (V-33) | none |
+| `testResults.maximumConcurrentRequests` | `6` | Requests that `Get-AdoBuildTestFailure` has in progress at the same time, and attachments that `Export-AdoBuildTestFailure` downloads at the same time, 1–16. With `1`, every request waits for the previous one. Results are combined in input order, and the history builds that fit `testResults.maximumHistoryRequests` do not depend on this value, apart from the retries and extra pages that row names. Lower the value if the server handles concurrent requests poorly; Server 2020 concurrency is not confirmed at work (V-33) | none |
+
+Every request accepts gzip and deflate, so a server that compresses its responses sends fewer
+bytes; the attachment limits above count the decoded bytes. A JSON response may hold at most
+256 MB once decoded, a fixed limit: a larger one fails with an `AdoResponseFormat` error that
+names the operation.
 
 ### Reporting
 

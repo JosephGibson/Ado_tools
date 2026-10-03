@@ -21,8 +21,18 @@ internal static class OrderedParallel
 
     // As RunAsync, but every failure observed is returned, ordered by input index, for a caller that
     // chooses among them. Results holds a value only for the items that completed.
-    internal static async Task<OrderedParallelOutcome<TResult>> TryRunAsync<TItem, TResult>(IReadOnlyList<TItem> items, int degree,
-        Func<TItem, CancellationToken, Task<TResult>> body, CancellationToken cancellationToken)
+    internal static Task<OrderedParallelOutcome<TResult>> TryRunAsync<TItem, TResult>(IReadOnlyList<TItem> items, int degree,
+        Func<TItem, CancellationToken, Task<TResult>> body, CancellationToken cancellationToken) =>
+        RunCoreAsync(items, degree, body, stopOnFailure: true, cancellationToken);
+
+    // As TryRunAsync, but a failure stops nothing: every item runs to its end, so the items that run
+    // and the failures returned never depend on which item failed first.
+    internal static Task<OrderedParallelOutcome<TResult>> TryRunAllAsync<TItem, TResult>(IReadOnlyList<TItem> items, int degree,
+        Func<TItem, CancellationToken, Task<TResult>> body, CancellationToken cancellationToken) =>
+        RunCoreAsync(items, degree, body, stopOnFailure: false, cancellationToken);
+
+    private static async Task<OrderedParallelOutcome<TResult>> RunCoreAsync<TItem, TResult>(IReadOnlyList<TItem> items, int degree,
+        Func<TItem, CancellationToken, Task<TResult>> body, bool stopOnFailure, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(items);
         ArgumentNullException.ThrowIfNull(body);
@@ -41,7 +51,7 @@ internal static class OrderedParallel
                     catch (Exception error)
                     {
                         failures.Enqueue((index, error));
-                        await stop.CancelAsync().ConfigureAwait(false);
+                        if (stopOnFailure) await stop.CancelAsync().ConfigureAwait(false);
                     }
                 }).ConfigureAwait(false);
         }

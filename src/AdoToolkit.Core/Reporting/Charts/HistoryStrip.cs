@@ -3,6 +3,10 @@ using AdoToolkit.Core.Connections;
 
 namespace AdoToolkit.Core.Reporting.Charts;
 
+// One square per build, oldest first, told apart by shape as well as colour: filled when the test
+// failed, half filled when it was flaky, hollow when it passed, dashed when it did not run, dotted for
+// any other outcome and hatched when the build could not be read. The build number and the status
+// are the square's accessible name and its title; the stylesheet outlines the current build.
 public static class HistoryStrip
 {
     public static void Write(TextWriter writer, IReadOnlyList<AdoTestHistoryEntry> entries, Uri collectionUri, string teamProject, CultureInfo culture)
@@ -16,16 +20,13 @@ public static class HistoryStrip
         writer.Write(SinkEncoding.Attribute(Messages.Get(AdoMessage.TestReportHistory, culture))); writer.Write("\">");
         foreach (AdoTestHistoryEntry entry in entries)
         {
-            writer.Write("<li><a class=\"history-cell\" rel=\"noreferrer\" href=\"");
+            string name = SinkEncoding.Attribute(Messages.Get(AdoMessage.TestReportLabelValue, culture, entry.BuildNumber, StatusPresentation.Label(entry.Outcome, culture)));
+            writer.Write("<li><a class=\"history-cell status-"); writer.Write(StatusPresentation.Css(entry.Outcome)); writer.Write("\" rel=\"noreferrer\" href=\"");
             writer.Write(SinkEncoding.Attribute(AdoWebLinks.BuildTestResult(collectionUri, teamProject, entry.BuildId).AbsoluteUri));
-            writer.Write("\" data-build-id=\""); writer.Write(entry.BuildId.ToString(CultureInfo.InvariantCulture)); writer.Write("\"");
-            writer.Write(" title=\""); writer.Write(SinkEncoding.Attribute(entry.BuildNumber + ": " + StatusPresentation.Label(entry.Outcome, culture))); writer.Write("\"");
+            writer.Write("\" data-build-id=\""); writer.Write(entry.BuildId.ToString(CultureInfo.InvariantCulture));
+            writer.Write("\" title=\""); writer.Write(name); writer.Write("\" aria-label=\""); writer.Write(name); writer.Write("\"");
             if (entry.IsCurrent) writer.Write(" aria-current=\"true\"");
-            writer.Write("><span class=\"history-build\">"); writer.Write(SinkEncoding.Attribute(entry.BuildNumber)); writer.Write("</span> ");
-            StatusPresentation.Write(writer, entry.Outcome, culture);
-            if (entry.IsCurrent) { writer.Write(" <span class=\"history-current\">"); writer.Write(SinkEncoding.Attribute(Messages.Get(AdoMessage.TestReportThisRun, culture))); writer.Write("</span>"); }
-            StatusPresentation.ExternalGlyph(writer, culture);
-            writer.Write("</a></li>");
+            writer.Write("></a></li>");
         }
         writer.Write("</ol>");
     }

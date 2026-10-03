@@ -24,6 +24,14 @@ public sealed class HttpPipelineContractTests
         Assert.Equal(Timeout.InfiniteTimeSpan, client.Timeout);
     }
 
+    // Every request accepts compressed bodies; a server that does not compress answers as before.
+    [Fact]
+    public void HandlerDecodesGzipAndDeflate()
+    {
+        using SocketsHttpHandler handler = AdoHttpHandlerFactory.CreateHandler();
+        Assert.Equal(DecompressionMethods.GZip | DecompressionMethods.Deflate, handler.AutomaticDecompression);
+    }
+
     [Theory]
     [Trait("Acceptance", "S0-3")]
     [InlineData(0)]

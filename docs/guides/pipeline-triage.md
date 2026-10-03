@@ -94,7 +94,11 @@ job attempt 2, stays in the group of the run it retries. The names and the suffi
 confirmed on Azure DevOps Server 2020 (V-19).
 
 Each failure keeps all its attempts, with error messages, stack traces,
-attachment metadata, any linked Test Case and its bugs. Run history covers the current build
+attachment metadata, any linked Test Case and its bugs. The attachment metadata costs one
+request per failed result and one more per sub-result, such as a rerun attempt; add
+`-SkipAttachments` to leave it out when you do not need the attachments. The set then has `AttachmentsListed` set to
+`$false`, its report says that the attachments were not listed, and its export downloads
+nothing and needs no connection. Run history covers the current build
 and earlier builds of the same definition. It uses 10 builds on the same branch by
 default. Change that with `-HistoryCount` (1–50) and `-HistoryScope AllBranches`.
 A result set with problems, such as more failing tests than the configured maximum,

@@ -5,10 +5,19 @@ internal sealed class CapturingLog : IAdoLog
 {
     private readonly Lock gate = new();
     internal List<string> Messages { get; } = [];
+    // The warnings alone, also in Messages.
+    internal List<string> Warnings { get; } = [];
     internal List<AdoProgress> ProgressEvents { get; } = [];
     public void Verbose(string message) => Add(message);
     public void Debug(string message) => Add(message);
-    public void Warning(string message) => Add(message);
+    public void Warning(string message)
+    {
+        lock (gate)
+        {
+            Messages.Add(message);
+            Warnings.Add(message);
+        }
+    }
     public void Progress(AdoProgress progress)
     {
         lock (gate) ProgressEvents.Add(progress);

@@ -110,6 +110,16 @@ public sealed class ConfigurationStoreTests
         Assert.Equal(4, JsonNode.Parse(ConfigurationStore.Serialize(loaded))!["testResults"]!["maximumConcurrentRequests"]!.GetValue<int>());
     }
 
+    // The history request budget is 500 unless set, wherever a default applies.
+    [Fact]
+    public void HistoryRequestBudgetDefaultsToFiveHundred()
+    {
+        Assert.Equal(500, ConfigurationStore.Parse("{}", English).TestResults.MaximumHistoryRequests);
+        Assert.Equal(500, ConfigurationStore.Parse("{\"testResults\":{\"historyCount\":5}}", English).TestResults.MaximumHistoryRequests);
+        Assert.Equal(500, new TestResultOptions().MaximumHistoryRequests);
+        Assert.Equal(500, new TestFailureQuery().MaximumHistoryRequests);
+    }
+
     // A hand-edited file with a repeated name must fail as configuration, not as an unhandled
     // ArgumentException that every command and the profile completer would surface raw.
     [Theory]

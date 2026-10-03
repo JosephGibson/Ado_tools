@@ -24,6 +24,9 @@ public sealed class TestFailureReportModel
     public Uri? CommitUrl { get; init; }
     // Null when nothing was downloaded; then the report contains no local links.
     public TestFailureLocalAttachments? LocalAttachments { get; init; }
+    // False when the set was retrieved without attachment lists; the report then says so instead of
+    // counting attachments, and no window applies.
+    public bool AttachmentsListed { get; init; } = true;
     // Runs whose attachments are listed: those started at or after AttachmentWindowStart.
     public IReadOnlySet<int> AttachmentRunIds { get; init; } = new HashSet<int>();
     public DateTimeOffset AttachmentWindowStart { get; init; }

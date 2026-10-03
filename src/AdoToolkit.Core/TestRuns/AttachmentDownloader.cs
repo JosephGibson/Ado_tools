@@ -26,12 +26,17 @@ public sealed class AttachmentDownloader
     private readonly AdoHttpPipeline pipeline;
     private readonly TestResultOptions limits;
     private readonly IAdoLog log;
+    private readonly RequestCounter? requests;
 
     public AttachmentDownloader(HttpClient client, AdoConnection connection, TestResultOptions limits, IAdoLog? log = null)
-        : this(new AdoHttpPipeline(client, connection.CollectionUri, TimeSpan.FromSeconds(connection.RequestTimeoutSeconds), log),
-            limits, log) { }
+        : this(client, connection, limits, log, new RequestCounter()) { }
 
-    internal AttachmentDownloader(AdoHttpPipeline pipeline, TestResultOptions limits, IAdoLog? log = null)
+    private AttachmentDownloader(HttpClient client, AdoConnection connection, TestResultOptions limits, IAdoLog? log, RequestCounter requests)
+        : this(new AdoHttpPipeline(client, connection.CollectionUri, TimeSpan.FromSeconds(connection.RequestTimeoutSeconds), log,
+            counter: requests), limits, log, requests) { }
+
+    // requests is the counter the pipeline counts with, if any, so that RequestCount can report it.
+    internal AttachmentDownloader(AdoHttpPipeline pipeline, TestResultOptions limits, IAdoLog? log = null, RequestCounter? requests = null)
     {
         ArgumentNullException.ThrowIfNull(limits);
         if (limits.MaximumAttachmentBytes < 1 || limits.MaximumTotalAttachmentBytes < 1 || limits.MaximumInlineJsonBytes < 1
@@ -41,7 +46,11 @@ public sealed class AttachmentDownloader
         this.pipeline = pipeline;
         this.limits = limits;
         this.log = log ?? new NullAdoLog();
+        this.requests = requests;
     }
+
+    // The requests sent so far, retries included.
+    internal int RequestCount => requests?.Count ?? 0;
 
     internal long MaximumInlineJsonBytes => limits.MaximumInlineJsonBytes;
     internal long MaximumInlineTotalBytes => limits.MaximumInlineTotalBytes;

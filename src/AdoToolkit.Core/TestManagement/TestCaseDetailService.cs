@@ -250,8 +250,8 @@ public sealed class TestCaseDetailService
                 {
                     try
                     {
-                        string json = await ResponseJson.ReadAsync(response, token).ConfigureAwait(false);
-                        return JsonSerializer.Deserialize(json, AdoJsonContext.Default.TestPointsPageDto)?.Points ?? throw new JsonException();
+                        return (await ResponseJson.DeserializeAsync(response, AdoJsonContext.Default.TestPointsPageDto, endpoint, culture, token)
+                            .ConfigureAwait(false))?.Points ?? throw new JsonException();
                     }
                     catch (JsonException error) { throw FormatError(culture, error); }
                 }, cancellationToken).ConfigureAwait(false);

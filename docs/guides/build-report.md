@@ -62,6 +62,7 @@ Check that `BuildNumber` and `Definition` are the build you meant before exporti
 | `History` | Run summaries, oldest first, current build last |
 | `Status` | `Complete`, or `Partial` when something could not be retrieved |
 | `Diagnostics` | Why a `Partial` set is partial |
+| `AttachmentsListed` | `False` when `-SkipAttachments` left out the attachment lists |
 
 ## Step 3 — Look before you write
 
@@ -113,32 +114,54 @@ $report.AttachmentDirectory
 
 ## Reading the report
 
-The report is built to be scanned with 100–200 failures and up to 14 attempts each. The
-tabs under the header switch between views; with scripts blocked, the views follow one
-another on a single page.
+The report is built to be scanned with 100–200 failures and up to 14 attempts each. Its
+header starts with the counts of failed and flaky tests and of attachments, then names the
+pipeline, build, branch, commit, result and finish time. The branch shows by its name, `main`
+for `refs/heads/main`, and the time without a label; rest the pointer on either to read the
+full ref or the label. A zero count is greyed. With scripts
+on, a count is also a filter: **Failed** or **Flaky** shows that kind alone, **Attachments**
+the tests that have some, and pressing it again shows every test. The tabs on the second
+line switch between views, beside the search and the filters; **Expand all** and **Collapse
+all** appear in Details only. With scripts blocked, the views follow one another on a single
+page.
 
 | View | What it shows |
 | --- | --- |
-| Overview | One row per failed test: its number, name and class, an **Open bug** link to the lowest-numbered open bug that tracks it, Test Case number, one status column per group of attempts, and the first line of its latest error |
+| Overview | One row per failed test: its number, name and class, **New** or **N in a row**, an **Open bug** link to the lowest-numbered open bug that tracks it, Test Case number, one status column per group of attempts, and the first line of its latest error |
 | By error | The same rows, grouped under their latest error, largest group first. Numbers and GUIDs are ignored when grouping, so "after 30012 ms" and "after 30020 ms" group together |
 | Open bugs | One entry per bug: its number, title and state, then a row for each test linked to it, saying whether the link comes from a test result, the Test Case or both. The bug with the most tests comes first, and a test with several bugs appears under each. Bugs that could not be read come last, marked **Not read**. The tab shows the number of bugs |
-| Details | One card per test: Test Case number and title, links, full name, its open bugs with title and state, and history, then its attempts. A bug that could not be read shows its number and a **Not read** mark |
-| Runs and history | The build's test runs with their stage, job, attempts, duration, test counts, the number of reported tests, and how many attachments are listed and downloaded; the latest run is marked and runs outside the attachment window are greyed. Below them, the run history: a chart with the failed count above each bar, the same numbers as a table of builds, and a table with one row per reported test, its outcome in each build and the number of builds in a row, ending with this one, in which it failed or was flaky |
+| Details | One card per test: Test Case number and title, links, full name, its open bugs with title and state, and its history as one square per build, then its attempts. A bug that could not be read shows its number and a **Not read** mark |
+| Runs and history | The build's test runs with their stage, job, the attempt numbers that the runs have (stage, job or job instance), duration, test counts, the number of reported tests, and how many attachments are listed and downloaded, or **Not listed** for a set gathered with `-SkipAttachments`; the latest run is marked and runs outside the attachment window are greyed. Below them, the run history: a chart with the failed count above each bar, the same numbers as a table of builds, and a table with one row per reported test, its outcome in each build and the number of builds in a row, ending with this one, in which it failed or was flaky |
 | Diagnostics | Shown only when something could not be retrieved: one line per diagnostic, errors first, then warnings, then information, with the number of each in the heading |
 
 In the Overview, By error and Open bugs tables, each group cell reads `✕ 7/7`: `✕` means the
 last attempt in that group failed, `≈` that it failed, then passed, and `✓` that it never
 failed. The numbers are failed attempts out of all attempts; a line above each table repeats
 this. In the overview, each square after them opens that attempt. A latest error that is too
-long for its cell is cut; rest the pointer on it to read the whole line.
+long for its cell is cut, and so is a long test name; rest the pointer on either to read it
+whole.
+
+After the name, **New** says that the build before this one ran the test and it did not fail,
+and **3 in a row** that the test failed or was flaky in this build and the two before it.
+Nothing is said when the build before this one could not be read or did not run the test. A
+card says the same after its history, with the build where the run of failures started, for
+example `✕ 3 in a row since 20260914.2`. Its history squares are told apart by shape as well as
+colour: filled for failed, half filled for flaky, hollow for passed, dashed for not run, dotted
+for any other outcome and hatched for a build that could not be read; the current build is
+outlined, and resting the pointer on a square gives its build and outcome. An attempt's
+**Failing since** names the build by its number when that build is in the history.
 
 An attachment larger than 1,024 bytes shows its size in KB or MB; rest the pointer on the
 size to read the exact number of bytes.
 
-In a card, every group and every attempt starts collapsed. An attempt's summary line shows its
-outcome, duration, machine and the first line of its error. Opened, every attempt shows its
-own full error message and stack trace, even when an earlier attempt failed with the same
-text, so a report with many retries of long traces is large.
+In a card, every group and every attempt starts collapsed; reaching a test from its row, with
+`j` or `k`, or with `Enter` opens the attempt of its latest error and the group that holds it.
+An attempt's summary line shows its outcome, duration, machine and the first line of its
+error. Opened, every attempt shows its own full error message and stack trace, even when an
+earlier attempt failed with the same text, so a report with many retries of long traces is
+large. A stack trace that has a frame of the test's own code opens with the framework frames
+hidden and **Hide framework frames** pressed, and an error message opens with **Wrap lines**
+pressed; press either button to change it. Copying and printing always include every frame.
 
 Every date and time in the report is shown in the time zone of the computer that exported it,
 the same zone as the report's own generation time. When the report was made, with which
@@ -177,14 +200,16 @@ instance, `__default` when there is none.
 Press `/` or use the Search box. Every word you type must appear somewhere in a test's card,
 collapsed attempts included: error messages, stack traces, JSON and text attachments shown in
 the report, stage and job names, run and attempt fields such as run name, machine or
-failure type, and bug titles and states. `12345` and `#12345` both find the tests linked to
-Test Case 12345. Attempts that match are marked in their summary line; nothing opens by
-itself. **Failing in** narrows the list to tests whose last attempt in a group failed, or
-failed only there. **Without an open bug**, shown when at least one test has an open bug,
-leaves only the tests that no open bug tracks yet.
+failure type, and bug titles and states. Case and accents are ignored, so `echec` finds
+« Échec ». `12345` and `#12345` both find the tests linked to Test Case 12345. Attempts that
+match are marked in their summary line; nothing opens by itself. **Failing in** narrows the
+list to tests whose last attempt in a group failed, or failed only there. **Without an open
+bug**, shown when at least one test has an open bug, leaves only the tests that no open bug
+tracks yet.
 
-Keys: `j`/`k` move between tests, `Enter` opens the selected test's card, `o` opens or closes
-an attempt or group, and `Esc` in the Search box clears every filter.
+Keys, also listed at the foot of the report: `j`/`k` move between tests, `Enter` opens the
+selected test's card, `o` opens or closes an attempt or group, and `Esc` in the Search box
+clears every filter. Back after opening a card returns to that test's row.
 
 ## What lands on disk
 
@@ -248,6 +273,7 @@ intact. Older attachment folders of the same report are removed after the replac
 | `-WhatIf` | Names the report and folder without requests or writes |
 | `-HistoryCount` (step 2) | Builds of run history, 1–50. Default 10 |
 | `-HistoryScope AllBranches` (step 2) | History across branches instead of the build's own branch |
+| `-SkipAttachments` (step 2) | Gathers the failures without their attachment lists, which cost one request per failed result and one more per sub-result, such as a rerun attempt. The report then says that the attachments were not listed, and the export downloads nothing and needs no connection |
 
 Defaults for history, attachment size and inline limits, and report culture live in the
 [configuration file](configuration.md#settings).
@@ -272,6 +298,8 @@ failed". `Save-AdoBuildLog` needs an existing directory, unlike the export.
 | `AdoConnectionMismatch` | The set came from a different collection than the connection used for the export |
 | A path error naming the report | `-Path` has an extension other than `.html`, or names an existing file that is not an `.html` file |
 | `Status` is `Partial` | Read `Diagnostics`. A common cause is more failing tests than `testResults.maximumReportedFailures` |
+| Gathering the failures takes long | Add `-Verbose` to `Get-AdoBuildTestFailure`: each stage, such as the result listings, the failure details or the attachment lists, writes its requests and milliseconds, and a last line gives the requests and the time of the whole command. The attachment lists cost one request per failed result and one more per sub-result, such as a rerun attempt; add `-SkipAttachments` if you do not need the attachments |
+| Writing the report takes long | Add `-Verbose` to `Export-AdoBuildTestFailure`: the attachment downloads, the rendering, the check of the report and its move into place each write their milliseconds, the downloads with their files and requests, and a last line gives the time of the whole export |
 | Warnings about attachment size | The attachment or the total exceeded the configured limit. Those attachments are listed in the report but not downloaded |
 | A flaky test is missing | Flaky tests are left out by default. Add `-IncludeFlaky` |
 | A run's attachments are missing | The run started before the attachment window. Raise `-AttachmentWindowDays`; the Runs and history view marks runs outside the window |

@@ -19,16 +19,34 @@
   let currentRow = null;
   let copyTimer;
   let filterTimer;
-  // Search text is the whole element, collapsed parts included, lowercased once on first use.
+  // Search ignores case and accents: "echec" finds « Échec ».
+  const fold = value => value.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase(lang);
+  // Search text is the whole element, collapsed parts included, folded once on first use.
   const text = node => {
     let value = texts.get(node);
-    if (value === undefined) { value = node.textContent.toLocaleLowerCase(lang); texts.set(node, value); }
+    if (value === undefined) { value = fold(node.textContent); texts.set(node, value); }
     return value;
   };
   // Every term must match. A Test Case ID matches with or without '#'; other terms match text.
   const matches = (node, terms, testCase) => terms.every(term =>
     (/^#?\d+$/.test(term) && testCase === term.replace('#', '')) || text(node).includes(term));
   const activeView = () => views.find(view => view.classList.contains('is-active'));
+  const header = document.querySelector('.top-bar');
+  // Sticky table headers and the page's scroll padding follow the top bar's height. True when it changed.
+  let bandHeight = 0;
+  const measure = () => {
+    const height = Math.ceil(header.getBoundingClientRect().height);
+    if (height === bandHeight) return false;
+    bandHeight = height;
+    root.style.setProperty('--report-header-height', `${height}px`);
+    return true;
+  };
+  // Scrolls a node to the top, clear of the band. The scroll lays out the cards that content-visibility
+  // skipped; a page that grows a scrollbar can rewrap the band, so the scroll is repeated at its new height.
+  const reveal = node => {
+    node.scrollIntoView({ block: 'start' });
+    if (measure()) node.scrollIntoView({ block: 'start' });
+  };
   const show = id => {
     const target = views.find(view => view.id === id) || views[0];
     views.forEach(view => view.classList.toggle('is-active', view === target));
@@ -36,6 +54,10 @@
       if (link.dataset.viewLink === target.id) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
+    // Expand all and Collapse all show in Details alone. They can change the band's height, which
+    // a scroll right after this needs at once, before the ResizeObserver reports it.
+    all('[data-details-only]').forEach(control => { control.hidden = target.id !== 'details'; });
+    measure();
   };
   const select = card => {
     current = card;
@@ -50,14 +72,25 @@
     count.textContent = count.dataset.labelCount.replace('{0}', numbers.format(shown)).replace('{1}', numbers.format(cards.length));
     all('[data-no-matches]').forEach(note => { note.hidden = shown !== 0; });
   };
+  // Reaching a test opens the attempt of its latest error.
+  const arrive = card => {
+    for (let node = document.getElementById(card.dataset.latestError); node && node !== card; node = node.parentElement) if (node.matches('details')) node.open = true;
+  };
   const focus = card => {
     if (!card) return;
     select(card);
+    arrive(card);
     card.focus({ preventScroll: true });
-    card.scrollIntoView({ block: 'start' });
+    reveal(card);
   };
+  // A count chip is a filter shortcut: that kind alone, or the tests with attachments.
+  const toggle = name => toggles.find(item => item.dataset.toggle === name);
+  const other = kind => toggle(kind === 'failed' ? 'flaky' : 'failed');
+  const chips = all('.count-chip:not([data-zero])').map(chip => [chip, ['failed', 'flaky', 'attachments'].find(kind => chip.classList.contains('status-' + kind))])
+    .filter(([, kind]) => kind && toggle(kind));
+  const pressed = kind => toggle(kind).checked && (kind === 'attachments' || !other(kind).checked);
   const apply = () => {
-    const terms = filter.value.toLocaleLowerCase(lang).split(/\s+/).filter(Boolean);
+    const terms = fold(filter.value).split(/\s+/).filter(Boolean);
     const group = failing ? failing.value : '';
     cards.forEach(card => {
       const failed = (card.dataset.failing || '').split(' ').filter(Boolean);
@@ -74,24 +107,43 @@
       all('.attempt-group', card).forEach(node => node.classList.toggle('is-match', node.querySelector('.attempt.is-match') !== null));
     });
     all('.error-cluster').forEach(cluster => { cluster.hidden = all('tr[data-index-for]', cluster).every(row => row.hidden); });
+    chips.forEach(([chip, kind]) => chip.setAttribute('aria-pressed', String(pressed(kind))));
     updateCount();
     if (current?.hidden) select(null);
+  };
+  const press = kind => {
+    const on = !pressed(kind);
+    toggle(kind).checked = on || kind !== 'attachments';
+    if (kind !== 'attachments') other(kind).checked = !on;
+    apply();
   };
   const fragment = () => {
     let target = null;
     try { target = document.getElementById(decodeURIComponent(location.hash.slice(1))); } catch { target = null; }
     const view = target?.closest('[data-view]');
     show(view ? view.id : 'overview');
-    if (!target || target === view) { window.scrollTo(0, 0); return; }
+    if (!target || target === view) {
+      // Back to a table of tests returns to the current test's row, not to the top.
+      const shown = activeView();
+      const candidates = current && ['overview', 'by-error', 'bugs'].includes(shown.id)
+        ? all('tr[data-index-for]', shown).filter(item => !item.hidden && item.dataset.indexFor === current.id) : [];
+      const row = candidates.includes(currentRow) ? currentRow : candidates[0];
+      if (!row) { window.scrollTo(0, 0); return; }
+      currentRow = row;
+      row.scrollIntoView({ block: 'center' });
+      row.querySelector('.col-test a').focus({ preventScroll: true });
+      return;
+    }
     const card = target.closest('.failure-card');
     if (card) {
       card.hidden = false;
       rows.get(card).forEach(row => { row.hidden = false; });
       select(card);
       updateCount();
+      if (target === card) arrive(card);
     }
     for (let node = target; node; node = node.parentElement) if (node.matches('details')) node.open = true;
-    target.scrollIntoView({ block: 'start' });
+    reveal(target);
   };
   const copy = async button => {
     const scope = button.closest('.code-section, .name-section');
@@ -111,25 +163,28 @@
     clearTimeout(copyTimer);
     copyTimer = setTimeout(() => { status.hidden = true; }, 5000);
   };
+  // Wrap and Framework buttons, pressed or not.
+  const set = (button, active) => {
+    button.setAttribute('aria-pressed', String(active));
+    button.closest('.code-section').classList.toggle(button.dataset.action === 'wrap' ? 'wrap-code' : 'hide-framework', active);
+  };
   filter.addEventListener('input', () => { clearTimeout(filterTimer); filterTimer = setTimeout(apply, 150); });
   failing?.addEventListener('change', apply);
   toggles.forEach(toggle => toggle.addEventListener('change', apply));
+  chips.forEach(([chip, kind]) => {
+    chip.setAttribute('role', 'button');
+    chip.tabIndex = 0;
+    chip.addEventListener('click', () => press(kind));
+    chip.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); press(kind); } });
+  });
   all('[data-action]').forEach(button => button.addEventListener('click', () => {
     const action = button.dataset.action;
     if (action === 'copy') { void copy(button); return; }
     if (action === 'expand' || action === 'collapse') {
-      if (activeView()?.id !== 'details') {
-        // A history cell shows the Runs view and leaves the hash, so an equal hash raises no event.
-        if (location.hash === '#details') show('details');
-        else location.hash = 'details';
-      }
       cards.filter(card => !card.hidden).forEach(card => all('.attempt-group, .attempt', card).forEach(node => { node.open = action === 'expand'; }));
       return;
     }
-    const scope = button.closest('.code-section');
-    const active = button.getAttribute('aria-pressed') !== 'true';
-    button.setAttribute('aria-pressed', String(active));
-    scope.classList.toggle(action === 'wrap' ? 'wrap-code' : 'hide-framework', active);
+    set(button, button.getAttribute('aria-pressed') !== 'true');
   }));
   document.addEventListener('focusin', event => {
     const card = event.target.closest('.failure-card');
@@ -189,14 +244,13 @@
   });
   window.addEventListener('hashchange', fragment);
   all('[data-enhance]').forEach(control => { control.hidden = false; });
+  // A trace opens on the test's own code and a message wrapped; copy and print keep every frame.
+  all('.code-section').forEach(section => {
+    const button = section.querySelector(section.querySelector('code.lang-error') ? '[data-action="wrap"]'
+      : section.querySelector('.first-user-frame') ? '[data-action="framework"]' : null);
+    if (button) set(button, true);
+  });
   root.classList.add('views');
-  const header = document.querySelector('.top-bar');
-  // Table headers stick below the top bar; scroll targets keep a little more room.
-  const measure = () => {
-    const height = Math.ceil(header.getBoundingClientRect().height);
-    root.style.setProperty('--report-header-height', `${height}px`);
-    root.style.setProperty('--report-header-offset', `${height + 16}px`);
-  };
   measure();
   if (typeof ResizeObserver === 'function') new ResizeObserver(measure).observe(header);
   apply();

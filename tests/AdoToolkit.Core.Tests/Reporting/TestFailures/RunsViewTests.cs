@@ -56,15 +56,26 @@ public sealed class RunsViewTests
         Assert.Matches(@"\.history-data th:nth-child\(n\+4\):nth-child\(-n\+7\), \.history-data td:nth-child\(n\+4\):nth-child\(-n\+7\) \{ text-align: end; \}", html);
     }
 
-    [Fact]
-    public void AttemptNumbersAlwaysShowThreePlaces()
+    // Only the attempt levels that some run has. The heading names them, so a lone number is never
+    // read as another level's attempt, and a run without one of them shows a dash in its place.
+    [Theory]
+    [InlineData("en-US", "Attempts (instance)", "Attempts (stage / instance)")]
+    [InlineData("fr-CA", "Tentatives (instance)", "Tentatives (phase / instance)")]
+    public void AttemptNumbersShowOnlyTheLevelsThatExist(string culture, string instance, string stageAndInstance)
     {
-        string grouped = View(Render(Model("grouped", change: run => run.Id == 203 ? Copy(run, stageAttempt: 3) : run)));
-        // Stage, job and instance: a missing level is a dash, so the job instance attempt stays in its place.
-        Assert.Contains("<td>– / – / 2</td>", Row(grouped, 201), StringComparison.Ordinal);
-        Assert.Contains("<td>– / – / 1</td>", Row(grouped, 202), StringComparison.Ordinal);
-        Assert.Contains("<td>3 / – / 2</td>", Row(grouped, 203), StringComparison.Ordinal);
-        Assert.Contains("<td>– / – / –</td>", Row(View(Render(Model("partial"))), 201), StringComparison.Ordinal);
+        string grouped = View(Render(Model("grouped", culture)));
+        Assert.Contains("<th scope=\"col\">" + instance + "</th>", grouped, StringComparison.Ordinal);
+        Assert.Contains("<td>2</td>", Row(grouped, 201), StringComparison.Ordinal);
+        Assert.Contains("<td>1</td>", Row(grouped, 202), StringComparison.Ordinal);
+        string staged = View(Render(Model("grouped", culture, change: run => run.Id == 203 ? Copy(run, stageAttempt: 3) : run)));
+        Assert.Contains("<th scope=\"col\">" + stageAndInstance + "</th>", staged, StringComparison.Ordinal);
+        Assert.Contains("<td>– / 2</td>", Row(staged, 201), StringComparison.Ordinal);
+        Assert.Contains("<td>– / 1</td>", Row(staged, 202), StringComparison.Ordinal);
+        Assert.Contains("<td>3 / 2</td>", Row(staged, 203), StringComparison.Ordinal);
+        // No run has an attempt number: no column at all.
+        string partial = View(Render(Model("partial", culture)));
+        Assert.DoesNotContain("(instance)", partial, StringComparison.Ordinal);
+        Assert.DoesNotContain(" / –", partial, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -168,7 +179,7 @@ public sealed class RunsViewTests
         // Failed in the build before and flaky in this one: flaky counts.
         Assert.Equal(["status-unavailable", "status-notrun", "status-failed", "status-flaky"], CellStatuses(flaky));
         Assert.EndsWith("<td class=\"num\">2</td>", flaky, StringComparison.Ordinal);
-        Assert.Contains("<td class=\"col-test\"><a href=\"#f-2\">RetryPayment</a> <span class=\"text-muted\">CheckoutTests</span></td>", flaky, StringComparison.Ordinal);
+        Assert.Contains("<td class=\"col-test\"><a href=\"#f-2\"><span class=\"test-name\" title=\"RetryPayment\">RetryPayment</span></a> <span class=\"text-muted\">CheckoutTests</span></td>", flaky, StringComparison.Ordinal);
         // Every cell names its outcome for a reader who cannot see the glyph.
         Assert.Equal(8, Regex.Count(table, "<td class=\"col-build\"><span class=\"status-glyph status-[a-z]+\" role=\"img\" aria-label=\"[^\"]+\">"));
     }
@@ -261,11 +272,11 @@ public sealed class RunsViewTests
         string chart = writer.ToString();
         Match failed = Regex.Match(chart, "<g data-outcome=\"failed\" data-count=\"1\"><title>[^<]*</title><rect class=\"chart-fail\" x=\"[0-9.]+\" y=\"([0-9.]+)\" width=\"52\" height=\"([0-9.]+)\"/>");
         Assert.True(failed.Success);
-        // One of 3,000 would be 0.06 of a unit high.
+        // One of 3,000 would be 0.04 of a unit high.
         Assert.Equal(6, double.Parse(failed.Groups[2].Value, CultureInfo.InvariantCulture));
         Match passed = Regex.Match(chart, "<rect class=\"chart-pass\" x=\"[0-9.]+\" y=\"([0-9.]+)\" width=\"52\" height=\"([0-9.]+)\"/>");
-        // The minimum is taken from the tallest segment: the bar is as high as before.
-        Assert.Equal(180, double.Parse(passed.Groups[2].Value, CultureInfo.InvariantCulture) + 6, 3);
+        // The minimum is taken from the tallest segment: the bar keeps the full height, 120 units since 0.8.0.
+        Assert.Equal(120, double.Parse(passed.Groups[2].Value, CultureInfo.InvariantCulture) + 6, 3);
         Match count = Regex.Match(chart, "<text class=\"chart-failed\" x=\"[0-9.]+\" y=\"([0-9.]+)\">✕ 1</text>");
         Assert.True(count.Success);
         Assert.True(double.Parse(count.Groups[1].Value, CultureInfo.InvariantCulture) < double.Parse(failed.Groups[1].Value, CultureInfo.InvariantCulture));
@@ -295,13 +306,19 @@ public sealed class RunsViewTests
         Assert.Contains("show('runs');\n        row.scrollIntoView", script, StringComparison.Ordinal);
     }
 
-    // A history cell shows the Runs view and leaves the hash on #details. Expand all and Collapse
-    // all then cannot rely on a hash change to show the Details view again.
+    // Expand all and Collapse all act on the cards, so they show in Details alone: a history cell that
+    // shows the Runs view with the hash still on #details hides them too (0.7.5 finding B5).
     [Fact]
-    public void ExpandAllShowsTheDetailsViewWhenTheHashAlreadyNamesIt()
+    public void ExpandAllAndCollapseAllShowInDetailsAlone()
     {
+        string html = Render(Model("grouped"));
+        foreach (string action in new[] { "expand", "collapse" })
+            Assert.Contains("<button type=\"button\" class=\"interactive\" data-enhance hidden data-action=\"" + action + "\" data-details-only>", html, StringComparison.Ordinal);
         string script = TestFailureAssets.Read("test-failures.js");
-        Assert.Contains("if (location.hash === '#details') show('details');\n        else location.hash = 'details';", script, StringComparison.Ordinal);
+        string show = script[script.IndexOf("const show = id => {", StringComparison.Ordinal)..script.IndexOf("const select = card =>", StringComparison.Ordinal)];
+        Assert.Contains("all('[data-details-only]').forEach(control => { control.hidden = target.id !== 'details'; });", show, StringComparison.Ordinal);
+        // The buttons no longer move to Details themselves: they are never shown anywhere else.
+        Assert.DoesNotContain("location.hash = 'details'", script, StringComparison.Ordinal);
     }
 
     [Theory]

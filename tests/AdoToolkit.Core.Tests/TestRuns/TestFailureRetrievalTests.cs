@@ -178,6 +178,38 @@ public sealed class TestFailureRetrievalTests
             handler.Requests[7].Uri.AbsolutePath);
     }
 
+    // The same build without attachment lists: every attempt is there without its attachments, the
+    // set says that they were not listed, and no other request changes.
+    [Fact]
+    public async Task SkipAttachmentsSendsNoAttachmentListAndLeavesEveryAttemptWithoutAttachments()
+    {
+        TestRunFixture fixture = TwoRuns();
+        using FakeHttpMessageHandler listedHandler = fixture.Handler();
+        using HttpClient listedClient = new(listedHandler);
+        AdoBuildTestFailureSet listed = await TestRunFixture.Service(listedClient).GetAsync(TestRunFixture.Build(), Sequential,
+            CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
+        using FakeHttpMessageHandler handler = fixture.Handler();
+        using HttpClient client = new(handler);
+        AdoBuildTestFailureSet set = await TestRunFixture.Service(client).GetAsync(TestRunFixture.Build(),
+            new TestFailureQuery { HistoryCount = 1, MaximumConcurrentRequests = 1, SkipAttachments = true },
+            CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
+
+        Assert.True(listed.AttachmentsListed);
+        Assert.Equal(5, listed.Failures[1].Attempts[0].Attachments.Count);
+        Assert.False(set.AttachmentsListed);
+        Assert.Equal(listed.Failures.Select(static failure => failure.TestName), set.Failures.Select(static failure => failure.TestName));
+        Assert.Equal(listed.Failures.Select(static failure => failure.Attempts.Count), set.Failures.Select(static failure => failure.Attempts.Count));
+        Assert.All(set.Failures.SelectMany(static failure => failure.Attempts), static attempt => Assert.Empty(attempt.Attachments));
+        Assert.Equal(listed.Diagnostics.Select(static diagnostic => diagnostic.Code), set.Diagnostics.Select(static diagnostic => diagnostic.Code));
+        Assert.Equal([2001], set.Failures[1].Bugs.Select(static bug => bug.Id));
+        // The two attachment lists are the only requests left out, and the others keep their order.
+        Assert.DoesNotContain(handler.Requests, static request => request.Uri.AbsolutePath.EndsWith("/attachments", StringComparison.Ordinal));
+        Assert.Equal(listedHandler.Requests.Where(static request => !request.Uri.AbsolutePath.EndsWith("/attachments", StringComparison.Ordinal))
+            .Select(static request => request.Method + " " + request.Uri.PathAndQuery + " " + request.Body),
+            handler.Requests.Select(static request => request.Method + " " + request.Uri.PathAndQuery + " " + request.Body));
+        Assert.Equal(9, handler.Requests.Count);
+    }
+
     // Test results fixture 9, resolution half of S5-8.
     [Fact]
     public async Task ValidTestCaseLinkResolvesAndAMissingOneKeepsItsLink()

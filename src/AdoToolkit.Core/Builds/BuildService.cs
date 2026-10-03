@@ -10,16 +10,21 @@ public sealed class BuildService
     private readonly AdoConnection connection;
     private readonly HttpClient client;
     private readonly IAdoLog? log;
+    private readonly RequestCounter? counter;
     private readonly AdoHttpPipeline pipeline;
 
-    public BuildService(HttpClient client, AdoConnection connection, IAdoLog? log = null)
+    public BuildService(HttpClient client, AdoConnection connection, IAdoLog? log = null) : this(client, connection, log, null) { }
+
+    // The counter counts every request of this service, the definition lookup included.
+    internal BuildService(HttpClient client, AdoConnection connection, IAdoLog? log, RequestCounter? counter)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(connection);
         this.connection = connection;
         this.client = client;
         this.log = log;
-        pipeline = new(client, connection.CollectionUri, TimeSpan.FromSeconds(connection.RequestTimeoutSeconds), log);
+        this.counter = counter;
+        pipeline = new(client, connection.CollectionUri, TimeSpan.FromSeconds(connection.RequestTimeoutSeconds), log, counter: counter);
     }
 
     public async Task<IReadOnlyList<AdoBuild>> GetBuildsAsync(string project, BuildQuery query, CultureInfo culture, CancellationToken cancellationToken)
@@ -27,7 +32,7 @@ public sealed class BuildService
         ArgumentNullException.ThrowIfNull(query);
         int? definition = query.DefinitionId;
         if (query.DefinitionName is not null)
-            definition = await new BuildDefinitionService(client, connection, log).ResolveAsync(project, query.DefinitionName, culture, cancellationToken).ConfigureAwait(false);
+            definition = await new BuildDefinitionService(client, connection, log, counter).ResolveAsync(project, query.DefinitionName, culture, cancellationToken).ConfigureAwait(false);
         return await ListAsync(project, query.Parameters(definition), query.Latest ? 1 : query.Top, culture, cancellationToken).ConfigureAwait(false);
     }
 
@@ -58,8 +63,8 @@ public sealed class BuildService
         {
             try
             {
-                string body = await ResponseJson.ReadAsync(response, token).ConfigureAwait(false);
-                return JsonSerializer.Deserialize(body, AdoJsonContext.Default.BuildDto) ?? throw new JsonException();
+                return await ResponseJson.DeserializeAsync(response, AdoJsonContext.Default.BuildDto, EndpointRegistry.BuildGet, culture, token)
+                    .ConfigureAwait(false) ?? throw new JsonException();
             }
             catch (JsonException error)
             {

@@ -2,7 +2,7 @@
 
 PowerShell toolkit for Azure DevOps Server 2020: compiled C# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 
-**Version 0.7.10** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.8.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
@@ -10,23 +10,22 @@ DevOps. Its cmdlets return typed objects that you can use in pipelines, and it w
 standalone HTML, Markdown or JSON reports when you need a document. All messages,
 report labels and help are available in English and French.
 
-Version 0.7.10 changes how a release pull request is merged, not what AdoToolkit does: the
-cmdlets, the reports, the help and the configuration file are those of 0.7.5. Version 0.7.5
-fixed defects that a repository audit found and added no feature: a lost
-connection is reported as one, a bug of another project links to its own project in the
-failed-test report, a build definition ID of any integer type is accepted, and a
-whitespace-only `-Field` or `-Query` is refused before any request. Version 0.7.0 reworked
-the failed-test report and the commands behind it.
-`Get-AdoBuildTestFailure` sends up to six requests at the same time, and
-`Export-AdoBuildTestFailure` downloads attachments the same way and now takes the small
-JSON and text files of every recent test run, not only of the latest one. The report has a
-new Open bugs view that lists each open bug with the tests linked to it, leaves closed bugs
-out, shows the full error message and stack trace of every attempt, and has a reworked Runs
-and history view with the history of each reported test. The cmdlets and their parameters
-are unchanged; the [changelog](CHANGELOG.md) says what a script can notice. Profiles hold
-your default project, branch, build definition, test plan and test suite; see the
+Version 0.8.0 makes the failed-test report faster to gather and quicker to read.
+`Get-AdoBuildTestFailure -SkipAttachments` leaves out the attachment lists, which are most
+of the requests when tests are rerun. Every request accepts compressed responses. The run
+history is planned so that the earlier builds it keeps no longer depend on the order in
+which the server answers, within a default of 500 requests instead of 400. With `-Verbose`,
+`Get-AdoBuildTestFailure` and `Export-AdoBuildTestFailure` give the requests and the time of
+each stage. The report leads with its counts, which also filter it, marks a test that fails
+for the first time as **New** and one that keeps failing as **N in a row**, shows each test's
+history as squares, and opens a test on its latest error and its own stack frames.
+Version 0.7.5 fixed defects that a repository audit found, and version 0.7.0 reworked the
+failed-test report and the commands behind it: up to six requests at the same time, the
+attachments of every recent test run, and an Open bugs view. The
+[changelog](CHANGELOG.md) says what a script can notice. Profiles hold your default
+project, branch, build definition, test plan and test suite; see the
 [configuration file](docs/guides/configuration.md#profiles). The
-[release notes](docs/release-0.7.10.md) list every change, the validation evidence and the
+[release notes](docs/release-0.8.0.md) list every change, the validation evidence and the
 remaining work-PC checks.
 
 > [!NOTE]
@@ -123,7 +122,7 @@ Profiles, connections and the other options are described in
 | Test Case JSON report format | [testcase.v1.schema.json](docs/schemas/testcase.v1.schema.json) |
 | Developer CLI, validation and prerequisites | [Developer tooling](docs/tooling.md) |
 | What changes for users in each version | [Changelog](CHANGELOG.md) |
-| Release notes | [Version 0.7.10](docs/release-0.7.10.md), with links to the earlier notes |
+| Release notes | [Version 0.8.0](docs/release-0.8.0.md), with links to the earlier notes |
 | Original specification, delivery plans, design notes and earlier release notes | [Archive](docs/archive/README.md) |
 | Rules for coding agents | [AGENTS.md](AGENTS.md) |
 

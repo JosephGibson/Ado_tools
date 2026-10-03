@@ -14,7 +14,8 @@ internal static class WorkItemTypeCategories
             {
                 try
                 {
-                    using JsonDocument document = JsonDocument.Parse(await ResponseJson.ReadAsync(response, token).ConfigureAwait(false));
+                    using JsonDocument document = await ResponseJson.ParseAsync(response, EndpointRegistry.WorkItemTypeCategory, culture, token)
+                        .ConfigureAwait(false);
                     JsonElement values = document.RootElement.GetProperty("workItemTypes");
                     return (IReadOnlyList<string>)Array.AsReadOnly(values.EnumerateArray().Select(value =>
                         value.GetProperty("name").GetString() ?? throw new JsonException()).ToArray());

@@ -21,9 +21,9 @@ internal static class WorkItemBatchReader
             {
                 try
                 {
-                    string json = await ResponseJson.ReadAsync(response, requestToken).ConfigureAwait(false);
-                    return (IReadOnlyList<WorkItemDto>)(JsonSerializer.Deserialize(json, AdoJsonContext.Default.WorkItemBatchDto)?.Value
-                        ?? throw new JsonException());
+                    WorkItemBatchDto? batch = await ResponseJson.DeserializeAsync(response, AdoJsonContext.Default.WorkItemBatchDto, endpoint,
+                        culture, requestToken).ConfigureAwait(false);
+                    return (IReadOnlyList<WorkItemDto>)(batch?.Value ?? throw new JsonException());
                 }
                 catch (JsonException error) { throw FormatError(culture, error); }
             }, token).ConfigureAwait(false);

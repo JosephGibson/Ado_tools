@@ -288,14 +288,14 @@
         <TableColumnHeader><Label>ShortName</Label></TableColumnHeader>
         <TableColumnHeader><Label>Attempts</Label></TableColumnHeader>
         <TableColumnHeader><Label>HasOpenBug</Label></TableColumnHeader>
-        <TableColumnHeader><Label>Storage</Label></TableColumnHeader>
+        <TableColumnHeader><Label>LatestError</Label></TableColumnHeader>
       </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
         <TableColumnItem><PropertyName>Ordinal</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>Classification</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>ShortName</PropertyName></TableColumnItem>
         <TableColumnItem><ScriptBlock>$_.Attempts.Count</ScriptBlock></TableColumnItem>
         <TableColumnItem><PropertyName>HasOpenBug</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Storage</PropertyName></TableColumnItem>
+        <TableColumnItem><ScriptBlock>[AdoToolkit.Core.Reporting.TestFailures.HtmlTestFailureRenderer]::LatestError($_)</ScriptBlock></TableColumnItem>
       </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
     </View>
     <View>

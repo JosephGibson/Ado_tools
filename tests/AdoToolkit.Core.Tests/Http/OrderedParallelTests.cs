@@ -104,6 +104,26 @@ public sealed class OrderedParallelTests
         Assert.Equal(3, cancelled);
     }
 
+    // With TryRunAll a failure stops nothing: the other items run to their end, at any degree, and
+    // every failure comes back in input order.
+    [Theory]
+    [InlineData(1)]
+    [InlineData(4)]
+    public async Task TryRunAllRunsEveryItemToItsEndWhateverFails(int degree)
+    {
+        int finished = 0;
+        OrderedParallelOutcome<int> outcome = await OrderedParallel.TryRunAllAsync<int, int>([0, 1, 2, 3], degree, async (item, token) =>
+        {
+            if (item is 0 or 2) throw new InvalidOperationException("item " + item.ToString(CultureInfo.InvariantCulture));
+            await Task.Delay(TimeSpan.FromMilliseconds(5), token);
+            Interlocked.Increment(ref finished);
+            return item * 10;
+        }, TestContext.Current.CancellationToken);
+        Assert.Equal(["item 0", "item 2"], outcome.Failures.Select(static failure => failure.Error.Message));
+        Assert.Equal(2, finished);
+        Assert.Equal((10, 30), (outcome.Results[1], outcome.Results[3]));
+    }
+
     [Fact]
     public async Task CancellationByTheCallerWinsOverAnyFailure()
     {
@@ -155,5 +175,45 @@ public sealed class OrderedParallelTests
         total.Increment();
         Assert.Equal(76, total.Count);
         Assert.Throws<ArgumentOutOfRangeException>(() => total.Child(0));
+    }
+
+    // Requests set aside count against the budget at once. Each piece of work sends its own without
+    // ever being refused; beyond them it takes from what is left, as a request that was not set
+    // aside does. A reservation is all or none and is never given back.
+    [Fact]
+    public void ReservedRequestsCountAtOnceAreNeverRefusedAndAreNotGivenBack()
+    {
+        RequestCounter total = new();
+        RequestCounter budget = total.Child(10);
+        budget.Increment();
+        IReadOnlyList<RequestCounter> pieces = budget.Reserve([3, 0, 2])!;
+        Assert.Equal(1, budget.Count);
+        // 1 sent and 5 set aside: a reservation of 5 more does not fit, and nothing is set aside.
+        Assert.Null(budget.Reserve([2, 3]));
+        IReadOnlyList<RequestCounter> last = Assert.IsAssignableFrom<IReadOnlyList<RequestCounter>>(budget.Reserve([1]));
+        // 3 left. The piece with nothing set aside takes two of them; the others send their own.
+        pieces[1].Increment();
+        pieces[1].Increment();
+        for (int request = 0; request < 3; request++) pieces[0].Increment();
+        pieces[2].Increment();
+        // A request beyond the first piece's three takes the last one left; the next is refused.
+        pieces[0].Increment();
+        Assert.True(budget.IsSpent);
+        Assert.Throws<RequestBudgetExceededException>(pieces[0].Increment);
+        Assert.Throws<RequestBudgetExceededException>(budget.Increment);
+        // Requests set aside are still sent, whatever was refused before them.
+        pieces[2].Increment();
+        last[0].Increment();
+        Assert.Throws<RequestBudgetExceededException>(last[0].Increment);
+        Assert.Equal((10, 10, 2), (budget.Count, total.Count, pieces[1].Count));
+        Assert.Equal(4, pieces[0].Count);
+        // Not given back: a piece that sends fewer than set aside leaves the budget spent.
+        RequestCounter spare = total.Child(4);
+        IReadOnlyList<RequestCounter> unused = spare.Reserve([3])!;
+        unused[0].Increment();
+        Assert.Equal(1, spare.Count);
+        Assert.Null(spare.Reserve([2]));
+        Assert.NotNull(spare.Reserve([1]));
+        Assert.True(spare.IsSpent);
     }
 }

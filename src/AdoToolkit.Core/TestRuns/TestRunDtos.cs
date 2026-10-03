@@ -54,7 +54,21 @@ internal sealed class RunStatisticDto
     public int Count { get; init; }
 }
 
-internal sealed class TestResultPageDto { public List<TestResultDto>? Value { get; init; } }
+internal sealed class TestResultListingPageDto { public List<TestResultListingDto>? Value { get; init; } }
+
+// A result as pass 1 and history list it: the fields of §15.9 step 3 and nothing else. Every other
+// field of a listed result is skipped unread, so a large listing costs no more than these fields.
+internal sealed class TestResultListingDto
+{
+    public int Id { get; init; }
+    public string? Outcome { get; init; }
+    public string? AutomatedTestName { get; init; }
+    public string? AutomatedTestStorage { get; init; }
+    public string? TestCaseTitle { get; init; }
+    public string? ResultGroupType { get; init; }
+    public DateTimeOffset? StartedDate { get; init; }
+    public TestCaseReferenceDto? TestCase { get; init; }
+}
 
 internal sealed class TestResultDto
 {

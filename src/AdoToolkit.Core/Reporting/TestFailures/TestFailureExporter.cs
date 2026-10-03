@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using AdoToolkit.Core.IO;
 using AdoToolkit.Core.TestRuns;
 
@@ -5,6 +6,10 @@ namespace AdoToolkit.Core.Reporting.TestFailures;
 
 // One report per set (§15.8). Prepare covers §13.4 steps 1–2 on the caller's thread so the shell
 // can ask ShouldProcess before anything is downloaded or written; ExportAsync covers steps 3–8.
+//
+// ExportAsync writes one Verbose line per step, in this order whatever is downloaded: the
+// attachment downloads with their files and requests, the rendered report with its bytes, its
+// check, and the move into place. A summary of the export ends them.
 public sealed class TestFailureExporter
 {
     private readonly IDocumentLauncher launcher;
@@ -65,6 +70,8 @@ public sealed class TestFailureExporter
         CultureInfo culture = plan.Options.SessionCulture;
         TestFailureReportModel model = plan.Model;
         IReadOnlyList<AdoDiagnostic> diagnostics = [];
+        StageTimer stage = new(output, culture);
+        int files = 0, requests = 0;
         if (plan.Options.CreateDirectory)
         {
             try { Directory.CreateDirectory(plan.Commit.Directory); }
@@ -73,6 +80,8 @@ public sealed class TestFailureExporter
                 throw new AdoFileOutputException(Messages.Get(AdoMessage.FileOutput, culture, plan.Commit.Directory), error);
             }
         }
+        // Nothing to download: the line keeps its place, with nothing counted.
+        if (!plan.DownloadsAttachments) stage.End(AdoMessage.ExportStageDownloads, files, requests);
         GenerationCommitResult result = await commit.CommitAsync(plan.Commit, plan.Options.NoClobber, plan.DownloadsAttachments,
             async (folder, token) =>
             {
@@ -86,12 +95,51 @@ public sealed class TestFailureExporter
                     MaximumInlineJsonBytes = downloader.MaximumInlineJsonBytes, MaximumInlineTotalBytes = downloader.MaximumInlineTotalBytes,
                 };
                 model = TestFailureReportModelBuilder.WithAttachments(plan.Model, downloaded.Failures, diagnostics, local);
+                files = downloaded.Files.Count;
+                requests = downloader.RequestCount;
+                stage.End(AdoMessage.ExportStageDownloads, files, requests);
                 return local is not null;
             },
             writer => HtmlTestFailureRenderer.Render(model, writer),
-            (report, folder) => TestFailureReportValidator.Validate(report, model, folder),
+            (report, folder) =>
+            {
+                // The report has been rendered, written and flushed when its check begins.
+                stage.End(AdoMessage.ExportStageRender, new FileInfo(report).Length);
+                TestFailureReportValidator.Validate(report, model, folder);
+                stage.End(AdoMessage.ExportStageValidation);
+            },
             output.Warning, culture, cancellationToken).ConfigureAwait(false);
+        stage.End(AdoMessage.ExportStageCommit);
+        output.Verbose(Messages.Get(AdoMessage.ExportSummary, culture, plan.Model.Build.Id, files, requests, stage.Total));
         if (plan.Options.Open) DocumentOpener.Open(launcher, result.Report.FullName, culture, output.Warning);
         return new TestFailureExportResult { Report = result.Report, AttachmentDirectory = result.AttachmentDirectory, Diagnostics = diagnostics };
+    }
+
+    // Times steps that follow one another: each line gives the milliseconds since the previous one,
+    // so the lines add up, within rounding, to Total.
+    private sealed class StageTimer
+    {
+        private readonly IAdoLog log;
+        private readonly CultureInfo culture;
+        private readonly long started;
+        private long last;
+
+        internal StageTimer(IAdoLog log, CultureInfo culture)
+        {
+            this.log = log;
+            this.culture = culture;
+            started = last = Stopwatch.GetTimestamp();
+        }
+
+        internal long Total => Milliseconds(started, Stopwatch.GetTimestamp());
+
+        internal void End(AdoMessage step, params object[] values)
+        {
+            long now = Stopwatch.GetTimestamp();
+            log.Verbose(Messages.Get(step, culture, [.. values, Milliseconds(last, now)]));
+            last = now;
+        }
+
+        private static long Milliseconds(long from, long to) => (long)Math.Round(Stopwatch.GetElapsedTime(from, to).TotalMilliseconds);
     }
 }

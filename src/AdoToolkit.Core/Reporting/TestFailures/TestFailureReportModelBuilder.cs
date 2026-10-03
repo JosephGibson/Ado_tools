@@ -62,6 +62,7 @@ public static class TestFailureReportModelBuilder
             ResultsUrl = AdoWebLinks.BuildTestResult(collection, project, set.Build.Id),
             DefinitionUrl = AdoWebLinks.BuildDefinition(collection, project, set.Build.Definition.Id),
             CommitUrl = AdoWebLinks.Commit(collection, project, set.Build.RepositoryType, set.Build.RepositoryId, set.Build.SourceVersion),
+            AttachmentsListed = set.AttachmentsListed,
             AttachmentRunIds = inWindow, AttachmentWindowStart = windowStart, OmittedAttachmentCount = omitted, FlakyExcluded = flakyExcluded,
             Grouping = PipelineGrouping.Create(set.Runs, failures.SelectMany(f => f.Attempts).Select(a => a.RunId)),
         };
@@ -91,7 +92,7 @@ public static class TestFailureReportModelBuilder
             FailedCount = model.FailedCount, FlakyCount = model.FlakyCount,
             Status = diagnostics.Any(d => d.Severity == AdoDiagnosticSeverity.Error) ? AdoTestFailureStatus.Partial : model.Status,
             BuildUrl = model.BuildUrl, ResultsUrl = model.ResultsUrl, DefinitionUrl = model.DefinitionUrl, CommitUrl = model.CommitUrl,
-            LocalAttachments = local, AttachmentRunIds = model.AttachmentRunIds, AttachmentWindowStart = model.AttachmentWindowStart,
+            LocalAttachments = local, AttachmentsListed = model.AttachmentsListed, AttachmentRunIds = model.AttachmentRunIds, AttachmentWindowStart = model.AttachmentWindowStart,
             OmittedAttachmentCount = model.OmittedAttachmentCount, FlakyExcluded = model.FlakyExcluded, Grouping = model.Grouping,
         };
     }

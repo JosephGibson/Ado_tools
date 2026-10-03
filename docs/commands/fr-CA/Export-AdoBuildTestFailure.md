@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-02-2026
+ms.date: 10-03-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -35,16 +35,25 @@ sixième pour les diagnostics lorsqu’il y en a. Vue d’ensemble est un tablea
 par test en échec : son numéro de cas de test lié à l’élément de travail, l’état de chaque
 groupe de tentatives qui l’a exécuté et la première ligne de sa dernière erreur. Un test
 qui a au moins un bogue ouvert porte après son nom un lien Bogue ouvert vers le bogue ouvert
-de plus petit numéro. Par erreur regroupe les mêmes lignes sous leur dernière erreur.
+de plus petit numéro. Avant ce lien, Nouveau indique que le build précédent a exécuté le test
+sans échec, et N fois de suite que le test a échoué ou a été instable dans ce build et dans les
+N - 1 builds précédents; rien n’est indiqué lorsque ce build n’a pas pu être lu ou n’a pas
+exécuté le test. Par erreur regroupe les mêmes lignes sous leur dernière erreur.
 Bogues ouverts liste chaque bogue une fois avec les tests qui lui sont liés et indique si
 chaque lien vient d’un résultat de test, du cas de test ou des deux; le bogue qui a le plus
 de tests vient en premier, et un bogue qui n’a pas pu être lu vient en dernier, avec la
 mention Non lu. Détails présente une fiche par test, qui liste ses bogues ouverts avec leur
-ID lié à l’élément de travail, leur titre et leur état. Un bogue est ouvert sauf si son
+ID lié à l’élément de travail, leur titre et leur état. Son historique présente un carré par
+build, distingué par sa forme autant que par sa couleur, plein en cas d’échec, à moitié plein
+si le test est instable, vide en cas de réussite, en tirets s’il n’a pas été exécuté, en
+pointillés pour un autre résultat et hachuré pour un build qui n’a pas pu être lu. La même
+mention Nouveau ou N fois de suite le suit, avec le build où les échecs ont commencé, et le
+champ En échec depuis d’une tentative nomme ce build par son numéro lorsqu’il figure dans
+l’historique. Un bogue est ouvert sauf si son
 état appartient à la catégorie d’états Completed ou Removed; un bogue fermé n’est pas
 affiché, et un bogue qui n’a pas pu être lu n’affiche que le lien vers son ID et la mention
-Non lu. Séries de tests et historique liste les séries de tests du build avec leurs
-tentatives, leur durée, leurs décomptes de tests, les tests signalés et les pièces jointes
+Non lu. Séries et historique liste les séries de tests du build avec les numéros de
+tentative qu’elles ont, de la phase, du travail ou de l’instance du travail, leur durée, leurs décomptes de tests, les tests signalés et les pièces jointes
 répertoriées et téléchargées, et signale la dernière série de tests. La vue présente
 ensuite l’historique des exécutions sous forme de graphique, de tableau des builds et de
 tableau des tests signalés, avec leur résultat dans chaque build et le nombre de builds
@@ -68,8 +77,13 @@ gardent une seule liste.
 Les tests instables sont omis sauf avec `-IncludeFlaky`; l’en-tête les compte quand même.
 Le rapport est complet lorsque les scripts sont bloqués. Un petit script statique, autorisé
 par une stratégie de sécurité du contenu fondée sur des hachages, ajoute le changement de
-vue, la recherche, la navigation au clavier et la copie. La recherche compare chaque mot
-saisi à toute la fiche, tentatives réduites comprises : messages d’erreur, arborescences
+vue, la recherche, la navigation au clavier et la copie, et fait des décomptes du haut du
+rapport des raccourcis vers leurs filtres. Il ouvre la tentative de la dernière erreur d’un
+test lorsque le test est atteint depuis sa ligne ou avec j ou k, ouvre une arborescence des
+appels qui contient un appel du code du test en masquant les appels du framework, et ouvre les
+messages d’erreur avec retour automatique à la ligne; la copie et l’impression conservent
+tous les appels. La recherche compare chaque mot saisi, sans tenir compte de la casse ni des
+accents, à toute la fiche, tentatives réduites comprises : messages d’erreur, arborescences
 des appels, pièces jointes JSON et texte affichées, noms de phase et de travail, champs
 des séries de tests et des tentatives, et titres et états des bogues. Un ID de cas de test
 correspond avec ou sans `#`. Lorsqu’au moins un test a un bogue ouvert, le filtre Sans
@@ -91,6 +105,10 @@ lien : l’exportation ne se rabat pas sur une série précédente pour ceux-l�
 d’une série plus ancienne qui ne déclare aucune taille est téléchargé et conservé seulement
 s’il fait au plus `maximumInlineJsonBytes`. Lorsqu’aucune série n’a de fichier à
 télécharger, aucun dossier de pièces jointes n’est créé et aucune connexion n’est requise.
+Un ensemble obtenu avec `Get-AdoBuildTestFailure -SkipAttachments` ne répertorie aucune
+pièce jointe : son exportation ne télécharge rien et n’a besoin d’aucune connexion, quels
+que soient les paramètres, et son rapport indique que les pièces jointes n’ont pas été
+répertoriées, dans l’en-tête et dans Séries et historique, au lieu de les compter.
 
 Utilisez `-AllRunAttachments` pour télécharger aussi les fichiers JSON et texte plus
 volumineux de toutes les séries de tests de la fenêtre, ou `-SkipAttachments` pour n’en
@@ -429,7 +447,7 @@ Le rapport validé et enregistré. Lorsque des pièces jointes ont été téléc
 
 ## NOTES
 
-Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. La façon dont Server 2020 répond à plusieurs téléchargements simultanés n’a pas été confirmée au travail (V-33). Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase, de travail et de série utilisés pour le regroupement et le suffixe de nouvelle tentative des noms de série (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27).
+Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. La façon dont Server 2020 répond à plusieurs téléchargements simultanés n’a pas été confirmée au travail (V-33). Avec -Verbose, chaque étape de l’exportation écrit une ligne indiquant sa durée en millisecondes : les téléchargements des pièces jointes, avec les fichiers écrits et les requêtes envoyées; le rapport produit, avec sa taille en octets; la vérification du rapport; et sa mise en place, qui supprime aussi les dossiers de pièces jointes antérieurs. Lorsque rien n’est téléchargé, la ligne des téléchargements reste à sa place avec 0 fichier et 0 requête. Une dernière ligne indique le build, les pièces jointes téléchargées, les requêtes et la durée écoulée. Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase, de travail et de série utilisés pour le regroupement et le suffixe de nouvelle tentative des noms de série (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27).
 
 ## RELATED LINKS
 

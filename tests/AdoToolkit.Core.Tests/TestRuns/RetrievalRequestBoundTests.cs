@@ -5,16 +5,18 @@ using AdoToolkit.Core.TestRuns;
 namespace AdoToolkit.Core.Tests.TestRuns;
 
 // The §15.9 bound: run pages + result pages (current and history builds) + one detail request per
-// reported result record + attachment lists + ceil(distinct Test Case IDs / 200). The bug lookup
-// adds ceil(distinct bug candidates / 200), one Bug category read per project with linked work
-// items and one state list per project and bug type (TestBugResolutionTests). A result listing
-// costs one request less when its run is completed and its short last page completes the run's
-// total: the empty page that would end it is not requested.
+// reported result record + attachment lists, none with SkipAttachments + ceil(distinct Test Case
+// IDs / 200). The bug lookup adds ceil(distinct bug candidates / 200), one Bug category read per
+// project with linked work items and one state list per project and bug type
+// (TestBugResolutionTests). A result listing costs one request less when its run is completed and
+// its short last page completes the run's total: the empty page that would end it is not requested.
 [Trait("Acceptance", "S5-1")]
 public sealed class RetrievalRequestBoundTests
 {
-    [Fact]
-    public async Task RequestCountMatchesTheDocumentedBoundForTheRerunFixture()
+    [Theory]
+    [InlineData(false, 11)]
+    [InlineData(true, 0)]
+    public async Task RequestCountMatchesTheDocumentedBoundForTheRerunFixture(bool skipAttachments, int expectedAttachmentLists)
     {
         TestRunFixture fixture = new();
         fixture.Route("runs-two.json", "/test/runs", "%24skip=0&")
@@ -28,7 +30,7 @@ public sealed class RetrievalRequestBoundTests
         using HttpClient client = new(handler);
         TestFailureRetrievalService service = TestRunFixture.Service(client);
         AdoBuildTestFailureSet set = await service.GetAsync(TestRunFixture.Build(),
-            new TestFailureQuery { HistoryCount = 1 }, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
+            new TestFailureQuery { HistoryCount = 1, SkipAttachments = skipAttachments }, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
         int runPages = Count(handler, "/_apis/test/runs");
         int resultPages = handler.Requests.Count(static request =>
             request.Uri.AbsolutePath.EndsWith("/results", StringComparison.Ordinal));
@@ -39,18 +41,20 @@ public sealed class RetrievalRequestBoundTests
         int batches = Count(handler, "/_apis/wit/workitemsbatch");
         // Two run pages, two result pages (run 201 lists its three tests on one page; run 202 lists
         // none of its two, so its first page is the empty one), one detail per rerun parent, one
-        // attachment list per detailed result plus one per rerun attempt, and no Test Case batch.
+        // attachment list per detailed result plus one per rerun attempt unless they are skipped,
+        // and no Test Case batch.
         Assert.Equal(2, runPages);
         Assert.Equal(2, resultPages);
         Assert.Equal(3, details);
-        Assert.Equal(11, attachmentLists);
+        Assert.Equal(expectedAttachmentLists, attachmentLists);
         Assert.Equal(0, batches);
         Assert.Equal(runPages + resultPages + details + attachmentLists + batches, handler.Requests.Count);
         Assert.Equal(handler.Requests.Count, service.RequestCount);
-        Assert.Equal(18, handler.Requests.Count);
+        Assert.Equal(7 + expectedAttachmentLists, handler.Requests.Count);
         // Eight attempts over three identities cost three detail requests: sub-results arrive
         // with their parent, so a rerun group is one request whatever its attempt count.
         Assert.Equal(8, set.Failures.Sum(static failure => failure.Attempts.Count));
+        Assert.Equal(!skipAttachments, set.AttachmentsListed);
     }
 
     [Fact]

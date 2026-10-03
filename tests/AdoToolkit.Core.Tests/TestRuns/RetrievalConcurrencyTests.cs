@@ -18,6 +18,7 @@ namespace AdoToolkit.Core.Tests.TestRuns;
 public sealed partial class RetrievalConcurrencyTests
 {
     private static readonly string[] Stages = ["runs", "results", "detail", "attachments", "test cases", "bugs", "category", "states", "window", "history"];
+    private static readonly int[] EarlierBuilds = [400, 399, 398, 397, 396];
 
     [Theory]
     [InlineData(1)]
@@ -200,6 +201,52 @@ public sealed partial class RetrievalConcurrencyTests
             Assert.Equal([2001, 3001], Test(set, "T1").Bugs.Select(static bug => bug.Id));
         }
         Assert.Equal(Describe(first), Describe(second));
+    }
+
+    // Near the history budget, the builds kept and the requests sent depend neither on the bound nor
+    // on the order of the answers. Build 400 fits whole. One result listing of build 399 is refused
+    // by the server; its other listings are still read to their end, so the build spends its whole
+    // reservation (0.7.10 cancelled them when the failure came first, so what was left for older
+    // builds depended on timing). Build 398 has a run without totalTests and build 397 a run still
+    // in progress: each is read to its end before an older build is planned, its uncosted pages
+    // taking from what is left. A build whose result pages do not fit sends none of them.
+    [Theory]
+    // Budget; kept earlier builds, oldest first (396 to 400); result requests per earlier build,
+    // newest first (400 to 396); history requests.
+    [InlineData(5, "00000", "0 0 0 0 0", 3)]
+    [InlineData(6, "00001", "3 0 0 0 0", 6)]
+    [InlineData(11, "00001", "3 0 0 0 0", 8)]
+    [InlineData(12, "00001", "3 4 0 0 0", 12)]
+    [InlineData(14, "00001", "3 4 0 0 0", 14)]
+    [InlineData(15, "00001", "3 4 1 0 0", 15)]
+    [InlineData(16, "00001", "3 4 2 0 0", 16)]
+    [InlineData(17, "00101", "3 4 3 0 0", 17)]
+    [InlineData(20, "00101", "3 4 3 1 0", 20)]
+    [InlineData(24, "01101", "3 4 3 2 0", 23)]
+    [InlineData(25, "11101", "3 4 3 2 2", 25)]
+    public async Task NearTheHistoryBudgetTheBuildsKeptAndTheRequestsSentDependOnNeitherTheBoundNorTheResponseOrder(int budget, string kept, string pages, int requests)
+    {
+        string? firstRequests = null, firstSet = null;
+        foreach ((int bound, int seed) in new[] { (1, 0), (8, 1), (8, 2), (8, 3) })
+        {
+            using HistoryServer server = new(seed);
+            AdoBuildTestFailureSet set = await server.GetAsync(new TestFailureQuery
+            {
+                HistoryCount = 6, MaximumHistoryRequests = budget, MaximumConcurrentRequests = bound, SkipAttachments = true,
+            });
+            Assert.Equal([396, 397, 398, 399, 400, 401], set.History.Select(static summary => summary.BuildId));
+            Assert.Equal(kept + "1", string.Concat(set.History.Select(static summary => summary.IsAvailable ? '1' : '0')));
+            Assert.Equal(budget < 25 ? 1 : 0, set.Diagnostics.Count(static item => item.Code == DiagnosticCodes.HistoryLimitExceeded));
+            Assert.Equal(budget >= 12 ? ["399"] : [], set.Diagnostics.Where(static item => item.Code == DiagnosticCodes.HistoryUnavailable)
+                .Select(static item => item.Arguments[0]));
+            Assert.Equal(pages, string.Join(' ', EarlierBuilds.Select(build => server.ResultRequests(build).ToString(CultureInfo.InvariantCulture))));
+            Assert.Equal(requests, server.HistoryRequests);
+            string sent = string.Join('\n', server.Sent().Order(StringComparer.Ordinal)), described = Describe(set);
+            firstRequests ??= sent;
+            firstSet ??= described;
+            Assert.Equal(firstRequests, sent);
+            Assert.Equal(firstSet, described);
+        }
     }
 
     private static AdoTestFailure Test(AdoBuildTestFailureSet set, string name) => Assert.Single(set.Failures, failure => failure.ShortName == name);
@@ -402,6 +449,112 @@ public sealed partial class RetrievalConcurrencyTests
             + "\",\"System.WorkItemType\":\"" + type + "\",\"System.TeamProject\":\"" + TestRunFixture.Project + "\"},\"relations\":["
             + string.Join(',', linked.Select(static target => "{\"rel\":\"Microsoft.VSTS.Common.TestedBy-Reverse\",\"url\":\"https://ado.example.test/Collection/_apis/wit/workItems/" + N(target) + "\"}"))
             + "]}";
+
+        private static HttpResponseMessage Page(IEnumerable<string> items)
+        {
+            string[] values = [.. items];
+            return FakeHttpMessageHandler.Response("{\"count\":" + N(values.Length) + ",\"value\":[" + string.Join(',', values) + "]}");
+        }
+
+        private static int Number(string text) => int.Parse(text, CultureInfo.InvariantCulture);
+        private static string N(int value) => value.ToString(CultureInfo.InvariantCulture);
+    }
+
+    // The history of NearTheHistoryBudget…: build 401 has one run, 501, with one failed test, and
+    // five earlier builds. Each earlier run is (ID, totalTests, state, results it lists); the
+    // listings of run 420 are refused. Delays depend only on the request and the seed, as above.
+    private sealed class HistoryServer : IDisposable
+    {
+        private const int FailingRun = 420;
+        private static readonly int[] WindowBuilds = [401, 400, 399, 398, 397, 396];
+        private static readonly Dictionary<int, (int Id, int? Total, string State, int Listed)[]> EarlierRuns = new()
+        {
+            [400] = [(410, 2, "Completed", 2), (411, 1000, "Completed", 1000)],
+            [399] = [(FailingRun, 3, "Completed", 3), (421, 1000, "Completed", 1000), (422, 4, "Completed", 4)],
+            [398] = [(430, null, "Completed", 2), (431, 1, "Completed", 1)],
+            [397] = [(440, 5, "InProgress", 5)],
+            [396] = [(450, 1, "Completed", 1), (451, 1, "Completed", 1)],
+        };
+        private readonly HttpClient client;
+        private readonly int seed;
+
+        internal HistoryServer(int seed)
+        {
+            this.seed = seed;
+            Handler = new FakeHttpMessageHandler
+            {
+                Fallback = async (request, token) =>
+                {
+                    if (this.seed != 0) await Task.Delay(TimeSpan.FromMilliseconds(Hash(request.RequestUri!.PathAndQuery) % 9), token);
+                    return Respond(request.RequestUri!);
+                },
+            };
+            client = new HttpClient(Handler);
+        }
+
+        internal FakeHttpMessageHandler Handler { get; }
+
+        // The window, the run lists and the result listings of the earlier builds.
+        internal int HistoryRequests => Handler.Requests.Count(static request =>
+            request.Uri.AbsolutePath.EndsWith("/_apis/build/builds", StringComparison.Ordinal)
+            || (request.Uri.AbsolutePath.EndsWith("/_apis/test/runs", StringComparison.Ordinal) && !request.Uri.Query.Contains("Build%2F401", StringComparison.Ordinal))
+            || (Listing().Match(request.Uri.AbsolutePath) is { Success: true } listing && listing.Groups[1].Value != "501"));
+
+        internal int ResultRequests(int build) => Handler.Requests.Count(request =>
+            Listing().Match(request.Uri.AbsolutePath) is { Success: true } listing
+            && EarlierRuns[build].Any(run => N(run.Id) == listing.Groups[1].Value));
+
+        internal Task<AdoBuildTestFailureSet> GetAsync(TestFailureQuery query) =>
+            new TestFailureRetrievalService(client, TestRunFixture.Connection, null, new FakeClock())
+                .GetAsync(TestRunFixture.Build(), query, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
+
+        internal IEnumerable<string> Sent() => Handler.Requests.Select(static request => request.Method + " " + request.Uri.PathAndQuery);
+
+        public void Dispose()
+        {
+            client.Dispose();
+            Handler.Dispose();
+        }
+
+        private uint Hash(string text)
+        {
+            uint hash = 2166136261 ^ (uint)seed;
+            foreach (char character in text) hash = (hash ^ character) * 16777619;
+            return hash;
+        }
+
+        private static HttpResponseMessage Respond(Uri uri)
+        {
+            string path = uri.AbsolutePath, query = uri.Query;
+            int skip = Skip().Match(query) is { Success: true } paging ? Number(paging.Groups[1].Value) : 0;
+            if (path.EndsWith("/_apis/build/builds", StringComparison.Ordinal))
+                return Page(WindowBuilds.Select(static id => "{\"id\":" + N(id) + ",\"buildNumber\":\"2026." + N(id) + "\",\"sourceBranch\":\"refs/heads/main\","
+                    + "\"result\":\"failed\",\"finishTime\":\"2026-09-" + N(id - 386) + "T10:00:00Z\"}"));
+            if (path.EndsWith("/_apis/test/runs", StringComparison.Ordinal))
+            {
+                int build = Number(BuildFilter().Match(query).Groups[1].Value);
+                return Page(skip > 0 ? [] : build == 401 ? [Run(501, 1, "Completed")]
+                    : EarlierRuns[build].Select(static run => Run(run.Id, run.Total, run.State)));
+            }
+            if (Listing().Match(path) is { Success: true } listing)
+            {
+                int run = Number(listing.Groups[1].Value);
+                if (run == FailingRun) return FakeHttpMessageHandler.Response("{\"message\":\"Synthetic failure.\"}", 500);
+                int listed = run == 501 ? 1 : EarlierRuns.Values.SelectMany(static runs => runs).Single(item => item.Id == run).Listed;
+                return Page(Enumerable.Range(skip + 1, Math.Clamp(listed - skip, 0, 1000)).Select(id => Listed(run, id)));
+            }
+            if (Detail().Match(path) is { Success: true } detail && detail.Groups[1].Value == "501" && detail.Groups[2].Value == "1")
+                return FakeHttpMessageHandler.Response("{\"id\":1,\"outcome\":\"Failed\"," + Identity(1) + ",\"errorMessage\":\"Synthetic failure.\"}");
+            throw new InvalidOperationException("No synthetic response for " + uri.PathAndQuery);
+        }
+
+        private static string Identity(int id) => "\"automatedTestName\":\"Synthetic.History.T" + N(id) + "\",\"automatedTestStorage\":\"Synthetic.History.dll\"";
+
+        private static string Listed(int run, int id) =>
+            "{\"id\":" + N(id) + ",\"outcome\":\"" + (id == 1 && run % 10 is 0 or 1 ? "Failed" : "Passed") + "\"," + Identity(id) + "}";
+
+        private static string Run(int id, int? total, string state) => "{\"id\":" + N(id) + ",\"name\":\"History " + N(id) + "\",\"state\":\"" + state
+            + "\",\"isAutomated\":true" + (total is int value ? ",\"totalTests\":" + N(value) : "") + "}";
 
         private static HttpResponseMessage Page(IEnumerable<string> items)
         {

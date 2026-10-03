@@ -8,7 +8,7 @@ namespace AdoToolkit.Core.Reporting.Charts;
 // left, and many builds scroll sideways instead of shrinking until their labels cannot be read.
 public static class RunHistoryChart
 {
-    private const double BarWidth = 52, BarTop = 56, BarHeight = 180, BarBottom = BarTop + BarHeight, ChartHeight = 272;
+    private const double BarWidth = 52, BarTop = 56, BarHeight = 120, BarBottom = BarTop + BarHeight, ChartHeight = BarBottom + 36;
     private const double MinimumSlot = 80, CharacterWidth = 7, MinimumSegment = 6;
     // A build number longer than this is cut in the bar label; the bar's title and the table hold it whole.
     private const int MaximumLabelCharacters = 28;
@@ -53,7 +53,7 @@ public static class RunHistoryChart
                     writer.Write("<path class=\"chart-hatch\" d=\"M "); writer.Write(N(x)); writer.Write(' '); writer.Write(N(y + 8));
                     writer.Write(" l "); writer.Write(N(BarWidth)); writer.Write(" -8\"/>");
                 }
-                Text(writer, center, BarTop + 98, "?", "chart-caption");
+                Text(writer, center, BarTop + BarHeight / 2 + 8, "?", "chart-caption");
             }
             else
             {
@@ -123,7 +123,8 @@ public static class RunHistoryChart
         if (count == 0) return;
         bottom -= height;
         writer.Write("<g data-outcome=\""); writer.Write(StatusPresentation.Css(status)); writer.Write("\" data-count=\""); writer.Write(N(count)); writer.Write("\"><title>");
-        writer.Write(E(StatusPresentation.Glyph(status) + " " + StatusPresentation.Label(status, culture) + ": " + count.ToString(culture)));
+        writer.Write(E(Messages.Get(AdoMessage.TestReportLabelValue, culture, StatusPresentation.Glyph(status) + " " + StatusPresentation.Label(status, culture),
+            count.ToString(culture))));
         writer.Write("</title>");
         Rect(writer, x, bottom, BarWidth, height, css);
         if (height >= 20 && count.ToString(culture).Length <= 6) Text(writer, x + BarWidth / 2, bottom + height / 2 + 4, count.ToString(culture), "chart-count");

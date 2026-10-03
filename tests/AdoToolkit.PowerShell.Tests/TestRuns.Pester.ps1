@@ -15,9 +15,10 @@ BeforeAll {
     # closed, so it is read and then left out of the set. Both runs are completed and list as many
     # results as they report, so neither result listing ends with a request for an empty page.
     # -Piped is a later build of the same invocation: its Test Cases and the bug states come from
-    # the invocation cache, so those two requests are not sent.
+    # the invocation cache, so those two requests are not sent. -SkipAttachments leaves out the two
+    # attachment lists.
     function Get-TwoRunResponses {
-        param([switch] $Piped)
+        param([switch] $Piped, [switch] $SkipAttachments)
         @(
             @{ Body = Get-TestRunFixture 'runs-two.json' }
             @{ Body = $script:EmptyPage }
@@ -25,8 +26,10 @@ BeforeAll {
             @{ Body = Get-TestRunFixture 'results-run-202.json' }
             @{ Body = Get-TestRunFixture 'result-detail-202-11.json' }
             @{ Body = Get-TestRunFixture 'result-detail-201-1.json' }
-            @{ Body = Get-TestRunFixture 'attachments-empty.json' }
-            @{ Body = Get-TestRunFixture 'attachments-result.json' }
+            if (-not $SkipAttachments) {
+                @{ Body = Get-TestRunFixture 'attachments-empty.json' }
+                @{ Body = Get-TestRunFixture 'attachments-result.json' }
+            }
             if (-not $Piped) { @{ Body = Get-TestRunFixture 'workitems-testcases.json' } }
             @{ Body = Get-TestRunFixture 'workitems-bugs.json' }
             if (-not $Piped) { @{ Body = Get-TestRunFixture 'workitemtype-states-bug.json' } }
@@ -174,6 +177,7 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
             $set.Failures[1].Bugs[0].IsAssociatedWithResult | Should -BeTrue
             $set.Failures[1].HasOpenBug | Should -BeTrue
             $set.Failures[0].HasOpenBug | Should -BeFalse
+            $set.AttachmentsListed | Should -BeTrue
             $set.Failures[1].Attempts[0].Attachments.Count | Should -Be 5
             $set.Failures[1].Attempts[0].Attachments[0].Kind | Should -Be 'Png'
             $set.Failures[1].Attempts[0].Attachments[0].DownloadStatus | Should -Be 'NotRequested'
@@ -233,6 +237,32 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
         finally { Stop-FakeAdoServer -Server $server }
     }
 
+    # The build comes from BuildGet, from Get-AdoBuild through the pipeline, or from the latest-build
+    # listing of the definition; each way costs one request before the nine of the retrieval.
+    It 'sends no attachment-list request with -SkipAttachments in the <Set> parameter set' -ForEach @(
+        @{ Set = 'ByBuildId'; Build = 'build-401.json' },
+        @{ Set = 'ByBuild'; Build = 'builds-history.json' },
+        @{ Set = 'ByDefinition'; Build = 'builds-history.json' }
+    ) {
+        $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture $Build }) + (Get-TwoRunResponses -SkipAttachments))
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $set = switch ($Set) {
+                'ByBuildId' { Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -SkipAttachments -WarningAction SilentlyContinue }
+                'ByBuild' { Get-AdoBuild -Definition 42 -Latest | Get-AdoBuildTestFailure -HistoryCount 1 -SkipAttachments -WarningAction SilentlyContinue }
+                'ByDefinition' { Get-AdoBuildTestFailure -Definition 42 -HistoryCount 1 -SkipAttachments -WarningAction SilentlyContinue }
+            }
+            $set.Build.Id | Should -Be 401
+            $set.AttachmentsListed | Should -BeFalse
+            $set.Failures.ShortName | Should -Be @('Totals', 'AddsItem')
+            $set.Failures[1].Bugs.Id | Should -Be @(2001)
+            @($set.Failures | ForEach-Object Attempts | Where-Object { $_.Attachments.Count -gt 0 }).Count | Should -Be 0
+            $server.Requests.Count | Should -Be 10
+            @($server.Requests.ToArray() | Where-Object { $_.Line -match '/attachments\?' }).Count | Should -Be 0
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
     It 'warns once and reports Partial when the configured failure maximum is exceeded' {
         Set-SequentialConfiguration -TestResults '"maximumReportedFailures":2'
         # Run 201 lists five results and reports three, so its listing still ends on an empty page;
@@ -257,6 +287,59 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
             $set.Diagnostics.Code | Should -Contain 'FailureLimitExceeded'
             # The identities beyond the maximum are still counted.
             $set.Summary.Failed | Should -Be 3
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+}
+
+# -Verbose gives each stage of a retrieval its own line, then ends with a summary of the record.
+Describe 'Failed test retrieval timing' {
+    BeforeEach { Set-SequentialConfiguration }
+    AfterEach {
+        Disconnect-Ado
+        Remove-Item -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Force -ErrorAction SilentlyContinue
+    }
+
+    It 'ends -Verbose output with a summary that counts every request, the build read included' {
+        $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses))
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $records = @(Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue -Verbose 4>&1)
+            $verbose = @($records | Where-Object { $_ -is [System.Management.Automation.VerboseRecord] })
+            $culture = [cultureinfo]::GetCultureInfo($PSUICulture)
+            # A catalog message with its milliseconds left open.
+            $pattern = {
+                param([string] $Key, [object[]] $Arguments)
+                '^' + [regex]::Escape([AdoToolkit.Core.Resources.Messages]::Get($Key, $culture, $Arguments)).Replace('ELAPSED', '[0-9]+') + '$'
+            }
+            $server.Requests.Count | Should -Be 12
+            @($verbose.Message -match (& $pattern 'RetrievalStageBuild' @(1, 'ELAPSED'))).Count | Should -Be 1
+            $verbose[-1].Message | Should -Match (& $pattern 'RetrievalSummary' @(401, 2, 12, 'ELAPSED'))
+            @($records | Where-Object { $_ -is [AdoToolkit.Core.TestRuns.AdoBuildTestFailureSet] }).Count | Should -Be 1
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+}
+
+# The default table of a failed test shows the first line of its latest error, as the report's
+# tables do, instead of its test assembly.
+Describe 'Failed test console table' {
+    BeforeEach { Set-SequentialConfiguration }
+    AfterEach {
+        Disconnect-Ado
+        Remove-Item -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Force -ErrorAction SilentlyContinue
+    }
+
+    It 'shows the latest error of each failed test instead of its storage' {
+        $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses))
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
+            $table = $set.Failures | Out-String -Width 400
+            $header = @($table -split '\r?\n' | Where-Object { $_ -match '\bOrdinal\b' })[0]
+            $header | Should -Match '^Ordinal\s+Classification\s+ShortName\s+Attempts\s+HasOpenBug\s+LatestError\s*$'
+            $table | Should -Match ([regex]::Escape('Assert.AreEqual failed. Expected:<1>. Actual:<2>.'))
+            $table | Should -Match ([regex]::Escape('Expected total 19,99 but found 19.99.'))
         }
         finally { Stop-FakeAdoServer -Server $server }
     }
@@ -325,6 +408,31 @@ Describe 'Concurrent failed test retrieval and download' {
             $server.Requests.Count | Should -Be 14
             Get-FakeAdoServerPeak -Server $server | Should -Be $Peak
             @(Get-ChildItem -LiteralPath $file.AttachmentDirectory -File).Name | Sort-Object | Should -Be @('r201-1-a5002.json', 'r202-11-a5002.json')
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
+    # Every request accepts gzip, and every body is decoded before it is read: the set and the
+    # downloaded files are the same as from a server that does not compress.
+    It 'reads the same set and files from a server that compresses its responses' {
+        $server = Start-FakeAdoServer -Routes (Get-TwoRunRoutes) -LatencyMilliseconds 20 -Workers 8 -Compression
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
+            $set.Failures.ShortName | Should -Be @('Totals', 'AddsItem')
+            $set.Failures[1].Bugs.Id | Should -Be @(2001)
+            $set.Failures[1].TestCase.Title | Should -Be 'Vérifier le panier'
+            $set.Failures[1].Attempts[0].Attachments.Count | Should -Be 5
+            $set.Diagnostics.Code | Should -Be @('UnresolvedTestCase')
+            $file = $set | Export-AdoBuildTestFailure -Path (Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))) 6> $null
+            $expected = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot '../Fixtures/Attachments/valid.json')).Hash
+            $downloaded = @(Get-ChildItem -LiteralPath $file.AttachmentDirectory -File)
+            $downloaded.Count | Should -Be 2
+            foreach ($item in $downloaded) { (Get-FileHash -LiteralPath $item.FullName).Hash | Should -Be $expected }
+            $requests = $server.Requests.ToArray()
+            $requests.Count | Should -Be 14
+            @($requests | Where-Object { $_.Headers['Accept-Encoding'] -notmatch '\bgzip\b' }).Count | Should -Be 0
+            ($requests | Measure-Object -Property Bytes -Sum).Sum | Should -BeLessThan ($requests | Measure-Object -Property DecodedBytes -Sum).Sum
         }
         finally { Stop-FakeAdoServer -Server $server }
     }

@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using AdoToolkit.Core.Http;
 using AdoToolkit.Core.IO;
 using AdoToolkit.Core.Reporting.TestFailures;
@@ -12,6 +13,12 @@ public sealed class TestFailureExporterTests
 {
     private static readonly CultureInfo Session = CultureInfo.GetCultureInfo("en-US");
     private static readonly DateTimeOffset Generated = new(2026, 9, 16, 13, 30, 0, TimeSpan.Zero);
+    // Each Verbose line of an export with the count of its numbers, in the order written.
+    private static readonly (AdoMessage Step, int Values)[] ExportSteps =
+    [
+        (AdoMessage.ExportStageDownloads, 3), (AdoMessage.ExportStageRender, 2), (AdoMessage.ExportStageValidation, 1),
+        (AdoMessage.ExportStageCommit, 1), (AdoMessage.ExportSummary, 4),
+    ];
 
     // S5-3: an unreadable history build (500) is a warning, and the report still commits.
     [Fact]
@@ -182,11 +189,57 @@ public sealed class TestFailureExporterTests
             TestFailureExportResult result = await exporter.ExportAsync(plan, null, log, TestContext.Current.CancellationToken);
             Assert.Equal(plan.ReportPath, result.Report.FullName);
             Assert.True(result.Report.Exists);
-            string warning = Assert.Single(log.Messages);
+            string warning = Assert.Single(log.Warnings);
             Assert.Contains(result.Report.FullName, warning, StringComparison.Ordinal);
             Assert.Contains(FailingLauncher.Reason, warning, StringComparison.Ordinal);
         }
     }
+
+    // -Verbose shows one line per step of the export, in step order whether or not anything is
+    // downloaded, then a summary with the build, the downloaded files and the requests.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task EachStepWritesOneLineInStepOrderAndTheSummaryComesLast(bool download)
+    {
+        using TestDirectory directory = new();
+        (AdoBuildTestFailureSet set, FakeHttpMessageHandler handler, HttpClient client) = await Retrieve();
+        using (handler)
+        using (client)
+        {
+            TestFailureExporter exporter = new(new RecordingLauncher());
+            CapturingLog log = new();
+            RequestCounter requests = new();
+            AttachmentDownloader downloader = new(new AdoHttpPipeline(client, TestRunFixture.Connection.CollectionUri,
+                TimeSpan.FromSeconds(100), log, new FakeClock(), counter: requests), new TestResultOptions(), log, requests);
+            TestFailureExportPlan plan = exporter.Prepare(set, Options(directory.Root, skip: !download, allRuns: true));
+            Assert.Equal(download, plan.DownloadsAttachments);
+            TestFailureExportResult result = await exporter.ExportAsync(plan, download ? downloader : null, log, TestContext.Current.CancellationToken);
+            // One JSON file, read with one request, or nothing.
+            long files = download ? 1 : 0;
+            List<(AdoMessage Step, long[] Values)> lines = ExportLines(log);
+            Assert.Equal(ExportSteps.Select(static step => step.Step), lines.Select(static line => line.Step));
+            Assert.Equal([files, files], lines[0].Values[..2]);
+            Assert.Equal(result.Report.Length, lines[1].Values[0]);
+            Assert.Equal([401L, files, files], lines[^1].Values[..3]);
+            Assert.Matches(Pattern(AdoMessage.ExportSummary, 4), log.Messages[^1]);
+        }
+    }
+
+    // The export's lines in the order written, each with its numbers.
+    private static List<(AdoMessage Step, long[] Values)> ExportLines(CapturingLog log)
+    {
+        List<(AdoMessage, long[])> lines = [];
+        foreach (string message in log.Messages)
+            foreach ((AdoMessage step, int values) in ExportSteps)
+                if (Pattern(step, values).Match(message) is { Success: true } match)
+                    lines.Add((step, [.. match.Groups.Cast<Group>().Skip(1).Select(static group => long.Parse(group.Value, CultureInfo.InvariantCulture))]));
+        return lines;
+    }
+
+    // A catalog message whose placeholders are numbers, each captured.
+    private static Regex Pattern(AdoMessage key, int placeholders) => new("^" + Regex.Escape(Messages.Get(key, Session,
+        [.. Enumerable.Repeat<object?>("\u0001", placeholders)])).Replace("\u0001", "([0-9]+)", StringComparison.Ordinal) + "$", RegexOptions.CultureInvariant);
 
     private static TestFailureExportOptions Options(string? path, bool skip = false, bool noClobber = false, bool open = false,
         string culture = "en-US", DateTimeOffset? generated = null, bool createDirectory = false, bool allRuns = false) => new()

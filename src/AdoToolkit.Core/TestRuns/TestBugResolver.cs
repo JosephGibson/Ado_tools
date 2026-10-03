@@ -179,10 +179,10 @@ internal sealed class TestBugResolver
                 {
                     try
                     {
-                        string text = await ResponseJson.ReadAsync(response, token).ConfigureAwait(false);
+                        WorkItemTypeStatePageDto? page = await ResponseJson.DeserializeAsync(response, AdoJsonContext.Default.WorkItemTypeStatePageDto,
+                            EndpointRegistry.WorkItemTypeStates, culture, token).ConfigureAwait(false);
                         Dictionary<string, string> map = new(StringComparer.OrdinalIgnoreCase);
-                        foreach (WorkItemTypeStateDto value in JsonSerializer.Deserialize(text, AdoJsonContext.Default.WorkItemTypeStatePageDto)?.Value
-                            ?? throw new JsonException())
+                        foreach (WorkItemTypeStateDto value in page?.Value ?? throw new JsonException())
                             if (value?.Name is { Length: > 0 } name && value.Category is { Length: > 0 } category) map.TryAdd(name, category);
                         return (IReadOnlyDictionary<string, string>)map;
                     }

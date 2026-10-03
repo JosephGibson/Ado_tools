@@ -13,7 +13,7 @@ projects, builds and test runs.
 
 0.7.10 adds no cmdlet, no parameter and no configuration key. The configuration file format,
 the JSON report schema, the help in both cultures and the seven-file package layout are
-unchanged. The [0.7.5 notes](release-0.7.5.md) still describe the module.
+unchanged. The [0.7.5 notes](archive/release-0.7.5.md) still describe the module.
 
 ### Releases
 
@@ -58,14 +58,14 @@ None. No test, fixture or golden was added, changed or removed.
 | Nothing enforces the merge method | It is a setting of the repository on GitHub, which this release does not change: merge commits and rebase merges stay possible until the developer turns them off there |
 | The body of the squashed commit is not prescribed | GitHub proposes it. For a pull request with several commits it is the list of their subjects, as for 0.7.5; for one commit it is the body of that commit, which the release commit does not have. The repository setting that defaults the message to the pull request title leaves it empty in both cases |
 | The release is published before the pull request is reviewed | As since 0.6.5, accepted by the developer |
-| The findings of 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.7.5](release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
+| The findings of 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
 
 ### Known limitations
 
 | Limitation | Notes |
 | --- | --- |
 | The tag after a squash merge | `v0.7.10` names the commit of the branch, not the squashed commit on `main`. Their files are the same when nothing else reached `main` in between, as `git diff v0.7.5 23e5f4a` shows for 0.7.5 by printing nothing. A command that looks for tags in the history of `main`, such as `git describe`, does not find the tag |
-| Limits carried over | The [0.7.5](release-0.7.5.md#known-limitations), [0.7.0](archive/release-0.7.0.md#known-limitations), [0.6.5](archive/release-0.6.5.md#known-limitations) and [0.6.0](archive/release-0.6.0.md#known-limitations) known limitations still apply, with V-33, V-31, V-32 and V-02 |
+| Limits carried over | The [0.7.5](archive/release-0.7.5.md#known-limitations), [0.7.0](archive/release-0.7.0.md#known-limitations), [0.6.5](archive/release-0.6.5.md#known-limitations) and [0.6.0](archive/release-0.6.0.md#known-limitations) known limitations still apply, with V-33, V-31, V-32 and V-02 |
 
 ## Work-PC Live checks
 
@@ -79,7 +79,7 @@ still pending and decides the same assumptions.
 | Rank | Check | Evidence to seek |
 | --- | --- | --- |
 | 1 | Record `Get-FileHash` of `%APPDATA%\AdoToolkit\config.json`, install 0.7.10, then run `Get-AdoProfile` and `Connect-Ado` | The hash is unchanged, no warning appears, and `Get-Module AdoToolkit -ListAvailable` shows 0.7.10 with seven files in its folder |
-| 2 | Checks 2 to 7 of the [0.7.5 notes](release-0.7.5.md#work-pc-live-checks), with the 0.7.10 package | As listed there: V-33, the bug link and **Expand all** in the browser, the two Live scripts, completion, a request with the PC off the network, and the 0.6.0 checks with V-31, V-32, V-02, V-01 and V-03. All still pending |
+| 2 | Checks 2 to 7 of the [0.7.5 notes](archive/release-0.7.5.md#work-pc-live-checks), with the 0.7.10 package | As listed there: V-33, the bug link and **Expand all** in the browser, the two Live scripts, completion, a request with the PC off the network, and the 0.6.0 checks with V-31, V-32, V-02, V-01 and V-03. All still pending |
 
 ## Local validation and developer handoff
 

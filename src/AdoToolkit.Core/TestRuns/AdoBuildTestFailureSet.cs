@@ -16,4 +16,6 @@ public sealed class AdoBuildTestFailureSet
     public IReadOnlyList<AdoDiagnostic> Diagnostics { get; init; } = Array.Empty<AdoDiagnostic>();
     public required DateTimeOffset RetrievedAt { get; init; }
     public required Uri CollectionUri { get; init; }
+    // False when the retrieval read no attachment list: no attempt then has an attachment.
+    public bool AttachmentsListed { get; init; } = true;
 }

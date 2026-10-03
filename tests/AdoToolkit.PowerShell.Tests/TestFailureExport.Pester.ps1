@@ -28,8 +28,9 @@ BeforeAll {
     # and bugs 2001–2002. Both runs list as many results as they report, so neither listing ends with
     # a request for an empty page. -Piped is a later build of the same invocation: its Test Cases and
     # the bug states come from the invocation cache, so those two requests are not sent.
+    # -SkipAttachments leaves out the two attachment lists.
     function Get-TwoRunResponses {
-        param([switch] $LatestAttachments, [int] $AgeHours = 2, [switch] $Piped)
+        param([switch] $LatestAttachments, [int] $AgeHours = 2, [switch] $Piped, [switch] $SkipAttachments)
         @(
             @{ Body = Get-RecentRunsFixture -AgeHours $AgeHours }
             @{ Body = $script:EmptyPage }
@@ -37,8 +38,10 @@ BeforeAll {
             @{ Body = Get-TestRunFixture 'results-run-202.json' }
             @{ Body = Get-TestRunFixture 'result-detail-202-11.json' }
             @{ Body = Get-TestRunFixture 'result-detail-201-1.json' }
-            @{ Body = Get-TestRunFixture $(if ($LatestAttachments) { 'attachments-result.json' } else { 'attachments-empty.json' }) }
-            @{ Body = Get-TestRunFixture 'attachments-result.json' }
+            if (-not $SkipAttachments) {
+                @{ Body = Get-TestRunFixture $(if ($LatestAttachments) { 'attachments-result.json' } else { 'attachments-empty.json' }) }
+                @{ Body = Get-TestRunFixture 'attachments-result.json' }
+            }
             if (-not $Piped) { @{ Body = Get-TestRunFixture 'workitems-testcases.json' } }
             @{ Body = Get-TestRunFixture 'workitems-bugs.json' }
             if (-not $Piped) { @{ Body = Get-TestRunFixture 'workitemtype-states-bug.json' } }
@@ -148,6 +151,29 @@ Describe 'Failed-test report export' {
         finally { Stop-FakeAdoServer -Server $server }
     }
 
+    # -Verbose gives each step of the export its own line, then ends with a summary of the export.
+    It 'ends -Verbose output with a summary that counts the downloaded files and their requests' {
+        $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses) + (Get-ContentResponses))
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
+            $records = @($set | Export-AdoBuildTestFailure -Path $outputDirectory -AllRunAttachments -Verbose 4>&1 6> $null)
+            $verbose = @($records | Where-Object { $_ -is [System.Management.Automation.VerboseRecord] })
+            $culture = [cultureinfo]::GetCultureInfo($PSUICulture)
+            # A catalog message with its milliseconds and bytes left open.
+            $pattern = {
+                param([string] $Key, [object[]] $Arguments)
+                '^' + [regex]::Escape([AdoToolkit.Core.Resources.Messages]::Get($Key, $culture, $Arguments)).Replace('NUMBER', '[0-9]+') + '$'
+            }
+            $server.Requests.Count | Should -Be 13
+            @($verbose.Message -match (& $pattern 'ExportStageDownloads' @(1, 1, 'NUMBER'))).Count | Should -Be 1
+            @($verbose.Message -match (& $pattern 'ExportStageRender' @('NUMBER', 'NUMBER'))).Count | Should -Be 1
+            $verbose[-1].Message | Should -Match (& $pattern 'ExportSummary' @(401, 1, 1, 'NUMBER'))
+            @($records | Where-Object { $_ -is [IO.FileInfo] }).Count | Should -Be 1
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
     # A name with %41 and %20 must stay literal: Uri(path) read %41 as an escaped A and pointed to xAy.
     It 'prints the report URI on the information stream and pipes only FileInfo (<Culture>, <Name>)' -ForEach @(
         @{ Culture = 'en-US'; Name = 'rapport [été] #1.html'; Escapes = @('%20', '%23', '%C3%A9', '%5B') },
@@ -178,6 +204,28 @@ Describe 'Failed-test report export' {
         finally { Stop-FakeAdoServer -Server $server }
     }
 
+    # A compressed attachment counts its decoded bytes against maximumAttachmentBytes: this body is
+    # far under the limit on the wire and far over it once decoded, so the file is not kept.
+    It 'counts the decoded bytes of a compressed attachment against the per-file limit' {
+        Set-SequentialConfiguration -TestResults '"maximumAttachmentBytes":2048'
+        $content = @{ Bytes = [Text.Encoding]::UTF8.GetBytes('{"padding":"' + ('a' * 10000) + '"}'); ContentType = 'application/octet-stream' }
+        $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses) + @($content)) -Compression
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
+            $warnings = @()
+            $file = $set | Export-AdoBuildTestFailure -Path $outputDirectory -WarningVariable warnings 6> $null
+            $download = $server.Requests.ToArray()[-1]
+            $download.Line | Should -Match '/attachments/5002\?'
+            $download.Bytes | Should -BeLessThan 2048
+            $download.DecodedBytes | Should -BeGreaterThan 2048
+            @($warnings | Where-Object { [string] $_ -match '5002' -and [string] $_ -match '2048' }).Count | Should -Be 1
+            @(Get-ChildItem -LiteralPath $outputDirectory -Recurse -File -Filter '*a5002*').Count | Should -Be 0
+            $file | Should -BeOfType ([IO.FileInfo])
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
     It 'SkipAttachments downloads nothing and creates no folder' -Tag 'S5-6' {
         $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses))
         try {
@@ -192,6 +240,30 @@ Describe 'Failed-test report export' {
             $html = [IO.File]::ReadAllText($file.FullName)
             $html | Should -Not -Match 'data-local-file'
             $html | Should -Match 'screenshot\.PNG <span role="img"'
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
+    # A set gathered with -SkipAttachments has no attachment to download, whatever the export's own
+    # switches, so it is exported without a connection and without a request.
+    It 'exports a set gathered with -SkipAttachments without a connection' {
+        $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses -SkipAttachments))
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -SkipAttachments -WarningAction SilentlyContinue
+            $server.Requests.Count | Should -Be 10
+            Disconnect-Ado
+            $warnings = @()
+            $file = $set | Export-AdoBuildTestFailure -Path $outputDirectory -Culture en-US -AllRunAttachments -WarningVariable warnings 6> $null
+            $file | Should -BeOfType ([IO.FileInfo])
+            $file.PSObject.Properties['AttachmentDirectory'] | Should -BeNullOrEmpty
+            @($warnings).Count | Should -Be 0
+            $server.Requests.Count | Should -Be 10
+            Get-OutputEntry -Path $outputDirectory | Should -Be @('Build-401-TestFailures.html')
+            $html = [IO.File]::ReadAllText($file.FullName)
+            $html | Should -Match '<span class="count-label">Attachments</span><span class="count-note">not listed</span>'
+            $html | Should -Not -Match 'data-local-file'
+            $html | Should -Not -Match 'screenshot\.PNG'
         }
         finally { Stop-FakeAdoServer -Server $server }
     }

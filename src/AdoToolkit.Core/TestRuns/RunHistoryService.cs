@@ -19,10 +19,22 @@ internal sealed record EarlierHistory(IReadOnlyList<HistoryEntry> Entries, IRead
 // the current build, so the retrieval may run it beside its main path; the current entry is added
 // afterwards, from data the main path computes.
 //
-// Builds are read one after another, newest first, and the result lists of one build together.
-// The request budget is the service's own counter: requests of the main path never spend it.
+// The request budget is the service's own counter: requests of the main path never spend it. Builds
+// are planned newest first, one at a time. A build's run list is charged as it is sent. Its result
+// pages are then counted from its runs' totalTests and set aside from what is left, all or none: a
+// build whose pages do not fit is unavailable, with every older build, before any of its pages is
+// sent. Its pages are read while the next build's run list is, and are never given back, so the
+// builds kept do not depend on the bound or on the order of the answers. Two cases take from what is
+// left when they are sent instead: the pages of a run that cannot be counted (no totalTests, or not
+// completed), whose build is read to its end before an older one is planned, and a request no count
+// foresaw (a retry, or a page beyond totalTests), which near the budget can still depend on the
+// order of the answers. With a bound of one, each build is read to its end before the next.
 internal sealed class RunHistoryService
 {
+    private readonly HttpClient client;
+    private readonly AdoConnection connection;
+    private readonly IAdoLog? log;
+    private readonly RequestGate? gate;
     private readonly AdoHttpPipeline pipeline;
     private readonly TestRunService runs;
     private readonly TestFailureInvocationCache cache;
@@ -35,6 +47,10 @@ internal sealed class RunHistoryService
     internal RunHistoryService(HttpClient client, AdoConnection connection, TestFailureInvocationCache cache,
         IAdoLog? log, RequestCounter counter, int maximumRequests, RequestGate? gate = null, int concurrency = 1)
     {
+        this.client = client;
+        this.connection = connection;
+        this.log = log;
+        this.gate = gate;
         this.cache = cache;
         this.maximumRequests = maximumRequests;
         this.concurrency = concurrency;
@@ -43,6 +59,9 @@ internal sealed class RunHistoryService
             log, counter: budget, gate: gate);
         runs = new TestRunService(client, connection, log, budget, gate);
     }
+
+    // The history requests sent so far: what the budget counts.
+    internal int RequestCount => budget.Count;
 
     internal static HistoryEntry Current(AdoBuild current, HistoryBuildData data) => new(new HistoryBuild
     {
@@ -79,65 +98,55 @@ internal sealed class RunHistoryService
                 arguments: [current.Id.ToString(CultureInfo.InvariantCulture)]));
             return new EarlierHistory([], diagnostics.AsReadOnly());
         }
-        // Newest first, so the request budget is spent on the most recent builds and the
-        // remaining older ones become Unavailable.
-        List<HistoryEntry> earlier = [];
-        bool limitReported = false;
-        int completed = 0;
-        foreach (HistoryBuild build in window)
+        Task<BuildRead>[] reads = new Task<BuildRead>[window.Count];
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            // The window holds the earlier builds only; the current build is read by the main path.
-            report(new AdoProgress
+            await PlanAsync(window, current.TeamProject, reads, culture, report, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            // No request of this read is left running when it ends, whatever ended it: the retrieval
+            // disposes the shared gate afterwards.
+            await Task.WhenAll(reads.OfType<Task>()).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        }
+        // The reads are judged newest first, as reading one build after another met them: the first
+        // build the budget refused ends the history, and so does the first error that fails the
+        // whole retrieval, whatever was read after it.
+        List<HistoryEntry> earlier = [];
+        bool ended = false;
+        for (int index = 0; index < window.Count; index++)
+        {
+            HistoryBuild build = window[index];
+            BuildRead read = await reads[index].ConfigureAwait(false);
+            HistoryBuildData data = HistoryBuildData.Unavailable;
+            if (read.Kind == BuildReadKind.Cached)
             {
-                Phase = AdoProgressPhase.History,
-                Completed = ++completed,
-                Total = window.Count,
-            });
-            if (cache.TryGetBuild(build.Id, out HistoryBuildData cached, out bool unreadable))
-            {
-                if (unreadable)
+                if (read.Unreadable)
                     diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.HistoryUnavailable, culture,
                         arguments: [build.Id.ToString(CultureInfo.InvariantCulture)]));
-                earlier.Add(new HistoryEntry(build, false, cached));
-                continue;
+                data = read.Data;
             }
-            if (budget.IsSpent)
-            {
-                if (!limitReported)
+            else if (!ended)
+                switch (read.Kind)
                 {
-                    diagnostics.Add(LimitExceeded());
-                    limitReported = true;
+                    case BuildReadKind.Exhausted:
+                        // Not cached: a later set of the invocation, with a budget of its own, may read it.
+                        diagnostics.Add(LimitExceeded());
+                        ended = true;
+                        break;
+                    case BuildReadKind.Fatal:
+                        ExceptionDispatchInfo.Capture(read.Error!).Throw();
+                        break;
+                    case BuildReadKind.Failed:
+                        diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.HistoryUnavailable, culture,
+                            arguments: [build.Id.ToString(CultureInfo.InvariantCulture)]));
+                        cache.AddBuild(build.Id, data, true);
+                        break;
+                    case BuildReadKind.Read:
+                        data = read.Data;
+                        cache.AddBuild(build.Id, data, false);
+                        break;
                 }
-                earlier.Add(new HistoryEntry(build, false, HistoryBuildData.Unavailable));
-                continue;
-            }
-            HistoryBuildData data;
-            bool exhausted = false, failed = false;
-            try
-            {
-                data = await ReadBuildAsync(build, current.TeamProject, culture, cancellationToken).ConfigureAwait(false);
-            }
-            catch (RequestBudgetExceededException)
-            {
-                // A request is refused only when the budget is fully spent, so every older build is
-                // unavailable too, whichever of this build's requests was the one refused.
-                if (!limitReported)
-                {
-                    diagnostics.Add(LimitExceeded());
-                    limitReported = true;
-                }
-                exhausted = true;
-                data = HistoryBuildData.Unavailable;
-            }
-            catch (Exception error) when (IsRecoverable(error, cancellationToken))
-            {
-                diagnostics.Add(DiagnosticMessageRenderer.Create(DiagnosticCodes.HistoryUnavailable, culture,
-                    arguments: [build.Id.ToString(CultureInfo.InvariantCulture)]));
-                data = HistoryBuildData.Unavailable;
-                failed = true;
-            }
-            if (!exhausted) cache.AddBuild(build.Id, data, failed);
             earlier.Add(new HistoryEntry(build, false, data));
         }
         earlier.Reverse();
@@ -148,6 +157,82 @@ internal sealed class RunHistoryService
     internal static bool IsRecoverable(Exception error, CancellationToken cancellationToken) =>
         !cancellationToken.IsCancellationRequested
         && error is AdoException and not AdoAuthenticationException and not AdoAuthorizationException;
+
+    // Fills reads, newest first. Planning stops at the first build that ends the history; the older
+    // builds are then only looked up in the cache. Result pages run on after this method returns.
+    private async Task PlanAsync(IReadOnlyList<HistoryBuild> window, string project, Task<BuildRead>[] reads, CultureInfo culture,
+        Action<AdoProgress> report, CancellationToken cancellationToken)
+    {
+        for (int index = 0; index < window.Count; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            HistoryBuild build = window[index];
+            // The window holds the earlier builds only; the current build is read by the main path.
+            report(new AdoProgress
+            {
+                Phase = AdoProgressPhase.History,
+                Completed = index + 1,
+                Total = window.Count,
+            });
+            if (cache.TryGetBuild(build.Id, out HistoryBuildData cached, out bool unreadable))
+                reads[index] = Task.FromResult(new BuildRead(BuildReadKind.Cached, cached, unreadable));
+            // Once a newer build has ended the history, older builds send nothing.
+            else if (reads.Take(index).Any(static read => read.IsCompletedSuccessfully && read.Result.Ends))
+                reads[index] = Task.FromResult(BuildRead.Skipped);
+            else
+            {
+                (reads[index], bool wait) = await PlanBuildAsync(build, project, culture, cancellationToken).ConfigureAwait(false);
+                if (wait) await reads[index].ConfigureAwait(false);
+            }
+        }
+    }
+
+    // Reads the build's run list and starts its result pages. Wait is true when the next build must
+    // not be planned before this one has been read to its end.
+    private async Task<(Task<BuildRead> Read, bool Wait)> PlanBuildAsync(HistoryBuild build, string project, CultureInfo culture,
+        CancellationToken cancellationToken)
+    {
+        if (budget.IsSpent) return (Task.FromResult(BuildRead.Exhausted), false);
+        IReadOnlyList<AdoTestRun> buildRuns;
+        try
+        {
+            Uri buildUri = new("vstfs:///Build/Build/" + build.Id.ToString(CultureInfo.InvariantCulture));
+            buildRuns = await runs.GetRunsAsync(project, build.Id, buildUri, culture, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception error) when (!cancellationToken.IsCancellationRequested)
+        {
+            return (Task.FromResult(BuildRead.Failure(error, cancellationToken)), false);
+        }
+        if (buildRuns.Count == 0) return (Task.FromResult(new BuildRead(BuildReadKind.Read, HistoryBuildData.Unavailable)), false);
+        // A run that cannot be counted sets nothing aside: its pages take from what is left.
+        int?[] pages = [.. buildRuns.Select(TestRunService.ResultPages)];
+        IReadOnlyList<RequestCounter>? reserved = budget.Reserve([.. pages.Select(static count => count ?? 0)]);
+        if (reserved is null) return (Task.FromResult(BuildRead.Exhausted), false);
+        return (ReadPagesAsync(buildRuns, reserved, project, culture, cancellationToken),
+            concurrency == 1 || pages.Any(static count => count is null));
+    }
+
+    // Every run's listing is read to its end, each through its own share of the budget, even when
+    // another one fails, so the requests sent never depend on which failed first.
+    private async Task<BuildRead> ReadPagesAsync(IReadOnlyList<AdoTestRun> buildRuns, IReadOnlyList<RequestCounter> reserved,
+        string project, CultureInfo culture, CancellationToken cancellationToken)
+    {
+        OrderedParallelOutcome<IReadOnlyList<TestResultListingDto>> lists = await OrderedParallel.TryRunAllAsync(
+            [.. Enumerable.Range(0, buildRuns.Count)], concurrency,
+            (index, token) => new TestRunService(client, connection, log, reserved[index], gate)
+                .GetResultsAsync(project, buildRuns[index], culture, token), cancellationToken).ConfigureAwait(false);
+        if (lists.Failures.Count > 0) return BuildRead.Failure(Decisive(lists.Failures, cancellationToken), cancellationToken);
+        PipelineGrouping grouping = PipelineGrouping.Create(buildRuns);
+        List<TestResultRecord> records = [];
+        for (int index = 0; index < buildRuns.Count; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            foreach (TestResultListingDto result in lists.Results[index])
+                records.Add(TestFailureRetrievalService.ToRecord(result, buildRuns[index], index + 1, grouping));
+        }
+        return new BuildRead(BuildReadKind.Read,
+            HistoryBuildData.FromGroups(AttemptGrouper.Group(records, culture, null, cancellationToken), cancellationToken));
+    }
 
     private async Task<IReadOnlyList<HistoryBuild>> GetWindowAsync(AdoBuild current, int historyCount,
         AdoTestHistoryScope scope, CultureInfo culture, CancellationToken cancellationToken)
@@ -199,32 +284,41 @@ internal sealed class RunHistoryService
         return result;
     }
 
-    private async Task<HistoryBuildData> ReadBuildAsync(HistoryBuild build, string project, CultureInfo culture,
-        CancellationToken cancellationToken)
-    {
-        Uri buildUri = new("vstfs:///Build/Build/" + build.Id.ToString(CultureInfo.InvariantCulture));
-        IReadOnlyList<AdoTestRun> buildRuns = await runs
-            .GetRunsAsync(project, build.Id, buildUri, culture, cancellationToken).ConfigureAwait(false);
-        if (buildRuns.Count == 0) return HistoryBuildData.Unavailable;
-        PipelineGrouping grouping = PipelineGrouping.Create(buildRuns);
-        OrderedParallelOutcome<IReadOnlyList<TestResultDto>> lists = await OrderedParallel.TryRunAsync(buildRuns, concurrency,
-            (run, token) => runs.GetResultsAsync(project, run, culture, token), cancellationToken).ConfigureAwait(false);
-        if (lists.Failures.Count > 0) ExceptionDispatchInfo.Capture(Decisive(lists.Failures, cancellationToken)).Throw();
-        List<TestResultRecord> records = [];
-        for (int index = 0; index < buildRuns.Count; index++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            foreach (TestResultDto result in lists.Results[index])
-                records.Add(TestFailureRetrievalService.ToRecord(result, buildRuns[index], index + 1, grouping));
-        }
-        return HistoryBuildData.FromGroups(AttemptGrouper.Group(records, culture, null, cancellationToken), cancellationToken);
-    }
-
-    // Several result lists of one build can fail at once. The failure that decides the build is
-    // chosen by kind, never by which arrived first: an error that fails the whole retrieval, then
-    // the spent budget, then an error that only makes this build unavailable. Within a kind the
-    // earliest run decides.
+    // Several result lists of one build can fail. The failure that decides the build is chosen by
+    // kind, never by which arrived first: an error that fails the whole retrieval, then the spent
+    // budget, then an error that only makes this build unavailable. Within a kind the earliest run
+    // decides.
     private static Exception Decisive(IReadOnlyList<(int Index, Exception Error)> failures, CancellationToken cancellationToken) => failures
         .OrderBy(failure => failure.Error is RequestBudgetExceededException ? 1 : IsRecoverable(failure.Error, cancellationToken) ? 2 : 0)
         .ThenBy(static failure => failure.Index).First().Error;
+
+    private enum BuildReadKind
+    {
+        // From the invocation cache; Unreadable repeats the warning of a read that failed.
+        Cached,
+        Read,
+        // An error that makes only this build unavailable.
+        Failed,
+        // The budget refused a request or could not hold the build's pages.
+        Exhausted,
+        // An error that fails the whole retrieval.
+        Fatal,
+        // Not read: a newer build had already ended the history.
+        Skipped,
+    }
+
+    // What reading one earlier build came to.
+    private sealed record BuildRead(BuildReadKind Kind, HistoryBuildData Data, bool Unreadable = false, Exception? Error = null)
+    {
+        internal static BuildRead Exhausted { get; } = new(BuildReadKind.Exhausted, HistoryBuildData.Unavailable);
+        internal static BuildRead Skipped { get; } = new(BuildReadKind.Skipped, HistoryBuildData.Unavailable);
+
+        // No older build is planned after this one.
+        internal bool Ends => Kind is BuildReadKind.Exhausted or BuildReadKind.Fatal;
+
+        internal static BuildRead Failure(Exception error, CancellationToken cancellationToken) =>
+            error is RequestBudgetExceededException ? Exhausted
+            : IsRecoverable(error, cancellationToken) ? new(BuildReadKind.Failed, HistoryBuildData.Unavailable)
+            : new(BuildReadKind.Fatal, HistoryBuildData.Unavailable, Error: error);
+    }
 }

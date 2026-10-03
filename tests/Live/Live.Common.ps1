@@ -278,3 +278,89 @@ function Format-AdoLiveCounts {
     param([Parameter(Mandatory = $true)][System.Collections.IDictionary] $Counts)
     return (@($Counts.GetEnumerator() | ForEach-Object { $_.Key + '=' + ([int] $_.Value).ToString([cultureinfo]::InvariantCulture) }) -join ' ')
 }
+
+# V-28: the routes of an area's resource locations, the answer to OPTIONS on the area, that a
+# later version would use. An allowlist entry names a route by its resource name and, where one
+# name has several routes, says whether its template has a run segment. Only the entry's own
+# name, PRESENT or ABSENT and the versions as numbers are returned.
+function Get-AdoLiveRouteEvidence {
+    param([AllowEmptyCollection()][object[]] $Location = @(), [Parameter(Mandatory = $true)][object[]] $Allowlist)
+    return @(foreach ($entry in $Allowlist) {
+            $found = @($Location | Where-Object {
+                    ([string] (Get-AdoLivePropertyValue $_ 'resourceName')) -ieq $entry.ResourceName -and
+                    ($null -eq $entry.PerRun -or ((([string] (Get-AdoLivePropertyValue $_ 'routeTemplate')) -match '\{runId\}') -eq $entry.PerRun)) })
+            $first = if ($found.Count -gt 0) { $found[0] } else { $null }
+            [pscustomobject]@{
+                Name = $entry.Name; State = if ($found.Count -gt 0) { 'PRESENT' } else { 'ABSENT' }
+                Released = ConvertTo-AdoLiveVersion (Get-AdoLivePropertyValue $first 'releasedVersion')
+                Maximum = ConvertTo-AdoLiveVersion (Get-AdoLivePropertyValue $first 'maxVersion')
+            }
+        })
+}
+
+# A version as major.minor digits, or UNKNOWN: server text is never printed as it came.
+function ConvertTo-AdoLiveVersion {
+    param([AllowNull()][object] $Value)
+    $match = [regex]::Match([string] $Value, '^([0-9]{1,3})\.([0-9]{1,3})(\.[0-9]{1,5})*$')
+    if ($match.Success) { return $match.Groups[1].Value + '.' + $match.Groups[2].Value }
+    return 'UNKNOWN'
+}
+
+# V-34: whether a result from a listing with details holds what the result read alone holds: the
+# fields the toolkit reads from that read, as many sub-results and iterations, and a message and a
+# trace of the same length. Names, counts and lengths are compared; no value is returned.
+function Get-AdoLiveListedDetailAgreement {
+    param([Parameter(Mandatory = $true)][object] $Listed, [Parameter(Mandatory = $true)][object] $Detail)
+    $read = @('id', 'outcome', 'automatedTestName', 'automatedTestStorage', 'testCaseTitle', 'resultGroupType', 'startedDate', 'completedDate',
+        'durationInMs', 'errorMessage', 'stackTrace', 'computerName', 'failureType', 'resolutionState', 'comment', 'priority', 'owner', 'runBy',
+        'testRun', 'failingSince', 'testCase', 'associatedBugs', 'customFields', 'subResults', 'iterationDetails')
+    $count = { param($Item, $Name) $value = Get-AdoLivePropertyValue $Item $Name; if ($null -eq $value) { 0 } else { @($value).Count } }
+    $length = { param($Item, $Name) ([string] (Get-AdoLivePropertyValue $Item $Name)).Length }
+    $missing = @($read | Where-Object { $null -ne $Detail.PSObject.Properties[$_] -and $null -eq $Listed.PSObject.Properties[$_] })
+    return [pscustomobject]@{
+        Fields = $missing.Count -eq 0
+        SubResults = (& $count $Listed 'subResults') -eq (& $count $Detail 'subResults')
+        Iterations = (& $count $Listed 'iterationDetails') -eq (& $count $Detail 'iterationDetails')
+        Text = (& $length $Listed 'errorMessage') -eq (& $length $Detail 'errorMessage') -and (& $length $Listed 'stackTrace') -eq (& $length $Detail 'stackTrace')
+    }
+}
+
+# V-35: the decoded length of a body as it came over the wire, by its content encoding. Only gzip
+# and deflate are decoded; anything else counts as it came.
+function Get-AdoLiveDecodedLength {
+    param([Parameter(Mandatory = $true)][AllowEmptyCollection()][byte[]] $Bytes, [AllowNull()][string] $ContentEncoding)
+    $encoding = ([string] $ContentEncoding).Trim().ToLowerInvariant()
+    if ($encoding -notin @('gzip', 'deflate')) { return [long] $Bytes.Length }
+    $source = [System.IO.MemoryStream]::new($Bytes)
+    $stream = if ($encoding -eq 'gzip') { [System.IO.Compression.GZipStream]::new($source, [System.IO.Compression.CompressionMode]::Decompress) }
+    else { [System.IO.Compression.ZLibStream]::new($source, [System.IO.Compression.CompressionMode]::Decompress) }
+    try {
+        $buffer = [byte[]]::new(81920)
+        [long] $total = 0
+        while (($read = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) { $total += $read }
+        return $total
+    }
+    finally { $stream.Dispose(); $source.Dispose() }
+}
+
+# V-35: COMPRESSED or UNCOMPRESSED, and the bytes sent as a whole percentage of the decoded bytes.
+function Get-AdoLiveCompressionEvidence {
+    param([AllowNull()][string] $ContentEncoding, [long] $WireBytes, [long] $DecodedBytes)
+    $compressed = ([string] $ContentEncoding).Trim().ToLowerInvariant() -in @('gzip', 'deflate')
+    return [pscustomobject]@{
+        State = if ($compressed) { 'COMPRESSED' } else { 'UNCOMPRESSED' }
+        Percent = if ($DecodedBytes -gt 0) { [int] [Math]::Round(100.0 * $WireBytes / $DecodedBytes) } else { 0 }
+    }
+}
+
+# V-36: whether a result's own attachment list also holds the attachments of its sub-results.
+# OVERLAP when it holds at least one of them; Complete when it holds them all.
+function Get-AdoLiveAttachmentOverlap {
+    param([AllowEmptyCollection()][int[]] $Result = @(), [AllowEmptyCollection()][int[]] $SubResult = @())
+    $own = @($SubResult | Sort-Object -Unique)
+    $shared = @($own | Where-Object { $Result -contains $_ })
+    return [pscustomobject]@{
+        State = if ($shared.Count -gt 0) { 'OVERLAP' } else { 'DISJOINT' }; Complete = $own.Count -gt 0 -and $shared.Count -eq $own.Count
+        Counts = [ordered]@{ RESULT = @($Result | Sort-Object -Unique).Count; SUB_RESULTS = $own.Count; SHARED = $shared.Count }
+    }
+}

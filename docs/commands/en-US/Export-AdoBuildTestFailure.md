@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-02-2026
+ms.date: 10-03-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -34,15 +34,22 @@ report in the report culture. The report has five views, plus a sixth for diagno
 when there are any. Overview is a table with one row per failed test: its Test Case
 number linked to the work item, the status of each group of attempts that ran it, and the
 first line of its latest error. A test with at least one open bug shows an Open bug link
-to the lowest-numbered open bug after its name. By error groups the same rows under their
+to the lowest-numbered open bug after its name. Before that link, New says that the build
+before this one ran the test and it did not fail, and N in a row that the test failed or
+was flaky in this build and in the N - 1 builds before it; nothing is said when that build
+could not be read or did not run the test. By error groups the same rows under their
 latest error. Open bugs lists each bug once with the tests linked to it and says whether
 each link comes from a test result, the Test Case or both; the bug with the most tests
 comes first, and a bug that could not be read comes last, marked Not read. Details has one
 card per test, which lists its open bugs, each with its ID linked to the work item, its
-title and its state. A bug is open unless its state is in the Completed or Removed state
+title and its state. Its history shows one square per build, told apart by shape as well as
+colour: filled for failed, half filled for flaky, hollow for passed, dashed for not run,
+dotted for another outcome and hatched for a build that could not be read. The same New or
+N in a row follows, with the build where the failures started, and an attempt's Failing
+since names that build by its number when it is in the history. A bug is open unless its state is in the Completed or Removed state
 category; a closed bug is not shown, and a bug that could not be read shows its ID link
-and the mark Not read. Runs and history lists the build's test runs with their attempts,
-duration, test counts, reported tests and listed and downloaded attachments, and marks the
+and the mark Not read. Runs and history lists the build's test runs with the attempt
+numbers that they have, of the stage, the job or the job instance, their duration, test counts, reported tests and listed and downloaded attachments, and marks the
 latest run. Below them it shows the run history as a chart, as a table of builds, and as a
 table of the reported tests with their outcome in each build and the number of builds in a
 row, ending with this one, in which each failed or was flaky. When and where the report was
@@ -61,7 +68,11 @@ stays in its group. Runs without distinct names keep one list.
 Flaky tests are left out unless `-IncludeFlaky` is supplied; the header still counts
 them. The report is complete with scripts blocked. A small static script, allowed by a
 hash-based Content Security Policy, adds view switching, search, keyboard navigation and
-copy. Search matches every word you type against the whole card, including collapsed
+copy, and makes the counts at the top of the report shortcuts to their filters. It opens the
+attempt of a test's latest error when the test is reached from its row or with j or k,
+opens a stack trace that has a frame of the test's own code with the framework frames
+hidden, and opens error messages wrapped; copying and printing keep every frame. Search
+matches every word you type, ignoring case and accents, against the whole card, including collapsed
 attempts: error messages, stack traces, inline JSON and text attachments, stage and job
 names, run and attempt fields, and bug titles and states. A Test Case ID matches with or
 without `#`. When at least one test has an open bug, the Without an open bug filter shows
@@ -79,7 +90,10 @@ attempt order: stage, phase and job attempt, then start date and run ID. A large
 older run stays a link: the export does not fall back to an older run for those. A file of an
 older run that declares no size is downloaded and kept only if it is at most
 `maximumInlineJsonBytes`. When no run has a file to download, no attachment folder is
-created and no connection is needed.
+created and no connection is needed. A set gathered with
+`Get-AdoBuildTestFailure -SkipAttachments` lists no attachment, so its export downloads
+nothing and needs no connection, whatever the switches; its report says that the attachments
+were not listed, in the header and in Runs and history, instead of counting them.
 
 Use `-AllRunAttachments` to download the larger JSON and text files from every run inside
 the window too, or `-SkipAttachments` to download none. `-SkipAttachments` takes precedence
@@ -413,7 +427,7 @@ The committed report. When attachments were downloaded, its AttachmentDirectory 
 
 ## NOTES
 
-Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Downloaded attachments are work data and stay on this machine. How Server 2020 answers several downloads at once has not been confirmed at work (V-33). Attachment routes, version and fields await server confirmation (V-23), as do the stage, job and run names used for grouping and the run name retry suffix (V-19), and browser behavior from local files awaits confirmation under the work browser policy (V-27).
+Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Downloaded attachments are work data and stay on this machine. How Server 2020 answers several downloads at once has not been confirmed at work (V-33). With -Verbose, each step of the export writes one line with its milliseconds: the attachment downloads, with the files written and the requests sent; the rendered report, with its size in bytes; the check of the report; and its move into place, which also removes earlier attachment folders. When nothing is downloaded, the downloads line keeps its place with 0 files and 0 requests. A last line gives the build, the downloaded attachments, the requests and the elapsed time. Attachment routes, version and fields await server confirmation (V-23), as do the stage, job and run names used for grouping and the run name retry suffix (V-19), and browser behavior from local files awaits confirmation under the work browser policy (V-27).
 
 ## RELATED LINKS
 

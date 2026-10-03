@@ -10,12 +10,14 @@ public sealed class BuildDefinitionService
     private readonly AdoConnection connection;
     private readonly AdoHttpPipeline pipeline;
 
-    public BuildDefinitionService(HttpClient client, AdoConnection connection, IAdoLog? log = null)
+    public BuildDefinitionService(HttpClient client, AdoConnection connection, IAdoLog? log = null) : this(client, connection, log, null) { }
+
+    internal BuildDefinitionService(HttpClient client, AdoConnection connection, IAdoLog? log, RequestCounter? counter)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(connection);
         this.connection = connection;
-        pipeline = new(client, connection.CollectionUri, TimeSpan.FromSeconds(connection.RequestTimeoutSeconds), log);
+        pipeline = new(client, connection.CollectionUri, TimeSpan.FromSeconds(connection.RequestTimeoutSeconds), log, counter: counter);
     }
 
     public async Task<IReadOnlyList<AdoBuildDefinition>> GetDefinitionsAsync(string project, CultureInfo culture, CancellationToken cancellationToken)

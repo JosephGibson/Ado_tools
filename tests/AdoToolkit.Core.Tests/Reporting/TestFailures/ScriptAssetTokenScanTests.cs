@@ -19,7 +19,9 @@ public sealed class ScriptAssetTokenScanTests
         Assert.DoesNotContain("</script", script, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("status.textContent = status.dataset.labelDone", script, StringComparison.Ordinal);
         Assert.Contains("status.textContent = status.dataset.labelSelected", script, StringComparison.Ordinal);
-        Assert.True(Encoding.UTF8.GetByteCount(script) < 12 * 1024);
+        // Small enough to show that nothing is bundled; 0.8.0 raised it from 12 KiB for the count
+        // shortcuts, the arrival at a test's latest error, accent-free search and the opening state of traces.
+        Assert.True(Encoding.UTF8.GetByteCount(script) < 16 * 1024);
     }
 
     [Fact]

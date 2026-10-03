@@ -6,6 +6,27 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.8.0 - 2026-10-03
+
+### Added
+
+- `Get-AdoBuildTestFailure -SkipAttachments` gathers the failed tests without their attachment lists, which saves one request per failed result and per rerun attempt; the set's new `AttachmentsListed` property is then `False`, its report says that the attachments were not listed, and its export needs no connection.
+- With `-Verbose`, `Get-AdoBuildTestFailure` and `Export-AdoBuildTestFailure` write the requests and the time of each stage and of the whole command.
+- The failed-test report marks a test **New** when it did not fail in the build before, or **N in a row** while it keeps failing, and shows each test's history as one square per build.
+
+### Changed
+
+- `testResults.maximumHistoryRequests` defaults to 500 instead of 400, and the earlier builds kept within it no longer depend on the order of the server's responses; a long history is read faster.
+- Every request accepts gzip and deflate responses, and a JSON response larger than 256 MiB once decoded fails with an `AdoResponseFormat` error.
+- The default table of failed tests shows the first line of the latest error instead of `Storage`.
+- The failed-test report has a shorter header that starts with the counts, which also filter the tests, one type scale, a focus colour that is no longer the amber of flaky tests, **Expand all** and **Collapse all** in Details only, and search that ignores accents; a test opens on its latest error, with its stack trace on its own code.
+
+### Fixed
+
+- In the failed-test report, keyboard focus and a test reached from its row no longer land under the header, a long test name no longer hides its **Open bug** link, Back returns to the test's row, printed status squares keep their colour, error and bug headings name their rows for screen readers, and French labels keep a no-break space before the colon.
+
+Details: [release notes](docs/release-0.8.0.md)
+
 ## 0.7.10 - 2026-10-02
 
 ### Changed
@@ -30,7 +51,7 @@ Details: [release notes](docs/release-0.7.10.md)
 - A custom field value that cannot be read no longer fails a failed-test result, a link closed by a table cell no longer breaks the step text of a Test Case report, a server error message cut inside a character no longer escapes as a .NET error, and a temporary file that cannot be deleted is reported as a file output error.
 - `Install-AdoToolkit.ps1` keeps the previous copy when the move of the new copy and the rollback both fail, and ignores a blank entry in `PSModulePath`.
 
-Details: [release notes](docs/release-0.7.5.md)
+Details: [release notes](docs/archive/release-0.7.5.md)
 
 ## 0.7.0 - 2026-10-01
 

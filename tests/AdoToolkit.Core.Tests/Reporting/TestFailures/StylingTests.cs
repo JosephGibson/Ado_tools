@@ -45,10 +45,9 @@ public sealed class StylingTests
     [Fact]
     public void ExternalLinkGlyphIsSmallAndMuted()
     {
-        int rule = Css.IndexOf("a > [role=\"img\"] { color: var(--text-muted); font-size: .8em; }", StringComparison.Ordinal);
-        Assert.True(rule >= 0);
-        // A history cell sets its own size, with a heavier selector.
-        Assert.True(rule < Css.IndexOf(".history-cell > [role=\"img\"] { font-size: .7rem; }", StringComparison.Ordinal));
+        Assert.Contains("a > [role=\"img\"] { color: var(--text-muted); font-size: var(--text-11); }", Css, StringComparison.Ordinal);
+        // A history cell is a square without text, so it holds no glyph of its own.
+        Assert.DoesNotMatch("class=\"history-cell[^>]*>[^<]", TestFailureReportFixture.Render());
         string html = TestFailureReportFixture.Render();
         // The glyph is a child of its link, which is what the rule selects.
         Assert.Matches("<a rel=\"noreferrer\" href=\"[^\"]+\">[^<]+ <span role=\"img\" aria-label=\"Open in Azure DevOps\">↗</span></a>", html);
@@ -291,11 +290,137 @@ public sealed class StylingTests
         Assert.Contains("data-iteration=\"7\"><h5>" + model.Labels["Iterations"] + " 7</h5>", card, StringComparison.Ordinal);
         Assert.Contains("<h6>" + Messages.Get(AdoMessage.ReportParameters, model.Culture) + "</h6>", card, StringComparison.Ordinal);
         // The look is the one the levels above had.
-        Assert.Contains(".failure-card > header h3 { overflow-wrap: anywhere; margin: 0; font-size: 1.05rem; letter-spacing: -.01em; color: var(--text); }", Css, StringComparison.Ordinal);
-        Assert.Contains("h3, .failure-card h4 { font-size: .85rem; margin: var(--space-3) 0 var(--space-1); color: var(--text-muted); }", Css, StringComparison.Ordinal);
+        Assert.Contains(".failure-card > header h3 { overflow-wrap: anywhere; margin: 0; font-size: var(--text-16); letter-spacing: -.01em; color: var(--text); }", Css, StringComparison.Ordinal);
+        Assert.Contains("h3, .failure-card h4 { font-size: var(--text-14); margin: var(--space-3) 0 var(--space-1); color: var(--text-muted); }", Css, StringComparison.Ordinal);
         Assert.Contains(".failure-card h4 { line-height: 1.3; font-weight: 600; }", Css, StringComparison.Ordinal);
         Assert.Contains("  .failure-card > header h3 { flex-basis: 100%; }", Css, StringComparison.Ordinal);
         Assert.DoesNotContain("header h2", Css, StringComparison.Ordinal);
+    }
+
+    // WCAG 2.2 SC 2.4.11: an element that gets focus, by k or by Shift+Tab, stays below the sticky
+    // header. The page keeps the header's height as scroll padding; a margin on some targets added to
+    // it and missed every other one.
+    [Fact]
+    public void KeyboardFocusStaysClearOfTheStickyHeader()
+    {
+        Assert.Contains("html { scroll-padding-top: calc(var(--report-header-height, 11rem) + var(--space-4)); }", Css, StringComparison.Ordinal);
+        Assert.DoesNotContain("scroll-margin-top", Css, StringComparison.Ordinal);
+        string script = TestFailureAssets.Read("test-failures.js");
+        Assert.Contains("root.style.setProperty('--report-header-height', `${height}px`);", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("--report-header-offset", script, StringComparison.Ordinal);
+    }
+
+    // A card or attempt reached by a link, j or k landed up to a line under the band, in two ways.
+    // Details shows Expand all and Collapse all, which can make the band a line taller than in the
+    // other views, and the scroll came before the ResizeObserver reported it: changing the view now
+    // measures the band at once. And the scroll itself lays out the cards that content-visibility
+    // skipped; on a short report the page then grows a scrollbar, the band rewraps and the position
+    // no longer clears it: a scroll to the top is now repeated when the band's height changed.
+    [Fact]
+    public void ATargetScrolledToTheTopClearsTheBandEvenWhenItsHeightChanges()
+    {
+        string script = TestFailureAssets.Read("test-failures.js");
+        string show = Section(script, "const show = id => {", "\n  };");
+        Assert.EndsWith("all('[data-details-only]').forEach(control => { control.hidden = target.id !== 'details'; });\n    measure();", show, StringComparison.Ordinal);
+        // Defined before show, so no call can meet it uninitialized.
+        Assert.True(script.IndexOf("const measure = () => {", StringComparison.Ordinal) is >= 0 and var position
+            && position < script.IndexOf("const show = id => {", StringComparison.Ordinal));
+        Assert.Contains("    if (height === bandHeight) return false;", script, StringComparison.Ordinal);
+        Assert.Contains("  const reveal = node => {\n    node.scrollIntoView({ block: 'start' });\n    if (measure()) node.scrollIntoView({ block: 'start' });\n  };",
+            script, StringComparison.Ordinal);
+        // Every scroll to the top goes through it.
+        Assert.Equal(2, Regex.Count(script, @"scrollIntoView\(\{ block: 'start' \}\)"));
+        Assert.Contains("    card.focus({ preventScroll: true });\n    reveal(card);", script, StringComparison.Ordinal);
+        Assert.Contains("    reveal(target);", script, StringComparison.Ordinal);
+    }
+
+    // The band is two lines: the counts first, then the build; the views and the filters share the
+    // second line. A zero count is muted, the generic title is quiet, and the keys are in the footer.
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("fr-CA")]
+    public void TheBandLeadsWithTheCountsAndHoldsTheViewsAndFiltersOnOneLine(string culture)
+    {
+        TestFailureReportModel model = TestFailureReportFixture.Model("failed", culture);
+        string html = TestFailureReportFixture.Render(model);
+        string band = Section(html, "<header class=\"top-bar\">", "</header>");
+        Assert.StartsWith("<header class=\"top-bar\"><div class=\"top-bar-inner\">\n<div class=\"title-line\"><span class=\"count-chip status-failed\"><span class=\"count-label\">✕ ",
+            band, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"count-chip status-flaky\" data-zero><span class=\"count-label\">≈ " + model.Labels["Flaky"] + "</span><strong class=\"count-value\">0</strong></span>"
+            + "<span class=\"count-chip status-attachments\"><span class=\"count-label\">" + model.Labels["Attachments"] + "</span><strong class=\"count-value\">2</strong></span>"
+            + "<span class=\"report-brand\">", band, StringComparison.Ordinal);
+        Assert.Contains("</div>\n<div class=\"nav-line\"><nav class=\"view-links\" aria-label=\"", band, StringComparison.Ordinal);
+        Assert.Contains("</nav>\n<div class=\"interactive filter-controls\" data-enhance hidden>", band, StringComparison.Ordinal);
+        Assert.DoesNotContain("keyboard-hint", band, StringComparison.Ordinal);
+        string footer = Section(html, "<footer class=\"report-footer\">", "</footer>");
+        Assert.EndsWith("</dl><p class=\"interactive keyboard-hint\" data-enhance hidden>" + SinkEncoding.Attribute(model.Labels["NavigationHint"]) + "</p>",
+            footer, StringComparison.Ordinal);
+        Assert.Contains(".top-bar h1 { margin: 0; font-size: var(--text-13); font-weight: 400; color: var(--text-muted); }", Css, StringComparison.Ordinal);
+        Assert.Contains(".count-chip[data-zero] { color: var(--text-muted); }", Css, StringComparison.Ordinal);
+        // With scripts on, a count that can filter becomes a button for its filter; a zero count does not.
+        string script = TestFailureAssets.Read("test-failures.js");
+        Assert.Contains("const chips = all('.count-chip:not([data-zero])')", script, StringComparison.Ordinal);
+        Assert.Contains("chip.setAttribute('role', 'button');", script, StringComparison.Ordinal);
+        Assert.Contains("chips.forEach(([chip, kind]) => chip.setAttribute('aria-pressed', String(pressed(kind))));", script, StringComparison.Ordinal);
+    }
+
+    // One type scale: five sizes, the body at 14px/1.45, tables at 13 and code at 12. Only the
+    // brand and the external link glyph go below 12, the minimum for controls and running text.
+    [Fact]
+    public void OneTypeScaleOfFiveSizes()
+    {
+        Assert.StartsWith(":root { --text-11: 11px; --text-12: 12px; --text-13: 13px; --text-14: 14px; --text-16: 16px;", Css, StringComparison.Ordinal);
+        Assert.Contains("body { font-size: var(--text-14); line-height: 1.45; font-variant-numeric: tabular-nums; }", Css, StringComparison.Ordinal);
+        Assert.Contains(".failure-table, .runs-table { font-size: var(--text-13); }", Css, StringComparison.Ordinal);
+        Assert.Contains("code { font-size: var(--text-12); }", Css, StringComparison.Ordinal);
+        Assert.Contains(".code-section code { font-size: var(--text-12); line-height: 1.55; }", Css, StringComparison.Ordinal);
+        string[] sizes = [.. Regex.Matches(Css, @"font-size: ([^;]+);").Select(static match => match.Groups[1].Value)];
+        Assert.All(sizes, static size => Assert.Matches(@"^var\(--text-(11|12|13|14|16)\)$", size));
+        string[] shorthands = [.. Regex.Matches(Css, @"\bfont: ([^;]+);").Select(static match => match.Groups[1].Value)];
+        Assert.All(shorthands, static font => Assert.Matches(@"^(400 )?var\(--text-1[2-6]\) var\(--font-mono\)$", font));
+        Assert.Equal([".report-brand", "a > [role=\"img\"]"], Regex.Matches(Css, @"(?m)^([^{}\n]+) \{[^{}]*var\(--text-11\)").Select(static match => match.Groups[1].Value).Order(StringComparer.Ordinal));
+    }
+
+    // Amber means flaky alone. Focus and what is current (the open view, this build, a search match,
+    // the first frame of the test's own code) take the link colour, whose contrast ThemeContrastTests checks.
+    [Fact]
+    public void FocusAndCurrentAreNoLongerAmber()
+    {
+        Assert.Contains("--focus: var(--link); --current: var(--link); }", Css.Split('\n')[0], StringComparison.Ordinal);
+        Assert.Contains(".view-links a[aria-current=\"page\"] { color: var(--text); background: var(--surface-2); box-shadow: inset 0 -2px 0 var(--current); }", Css, StringComparison.Ordinal);
+        Assert.Contains(".attempt.is-match > summary, .attempt-group.is-match > summary { box-shadow: inset 3px 0 0 var(--current); }", Css, StringComparison.Ordinal);
+        string shared = TestFailureAssets.Read("report-base.css");
+        Assert.Contains("--flaky: #e3c17f;", shared, StringComparison.Ordinal);
+        Assert.Contains(".first-user-frame { border-inline-start: 3px solid var(--focus); }", shared, StringComparison.Ordinal);
+        Assert.DoesNotContain("--flaky", string.Concat(Css.Split('\n').Where(static line => line.Contains("is-current", StringComparison.Ordinal)
+            || line.Contains("aria-current", StringComparison.Ordinal) || line.Contains("is-match", StringComparison.Ordinal))), StringComparison.Ordinal);
+    }
+
+    // The History data table has the cells of the other tables, and its row headers no background.
+    [Fact]
+    public void HistoryDataTableIsAsDenseAsTheOthers()
+    {
+        Assert.Contains(".history-data th, .history-data td { padding: 3px var(--space-2); }", Css, StringComparison.Ordinal);
+        Assert.Contains(".history-data tbody th { background: none; }", Css, StringComparison.Ordinal);
+    }
+
+    // A long report lays out only the cards near the screen. Print lays out every card.
+    [Fact]
+    public void CardsOutOfSightAreNotLaidOutOnScreen()
+    {
+        Assert.Matches(@"\.failure-card \{ content-visibility: auto; contain-intrinsic-size: auto [0-9]+px;", Css);
+        string print = Css[Css.IndexOf("@media print", StringComparison.Ordinal)..];
+        Assert.Contains("  .failure-card { content-visibility: visible; }", print, StringComparison.Ordinal);
+    }
+
+    // Browsers leave out background colours when printing unless told otherwise, and a failed
+    // attempt's square is told apart by its fill.
+    [Fact]
+    public void PrintedStatusSquaresKeepTheirFill()
+    {
+        string print = Css[Css.IndexOf("@media print", StringComparison.Ordinal)..];
+        Assert.Contains("  .sq, .history-cell { print-color-adjust: exact; }", print, StringComparison.Ordinal);
+        Assert.Contains(".sq.status-failed { background: var(--fail); }", Css, StringComparison.Ordinal);
     }
 
     private static AdoTestFailure Failure(string name, string? error) => new()

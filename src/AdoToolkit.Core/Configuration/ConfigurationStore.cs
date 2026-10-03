@@ -99,7 +99,7 @@ public sealed class ConfigurationStore
                     HistoryCount = checked((int)Positive(results, "historyCount", 10)),
                     HistoryScope = results["historyScope"]?.GetValue<string>() ?? "SameBranch",
                     MaximumReportedFailures = checked((int)Positive(results, "maximumReportedFailures", 1000)),
-                    MaximumHistoryRequests = checked((int)Positive(results, "maximumHistoryRequests", 400)),
+                    MaximumHistoryRequests = checked((int)Positive(results, "maximumHistoryRequests", 500)),
                     MaximumAttachmentBytes = Positive(results, "maximumAttachmentBytes", 52428800),
                     MaximumTotalAttachmentBytes = Positive(results, "maximumTotalAttachmentBytes", 524288000),
                     MaximumInlineJsonBytes = Positive(results, "maximumInlineJsonBytes", 262144),

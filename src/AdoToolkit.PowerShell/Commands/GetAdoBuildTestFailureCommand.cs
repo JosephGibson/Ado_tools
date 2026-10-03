@@ -46,6 +46,9 @@ public sealed class GetAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
     [Parameter]
     public AdoTestHistoryScope? HistoryScope { get; set; }
 
+    [Parameter]
+    public SwitchParameter SkipAttachments { get; set; }
+
     [Parameter(ParameterSetName = "ByBuildId")]
     [Parameter(ParameterSetName = "ByDefinition")]
     [ArgumentCompleter(typeof(ProjectNameCompleter))]
@@ -68,6 +71,7 @@ public sealed class GetAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
             MaximumReportedFailures = options.MaximumReportedFailures,
             MaximumHistoryRequests = options.MaximumHistoryRequests,
             MaximumConcurrentRequests = options.MaximumConcurrentRequests,
+            SkipAttachments = SkipAttachments,
         };
         CultureInfo culture = MessageCulture;
         // ByDefinition selects the latest completed build, as Get-AdoBuild -Latest does.
@@ -84,14 +88,14 @@ public sealed class GetAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
         }
         lease ??= SessionStateRegistry.Current.Acquire(connection);
         ClientLease active = lease;
-        AdoBuildTestFailureSet set = RunWorker(async (log, token) =>
+        AdoBuildTestFailureSet set = RunWorker((log, token) =>
         {
-            BuildService builds = new(active.Client, connection, log);
-            AdoBuild build = InputObject ?? (latest is null
-                ? await builds.GetAsync(project, BuildId, culture, token).ConfigureAwait(false)
-                : await LatestAsync(builds, project, latest, definitionText!, culture, token).ConfigureAwait(false));
-            return await new TestFailureRetrievalService(active.Client, connection, log, cache)
-                .GetAsync(build, query, culture, token).ConfigureAwait(false);
+            TestFailureRetrievalService retrieval = new(active.Client, connection, log, cache);
+            // The retrieval reads the build, so that its requests count in the stage lines of -Verbose.
+            return InputObject is { } input ? retrieval.GetAsync(input, query, culture, token)
+                : retrieval.GetAsync((builds, readToken) => latest is null
+                    ? builds.GetAsync(project, BuildId, culture, readToken)
+                    : LatestAsync(builds, project, latest, definitionText!, culture, readToken), query, culture, token);
         });
         WriteProgress(new ProgressRecord(ProgressActivityId, Messages.Get(AdoMessage.ProgressTestFailureActivity, culture),
             Messages.Get(AdoMessage.ProgressTestFailureCompleted, culture, set.Failures.Count))

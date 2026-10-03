@@ -34,6 +34,7 @@ BeforeAll {
     . (Get-LiveDefinitions 'Shape')
     . (Get-LiveDefinitions 'Triage')
     . (Get-LiveDefinitions 'TestCaseDetail')
+    . (Get-LiveDefinitions 'Probes')
     . (Join-Path $liveRoot 'Live.Common.ps1')
 }
 
@@ -467,5 +468,164 @@ Describe 'Approved live-check audit regressions with synthetic data only' {
             throw $failure
         }
         @(. (Get-LiveSection 'TestCaseDetail' 'POINTS_QUERY_AS_ASSUMED')) -join "`n" | Should -Be 'FAIL V-32 QUERY_REJECTED STATUS=404'
+    }
+}
+
+# The probes for the next version (tests/Live/Probes.Live.ps1): pure helpers and single validation
+# blocks, with synthetic answers. Customer* stands for server text that must never be printed.
+Describe 'Live probes with synthetic data only' {
+    BeforeEach {
+        $printed = [System.Collections.Generic.List[string]]::new()
+        $collectionBase = 'https://ado.example.test/Collection'
+        $projectBase = 'https://ado.example.test/Collection/Project'
+        $connection = [pscustomobject]@{ CollectionUri = [uri] 'https://ado.example.test/Collection'; RequestTimeoutSeconds = 30 }
+        $details = [uri]::EscapeDataString('Iterations,WorkItems,SubResults')
+        $hasBuild = $true
+        $hasRerun = $true
+        $rerunId = 402
+        $runs = @([pscustomobject]@{ id = 201; runStatistics = @([pscustomobject]@{ outcome = 'Failed'; count = 2 }) })
+        Mock Invoke-WebRequest { throw 'Network forbidden in offline tests.' }
+        Mock Invoke-RestMethod { throw 'Network forbidden in offline tests.' }
+        function New-Location {
+            param([string] $Name, [string] $Route, [string] $Released = '6.0', [string] $Maximum = '6.1')
+            [pscustomobject]@{ id = [guid]::NewGuid(); area = 'Test'; resourceName = $Name; routeTemplate = $Route; releasedVersion = $Released; maxVersion = $Maximum }
+        }
+        function ConvertTo-Gzip {
+            param([string] $Text)
+            $buffer = [System.IO.MemoryStream]::new()
+            $zip = [System.IO.Compression.GZipStream]::new($buffer, [System.IO.Compression.CompressionLevel]::Optimal, $true)
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($Text)
+            $zip.Write($bytes, 0, $bytes.Length)
+            $zip.Dispose()
+            , $buffer.ToArray()
+        }
+    }
+
+    It 'V-28 names each allowlisted route by its own name, with versions as numbers only' {
+        $locations = @(
+            (New-Location 'ResultSummaryByBuild' '{project}/_apis/{area}/CustomerAlpha' '6.0' '6.1')
+            (New-Location 'Results' '{project}/_apis/{area}/Runs/{runId}/{resource}/{testCaseResultId}' 'CustomerBeta' '6.0')
+            (New-Location 'TestHistory' '{project}/_apis/{area}/Results/testhistory' '6.0.12345' '6.0'))
+        $routes = @(Get-AdoLiveRouteEvidence -Location $locations -Allowlist (Get-AdoProbeRoute))
+        @($routes | ForEach-Object { $_.Name + ' ' + $_.State + ' ' + $_.Released + ' ' + $_.Maximum }) | Should -Be @(
+            'RESULT_SUMMARY_BY_BUILD PRESENT 6.0 6.1', 'RESULTS_BY_BUILD ABSENT UNKNOWN UNKNOWN',
+            # The per-run Results route is not the query route.
+            'RESULTS_QUERY ABSENT UNKNOWN UNKNOWN', 'TEST_HISTORY PRESENT 6.0 6.0')
+        ConvertTo-AdoLiveVersion 'CustomerGamma' | Should -Be 'UNKNOWN'
+        ConvertTo-AdoLiveVersion $null | Should -Be 'UNKNOWN'
+    }
+
+    It 'V-28 reports <Verdict> with route notes and counts only' -TestCases @(
+        @{ Names = @('ResultSummaryByBuild', 'ResultsByBuild', 'Results', 'TestHistory'); Verdict = 'PASS V-28 ROUTES_PRESENT LOCATIONS=4 ABSENT=0' }
+        @{ Names = @('ResultSummaryByBuild', 'Results'); Verdict = 'FAIL V-28 ROUTES_ABSENT LOCATIONS=2 ABSENT=2' }
+        @{ Names = @(); Verdict = 'INCONCLUSIVE V-28 NO_LOCATIONS_LISTED LOCATIONS=0 ABSENT=4' }
+    ) {
+        param($Names, $Verdict)
+        Mock Get-AdoProbeJson {
+            param($Uri, $Method)
+            [pscustomobject]@{ count = $Names.Count; value = @($Names | ForEach-Object { New-Location $_ ('{project}/_apis/{area}/' + $_ + '/CustomerDelta') }) }
+        }
+        $lines = @(. (Get-LiveSection 'Probes' 'ROUTES_ABSENT'))
+        $lines.Count | Should -Be 5
+        @($lines | Select-Object -First 4 | ForEach-Object { $_ -replace ' RELEASED=.*$' }) | Should -Be @(
+            ('NOTE V-28 RESULT_SUMMARY_BY_BUILD ' + $(if ($Names -contains 'ResultSummaryByBuild') { 'PRESENT' } else { 'ABSENT' })),
+            ('NOTE V-28 RESULTS_BY_BUILD ' + $(if ($Names -contains 'ResultsByBuild') { 'PRESENT' } else { 'ABSENT' })),
+            ('NOTE V-28 RESULTS_QUERY ' + $(if ($Names -contains 'Results') { 'PRESENT' } else { 'ABSENT' })),
+            ('NOTE V-28 TEST_HISTORY ' + $(if ($Names -contains 'TestHistory') { 'PRESENT' } else { 'ABSENT' })))
+        $lines[4] | Should -Be $Verdict
+        $lines -join "`n" | Should -Not -Match 'Customer'
+        Should -Invoke Get-AdoProbeJson -Exactly -Times 1 -ParameterFilter { $Uri -eq 'https://ado.example.test/Collection/_apis/test' -and $Method -eq 'Options' }
+    }
+
+    It 'V-34 compares the fields read, the sub-results, the iterations and the text lengths' {
+        $detail = [pscustomobject]@{ id = 1; outcome = 'Failed'; errorMessage = 'CustomerEpsilon'; stackTrace = 'CustomerZeta'; failingSince = [pscustomobject]@{ build = 1 }
+            subResults = @([pscustomobject]@{ id = 1 }, [pscustomobject]@{ id = 2 }); iterationDetails = @() }
+        $same = [pscustomobject]@{ id = 1; outcome = 'Failed'; errorMessage = 'CustomerEpsilon'; stackTrace = 'CustomerZeta'; failingSince = $null
+            subResults = @([pscustomobject]@{ id = 1 }, [pscustomobject]@{ id = 2 }); iterationDetails = @(); url = 'CustomerEta' }
+        $agreement = Get-AdoLiveListedDetailAgreement -Listed $same -Detail $detail
+        @($agreement.Fields, $agreement.SubResults, $agreement.Iterations, $agreement.Text) | Should -Be @($true, $true, $true, $true)
+        # A field left out, one sub-result fewer and a message cut short.
+        $short = [pscustomobject]@{ id = 1; outcome = 'Failed'; errorMessage = 'Customer'; stackTrace = 'CustomerZeta'; subResults = @([pscustomobject]@{ id = 1 }) }
+        $agreement = Get-AdoLiveListedDetailAgreement -Listed $short -Detail $detail
+        @($agreement.Fields, $agreement.SubResults, $agreement.Iterations, $agreement.Text) | Should -Be @($false, $false, $true, $false)
+    }
+
+    It 'V-34 reports <Verdict> with counts only' -TestCases @(
+        @{ Cut = $false; Verdict = 'PASS V-34 LISTED_DETAILS_AGREE LISTED=3 COMPARED=2 FIELDS=2 SUB_RESULTS=2 ITERATIONS=2 TEXT=2 MESSAGES_AT_4000=0' }
+        @{ Cut = $true; Verdict = 'FAIL V-34 LISTED_DETAILS_DIFFER LISTED=3 COMPARED=2 FIELDS=2 SUB_RESULTS=2 ITERATIONS=2 TEXT=0 MESSAGES_AT_4000=2' }
+    ) {
+        param($Cut, $Verdict)
+        Mock Get-AdoProbeJson {
+            param($Uri)
+            $long = 'C' * 4100
+            if ($Uri -match '/results/[0-9]+\?') { return [pscustomobject]@{ id = 1; outcome = 'Failed'; errorMessage = $long; stackTrace = 'CustomerTheta' } }
+            $listed = if ($Cut) { $long.Substring(0, 4000) } else { $long }
+            [pscustomobject]@{ value = @(
+                    [pscustomobject]@{ id = 1; outcome = 'Failed'; errorMessage = $listed; stackTrace = 'CustomerTheta' }
+                    [pscustomobject]@{ id = 2; outcome = 'Passed'; errorMessage = $null; stackTrace = $null }
+                    [pscustomobject]@{ id = 3; outcome = 'Error'; errorMessage = $listed; stackTrace = 'CustomerTheta' }) }
+        }
+        $lines = @(. (Get-LiveSection 'Probes' 'LISTED_DETAILS_DIFFER'))
+        $lines | Should -Be @($Verdict)
+        Should -Invoke Get-AdoProbeJson -Exactly -Times 1 -ParameterFilter { $Uri -match '/Runs/201/results\?api-version=6\.0&detailsToInclude=Iterations%2CWorkItems%2CSubResults&%24top=200$' }
+        Should -Invoke Get-AdoProbeJson -Exactly -Times 2 -ParameterFilter { $Uri -match '/Runs/201/results/[13]\?api-version=6\.0&detailsToInclude=Iterations%2CWorkItems%2CSubResults$' }
+    }
+
+    It 'V-35 decodes a gzip body and measures it as a percentage' {
+        $text = '{"value":[' + ((1..200 | ForEach-Object { '{"id":' + $_ + ',"outcome":"Passed"}' }) -join ',') + ']}'
+        $bytes = ConvertTo-Gzip $text
+        Get-AdoLiveDecodedLength -Bytes $bytes -ContentEncoding 'gzip' | Should -Be ([System.Text.Encoding]::UTF8.GetByteCount($text))
+        Get-AdoLiveDecodedLength -Bytes ([byte[]] @(1, 2, 3)) -ContentEncoding '' | Should -Be 3
+        $evidence = Get-AdoLiveCompressionEvidence -ContentEncoding 'gzip' -WireBytes 25 -DecodedBytes 100
+        @($evidence.State, $evidence.Percent) | Should -Be @('COMPRESSED', 25)
+        (Get-AdoLiveCompressionEvidence -ContentEncoding $null -WireBytes 100 -DecodedBytes 100).State | Should -Be 'UNCOMPRESSED'
+    }
+
+    It 'V-35 reports <Verdict> from the body as it came over the wire' -TestCases @(
+        @{ Encoding = 'gzip'; Size = 200; Verdict = '^PASS V-35 COMPRESSED PERCENT=[0-9]+ DECODED_BYTES=[0-9]+$' }
+        @{ Encoding = ''; Size = 200; Verdict = '^FAIL V-35 UNCOMPRESSED PERCENT=100 DECODED_BYTES=[0-9]+$' }
+        @{ Encoding = ''; Size = 2; Verdict = '^INCONCLUSIVE V-35 PAGE_TOO_SMALL PERCENT=100 DECODED_BYTES=[0-9]+$' }
+    ) {
+        param($Encoding, $Size, $Verdict)
+        Mock Invoke-AdoProbeRawRequest {
+            $text = '{"value":[' + ((1..$Size | ForEach-Object { '{"id":' + $_ + ',"outcome":"Passed"}' }) -join ',') + ']}'
+            [pscustomobject]@{ Bytes = $(if ($Encoding -eq 'gzip') { ConvertTo-Gzip $text } else { [System.Text.Encoding]::UTF8.GetBytes($text) }); ContentEncoding = $Encoding }
+        }
+        @(. (Get-LiveSection 'Probes' 'PAGE_TOO_SMALL')) -join "`n" | Should -Match $Verdict
+        Should -Invoke Invoke-AdoProbeRawRequest -Exactly -Times 1 -ParameterFilter { $Uri -match '/Runs/201/results\?api-version=6\.0&detailsToInclude=None&%24top=1000&%24skip=0$' }
+    }
+
+    It 'V-36 tells OVERLAP from DISJOINT and needs every sub-result attachment to pass' {
+        $full = Get-AdoLiveAttachmentOverlap -Result @(61, 62, 63) -SubResult @(62, 63, 63)
+        @($full.State, $full.Complete, (Format-AdoLiveCounts $full.Counts)) | Should -Be @('OVERLAP', $true, 'RESULT=3 SUB_RESULTS=2 SHARED=2')
+        $part = Get-AdoLiveAttachmentOverlap -Result @(61, 62) -SubResult @(62, 64)
+        @($part.State, $part.Complete) | Should -Be @('OVERLAP', $false)
+        $none = Get-AdoLiveAttachmentOverlap -Result @(61) -SubResult @(64)
+        @($none.State, $none.Complete) | Should -Be @('DISJOINT', $false)
+    }
+
+    It 'V-36 reports <Verdict> with counts only' -TestCases @(
+        @{ Own = @(71, 72); Sub = @(72); Verdict = 'PASS V-36 OVERLAP RESULT=2 SUB_RESULTS=1 SHARED=1' }
+        @{ Own = @(71); Sub = @(72); Verdict = 'FAIL V-36 DISJOINT RESULT=1 SUB_RESULTS=1 SHARED=0' }
+        @{ Own = @(71); Sub = @(); Verdict = 'INCONCLUSIVE V-36 NO_SUB_RESULT_ATTACHMENTS RERUNS=1' }
+    ) {
+        param($Own, $Sub, $Verdict)
+        Mock Get-AdoProbeRun { @([pscustomobject]@{ id = 301; name = 'CustomerIota' }) }
+        Mock Get-AdoProbeJson {
+            param($Uri)
+            if ($Uri -match 'testSubResultId=') { return [pscustomobject]@{ value = @($Sub | ForEach-Object { [pscustomobject]@{ id = $_; fileName = 'CustomerKappa' } }) } }
+            if ($Uri -match '/attachments\?') { return [pscustomobject]@{ value = @($Own | ForEach-Object { [pscustomobject]@{ id = $_; fileName = 'CustomerLambda' } }) } }
+            if ($Uri -match '/results/5\?') { return [pscustomobject]@{ id = 5; resultGroupType = 'Rerun'; subResults = @([pscustomobject]@{ id = 1 }) } }
+            [pscustomobject]@{ value = @([pscustomobject]@{ id = 4; outcome = 'Passed' }, [pscustomobject]@{ id = 5; outcome = 'Passed'; resultGroupType = 'Rerun' }) }
+        }
+        $lines = @(. (Get-LiveSection 'Probes' 'NO_SUB_RESULT_ATTACHMENTS'))
+        $lines | Should -Be @($Verdict)
+        Should -Invoke Get-AdoProbeRun -Exactly -Times 1 -ParameterFilter { $BuildId -eq 402 }
+        Should -Invoke Get-AdoProbeJson -Exactly -Times 1 -ParameterFilter { $Uri -match '/Runs/301/Results/5/attachments\?api-version=6\.0-preview\.1&testSubResultId=1$' }
+    }
+
+    It 'gives every probe one verdict, after its route notes, and leaves out the checks already settled' {
+        Get-AdoLivePendingCheck -Id @('V-28', 'V-34', 'V-35', 'V-36') -Line @('NOTE V-28 TEST_HISTORY PRESENT RELEASED=6.0 MAX=6.0', 'PASS V-28 ROUTES_PRESENT LOCATIONS=4 ABSENT=0',
+            'FAIL V-34 CHECK_FAILED') | Should -Be @('V-35', 'V-36')
     }
 }

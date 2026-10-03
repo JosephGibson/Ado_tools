@@ -106,7 +106,7 @@ public sealed class TestBugResolutionTests
         string html = TestFailureReportFixture.Render(model);
         TestFailureReportValidator.Validate(new StringReader(html), model);
         // The overview and by-error rows mark only the test with an open bug.
-        Assert.Equal(2, Count(html, ">Missing</a> <a class=\"open-bug-marker\" rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/4003\">Open bug</a>"));
+        Assert.Equal(2, Count(html, ">Missing</span></a> <a class=\"open-bug-marker\" rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/4003\">Open bug</a>"));
         Assert.Equal(2, Count(html, "class=\"open-bug-marker\""));
         foreach (string closed in new[] { "data-bug=\"4001\"", "data-bug=\"4002\"", "edit/4001", "edit/4002", "Corrigé hier", "Doublon" })
             Assert.DoesNotContain(closed, html, StringComparison.Ordinal);

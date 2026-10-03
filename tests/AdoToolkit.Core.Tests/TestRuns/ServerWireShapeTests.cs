@@ -22,36 +22,55 @@ public sealed class ServerWireShapeTests
     }
 
     [Theory]
-    [InlineData("""{"value":[{"id":1,"testRun":{"id":"invalid"}}]}""")]
-    [InlineData("""{"value":[{"id":1,"testRun":{"id":"12.5"}}]}""")]
+    [InlineData("""{"id":1,"testRun":{"id":"invalid"}}""")]
+    [InlineData("""{"id":1,"testRun":{"id":"12.5"}}""")]
     public void NonNumericReferenceIdsStillFail(string body) =>
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize(body, AdoJsonContext.Default.TestResultPageDto));
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize(body, AdoJsonContext.Default.TestResultDto));
 
     [Fact]
-    public async Task StringTestRunIdsInResultListsParse()
+    public async Task StringTestRunIdsInResultDetailsParse()
     {
         using FakeHttpMessageHandler handler = new TestRunFixture()
-            .RouteBody("""{"count":1,"value":[{"id":1,"outcome":"Failed","testRun":{"id":"201","name":"Web tests"},"testCase":{"id":"1010"}}]}""",
-                "/Runs/201/results", "%24skip=0&")
+            .RouteBody("""{"id":1,"outcome":"Failed","testRun":{"id":"201","name":"Web tests"},"testCase":{"id":"1010"}}""", "/Runs/201/results/1?")
             .Handler();
         using HttpClient client = new(handler);
-        IReadOnlyList<TestResultDto> results = await Service(client).GetResultsAsync(TestRunFixture.Project, 201,
+        TestResultDto result = await Service(client).GetResultAsync(TestRunFixture.Project, 201, 1,
             CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
-        Assert.Equal(201, Assert.Single(results).TestRun!.Id);
+        Assert.Equal(201, result.TestRun!.Id);
     }
 
     [Fact]
     public async Task InvalidReferenceIdNamesTheOperationAndJsonPath()
     {
         using FakeHttpMessageHandler handler = new TestRunFixture()
-            .RouteBody("""{"count":1,"value":[{"id":1,"outcome":"Failed","testRun":{"id":"invalid"}}]}""",
-                "/Runs/201/results", "%24skip=0&")
+            .RouteBody("""{"id":1,"outcome":"Failed","testRun":{"id":"invalid"}}""", "/Runs/201/results/1?")
             .Handler();
         using HttpClient client = new(handler);
         AdoResponseFormatException error = await Assert.ThrowsAsync<AdoResponseFormatException>(() => Service(client)
-            .GetResultsAsync(TestRunFixture.Project, 201, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
-        Assert.Equal("TestResultsList", error.Operation);
-        Assert.Equal("$.value[0].testRun.id", Assert.IsType<JsonException>(error.InnerException).Path);
+            .GetResultAsync(TestRunFixture.Project, 201, 1, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
+        Assert.Equal("TestResultGet", error.Operation);
+        Assert.Equal("$.testRun.id", Assert.IsType<JsonException>(error.InnerException).Path);
+    }
+
+    // Pass 1 reads the fields of §15.9 step 3 and skips every other field of a listed result unread,
+    // so a field it does not use can neither fail the listing nor cost its parsing.
+    [Fact]
+    public async Task ResultListingsReadOnlyThePass1Fields()
+    {
+        using FakeHttpMessageHandler handler = new TestRunFixture()
+            .RouteBody("""
+                {"count":1,"value":[{"id":1,"outcome":"Failed","automatedTestName":"Contoso.Web.Tests.CartTests.AddsItem",
+                "automatedTestStorage":"Contoso.Web.Tests.dll","testCaseTitle":"Adds an item","resultGroupType":"rerun",
+                "startedDate":"2026-09-15T10:00:00Z","testCase":{"id":"1010"},"testRun":{"id":"invalid"},"durationInMs":"slow","owner":42}]}
+                """, "/Runs/201/results", "%24skip=0&")
+            .Handler();
+        using HttpClient client = new(handler);
+        TestResultListingDto result = Assert.Single(await Service(client).GetResultsAsync(TestRunFixture.Project, 201,
+            CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
+        Assert.Equal((1, "Failed", "Contoso.Web.Tests.CartTests.AddsItem", "Contoso.Web.Tests.dll", "Adds an item", "rerun"),
+            (result.Id, result.Outcome, result.AutomatedTestName, result.AutomatedTestStorage, result.TestCaseTitle, result.ResultGroupType));
+        Assert.Equal(new DateTimeOffset(2026, 9, 15, 10, 0, 0, TimeSpan.Zero), result.StartedDate);
+        Assert.Equal("1010", result.TestCase!.Id);
     }
 
     [Fact]

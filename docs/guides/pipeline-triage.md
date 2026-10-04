@@ -200,8 +200,11 @@ The server response has an invalid format. Operation: TestResultsList. JSON path
 The location contains only field names and positions, never response values, so
 you can share it when reporting the problem.
 
-Full help: [Get-AdoBuild](../commands/en-US/Get-AdoBuild.md),
+Full help: [Get-AdoBuildDefinition](../commands/en-US/Get-AdoBuildDefinition.md),
+[Get-AdoBuild](../commands/en-US/Get-AdoBuild.md),
+[Get-AdoBuildTimeline](../commands/en-US/Get-AdoBuildTimeline.md),
 [Get-AdoBuildFailure](../commands/en-US/Get-AdoBuildFailure.md),
 [Save-AdoBuildLog](../commands/en-US/Save-AdoBuildLog.md),
+[Get-AdoTestRun](../commands/en-US/Get-AdoTestRun.md),
 [Get-AdoBuildTestFailure](../commands/en-US/Get-AdoBuildTestFailure.md),
 [Export-AdoBuildTestFailure](../commands/en-US/Export-AdoBuildTestFailure.md).

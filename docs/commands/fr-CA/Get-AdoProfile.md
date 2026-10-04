@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-02-2026
+ms.date: 10-04-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoProfile
 ---
@@ -39,7 +39,7 @@ Lit la configuration locale sans contacter le serveur. Retourne les profils tri�
 Get-AdoProfile -Name 'work*'
 ```
 
-Liste les profils de connexion enregistrés localement.
+Liste les profils de connexion enregistrés localement dont le nom commence par `work`.
 
 ## PARAMETERS
 

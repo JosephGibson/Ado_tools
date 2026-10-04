@@ -6,6 +6,16 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.9.5 - 2026-10-04
+
+### Fixed
+
+- The failed-test report no longer shows the replacement character where it cuts a long error line or a long build number inside an emoji: the Error column, its tooltip, the default table of the failed tests and the bar captions of the run-history chart keep whole characters.
+- Piping an object you built by hand, without its numeric ID, now reports an error for that object in your language and leaves the rest of the pipeline running; it used to end the pipeline with an untranslated .NET error.
+- Four help topics say what their examples do, and four guides link every cmdlet they use, in both English and French.
+
+Details: [release notes](docs/release-0.9.5.md)
+
 ## 0.9.0 - 2026-10-04
 
 ### Changed
@@ -28,7 +38,7 @@ Details: [release notes](docs/release-0.9.0.md)
 - By error also groups messages that differ only in paths, URLs or hexadecimal IDs, and groups an MSTest failure by its exception instead of its "Test method … threw exception:" line.
 - A test's card shows its run history by date, its bugs as chips and its attachments, each file once, before its attempts; the Runs and history view starts with the run history chart.
 
-Details: [release notes](docs/release-0.8.5.md)
+Details: [release notes](docs/archive/release-0.8.5.md)
 
 ## 0.8.0 - 2026-10-03
 

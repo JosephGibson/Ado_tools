@@ -61,7 +61,11 @@ public sealed class GetAdoBuildTestFailureCommand : AdoCmdletBase, IDisposable
     protected override void ProcessRecord() => RunLocal(() =>
     {
         AdoConnection connection = Resolve();
-        if (InputObject is not null) EnsureInput(InputObject, InputObject.CollectionUri, connection);
+        if (InputObject is not null)
+        {
+            EnsureInput(InputObject, InputObject.CollectionUri, connection);
+            EnsureIdentifier(InputObject, nameof(InputObject.Id), InputObject.Id);
+        }
         string project = InputObject?.TeamProject ?? ResolveProject(Project, connection);
         TestResultOptions options = configuration!.TestResults;
         TestFailureQuery query = new()

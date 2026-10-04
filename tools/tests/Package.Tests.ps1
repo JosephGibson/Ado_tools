@@ -149,6 +149,21 @@ Describe 'Package validation and deployment boundaries' {
         { Assert-AdoPackage -PackagePath $package } | Should -Throw '*required layout*'
     }
 
+    # The installer compares the layout case-sensitively, so the gate must too: a case-only
+    # difference that passes here would be published and then refused on every user's machine.
+    It 'rejects a layout that differs from the required one only in case: <Wrong>' -TestCases @(
+        @{ Right = 'en-US'; Wrong = 'en-us' }
+        @{ Right = 'AdoToolkit.psd1'; Wrong = 'Adotoolkit.psd1' }
+    ) {
+        param($Right, $Wrong)
+        # Windows keeps the casing a rename supplies, but refuses a direct case-only rename.
+        $staging = Join-Path $package 'staged-case'
+        Move-Item -LiteralPath (Join-Path $package $Right) -Destination $staging
+        Move-Item -LiteralPath $staging -Destination (Join-Path $package $Wrong)
+
+        { Assert-AdoPackage -PackagePath $package } | Should -Throw '*required layout*'
+    }
+
     It 'refuses installation for <Status> signatures' -TestCases @(
         @{ Status = 'NotSigned' }, @{ Status = 'HashMismatch' }
     ) {

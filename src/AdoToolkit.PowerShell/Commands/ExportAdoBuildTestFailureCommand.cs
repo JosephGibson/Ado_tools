@@ -61,6 +61,7 @@ public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposabl
     {
         AdoBuildTestFailureSet set = InputObject!;
         EnsureComplete(set);
+        EnsureIdentifier(set, nameof(set.Build) + "." + nameof(set.Build.Id), set.Build.Id);
         // A file path names exactly one report; each later set gets a per-input error.
         if (pathIsFile && received++ > 0)
         {

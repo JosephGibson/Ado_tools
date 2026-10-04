@@ -95,6 +95,9 @@ exit $failed
             'check: product Pester: 1 passed, 0 failed, 0 skipped, 1 discovered'
         )
         $gate.Output | Should -Not -Match 'What if'
+        # Each Core run reads its report and gives the folder back, so repeated gate runs in one
+        # checkout cannot fill artifacts/verify with the TRX of every run ever made.
+        @(Get-ChildItem -LiteralPath (Join-Path $root 'artifacts/verify') -Directory -Filter 'core-*') | Should -BeNullOrEmpty
     }
 
     It 'reports every step and fails when a Core run fails' {
@@ -111,6 +114,8 @@ exit $failed
             'check: package staged and inspected (AdoToolkit 1.2.3): exact layout, help for every command'
             'check: product Pester: 1 passed, 0 failed, 0 skipped, 1 discovered'
         )
+        # A failing gate gives its folders back too; the failure is already in the output above.
+        @(Get-ChildItem -LiteralPath (Join-Path $root 'artifacts/verify') -Directory -Filter 'core-*') | Should -BeNullOrEmpty
     }
 
     It 'fails on a later failure even when an earlier step is only incomplete' {

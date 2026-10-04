@@ -332,4 +332,6 @@ data. Handle them like any other work data.
 Full help: [Get-AdoBuildTestFailure](../commands/en-US/Get-AdoBuildTestFailure.md),
 [Export-AdoBuildTestFailure](../commands/en-US/Export-AdoBuildTestFailure.md),
 [Get-AdoBuildFailure](../commands/en-US/Get-AdoBuildFailure.md),
-[Save-AdoBuildLog](../commands/en-US/Save-AdoBuildLog.md).
+[Save-AdoBuildLog](../commands/en-US/Save-AdoBuildLog.md),
+[Get-AdoBuildTimeline](../commands/en-US/Get-AdoBuildTimeline.md),
+[Get-AdoTestRun](../commands/en-US/Get-AdoTestRun.md).

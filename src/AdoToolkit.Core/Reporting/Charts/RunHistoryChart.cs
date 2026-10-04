@@ -88,8 +88,15 @@ public static class RunHistoryChart
     private static string N(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
     private static string E(string value) => SinkEncoding.Attribute(value);
 
-    private static string Label(string buildNumber) => buildNumber.Length <= MaximumLabelCharacters
-        ? buildNumber : string.Concat(buildNumber.AsSpan(0, MaximumLabelCharacters - 1), "…");
+    // Shortened without splitting a surrogate pair: the sink encodes a lone half as the replacement
+    // character, so the caption would contradict the title, which carries the whole build number.
+    private static string Label(string buildNumber)
+    {
+        if (buildNumber.Length <= MaximumLabelCharacters) return buildNumber;
+        int length = MaximumLabelCharacters - 1;
+        if (char.IsHighSurrogate(buildNumber[length - 1])) length--;
+        return string.Concat(buildNumber.AsSpan(0, length), "…");
+    }
 
     private static string? Date(DateTimeOffset? value, CultureInfo culture, TimeSpan? offset) =>
         (value is { } time && offset is { } shift ? ReportTime.InOffset(time, shift) : value)?.ToString("g", culture);

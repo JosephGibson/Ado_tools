@@ -50,6 +50,16 @@ Describe 'Workflow contracts' {
         $result.Failures.Count | Should -Be 2
     }
 
+    # Strict mode turns a bare read of an absent property into a PropertyNotFound error, which the
+    # catch would report in place of the real shape problem, leaving the hook-helper check with
+    # nothing to inspect. The group's shape is named instead.
+    It 'names a hook group that carries no hooks array' {
+        $root = Join-Path $TestDrive 'hook-group-shape'
+        New-Fixture (Join-Path $root '.claude/settings.json') '{"hooks":{"SessionStart":[{"type":"command","command":"pwsh -File tools/start.ps1"}]}}'
+        $result = Get-ToolingLayoutOutcome -ProjectProfile (Get-ProjectProfile -Root $root)
+        $result.Failures | Should -Contain '.claude/settings.json: Each hooks entry needs a hooks array.'
+    }
+
     It 'reports a passing selected check as incomplete and rejects unknown names' {
         $root = Join-Path $TestDrive 'selected'
         New-Fixture (Join-Path $root 'app.json') '{}'
@@ -60,6 +70,8 @@ Describe 'Workflow contracts' {
         $result.Stages[0].Status | Should -Be 'pass'
         $result.Warnings | Should -Contain 'Only the selected stages ran; run verify for the full gate.'
         { Invoke-ProjectVerification -Root $root -Stage typo } | Should -Throw '*Unknown stage*'
+        # An empty name selects nothing; it must not fall through to the whole gate and a pass.
+        { Invoke-ProjectVerification -Root $root -Stage '' } | Should -Throw '*Unknown stage*'
     }
 
     It 'rejects an unknown stage name in a repository that has no stage' {

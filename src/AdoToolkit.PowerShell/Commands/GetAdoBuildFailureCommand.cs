@@ -29,7 +29,11 @@ public sealed class GetAdoBuildFailureCommand : AdoCmdletBase
     protected override void ProcessRecord() => RunLocal(() =>
     {
         AdoConnection connection = ResolveConnection(Connection);
-        if (InputObject is not null) EnsureInput(InputObject, InputObject.CollectionUri, connection);
+        if (InputObject is not null)
+        {
+            EnsureInput(InputObject, InputObject.CollectionUri, connection);
+            EnsureIdentifier(InputObject, nameof(InputObject.Id), InputObject.Id);
+        }
         string project = InputObject?.TeamProject ?? ResolveProject(Project, connection);
         using ClientLease lease = SessionStateRegistry.Current.Acquire(connection);
         IReadOnlyList<AdoBuildFailure> failures = RunWorker(async (log, token) =>

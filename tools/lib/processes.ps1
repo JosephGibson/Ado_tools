@@ -128,6 +128,7 @@ Import-Module -Name $(ConvertTo-PowerShellLiteral $PesterManifest)
 `$summary = [ordered]@{
     Result = [string] `$result.Result; TotalCount = `$result.TotalCount; PassedCount = `$result.PassedCount
     FailedCount = `$result.FailedCount; SkippedCount = `$result.SkippedCount; NotRunCount = `$result.NotRunCount
+    InconclusiveCount = `$result.InconclusiveCount
     Failed = @(foreach (`$test in `$result.Failed) { [ordered]@{ ExpandedPath = `$test.ExpandedPath; Message = [string] `$test.ErrorRecord.Exception.Message } })
     Containers = @(foreach (`$container in @(`$result.Containers | Where-Object { `$_.Result -eq 'Failed' -and @(`$_.ErrorRecord).Count -gt 0 })) {
             [ordered]@{ Item = [string] `$container.Item; Result = 'Failed'; Messages = @(foreach (`$record in @(`$container.ErrorRecord)) { [string] `$record.Exception.Message }) } })
@@ -144,7 +145,8 @@ Import-Module -Name $(ConvertTo-PowerShellLiteral $PesterManifest)
             }
             if ($null -eq $summary) {
                 $summary = [pscustomobject]@{
-                    Result = 'Failed'; TotalCount = 0; PassedCount = 0; FailedCount = 0; SkippedCount = 0; NotRunCount = 0; Failed = @()
+                    Result = 'Failed'; TotalCount = 0; PassedCount = 0; FailedCount = 0; SkippedCount = 0; NotRunCount = 0
+                    InconclusiveCount = 0; Failed = @()
                     Containers = @([pscustomobject]@{ Item = $started[$index]; Result = 'Failed'; Messages = @(Get-PowerShellProcessFailure -Result $results[$index] -Activity 'test') })
                 }
             }
@@ -162,6 +164,12 @@ Import-Module -Name $(ConvertTo-PowerShellLiteral $PesterManifest)
         FailedCount = & $sum 'FailedCount'
         SkippedCount = & $sum 'SkippedCount'
         NotRunCount = & $sum 'NotRunCount'
+        InconclusiveCount = & $sum 'InconclusiveCount'
+        # Completeness is per file, as the Core runs check it per run: a file that discovered nothing
+        # adds zero to every sum, and an inconclusive test is discovered but neither passed nor failed.
+        Incomplete = @($ordered | Where-Object {
+                [int] $_.TotalCount -eq 0 -or ([int] $_.PassedCount + [int] $_.FailedCount) -ne [int] $_.TotalCount
+            }).Count -gt 0
         Failed = @($ordered | ForEach-Object { @($_.Failed) })
         Containers = @($ordered | ForEach-Object { @($_.Containers) })
     }

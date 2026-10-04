@@ -629,3 +629,26 @@ Describe 'Live probes with synthetic data only' {
             'FAIL V-34 CHECK_FAILED') | Should -Be @('V-35', 'V-36')
     }
 }
+
+# tests/Live/AGENTS.md: one verdict per check ID. S0-9 is one criterion, "Connect-Ado; Test-AdoConnection;
+# Get-AdoProject succeeds from a signed installed module", so the signature is an observation before it,
+# not a verdict of its own.
+Describe 'Live connection check with synthetic data only' {
+    It 'gives S0-9 one verdict, after the signature note' -TestCases @(
+        @{ Signed = $true; Note = 'NOTE S0-9 SIGNATURE_VALID' }
+        @{ Signed = $false; Note = 'NOTE S0-9 UNSIGNED_RELEASE_INSTALLED' }
+    ) {
+        param($Signed, $Note)
+        $installed = [pscustomobject]@{ Signed = $Signed }
+        function Connect-Ado { param([Parameter(ValueFromRemainingArguments = $true)] $Rest) }
+        function Test-AdoConnection { param([Parameter(ValueFromRemainingArguments = $true)] $Rest) [pscustomobject]@{ Success = $true } }
+        function Get-AdoProject { param([Parameter(ValueFromRemainingArguments = $true)] $Rest) }
+        $source = (Read-LiveAst 'Connection').Extent.Text
+        $start = $source.IndexOf('if ($installed.Signed)', [StringComparison]::Ordinal)
+        $end = $source.IndexOf('exit 2', $start, [StringComparison]::Ordinal)
+        $lines = @(. ([scriptblock]::Create($source.Substring($start, $end - $start))))
+
+        @($lines | Where-Object { $_ -match '^(PASS|FAIL|INCONCLUSIVE) S0-9( |$)' }) | Should -Be @('PASS S0-9 CONNECT_TEST_PROJECTS')
+        $lines[0] | Should -Be $Note
+    }
+}

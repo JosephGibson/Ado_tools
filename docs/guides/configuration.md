@@ -132,3 +132,9 @@ Full help: [Set-AdoProfile](../commands/en-US/Set-AdoProfile.md),
 [Get-AdoProfile](../commands/en-US/Get-AdoProfile.md),
 [Remove-AdoProfile](../commands/en-US/Remove-AdoProfile.md),
 [Connect-Ado](../commands/en-US/Connect-Ado.md).
+The cmdlets that read the defaults and limits above:
+[Get-AdoTestCase](../commands/en-US/Get-AdoTestCase.md),
+[Get-AdoTestSuite](../commands/en-US/Get-AdoTestSuite.md),
+[Get-AdoBuild](../commands/en-US/Get-AdoBuild.md),
+[Get-AdoBuildTestFailure](../commands/en-US/Get-AdoBuildTestFailure.md),
+[Export-AdoBuildTestFailure](../commands/en-US/Export-AdoBuildTestFailure.md).

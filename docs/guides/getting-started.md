@@ -40,7 +40,7 @@ it before extraction, run this in Windows PowerShell or PowerShell 7 and compare
 the result with the published checksum:
 
 ```powershell
-(Get-FileHash .\AdoToolkit-0.9.0-win-x64.zip -Algorithm SHA256).Hash
+(Get-FileHash .\AdoToolkit-0.9.5-win-x64.zip -Algorithm SHA256).Hash
 ```
 
 The launcher uses `RemoteSigned` for its process only. It does not change your
@@ -59,7 +59,7 @@ script is blocked, unblock the original ZIP in Properties and extract it again.
 
    ```powershell
    Unblock-File .\Install-AdoToolkit.ps1
-   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.9.0.zip
+   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.9.5.zip
    ```
 
    The script checks the ZIP against the `.sha256` file and checks that it contains
@@ -87,9 +87,9 @@ To install without the script, check the hash yourself, then unblock the ZIP bef
 extracting it so that no extracted file carries the download mark:
 
 ```powershell
-(Get-FileHash .\AdoToolkit-0.9.0.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
-Unblock-File .\AdoToolkit-0.9.0.zip
-Expand-Archive .\AdoToolkit-0.9.0.zip `
+(Get-FileHash .\AdoToolkit-0.9.5.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
+Unblock-File .\AdoToolkit-0.9.5.zip
+Expand-Archive .\AdoToolkit-0.9.5.zip `
     -DestinationPath (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell\Modules')
 ```
 
@@ -103,7 +103,7 @@ PowerShell 7:
 ```powershell
 & .\tools\package\Publish-AdoToolkitPackage.ps1    # restores, builds and stages the package
 & .\tools\package\New-AdoToolkitRelease.ps1        # writes artifacts\release
-& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.9.0.zip
+& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.9.5.zip
 ```
 
 The package script lists every missing prerequisite before it starts. Restore uses
@@ -195,5 +195,9 @@ The collection URL ends with the project name. Connect with: Connect-Ado -Collec
 
 Full help: [Connect-Ado](../commands/en-US/Connect-Ado.md),
 [Set-AdoProfile](../commands/en-US/Set-AdoProfile.md),
-[Test-AdoConnection](../commands/en-US/Test-AdoConnection.md), or
+[Get-AdoProfile](../commands/en-US/Get-AdoProfile.md),
+[Test-AdoConnection](../commands/en-US/Test-AdoConnection.md),
+[Get-AdoProject](../commands/en-US/Get-AdoProject.md),
+[Get-AdoConnection](../commands/en-US/Get-AdoConnection.md),
+[Disconnect-Ado](../commands/en-US/Disconnect-Ado.md), or
 `Get-Help <cmdlet> -Full`.

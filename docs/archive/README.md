@@ -20,6 +20,7 @@ documentation starts at the [README](../../README.md).
 | [release-0.7.5.md](release-0.7.5.md) | 0.7.5 release notes: audit fixes, French spacing, help and guide corrections and tooling hardening |
 | [release-0.7.10.md](release-0.7.10.md) | 0.7.10 release notes: squash merge of pull requests in the release procedure; no product change |
 | [release-0.8.0.md](release-0.8.0.md) | 0.8.0 release notes: faster failed-test retrieval, `-SkipAttachments`, the planned history read, the report density pass and V-34 to V-36 |
+| [release-0.8.5.md](release-0.8.5.md) | 0.8.5 release notes: the failed-test report restyle, with the Overview cards, the error clusters and the bug coverage; no cmdlet or schema change |
 
 Release notes for the current and the previous version are in `docs/`.
 

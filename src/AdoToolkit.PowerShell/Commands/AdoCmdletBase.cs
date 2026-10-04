@@ -130,6 +130,16 @@ public abstract class AdoCmdletBase : PSCmdlet
             throw new AdoRequestException(Messages.Get(AdoMessage.IncompleteInput, MessageCulture, missing.Type, missing.Member));
     }
 
+    // InputGuard describes only reference-typed members, so an absent integer identifier reaches
+    // Core as 0 and fails there with an ArgumentOutOfRangeException, which terminates the pipeline
+    // and carries untranslated text. A hand-made input is reported here instead, like a null member.
+    private protected void EnsureIdentifier(object input, string member, int value)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        if (value < 1)
+            throw new AdoRequestException(Messages.Get(AdoMessage.IncompleteInput, MessageCulture, input.GetType().Name, member));
+    }
+
     private protected void EnsureInput(object input, Uri? collection, AdoConnection connection)
     {
         EnsureComplete(input);

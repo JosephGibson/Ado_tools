@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-04-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoProject
 ---
@@ -39,7 +39,7 @@ Reads all project pages using API version 6.0. Filters Name with case-insensitiv
 Get-AdoProject -Name 'Équipe*' -Top 5
 ```
 
-Lists projects in the connected collection.
+Lists at most five projects of the connected collection whose name begins with `Équipe`.
 
 ## PARAMETERS
 

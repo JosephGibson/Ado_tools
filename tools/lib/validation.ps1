@@ -75,12 +75,16 @@ function Get-PesterOutcome {
         [void] $failures.Add("... and $($result.FailedCount - $listed.Count) further failing test(s)")
     }
     if ($result.Result -eq 'Failed' -and $failures.Count -eq 0) { [void] $failures.Add('Pester failed during discovery or setup. Inspect the test container.') }
-    $incomplete = $result.TotalCount -eq 0 -or $result.SkippedCount -gt 0 -or $result.NotRunCount -gt 0
+    # Incomplete in the aggregate, where a skipped, not-run or inconclusive test is discovered but
+    # neither passes nor fails, and per file, where a file that discovered nothing adds only zeros.
+    $perFile = $null -ne $result.PSObject.Properties['Incomplete'] -and $result.Incomplete
+    $incomplete = $result.TotalCount -eq 0 -or
+        ($result.PassedCount + $result.FailedCount) -ne $result.TotalCount -or $perFile
 
     return [pscustomobject]@{
         Failures = @($failures)
         Summary = @("Pester: $($result.PassedCount) passed, $($result.FailedCount) failed, $($result.SkippedCount) skipped")
-        Warnings = if ($incomplete) { @('Pester discovered no tests or left tests skipped/not run.') } else { @() }
+        Warnings = if ($incomplete) { @('A Pester file discovered no tests, or left a test skipped, not run or inconclusive.') } else { @() }
         Unavailable = $incomplete
     }
 }
@@ -358,10 +362,21 @@ function Get-ToolingLayoutOutcome {
             $hooksProperty = $settings.PSObject.Properties['hooks']
             if ($null -ne $hooksProperty) {
                 if ($hooksProperty.Value -isnot [pscustomobject]) { throw 'hooks must be an object of event arrays.' }
+                # Read every member through PSObject, as the rest of this file does: under strict mode a
+                # bare read of an absent property throws, and the catch below would report that in place
+                # of the shape problem and leave $hookScripts empty, checking no hook helper at all.
                 foreach ($hookEvent in $hooksProperty.Value.PSObject.Properties) {
                     foreach ($group in @($hookEvent.Value)) {
-                        foreach ($hook in @($group.hooks)) {
-                            if ($hook.type -eq 'command' -and [string]::IsNullOrWhiteSpace([string]$hook.command)) { throw 'Command hooks require a nonempty command.' }
+                        $groupHooks = if ($group -is [pscustomobject]) { $group.PSObject.Properties['hooks'] } else { $null }
+                        if ($null -eq $groupHooks) { throw 'Each hooks entry needs a hooks array.' }
+                        foreach ($hook in @($groupHooks.Value)) {
+                            if ($hook -isnot [pscustomobject]) { throw 'Each hook must be an object.' }
+                            $type = $hook.PSObject.Properties['type']
+                            $command = $hook.PSObject.Properties['command']
+                            if ($null -ne $type -and $type.Value -eq 'command' -and
+                                ($null -eq $command -or [string]::IsNullOrWhiteSpace([string] $command.Value))) {
+                                throw 'Command hooks require a nonempty command.'
+                            }
                         }
                     }
                 }
@@ -854,7 +869,9 @@ function Invoke-ProjectVerification {
 
     $projectProfile = Get-ProjectProfile -Root $Root
     $plan = @(Get-ValidationPlan -ProjectProfile $projectProfile -SkipTests:$SkipTests)
-    if ($Stage) {
+    # Any supplied name is validated, including an empty one: @('') is falsy, so a truthiness test
+    # would take an explicit selection that names nothing for an unset -Stage and run the whole gate.
+    if ($null -ne $Stage -and @($Stage).Count -gt 0) {
         $planned = @($plan | ForEach-Object Name)
         foreach ($name in $Stage) {
             if ($name -notin $planned) { throw "Unknown stage '$name'. Run dev.ps1 plan for valid names." }

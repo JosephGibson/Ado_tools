@@ -2,7 +2,7 @@
 
 Prepared on 2026-10-03 from the uncommitted changes on the branch `0.8.5`, which starts at
 `main` after the pull request of 0.8.0 was squash-merged as `4e62fba`. The work followed the
-[0.8.5 plan](plans/0.8.5-report-styling.md): its section 4 is the design, its section 10 the
+[0.8.5 plan](archive/plans/0.8.5-report-styling.md): its section 4 is the design, its section 10 the
 developer's decisions over three rounds of previews, and its section 11 the evidence of each
 step. 0.8.5 is a styling pass on the HTML report that `Export-AdoBuildTestFailure` writes:
 the views come in a new order, every part of a test has a column of its own, colour carries
@@ -163,7 +163,7 @@ No existing test was deleted; the renamed ones replace their earlier versions.
 | Tag a bug opened in this run as New, in a lighter red, as the developer asked in the last design pass | Moved to 0.9: it needs each bug's creation date (`System.CreatedDate`), a new property of `AdoTestBug`, which is public output, and a live check on Server 2020. The plan's section 9 keeps it with the other ideas that need the server |
 | The overview's Latest error and the console table keep MSTest's "Test method X threw exception:" | A decision of the plan (section 10): switching them changes what `Get-AdoBuildTestFailure` shows. The attempt summaries and By error read the exception |
 | The Test Case report has `scope="colgroup"` without a `colgroup`; `RichTextImageAlt` and `PartialTestCase` keep an ordinary space before a colon in French | Carried from 0.8.0 and 0.7.5: 0.8.5 changes only the failed-test report, and the fixes change the Test Case goldens |
-| The findings of 0.8.0, 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.8.0](release-0.8.0.md#findings-not-fixed), [0.7.10](archive/release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
+| The findings of 0.8.0, 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.8.0](archive/release-0.8.0.md#findings-not-fixed), [0.7.10](archive/release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
 
 ### Known limitations
 
@@ -174,7 +174,7 @@ No existing test was deleted; the renamed ones replace their earlier versions.
 | Browser features | The ordinal's width from 100 tests uses `:has()`; a browser without it keeps two digits' width, and three-digit ordinals then end one digit further. How the work browser treats a report opened from a file is still V-27 |
 | Browser checks | Headless Edge 154 ran 36 checks of the previews in the design rounds (plan, section 11: tab order, `j`, `k`, `o`, search, the Without an open bug filter, jumps to a cluster, to `no-bug`, to a far card and from a card's attachment to its attempt, no horizontal scroll at 1440 px, print emulation). They were not repeated on the final build, which differs from the reviewed previews only by B1 and the removed ↗ rule |
 | Report size | Each report is about 14 KB larger, the stylesheet's growth. Both size budgets hold |
-| Limits carried over | The [0.8.0](release-0.8.0.md#known-limitations), [0.7.10](archive/release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations) and [0.7.0](archive/release-0.7.0.md#known-limitations) known limitations still apply, with V-28, V-33 to V-36, V-31, V-32 and V-02 |
+| Limits carried over | The [0.8.0](archive/release-0.8.0.md#known-limitations), [0.7.10](archive/release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations) and [0.7.0](archive/release-0.7.0.md#known-limitations) known limitations still apply, with V-28, V-33 to V-36, V-31, V-32 and V-02 |
 
 ## Work-PC Live checks
 
@@ -189,7 +189,7 @@ still apply: variables stay on the work PC, raw responses are not sent back, and
 | 1 | Record `Get-FileHash` of `%APPDATA%\AdoToolkit\config.json`, install 0.8.5, then run `Get-AdoProfile` and `Connect-Ado` | The hash is unchanged, no warning appears, and `Get-Module AdoToolkit -ListAvailable` shows 0.8.5 with seven files in its folder |
 | 2 | `Export-AdoBuildTestFailure -Open` for a failed build with many failures, a history of 10 builds or more and bugs, in the browser used at work, with scripts allowed and then blocked | The views in their new order; one line per Overview row at the usual window width, without horizontal scroll; the cards' counts plausible against the table; By error merging the messages you would merge by hand, and no cluster that merges different failures (report the counts only); Since dates matching the builds; bug chips red, an unread bug grey; the card's run history, bugs and attachments; Shift+Tab, `j`, `k`, search and the print dialog as in 0.8.0. No Content Security Policy error in the console |
 | 3 | The same report in French (`-Culture fr-CA`) | The band, the cards and the bug headings fit, and the attempt titles line up |
-| 4 | Checks 2 to 6 of the [0.8.0 notes](release-0.8.0.md#work-pc-live-checks), with the 0.8.5 package | As listed there: V-33 and the stage timing, `-SkipAttachments`, the probes of V-28 and V-34 to V-36, the browser checks, and the 0.7.5 checks with V-31, V-32, V-02, V-01 and V-03. All still pending |
+| 4 | Checks 2 to 6 of the [0.8.0 notes](archive/release-0.8.0.md#work-pc-live-checks), with the 0.8.5 package | As listed there: V-33 and the stage timing, `-SkipAttachments`, the probes of V-28 and V-34 to V-36, the browser checks, and the 0.7.5 checks with V-31, V-32, V-02, V-01 and V-03. All still pending |
 
 ## Local validation and developer handoff
 

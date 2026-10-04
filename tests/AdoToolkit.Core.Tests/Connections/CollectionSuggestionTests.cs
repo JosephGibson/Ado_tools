@@ -4,6 +4,7 @@ using AdoToolkit.Core.Tests.Http;
 namespace AdoToolkit.Core.Tests.Connections;
 
 // A project URL supplied as the collection URL: the parent is checked once for that project.
+[Trait("Culture", "Invariant")]
 public sealed class CollectionSuggestionTests
 {
     private const string Projects = """{"value":[{"id":"11111111-1111-1111-1111-111111111111","name":"Équipe Web","state":"wellFormed"}]}""";

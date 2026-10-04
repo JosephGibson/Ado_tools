@@ -31,10 +31,6 @@ $script:ShellWrappers = @('bash', 'sh', 'zsh', 'dash', 'ksh', 'pwsh', 'powershel
 # the first is part of a word when it follows NAME=, and a backtick is the escape character.
 $script:SubstitutionPattern = '\$\((?<text>(?>[^()]+|\((?<open>)|\)(?<-open>))*(?(open)(?!)))\)|`(?<text>[^`]+)`'
 
-try { $raw = [Console]::In.ReadToEnd() } catch { exit 0 }
-if ([string]::IsNullOrWhiteSpace($raw)) { exit 0 }
-try { $payload = $raw | ConvertFrom-Json } catch { exit 0 }
-
 function Get-Property {
     param([object] $Object, [string] $Name)
     if ($null -eq $Object) { return $null }
@@ -194,16 +190,26 @@ function Test-IsBlockedGitCommand {
     return $false
 }
 
-$toolInput = Get-Property -Object $payload -Name 'tool_input'
-$command = [string](Get-Property -Object $toolInput -Name 'command')
-if ([string]::IsNullOrWhiteSpace($command)) { exit 0 }
+# The hook's answer to one payload: why it blocks the command, or $null to let it run. A payload
+# it cannot read lets the command run.
+function Get-GitGuardReason {
+    param([AllowEmptyString()][string] $Payload)
 
-if (Test-IsBlockedGitCommand -CommandText $command) {
-    [Console]::Error.WriteLine(
-        'Blocked by tools/guard-git.ps1: the user owns Git repository state. ' +
+    if ([string]::IsNullOrWhiteSpace($Payload)) { return $null }
+    try { $data = $Payload | ConvertFrom-Json } catch { return $null }
+    $toolInput = Get-Property -Object $data -Name 'tool_input'
+    $command = [string](Get-Property -Object $toolInput -Name 'command')
+    if ([string]::IsNullOrWhiteSpace($command) -or -not (Test-IsBlockedGitCommand -CommandText $command)) { return $null }
+    return 'Blocked by tools/guard-git.ps1: the user owns Git repository state. ' +
         'Only git status, diff, log, show and blame are allowed, and not with ' +
-        ($script:ForbiddenGitOptions -join ', ') + '. Ask the user to run other Git commands.')
-    exit 2
+        ($script:ForbiddenGitOptions -join ', ') + '. Ask the user to run other Git commands.'
 }
 
-exit 0
+# Dot-sourced, the script defines its functions and stops, so tests check the rules in one process.
+if ($MyInvocation.InvocationName -eq '.') { return }
+
+try { $raw = [Console]::In.ReadToEnd() } catch { exit 0 }
+$reason = Get-GitGuardReason -Payload $raw
+if ($null -eq $reason) { exit 0 }
+[Console]::Error.WriteLine($reason)
+exit 2

@@ -3,6 +3,7 @@ using AdoToolkit.Core.Http;
 
 namespace AdoToolkit.Core.Tests.Http;
 
+[Trait("Culture", "Invariant")]
 public sealed class PagingTests
 {
     [Fact]

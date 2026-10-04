@@ -8,6 +8,7 @@ namespace AdoToolkit.Core.Tests.TestRuns;
 
 // Server 2020 wire shapes observed at work: reference IDs arrive as numeric strings, runs carry
 // aggregate counts instead of runStatistics, and failingSince nests its build reference.
+[Trait("Culture", "Invariant")]
 public sealed class ServerWireShapeTests
 {
     [Theory]

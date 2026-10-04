@@ -5,6 +5,7 @@ using AdoToolkit.Core.TestRuns;
 namespace AdoToolkit.Core.Tests.TestRuns;
 
 [Trait("Acceptance", "S5-8")]
+[Trait("Culture", "Invariant")]
 public sealed class TestCaseLinkResolutionTests
 {
     // Test results fixture 9: valid, missing from the batch, and a non-integer reference.

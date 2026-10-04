@@ -2,6 +2,9 @@
 CLAUDE.local.md
 .claude/settings.local.json
 
+# Git worktrees that Claude Code creates, each a checkout of its own.
+.claude/worktrees/
+
 # Never track local credentials or service configuration.
 .env
 .env.*

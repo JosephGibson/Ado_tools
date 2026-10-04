@@ -15,6 +15,7 @@ namespace AdoToolkit.Core.Tests.TestRuns;
 // English; T5 fails only in French; result 7 of run 301 has no automated name. T2 is a rerun group
 // in run 301. Test Case 1503 and bug 2003 cannot be read, T4 names an invalid Test Case, and bug
 // 2002 is closed. History has builds 400 and 399; the runs of build 398 cannot be listed.
+[Trait("Culture", "Invariant")]
 public sealed partial class RetrievalConcurrencyTests
 {
     private static readonly string[] Stages = ["runs", "results", "detail", "attachments", "test cases", "bugs", "category", "states", "window", "history"];
@@ -26,7 +27,9 @@ public sealed partial class RetrievalConcurrencyTests
     [InlineData(3)]
     public async Task SetAndRenderedReportAreIdenticalAtABoundOfOneAndOfEightUnderRandomDelays(int seed)
     {
-        using Server sequential = new(seed);
+        // At a bound of one the requests, the set and the report do not depend on the delays, so one
+        // seed proves the bound-one side under delays and the others read it without them.
+        using Server sequential = new(seed == 1 ? seed : 0);
         using Server parallel = new(seed * 31);
         AdoBuildTestFailureSet first = await sequential.GetAsync(new TestFailureQuery { HistoryCount = 4, MaximumConcurrentRequests = 1 });
         AdoBuildTestFailureSet second = await parallel.GetAsync(new TestFailureQuery { HistoryCount = 4, MaximumConcurrentRequests = 8 });
@@ -132,7 +135,8 @@ public sealed partial class RetrievalConcurrencyTests
     [InlineData(6, 8)]
     public async Task HistoryBudgetCountsOnlyHistoryRequestsAndGivesTheSameBuildsAtEveryBound(int budget, int bound)
     {
-        using Server server = new(seed: budget);
+        // At a bound of one the order is fixed, so delays would change nothing; seed 0 sends none.
+        using Server server = new(seed: bound == 1 ? 0 : budget);
         AdoBuildTestFailureSet set = await server.GetAsync(new TestFailureQuery { HistoryCount = 4, MaximumHistoryRequests = budget, MaximumConcurrentRequests = bound });
         Assert.Equal([398, 399, 400, 401], set.History.Select(static summary => summary.BuildId));
         Assert.Equal([false, false, true, true], set.History.Select(static summary => summary.IsAvailable));

@@ -5,6 +5,7 @@ using AdoToolkit.Core.TestRuns;
 namespace AdoToolkit.Core.Tests.TestRuns;
 
 [Trait("Acceptance", "S5-3")]
+[Trait("Culture", "Invariant")]
 public sealed class RunHistoryTests
 {
     // Test results fixture 13.

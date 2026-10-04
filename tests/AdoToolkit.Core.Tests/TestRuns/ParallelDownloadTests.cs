@@ -8,6 +8,7 @@ namespace AdoToolkit.Core.Tests.TestRuns;
 // Attachment bodies are read several at a time, and each file is settled in report order by the
 // rules of one-at-a-time downloading. Whatever order the bodies arrive in, the statuses, the
 // diagnostics and the files are those of the sequential download.
+[Trait("Culture", "Invariant")]
 public sealed class ParallelDownloadTests
 {
     private static readonly CultureInfo Culture = CultureInfo.GetCultureInfo("en-US");
@@ -60,19 +61,20 @@ public sealed class ParallelDownloadTests
         Assert.Equal([1, 2, 4, 5, 5, 5, 6, 7, 8, 9, 10, 11, 12], sequential.Requested);
     }
 
+    // Three files show one body at a time; a bound of three or six needs twenty to be reached.
     [Theory]
-    [InlineData(1, 1)]
-    [InlineData(3, 3)]
-    [InlineData(6, 6)]
-    public async Task BodiesBeingReadNeverExceedTheBoundAndReachIt(int bound, int peak)
+    [InlineData(1, 1, 3)]
+    [InlineData(3, 3, 20)]
+    [InlineData(6, 6, 20)]
+    public async Task BodiesBeingReadNeverExceedTheBoundAndReachIt(int bound, int peak, int count)
     {
-        AdoTestAttachment[] files = [.. Enumerable.Range(1, 20).Select(static id => Remote(id, "file.txt", 40))];
+        AdoTestAttachment[] files = [.. Enumerable.Range(1, count).Select(static id => Remote(id, "file.txt", 40))];
         AttachmentFixture fixture = new() { Delay = static _ => TimeSpan.FromMilliseconds(40) };
         foreach (AdoTestAttachment file in files) fixture.Serve(file.Id, Text(40));
         Outcome outcome = await DownloadAsync(fixture, files, Limits(bound));
         Assert.All(outcome.Statuses, static status => Assert.Contains(":Downloaded:", status, StringComparison.Ordinal));
         Assert.Equal(peak, outcome.Peak);
-        Assert.Equal(20, outcome.Requested.Count);
+        Assert.Equal(count, outcome.Requested.Count);
     }
 
     // The total is spent in report order. With truthful sizes a file is read ahead only when it

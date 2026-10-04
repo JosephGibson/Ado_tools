@@ -11,6 +11,7 @@ namespace AdoToolkit.Core.Tests.TestRuns;
 // (TestBugResolutionTests). A result listing costs one request less when its run is completed and
 // its short last page completes the run's total: the empty page that would end it is not requested.
 [Trait("Acceptance", "S5-1")]
+[Trait("Culture", "Invariant")]
 public sealed class RetrievalRequestBoundTests
 {
     [Theory]

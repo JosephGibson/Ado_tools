@@ -5,6 +5,7 @@ using System.Text.Json;
 namespace AdoToolkit.Core.Tests.TestRuns;
 
 [Trait("Acceptance", "S5-1")]
+[Trait("Culture", "Invariant")]
 public sealed class TestAttemptMapperTests
 {
     [Fact]

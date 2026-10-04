@@ -4,6 +4,7 @@ using AdoToolkit.Core.Http;
 namespace AdoToolkit.Core.Tests.Http;
 
 // The gate bounds the requests one retrieval has in flight. A pipeline without one is unchanged.
+[Trait("Culture", "Invariant")]
 public sealed class RequestGateTests
 {
     private static readonly Uri Collection = new("https://ado.example.test/Collection");
@@ -59,14 +60,14 @@ public sealed class RequestGateTests
     [Fact]
     public async Task TimeSpentWaitingForASlotIsNotRequestTimeAndAFailedRequestReleasesItsSlot()
     {
-        TimeSpan timeout = TimeSpan.FromSeconds(1);
+        TimeSpan timeout = TimeSpan.FromMilliseconds(500);
         int received = 0;
         using FakeHttpMessageHandler handler = new()
         {
             Fallback = async (_, token) =>
             {
                 if (Interlocked.Increment(ref received) == 1) await Task.Delay(Timeout.InfiniteTimeSpan, token);
-                await Task.Delay(TimeSpan.FromMilliseconds(200), token);
+                await Task.Delay(TimeSpan.FromMilliseconds(50), token);
                 return FakeHttpMessageHandler.Response("{}");
             },
         };

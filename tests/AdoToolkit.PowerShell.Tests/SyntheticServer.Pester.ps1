@@ -28,7 +28,11 @@ BeforeAll {
 # request closes its connection: the request is abandoned, which is not a server error.
 Describe 'Synthetic server' {
     It 'stops counting a request whose client closed its connection, and keeps serving' {
-        $server = Start-FakeAdoServer -Routes @(@{ Line = '/slow\?'; Response = @{ Body = '{"value":[]}' } }) -LatencyMilliseconds 1500
+        # The first request waits until its client leaves; the second is answered at once.
+        $server = Start-FakeAdoServer -Routes @(
+            @{ Line = '/slow\?'; Response = @{ Block = $true } }
+            @{ Line = '/fast\?'; Response = @{ Body = '{"value":[]}' } }
+        )
         $stopped = $false
         $client = [System.Net.Http.HttpClient]::new()
         $client.Timeout = [timespan]::FromSeconds(10)
@@ -36,10 +40,10 @@ Describe 'Synthetic server' {
             $raw = Send-RawRequest -Server $server -Path '/slow?first=1'
             Wait-Condition { $server.Requests.Count -eq 1 } | Should -BeTrue
             $raw.Dispose()
-            # Well before the latency ends, the request no longer counts as in flight.
+            # Soon after its client leaves, the request no longer counts as in flight.
             Wait-Condition { $server.Load[0] -eq 0 } -Milliseconds 700 | Should -BeTrue
-            # The one worker answers the next request.
-            Get-Text -Client $client -Uri ($server.Uri + '/slow?second=1') | Should -Be '{"value":[]}'
+            # The one worker is free again and answers the next request.
+            Get-Text -Client $client -Uri ($server.Uri + '/fast?second=1') | Should -Be '{"value":[]}'
             $requests = $server.Requests.ToArray()
             $requests.Aborted | Should -Be @($true, $false)
             $requests[1].Status | Should -Be 200
@@ -168,14 +172,15 @@ Describe 'Synthetic server' {
     }
 
     It 'writes a response no faster than -BytesPerSecond' {
-        $text = '"' + ('x' * 40000) + '"'
-        $server = Start-FakeAdoServer -Routes @(@{ Line = '/paced\?'; Response = @{ Body = $text } }) -BytesPerSecond 40000
+        # 3,999 bytes with the 99-byte head, in chunks of 1,024: the fourth and last chunk is due 300 ms
+        # after the first, and the client cannot have the whole response before it.
+        $text = '"' + ('x' * 3898) + '"'
+        $server = Start-FakeAdoServer -Routes @(@{ Line = '/paced\?'; Response = @{ Body = $text } }) -BytesPerSecond 10240
         $client = [System.Net.Http.HttpClient]::new()
         try {
             $watch = [System.Diagnostics.Stopwatch]::StartNew()
             Get-Text -Client $client -Uri ($server.Uri + '/paced?a=1') | Should -Be $text
-            # The last chunk leaves before its own pause, so the client waits a little under a second.
-            $watch.ElapsedMilliseconds | Should -BeGreaterThan 900
+            $watch.ElapsedMilliseconds | Should -BeGreaterThan 250
         }
         finally { $client.Dispose(); Stop-FakeAdoServer -Server $server }
     }

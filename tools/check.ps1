@@ -68,112 +68,117 @@ try {
     Push-Location -LiteralPath $repository
     try {
         # Lines that start with "check: " are this gate's results; dev.ps1 reports them as the
-        # summary of a passing run.
+        # summary of a passing run. They come in the order below, whichever step ends first.
         $buildArguments = @('build', 'AdoToolkit.slnx', '--configuration', 'Release', '--no-restore', '--nologo')
         & $dotnet.Source @buildArguments
         $buildExit = $LASTEXITCODE
         if ($buildExit -ne 0) { exit 1 }
         Write-Output 'check: build succeeded (Release)'
 
+        $buildProperties = Read-ProjectXml -Path (Resolve-RepositoryPath 'Directory.Build.props')
+        $declared = $buildProperties.SelectSingleNode('/Project/PropertyGroup/VersionPrefix')
+        $version = if ($null -ne $declared) { $declared.InnerText } else { '' }
+        if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'VersionPrefix must be a three-part module version.' }
+        $staging = Resolve-RepositoryPath "artifacts/verify/AdoToolkit/$version"
+
         . (Join-Path $PSScriptRoot 'lib/test-results.ps1')
-        if (-not $SkipTests) {
-            $previousCulture = $env:ADOTOOLKIT_TEST_CULTURE
-            $previousGolden = $env:ADOTOOLKIT_UPDATE_GOLDEN
-            try {
-                $env:ADOTOOLKIT_UPDATE_GOLDEN = $null
-                foreach ($culture in @('en-US', 'fr-CA')) {
-                    $env:ADOTOOLKIT_TEST_CULTURE = $culture
+        . (Join-Path $PSScriptRoot 'lib/processes.ps1')
+        $steps = [System.Collections.Generic.List[object]]::new()
+        try {
+            $coreRuns = @()
+            if (-not $SkipTests) {
+                # The Core runs need only the build, so they run beside packaging and product Pester.
+                # en-US runs every test. fr-CA leaves out the classes marked [Trait("Culture",
+                # "Invariant")], whose assertions the process culture cannot change; tests/AGENTS.md.
+                foreach ($run in @(
+                        [pscustomobject]@{ Culture = 'en-US'; Filter = $null }
+                        [pscustomobject]@{ Culture = 'fr-CA'; Filter = 'Culture!=Invariant' })) {
                     # A successful runner exit alone can hide skipped or undiscovered tests.
                     # Use a fresh folder so previous successful results cannot satisfy this run.
                     $results = Resolve-RepositoryPath ('artifacts/verify/core-' + [guid]::NewGuid().ToString('N'))
                     [void] [System.IO.Directory]::CreateDirectory($results)
                     $testArguments = @('test', 'AdoToolkit.slnx', '--configuration', 'Release', '--no-build', '--no-restore', '--nologo',
                         '--logger', 'trx', '--results-directory', $results)
-                    & $dotnet.Source @testArguments
-                    $testExit = $LASTEXITCODE
-                    if ($testExit -ne 0) { exit 1 }
-                    $reports = @(Get-ChildItem -LiteralPath $results -File -Filter '*.trx')
-                    if ($reports.Count -eq 0) { Write-Output "Core tests ($culture): the result report was not written."; exit 2 }
-                    foreach ($report in $reports) {
-                        $outcome = Get-AdoTestOutcome -Document (Read-ProjectXml -Path $report.FullName)
-                        Write-Output "check: Core tests ($culture): $($outcome.Summary)"
-                        if ($outcome.ExitCode -ne 0) { exit $outcome.ExitCode }
+                    if ($null -ne $run.Filter) { $testArguments += @('--filter', $run.Filter) }
+                    $handle = Start-AdoGateProcess -FilePath $dotnet.Source -ArgumentList $testArguments -Environment @{
+                        ADOTOOLKIT_TEST_CULTURE = $run.Culture
+                        ADOTOOLKIT_UPDATE_GOLDEN = $null
                     }
+                    $steps.Add($handle)
+                    $coreRuns += [pscustomobject]@{ Culture = $run.Culture; Results = $results; Handle = $handle }
                 }
             }
-            finally {
-                $env:ADOTOOLKIT_TEST_CULTURE = $previousCulture
-                $env:ADOTOOLKIT_UPDATE_GOLDEN = $previousGolden
+
+            $publishArguments = @('-NoProfile', '-File', (Resolve-RepositoryPath 'tools/package/Publish-AdoToolkitPackage.ps1'),
+                '-NoBuild', '-OutputRoot', (Resolve-RepositoryPath 'artifacts/verify'))
+            & (Join-Path $PSHOME 'pwsh.exe') @publishArguments
+            $publishExit = $LASTEXITCODE
+            if ($publishExit -ne 0) { exit 1 }
+
+            # Assert-AdoPackage holds the one package layout: the exact files, help that describes
+            # every command, the manifest, and assemblies built for this version.
+            . (Join-Path $PSScriptRoot 'package/Package.Common.ps1')
+            if ((Assert-AdoPackage -PackagePath $staging) -ne $version) { throw 'Staged package version mismatch.' }
+            $manifest = Join-Path $staging 'AdoToolkit.psd1'
+
+            $pesterRun = $null
+            if (-not $SkipTests) {
+                # Each product test file runs, with the staged module, in a process of its own beside
+                # the Core runs. Nothing a cmdlet under test prints, "What if:" text included, reaches
+                # this output.
+                $pesterArguments = @{
+                    TestPath = @(Resolve-RepositoryPath 'tests/AdoToolkit.PowerShell.Tests')
+                    PesterManifest = $pester[0].Path
+                    TestExtension = '.Pester.ps1'
+                    Environment = @{
+                        ADOTOOLKIT_MODULE_MANIFEST = $manifest
+                        # A developer's default profile would connect implicitly; tests never read real configuration.
+                        ADOTOOLKIT_CONFIG_PATH = Resolve-RepositoryPath ('artifacts/verify/config-' + [guid]::NewGuid().ToString('N') + '/config.json')
+                    }
+                }
+                $pesterRun = Invoke-PesterProcess @pesterArguments
             }
+
+            # Every step has ended. Each reports in the order above, so that a failure is never
+            # hidden behind an earlier step that was only incomplete.
+            $failed = $false
+            $incomplete = $false
+            foreach ($run in $coreRuns) {
+                $completed = Wait-AdoGateProcess -Handle $run.Handle
+                Write-Output $completed.Lines
+                if ($completed.ExitCode -ne 0) { $failed = $true }
+                $reports = @(Get-ChildItem -LiteralPath $run.Results -File -Filter '*.trx')
+                if ($reports.Count -eq 0) { Write-Output "Core tests ($($run.Culture)): the result report was not written."; $incomplete = $true }
+                foreach ($report in $reports) {
+                    $outcome = Get-AdoTestOutcome -Document (Read-ProjectXml -Path $report.FullName)
+                    Write-Output "check: Core tests ($($run.Culture)): $($outcome.Summary)"
+                    if ($outcome.ExitCode -eq 1) { $failed = $true }
+                    elseif ($outcome.ExitCode -eq 2) { $incomplete = $true }
+                }
+            }
+            Write-Output "check: package staged and inspected (AdoToolkit $version): exact layout, help for every command"
+
+            if ($null -ne $pesterRun) {
+                Write-Output ('check: product Pester: {0} passed, {1} failed, {2} skipped, {3} discovered' -f
+                    $pesterRun.PassedCount, $pesterRun.FailedCount, $pesterRun.SkippedCount, $pesterRun.TotalCount)
+                if ($pesterRun.Result -eq 'Failed') {
+                    foreach ($container in @($pesterRun.Containers)) {
+                        foreach ($message in @($container.Messages)) { Write-Output "$($container.Item): $message" }
+                    }
+                    foreach ($test in @($pesterRun.Failed | Select-Object -First 20)) {
+                        $reason = @("$($test.Message)" -split "`r?`n" | Where-Object { $_ } | Select-Object -First 2) -join ' '
+                        Write-Output "$($test.ExpandedPath): $reason"
+                    }
+                    $failed = $true
+                }
+                elseif ($pesterRun.TotalCount -eq 0 -or $pesterRun.SkippedCount -gt 0 -or $pesterRun.NotRunCount -gt 0) { $incomplete = $true }
+            }
+            if ($failed) { exit 1 }
+            if ($incomplete) { exit 2 }
         }
-
-        $buildProperties = Read-ProjectXml -Path (Resolve-RepositoryPath 'Directory.Build.props')
-        $declared = $buildProperties.SelectSingleNode('/Project/PropertyGroup/VersionPrefix')
-        $version = if ($null -ne $declared) { $declared.InnerText } else { '' }
-        if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'VersionPrefix must be a three-part module version.' }
-        $staging = Resolve-RepositoryPath "artifacts/verify/AdoToolkit/$version"
-        $publishArguments = @('-NoProfile', '-File', (Resolve-RepositoryPath 'tools/package/Publish-AdoToolkitPackage.ps1'),
-            '-NoBuild', '-OutputRoot', (Resolve-RepositoryPath 'artifacts/verify'))
-        & (Join-Path $PSHOME 'pwsh.exe') @publishArguments
-        $publishExit = $LASTEXITCODE
-        if ($publishExit -ne 0) { exit 1 }
-
-        # Assert-AdoPackage holds the one package layout: the exact files, help that describes
-        # every command, the manifest, and assemblies built for this version.
-        . (Join-Path $PSScriptRoot 'package/Package.Common.ps1')
-        if ((Assert-AdoPackage -PackagePath $staging) -ne $version) { throw 'Staged package version mismatch.' }
-        $manifest = Join-Path $staging 'AdoToolkit.psd1'
-        Write-Output "check: package staged and inspected (AdoToolkit $version): exact layout, help for every command"
-
-        if (-not $SkipTests) {
-            $previousManifest = $env:ADOTOOLKIT_MODULE_MANIFEST
-            $previousConfig = $env:ADOTOOLKIT_CONFIG_PATH
-            try {
-                $env:ADOTOOLKIT_MODULE_MANIFEST = $manifest
-                # A developer's default profile would connect implicitly; tests never read real configuration.
-                $env:ADOTOOLKIT_CONFIG_PATH = Resolve-RepositoryPath ('artifacts/verify/config-' + [guid]::NewGuid().ToString('N') + '/config.json')
-                # The child loads the staged module, which cannot be unloaded from this process.
-                # It reports through a file: see Invoke-AdoReportingChild.
-                $child = @'
-Set-StrictMode -Version 2.0
-$ErrorActionPreference = 'Stop'
-. (Join-Path (Get-Location).Path 'tools/lib/dependencies.ps1')
-$pester = Get-BuildModule -Name Pester
-if ($null -eq $pester) { throw 'Pester 5.x is required: authorized setup step.' }
-Import-Module -Name $pester.Path -ErrorAction Stop
-$ProgressPreference = 'SilentlyContinue'
-$configuration = New-PesterConfiguration
-$configuration.Run.Path = Join-Path (Get-Location).Path 'tests/AdoToolkit.PowerShell.Tests'
-$configuration.Run.TestExtension = '.Pester.ps1'
-$configuration.Run.PassThru = $true
-$configuration.Output.Verbosity = 'None'
-$result = Invoke-Pester -Configuration $configuration
-$lines = [System.Collections.Generic.List[string]]::new()
-$lines.Add(('check: product Pester: {0} passed, {1} failed, {2} skipped, {3} discovered' -f $result.PassedCount, $result.FailedCount, $result.SkippedCount, $result.TotalCount))
-$failed = $result.FailedCount -gt 0 -or $result.FailedContainersCount -gt 0 -or $result.FailedBlocksCount -gt 0
-if ($failed) {
-    foreach ($container in @($result.Containers | Where-Object Result -eq 'Failed')) {
-        foreach ($record in @($container.ErrorRecord)) { $lines.Add("$($container.Item): $($record.Exception.Message)") }
-    }
-    foreach ($test in @($result.Tests | Where-Object Result -eq 'Failed' | Select-Object -First 20)) {
-        $reason = @("$($test.ErrorRecord | Select-Object -First 1)" -split "`r?`n" | Where-Object { $_ } | Select-Object -First 2) -join ' '
-        $lines.Add("$($test.ExpandedPath): $reason")
-    }
-}
-[System.IO.File]::WriteAllLines($env:ADOTOOLKIT_GATE_REPORT, $lines, [System.Text.UTF8Encoding]::new($false))
-if ($failed) { exit 1 }
-if ($result.TotalCount -eq 0 -or $result.SkippedCount -gt 0 -or $result.NotRunCount -gt 0) { exit 2 }
-exit 0
-'@
-                $report = Resolve-RepositoryPath ('artifacts/verify/pester-' + [guid]::NewGuid().ToString('N') + '.txt')
-                $pesterRun = Invoke-AdoReportingChild -Script $child -ReportPath $report
-                Write-Output $pesterRun.Lines
-                if ($pesterRun.ExitCode -ne 0) { exit $pesterRun.ExitCode }
-            }
-            finally {
-                $env:ADOTOOLKIT_MODULE_MANIFEST = $previousManifest
-                $env:ADOTOOLKIT_CONFIG_PATH = $previousConfig
-            }
+        finally {
+            # A packaging failure or an error ends the gate, and the Core runs stop with it.
+            foreach ($step in $steps) { Stop-AdoGateProcess -Handle $step }
         }
     }
     finally { Pop-Location }

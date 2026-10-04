@@ -44,6 +44,9 @@ $script:RepositoryRoot = Split-Path -Parent $PSScriptRoot
 # from these names rather than written out again, so the file set an agent sees cannot
 # change depending on whether ripgrep happens to be installed.
 $script:ExcludedDirectoryNames = @('.git', '.vs', '.idea', 'bin', 'obj', 'artifacts', 'dist', 'build', 'coverage', 'TestResults', 'target', '.cache', '.nuget')
+# Directories excluded by their path from the repository root rather than by name: each
+# subdirectory of one is a Git worktree that Claude Code created, a checkout of its own.
+$script:WorktreeDirectoryPaths = @('.claude/worktrees')
 $script:SensitiveDirectoryNames = @('secret', 'secrets')
 $script:SensitiveFileGlobs = @('.env*', 'id_rsa*', 'id_ed25519*', '*.pem', '*.pfx', '*.p12', '*.key', '*.log', '*credentials*', '*.local.*', '.npmrc', '.pypirc', '.netrc')
 # A sensitive name is rejected wherever it occurs in a path: ripgrep applies a file glob to
@@ -62,7 +65,7 @@ $script:DatedDocumentationPattern = '^(?:CHANGELOG\.md|docs/release-[^/]+\.md)$'
 # A code span that starts with one of these directories names a repository path.
 $script:RepositoryPathRoots = @('src', 'tests', 'tools', 'docs', '.claude', '.agents', '.github')
 
-foreach ($library in @('discovery', 'dependencies', 'validation', 'setup')) {
+foreach ($library in @('discovery', 'dependencies', 'processes', 'validation', 'setup')) {
     . (Join-Path $PSScriptRoot "lib/$library.ps1")
 }
 function Write-DevResult {

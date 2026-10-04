@@ -6,6 +6,8 @@ using AdoToolkit.Core.TestRuns;
 
 namespace AdoToolkit.Core.Tests.Configuration;
 
+// The store without a path resolves ADOTOOLKIT_CONFIG_PATH, a process-wide variable.
+[Collection(ProcessEnvironment.Name)]
 public sealed class ConfigurationStoreTests
 {
     private static readonly CultureInfo English = CultureInfo.GetCultureInfo("en-US");
@@ -25,7 +27,7 @@ public sealed class ConfigurationStoreTests
     [Trait("Acceptance", "S0-5")]
     public void ProfilesAreNormalizedSavedAndRemovedWithDefaultCleared()
     {
-        using TestDirectory directory = new();
+        using TestDirectory directory = TestDirectory.WithConfigurationPath();
         ConfigurationStore store = new();
         Assert.False(File.Exists(directory.ConfigPath));
         AdoProfile profile = store.SetProfile(new AdoProfile
@@ -48,7 +50,7 @@ public sealed class ConfigurationStoreTests
     [Trait("Acceptance", "S0-5")]
     public void UnknownPropertiesAtEveryLevelSurviveAWriteAndWarn()
     {
-        using TestDirectory directory = new();
+        using TestDirectory directory = TestDirectory.WithConfigurationPath();
         File.WriteAllText(directory.ConfigPath, """
         {"schemaVersion":1,"extra":{"keep":true},"profiles":{"sample":{"collectionUrl":"https://ado.example.test/Collection","extraProfile":42}},
          "testCases":{"futureLimit":7},"testResults":{"futureMode":"sample"},"reporting":{"extraLabel":"Été"}}
@@ -69,7 +71,7 @@ public sealed class ConfigurationStoreTests
     [Trait("Acceptance", "S0-5")]
     public void OldSchemaMigratesInMemoryAndNewSchemaCannotBeOverwritten()
     {
-        using TestDirectory directory = new();
+        using TestDirectory directory = TestDirectory.WithConfigurationPath();
         File.WriteAllText(directory.ConfigPath, """{"schemaVersion":0}""");
         ConfigurationStore store = new();
         Assert.Equal(1, store.Load(English).SchemaVersion);
@@ -197,7 +199,7 @@ public sealed class ConfigurationStoreTests
     {
         string json = """{"profiles":{"work":{"collectionUrl":"https://ado.example.test/Collection",""" + setting + "}}}";
         Assert.Throws<AdoConfigurationException>(() => ConfigurationStore.Parse(json, English));
-        using TestDirectory directory = new();
+        using TestDirectory directory = TestDirectory.WithConfigurationPath();
         File.WriteAllText(directory.ConfigPath, json);
         Assert.Throws<AdoConfigurationException>(() => new ConfigurationStore().Load(English));
     }
@@ -222,7 +224,7 @@ public sealed class ConfigurationStoreTests
     [Fact]
     public void FileWithoutProfileDefaultsSavesUnchanged()
     {
-        using TestDirectory directory = new();
+        using TestDirectory directory = TestDirectory.WithConfigurationPath();
         string original = JsonNode.Parse(CompleteConfiguration)!.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(directory.ConfigPath, original);
         ConfigurationStore store = new();
@@ -233,7 +235,7 @@ public sealed class ConfigurationStoreTests
     [Fact]
     public void SettingAndClearingProfileDefaultsKeepsEveryOtherSetting()
     {
-        using TestDirectory directory = new();
+        using TestDirectory directory = TestDirectory.WithConfigurationPath();
         File.WriteAllText(directory.ConfigPath, CompleteConfiguration);
         ConfigurationStore store = new();
         AdoProfile before = store.Load(English).Profiles["work"];
@@ -289,7 +291,7 @@ public sealed class ConfigurationStoreTests
     [Trait("Acceptance", "S0-5")]
     public void FailedValidationPreservesExistingBytesAndRemovesTemporaryFile()
     {
-        using TestDirectory directory = new();
+        using TestDirectory directory = TestDirectory.WithConfigurationPath();
         ConfigurationStore initial = new();
         initial.Save(new AdoConfiguration(), English);
         byte[] original = File.ReadAllBytes(directory.ConfigPath);

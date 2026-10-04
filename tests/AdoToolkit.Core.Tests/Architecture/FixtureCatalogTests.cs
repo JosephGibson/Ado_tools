@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 namespace AdoToolkit.Core.Tests.Architecture;
 
 // tests/AGENTS.md: every fixture file has a row in tests/Fixtures/README.md.
+[Trait("Culture", "Invariant")]
 public sealed partial class FixtureCatalogTests
 {
     private static readonly string Root = Path.Combine(TestDirectory.RepositoryRoot, "tests", "Fixtures");

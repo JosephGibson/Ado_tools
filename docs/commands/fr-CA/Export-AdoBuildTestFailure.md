@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-03-2026
+ms.date: 10-04-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -29,49 +29,60 @@ Aucun alias.
 
 ## DESCRIPTION
 
-Produit, pour chaque `AdoBuildTestFailureSet` reçu de `Get-AdoBuildTestFailure`, un
-rapport HTML sombre dans la culture du rapport. Le rapport compte cinq vues, dans cet ordre,
-et une sixième pour les diagnostics lorsqu’il y en a. Vue d’ensemble est un tableau d’une
-ligne par test en échec, chaque partie dans sa propre colonne, soit son état et son numéro,
-son numéro de cas de test lié à l’élément de travail, son nom et sa classe, sa tendance, son
-bogue ouvert de plus petit numéro sous forme de pastille rouge avec le nombre des autres,
-l’état de chaque groupe de tentatives qui l’a exécuté et la première ligne de sa dernière
-erreur. Dans la tendance, Nouveau indique que le build précédent a exécuté le test sans échec,
-et Depuis le suivi d’une date que le test a aussi échoué ou été instable dans le build
-précédent; la date est le jour où le premier build de cette suite d’échecs s’est terminé, la
-pastille mène aux résultats de tests de ce build et son titre indique le nombre de builds
-consécutifs. Rien n’est indiqué lorsque le build précédent n’a pas pu être lu ou n’a pas
-exécuté le test. Sous le tableau, des encadrés résument le build, soit les tests nouveaux et
-récurrents, les erreurs les plus fréquentes, les tests sans bogue ouvert et, lorsque les
-tentatives sont regroupées, chaque groupe. Séries et historique présente l’historique des
-exécutions sous forme de graphique et de tableau des builds, puis liste les séries de tests du
-build avec leur ID, les numéros de tentative qu’elles ont, de la phase, du travail ou de
-l’instance du travail, leur durée, leurs décomptes de tests, les tests signalés et les pièces
-jointes répertoriées et téléchargées, et signale la dernière série de tests; un tableau des
-tests signalés la termine, avec leur résultat dans chaque build et leur tendance. Détails
-présente une fiche par test avec son historique des exécutions, une pastille par build avec
-le jour où il s’est terminé, distinguée par son glyphe et sa forme autant que par sa couleur,
-et la même tendance, ses bogues ouverts, chacun sous forme de pastille liée à l’élément de
-travail avec son titre et son état, et ses pièces jointes, chaque nom de fichier une seule
-fois, tiré de la dernière tentative qui l’a. Le champ En échec depuis d’une tentative nomme ce
-build par son numéro lorsqu’il figure dans l’historique. Par erreur regroupe les mêmes lignes
-sous leur dernière erreur, sans tenir compte des URL, des GUID, des chemins, des ID
-hexadécimaux ni des nombres; chaque groupe nomme son type d’exception et marque les parties de
-sa ligne qui diffèrent d’un test à l’autre, et un groupe de deux tests ou plus indique ce que
-ses tests ont en commun et présente un exemple du premier message. Bogues ouverts liste chaque
-bogue une fois, sur une ligne avec ce qu’il couvre, puis les tests qui lui sont liés, et
-indique si chaque lien vient d’un résultat de test, du cas de test ou des deux, et combien de
-résultats en échec atteint un lien par les résultats de test lorsqu’il ne les atteint pas
-tous; les tests du même cas de test sans le bogue suivent, et les tests sans bogue ouvert
-viennent en dernier. Le bogue qui a le plus de tests vient en premier, et un bogue qui n’a pas
-pu être lu vient en dernier, sous forme de pastille grise avec la mention Non lu. Un bogue est
-ouvert sauf si son état appartient à la catégorie d’états Completed ou Removed; un bogue fermé
-n’est pas affiché, et un bogue qui n’a pas pu être lu n’est pas compté comme ouvert. La date
-et l’origine du rapport figurent sous chaque vue. Chaque groupe, tentative et aperçu de pièce
-jointe est d’abord réduit, et chaque tentative contient son propre message d’erreur complet et
-sa propre arborescence des appels, même lorsqu’une tentative antérieure du même test avait le
-même texte. Toutes les dates et heures sont affichées dans le fuseau horaire de l’ordinateur
-qui exporte le rapport, comme l’heure de génération du rapport.
+Produit, pour chaque `AdoBuildTestFailureSet` reçu de `Get-AdoBuildTestFailure`, un rapport
+HTML sombre dans la culture du rapport. Le rapport compte cinq vues, dans cet ordre, et une
+sixième pour les diagnostics lorsqu’il y en a. Vue d’ensemble est un tableau d’une ligne par
+test en échec, chaque partie dans sa propre colonne, soit son état et son numéro, son numéro de
+cas de test lié à l’élément de travail, son nom et sa classe, sa tendance, son bogue ouvert de
+plus petit numéro sous forme de pastille rouge avec le nombre des autres, dans un rouge plus
+pâle à l’écran avec ✦ lorsque ce bogue a été ouvert après la mise en file du build, l’état de
+chaque groupe de tentatives qui l’a exécuté et la première ligne de sa dernière erreur. Dans la
+tendance, Nouveau indique que le build précédent a exécuté le test sans échec, et Depuis le
+suivi d’une date que le test a aussi échoué ou été instable dans le build précédent; la date
+est le jour où le premier build de cette suite d’échecs s’est terminé, la pastille mène aux
+résultats de tests de ce build et son titre indique le nombre de builds consécutifs. Rien n’est
+indiqué lorsque le build précédent n’a pas pu être lu ou n’a pas exécuté le test. Sous le
+tableau, des encadrés résument le build, soit les tests nouveaux et récurrents, les erreurs les
+plus fréquentes, les tests sans bogue ouvert et, lorsque les tentatives sont regroupées, chaque
+groupe. Séries et historique présente l’historique des exécutions sous forme de graphique et de
+tableau des builds, puis liste les séries de tests du build avec leur ID, les numéros de
+tentative qu’elles ont, de la phase, du travail ou de l’instance du travail, leur durée, leurs
+décomptes de tests, les tests signalés et les pièces jointes répertoriées et téléchargées, et
+signale la dernière série de tests; un tableau des tests signalés la termine, avec leur
+résultat dans chaque build et leur tendance. Détails présente une fiche par test avec son
+historique des exécutions, une pastille par build avec le jour où il s’est terminé, distinguée
+par son glyphe et sa forme autant que par sa couleur, et la même tendance, ses bogues ouverts,
+chacun sous forme de pastille liée à l’élément de travail avec son titre et son état, puis,
+pour un bogue lu en entier, le jour où il a été ouvert, Nouveau lorsqu’il l’a été après la mise
+en file du build, et la personne à qui il est assigné ou Non assigné, et ses pièces jointes,
+chaque nom de fichier une seule fois, tiré de la dernière tentative qui l’a. Le champ En échec
+depuis d’une tentative nomme ce build par son numéro lorsqu’il figure dans l’historique. Par
+erreur regroupe les mêmes lignes sous leur dernière erreur, sans tenir compte des URL, des
+GUID, des chemins, des ID hexadécimaux ni des nombres; chaque groupe nomme son type d’exception
+et marque les parties de sa ligne qui diffèrent d’un test à l’autre, et un groupe de deux tests
+ou plus indique ce que ses tests ont en commun et présente un exemple du premier message.
+Bogues ouverts s’ouvre sur une ligne qui compte les bogues qu’elle liste et combien d’entre eux
+ont été ouverts après la mise en file du build, le second décompte étant omis lorsque le build
+n’a pas d’heure de mise en file, puis liste chaque bogue une fois, sur une ligne avec le jour
+où il a été ouvert, la personne à qui il est assigné et ce qu’il couvre, puis les tests qui lui
+sont liés, et indique si chaque lien vient d’un résultat de test, du cas de test ou des deux,
+et combien de résultats en échec atteint un lien par les résultats de test lorsqu’il ne les
+atteint pas tous; les tests du même cas de test sans le bogue suivent, et les tests sans bogue
+ouvert viennent en dernier. Le bogue qui a le plus de tests vient en premier, et un bogue qui
+n’a pas pu être lu vient en dernier, sous forme de pastille grise avec la mention Non lu. Un
+bogue est ouvert sauf si son état appartient à la catégorie d’états Completed ou Removed; un
+bogue fermé n’est pas affiché, et un bogue qui n’a pas pu être lu n’est pas compté comme
+ouvert. Le jour où un bogue a été ouvert, la mention Nouveau et la personne assignée ne sont
+affichés que pour un bogue lu en entier; un bogue qui n’a pas pu être lu indique seulement Non
+lu. Nouveau signifie ouvert à la mise en file du build ou après elle, le seul seuil que les
+données permettent : il n’y a pas de borne supérieure, si bien qu’un rapport régénéré pour un
+build plus ancien peut marquer un bogue ouvert pour un build ultérieur, et le jour affiché à
+côté de la mention le montre. La date et l’origine du rapport figurent sous chaque vue. Chaque
+groupe, tentative et aperçu de pièce jointe est d’abord réduit, et chaque tentative contient
+son propre message d’erreur complet et sa propre arborescence des appels, même lorsqu’une
+tentative antérieure du même test avait le même texte. Toutes les dates et heures sont
+affichées dans le fuseau horaire de l’ordinateur qui exporte le rapport, comme l’heure de
+génération du rapport.
 
 Lorsque les séries de tests du build portent des noms de phase, de travail ou de série
 différents, par exemple une phase par langue, chaque fiche regroupe ses tentatives selon ces
@@ -93,8 +104,8 @@ messages d’erreur avec retour automatique à la ligne; la copie et l’impress
 tous les appels. La recherche compare chaque mot saisi, sans tenir compte de la casse ni des
 accents, à toute la fiche, tentatives réduites comprises : messages d’erreur, arborescences
 des appels, pièces jointes JSON et texte affichées, noms de phase et de travail, champs
-des séries de tests et des tentatives, jours de l’historique des exécutions, et titres et
-états des bogues. Un ID de cas de test
+des séries de tests et des tentatives, jours de l’historique des exécutions, et titres, états,
+jours d’ouverture et personnes assignées des bogues. Un ID de cas de test
 correspond avec ou sans `#`. Lorsqu’au moins un test a un bogue ouvert, le filtre Sans
 bogue ouvert n’affiche que les tests qu’aucun bogue ouvert ne suit encore.
 
@@ -456,7 +467,7 @@ Le rapport validé et enregistré. Lorsque des pièces jointes ont été téléc
 
 ## NOTES
 
-Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. La façon dont Server 2020 répond à plusieurs téléchargements simultanés n’a pas été confirmée au travail (V-33). Avec -Verbose, chaque étape de l’exportation écrit une ligne indiquant sa durée en millisecondes : les téléchargements des pièces jointes, avec les fichiers écrits et les requêtes envoyées; le rapport produit, avec sa taille en octets; la vérification du rapport; et sa mise en place, qui supprime aussi les dossiers de pièces jointes antérieurs. Lorsque rien n’est téléchargé, la ligne des téléchargements reste à sa place avec 0 fichier et 0 requête. Une dernière ligne indique le build, les pièces jointes téléchargées, les requêtes et la durée écoulée. Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase, de travail et de série utilisés pour le regroupement et le suffixe de nouvelle tentative des noms de série (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27).
+Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. La façon dont Server 2020 répond à plusieurs téléchargements simultanés n’a pas été confirmée au travail (V-33). Avec -Verbose, chaque étape de l’exportation écrit une ligne indiquant sa durée en millisecondes : les téléchargements des pièces jointes, avec les fichiers écrits et les requêtes envoyées; le rapport produit, avec sa taille en octets; la vérification du rapport; et sa mise en place, qui supprime aussi les dossiers de pièces jointes antérieurs. Lorsque rien n’est téléchargé, la ligne des téléchargements reste à sa place avec 0 fichier et 0 requête. Une dernière ligne indique le build, les pièces jointes téléchargées, les requêtes et la durée écoulée. Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase, de travail et de série utilisés pour le regroupement et le suffixe de nouvelle tentative des noms de série (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27). Le fait que Server 2020 renvoie la date de création et la personne assignée d’un bogue dans une projection de champs d’un lot d’éléments de travail n’a pas été observé au travail (V-37); sans eux, la ligne d’un bogue n’affiche ni jour, ni marque ✦, ni personne assignée, sans avertissement.
 
 ## RELATED LINKS
 

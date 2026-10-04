@@ -539,6 +539,15 @@ public static class HtmlTestFailureRenderer
             W("<section class=\"view\" id=\"bugs\" data-view>\n"); Heading(2, L("OpenBugs"));
             if (model.Failures.Count == 0) { W("<p>"); T(L("NoFailures")); W("</p>\n</section>\n"); return; }
             if (BugEntries.Count == 0) { W("<p>"); T(L("NoOpenBugs")); W("</p>\n</section>\n"); return; }
+            // How many bugs the report holds, and how many of them were filed after the build was queued.
+            // Without a queue time there is no threshold, so the count is left out rather than read as zero.
+            W("<p class=\"cluster-summary\">"); T(F(AdoMessage.TestReportLabelValue, L("OpenBugs"), BugEntries.Count.ToString(Culture)));
+            if (model.Build.QueueTime is not null)
+            {
+                W(" · ");
+                T(F(AdoMessage.TestReportLabelValue, L("BugsOpenedAfterQueued"), BugEntries.Count(entry => IsNewBug(entry.Bug)).ToString(Culture)));
+            }
+            W("</p>\n");
             W("<p data-no-matches hidden>"); T(L("NoMatches")); W("</p>\n<div class=\"table-scroll\"><table class=\"failure-table by-error by-bug\">\n");
             TableHead(Columns.Source);
             int span = ColumnCount(Columns.Source);
@@ -710,26 +719,54 @@ public static class HtmlTestFailureRenderer
 
         private void NewChip(string label) { W("<span class=\"trend trend-new\"><span aria-hidden=\"true\">✦</span> "); T(label); W("</span>"); }
 
+        // A bug filed at or after the build went into the queue. Only a bug read whole makes the claim:
+        // IsOpen is null both for a bug that never came back and for one that came back without a state,
+        // and the second has a creation date. Both sides are instants, so no offset enters the comparison.
+        // The queue time is the only threshold the data supports, and it has no upper bound.
+        private bool IsNewBug(AdoTestBug bug) => bug.IsOpen == true
+            && model.Build.QueueTime is { } queued && bug.CreatedDate is { } created && created >= queued;
+
         // A bug as a chip, the same wherever it shows, linked to the bug in its own project: red when it
-        // is open, grey when it could not be read.
+        // is open, a lighter red with the new glyph when it was opened after the build was queued, grey
+        // when it could not be read.
         private void BugChip(AdoTestBug bug)
         {
-            bool unread = bug.IsOpen is null;
-            W("<a class=\"" + (unread ? "bug-marker bug-unread" : "open-bug-marker") + "\" rel=\"noreferrer\" href=\"");
+            bool unread = bug.IsOpen is null, opened = IsNewBug(bug);
+            W("<a class=\"" + (unread ? "bug-marker bug-unread" : opened ? "open-bug-marker bug-new" : "open-bug-marker") + "\" rel=\"noreferrer\" href=\"");
             T(AdoWebLinks.WorkItem(Collection, bug.TeamProject ?? Project, bug.Id).AbsoluteUri); W("\"");
-            if ((unread ? L("BugNotRead") : bug.Title) is { } title) { W(" title=\""); T(title); W("\""); }
+            if ((unread ? L("BugNotRead") : opened ? Joined(bug.Title, L("BugOpenedAfterQueued")) : bug.Title) is { } title)
+            { W(" title=\""); T(title); W("\""); }
             W(">");
-            if (!unread) { W("<span class=\"sr-only\">"); T(L("OpenBug")); W(" </span>"); }
+            if (!unread) { W("<span class=\"sr-only\">"); T(opened ? Joined(L("OpenBug"), L("BugOpenedAfterQueued")) : L("OpenBug")); W(" </span>"); }
+            if (opened) W("<span aria-hidden=\"true\">✦</span> ");
             T("#" + bug.Id.ToString(Culture)); W("</a>");
         }
 
-        // The bug's title and state after its chip, and whether it could be read.
+        // The bug's title and state after its chip, then what the report knows about a bug it read whole:
+        // when it was filed, whether that was after the build was queued, and who has it. A bug that
+        // could not be read says only that, so no line pairs a date with Not read.
         private void BugText(AdoTestBug bug)
         {
             if (bug.Title is not null) { W(" <span class=\"bug-title\">"); T(bug.Title); W("</span>"); }
             if (bug.State is not null) { W(" <span class=\"bug-state\">"); T(bug.State); W("</span>"); }
-            if (bug.IsOpen is null) { W(" <span class=\"bug-unread\">"); T(L("BugNotRead")); W("</span>"); }
+            if (bug.IsOpen is null) { W(" <span class=\"bug-unread\">"); T(L("BugNotRead")); W("</span>"); return; }
+            W(" <span class=\"bug-meta\">");
+            if (bug.CreatedDate is { } created)
+            {
+                W("<span class=\"bug-created\">");
+                T(F(AdoMessage.TestReportLabelValue, M(AdoMessage.ReportCreatedDate), ReportTime.InOffset(created, model.GeneratedAt.Offset).ToString("d", Culture)));
+                W("</span>");
+            }
+            // The word, in the chip's own lighter red: the filled violet chip stays the test's New alone.
+            if (IsNewBug(bug))
+            { W("<span class=\"trend bug-new\" title=\""); T(L("BugOpenedAfterQueued")); W("\"><span aria-hidden=\"true\">✦</span> "); T(L("New")); W("</span>"); }
+            W("<span class=\"bug-assignee\">");
+            T(bug.AssignedTo is { } owner ? F(AdoMessage.TestReportLabelValue, M(AdoMessage.ReportAssignedTo), owner.DisplayName) : L("Unassigned"));
+            W("</span></span>");
         }
+
+        // Two labels on one line of text, for a chip's title and for what a screen reader reads out.
+        private static string Joined(string? first, string second) => first is null ? second : first + ", " + second;
 
         // Per pipeline group, how many of the tests ended failed or flaky in it.
         private void GroupFacts(IEnumerable<AdoTestFailure> tests)

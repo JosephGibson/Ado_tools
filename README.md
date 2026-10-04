@@ -2,7 +2,7 @@
 
 PowerShell toolkit for Azure DevOps Server 2020: compiled C# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 
-**Version 0.9.10** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.9.15** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
@@ -10,8 +10,15 @@ DevOps. Its cmdlets return typed objects that you can use in pipelines, and it w
 standalone HTML, Markdown or JSON reports when you need a document. All messages,
 report labels and help are available in English and French.
 
-Version 0.9.10 changes the tools that develop AdoToolkit, not what AdoToolkit does: the
-module is that of 0.9.5 with a new version number.
+Version 0.9.15 answers the first question of triage in a failed-test report: has someone
+already filed this bug, and is anyone on it? A bug filed at or after the build went into the
+queue carries **✦** on its chip, in a paler red, wherever that chip appears, and the Open
+bugs view counts those bugs above its table. Each bug the report read whole now also shows
+the day it was filed and who it is assigned to, or **Unassigned**, both in the Open bugs
+view and on the test's card, so typing an owner's name in the report's search leaves the
+tests whose bugs that person has. `Get-AdoBuildTestFailure` returns the two new facts as
+`CreatedDate` and `AssignedTo` on each bug, read in the batch it already sent.
+Version 0.9.10 changed the tools that develop AdoToolkit, not what AdoToolkit does.
 Version 0.9.5 corrects defects found by reviewing the repository against its own rules. In a
 failed-test report, an error summary or a chart caption cut at its length limit kept a whole
 character where it used to leave half of an emoji behind, which showed as the replacement
@@ -36,7 +43,7 @@ commands behind it: up to six requests at the same time, the attachments of ever
 test run, and an Open bugs view. The [changelog](CHANGELOG.md) says what a script can
 notice. Profiles hold your default project, branch, build definition, test plan and test
 suite; see the [configuration file](docs/guides/configuration.md#profiles). The
-[release notes](docs/release-0.9.10.md) list every change, the validation evidence and the
+[release notes](docs/release-0.9.15.md) list every change, the validation evidence and the
 remaining work-PC checks.
 
 > [!NOTE]

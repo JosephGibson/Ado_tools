@@ -137,7 +137,7 @@ stage reads no build output and writes nothing to `bin/`, `obj/` or `artifacts/`
 | actionlint | `workflow-lint` | `winget install --id rhysd.actionlint --exact --source winget` |
 | ripgrep (recommended) | Faster discovery | `winget install --id BurntSushi.ripgrep.MSVC --exact --source winget` |
 | Codex CLI and `jq` (optional) | The plan critique of `critique-plan`: the critic runs through `codex exec` on the developer's ChatGPT plan. The skill names a missing tool; no stage needs it | Installed for the account, with both on `PATH` |
-| GitHub CLI (recommended) | The release handoff: it opens the pull request and watches its check. Listed only where workflow files exist; no stage needs it | `winget install --id GitHub.cli --exact --source winget`, then `gh auth login` |
+| GitHub CLI (recommended) | The release handoff: it opens the pull request and watches its check. Creating a pull request needs a token allowed to write one; reading checks and runs does not, and `gh pr create --dry-run` exits `0` without exercising that permission. Listed only where workflow files exist; no stage needs it | `winget install --id GitHub.cli --exact --source winget`, then `gh auth login`; a fine-grained PAT needs Pull requests: Read and write |
 
 - Pester stays on 5.x because the tooling depends on its result format.
 - winget extends `PATH` for new processes: open a new terminal after it installs a tool.
@@ -256,7 +256,9 @@ proposes: the pull-request title, then ` (#<number>)`. The `release` skill sets 
 of a release pull request, `AdoToolkit <version>: <summary>`: its first handoff command ends
 with `gh pr create`, which opens the pull request with that title already set, and its second
 runs `gh pr checks <branch> --watch --fail-fast` and opens the page once this check passes.
-Where the GitHub CLI is absent, the skill gives a prefilled compare page instead.
+That first command falls back by itself, after the push it has already made, to printing and
+opening a prefilled compare page: when `gh` is absent, and equally when `gh pr create` is
+refused, as it is for a token that may not write a pull request.
 
 ### Setup action
 
@@ -292,7 +294,7 @@ completely; an unsigned one is accepted.
 | `tests/Live/Connection.Live.ps1` | Installation, access and the project listing | — |
 | `tests/Live/Smoke.Live.ps1` | The user workflow through the cmdlets: connection, test runs, failed-test retrieval, report rendering and optionally a Test Case report. A failure shows the error code, operation and JSON path | `ADOTOOLKIT_LIVE_TEST_BUILD_ID` or `ADOTOOLKIT_LIVE_DEFINITION`; optionally `ADOTOOLKIT_LIVE_PLAN_ID` with `ADOTOOLKIT_LIVE_SUITE_ID` |
 | `tests/Live/Shape.Live.ps1` | Samples projects, a build, its logs and timeline, test runs, results, details, attachments, and test plans, suites and cases. Prints allowlisted property paths and JSON kinds; an unknown key becomes `<unknown>` and dynamic bags are opaque. A sample does not prove that a path never occurs | Optionally `ADOTOOLKIT_LIVE_TEST_BUILD_ID`, `ADOTOOLKIT_LIVE_PLAN_ID`, `ADOTOOLKIT_LIVE_SUITE_ID` |
-| `tests/Live/TestFailures.Live.ps1` | V-19 to V-25 and V-30. V-22 passes only with observed rerun details and distinct retry attempts under complete paging. V-30 checks the Bug category, the state categories, the Test Case relations and the module's own bug lookup, printing counts only | `ADOTOOLKIT_LIVE_TEST_BUILD_ID`; retries also need `ADOTOOLKIT_LIVE_RERUN_BUILD_ID` and `ADOTOOLKIT_LIVE_REATTEMPT_BUILD_ID` |
+| `tests/Live/TestFailures.Live.ps1` | V-19 to V-25, V-30 and V-37. V-22 passes only with observed rerun details and distinct retry attempts under complete paging. V-30 checks the Bug category, the state categories, the Test Case relations and the module's own bug lookup, printing counts only. V-37 sends its own work item batch for the bugs the module read, with the resolver's seven-field projection, and reports whether `System.CreatedDate` and `System.AssignedTo` came back, each present assignee as `IDENTITY_OBJECT`, `STRING`, `EMPTY` or `OTHER`, and whether the module's non-null counts match; an `OTHER` shape fails | `ADOTOOLKIT_LIVE_TEST_BUILD_ID`; retries also need `ADOTOOLKIT_LIVE_RERUN_BUILD_ID` and `ADOTOOLKIT_LIVE_REATTEMPT_BUILD_ID`; optionally `ADOTOOLKIT_LIVE_ASSIGNED_BUG_ID`, a bug known to have an assignee, without which V-37 is `INCONCLUSIVE` when nothing came back assigned |
 | `tests/Live/Triage.Live.ps1` | V-11 and V-14: timeline retries, continuation headers, log ranges and 64-bit line counts | `ADOTOOLKIT_LIVE_DEFINITION`, `ADOTOOLKIT_LIVE_BUILD_ID`; optionally `ADOTOOLKIT_LIVE_RETRIED_BUILD_ID` |
 | `tests/Live/TestCase.Live.ps1` | V-01, V-02, V-03, V-05, V-10 and V-13. V-01 passes when a shared-step reference has no child steps, or children that repeat the shared steps; children that are other steps are a `FAIL`, because the toolkit skips them. V-02 needs a visual comparison | `ADOTOOLKIT_LIVE_TESTCASE_ID`; shared parameters also need `ADOTOOLKIT_LIVE_SHARED_PARAM_CASE_ID` |
 | `tests/Live/TestCaseDetail.Live.ps1` | V-31 and V-32, the requests of `Export-AdoTestCase -IncludeDetail`. V-31 reads the Test Case with its relations: it passes when the field kinds and the relation attributes are as assumed, a named work item link and a description were observed, and the installed export shows the same number of links. V-32 sends the test points query: it passes when every point can be placed in a plan and a suite, paging by `$top` and `$skip` was observed, and the export shows the same number of points. Counts only; the report it renders goes to a temporary folder that the script deletes | `ADOTOOLKIT_LIVE_TESTCASE_ID`: a case with a description, a link to another work item and two or more test points |
@@ -373,7 +375,7 @@ the plan to the developer's personal `critique` skill, which runs an OpenAI mode
 
 | Step | What it does |
 | --- | --- |
-| Artifact | A plan file under `docs/plans/`, or the text of a plan mode plan through a quoted heredoc. Over 10,000 characters the critic stops with exit `2` until the developer confirms the size |
+| Artifact | A plan file under `docs/plans/`, or the text of a plan mode plan through a quoted heredoc. Over 50,000 characters the critic stops with exit `2` until the developer confirms the size |
 | Run | `bash ~/.claude/skills/critique/critique --raw --repo --out "$OUT" <plan>`, from the repository root, in the background, with the raw critique written to the session scratchpad. `--repo` lets the critic read this tree read-only, so a finding cites `path:line`; it resolves the root with `git rev-parse` |
 | Triage | A decision, a golden or the public contract names what a finding would change; none of them refutes it. A finding is rejected only on evidence that the behavior it questions is still intended |
 | Record | A `## Critique` section in the plan: each finding with `applied`, `rejected` or `owed` |

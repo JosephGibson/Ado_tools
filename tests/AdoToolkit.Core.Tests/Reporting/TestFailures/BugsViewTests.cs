@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using AdoToolkit.Core.Builds;
+using AdoToolkit.Core.Connections;
 using AdoToolkit.Core.Reporting;
 using AdoToolkit.Core.Reporting.TestFailures;
 using AdoToolkit.Core.TestRuns;
@@ -56,7 +58,9 @@ public sealed class BugsViewTests
         string other = Entry(view, 805);
         Assert.Contains("href=\"" + prefix + Uri.EscapeDataString(OtherProject) + "/_workitems/edit/805\" title=\"Bug 805\"><span class=\"sr-only\">Open bug </span>#805</a>",
             other, StringComparison.Ordinal);
-        Assert.Contains("<span class=\"bug-title\">Bug 805</span> <span class=\"bug-state\">Active</span> <span class=\"bug-state\">Project: Autre projet</span>",
+        // Read and open with no date and nobody on it: Unassigned, then the project it lives in.
+        Assert.Contains("<span class=\"bug-title\">Bug 805</span> <span class=\"bug-state\">Active</span>"
+            + " <span class=\"bug-meta\"><span class=\"bug-assignee\">Unassigned</span></span> <span class=\"bug-state\">Project: Autre projet</span>",
             other, StringComparison.Ordinal);
         Assert.DoesNotContain("bug-unread", other, StringComparison.Ordinal);
         string unread = Entry(view, 799);
@@ -204,6 +208,129 @@ public sealed class BugsViewTests
             html, StringComparison.Ordinal);
     }
 
+    // The build of the fixture went into the queue twenty minutes before the report was generated.
+    private static readonly DateTimeOffset Queued = TestFailureReportFixture.Clock.AddMinutes(-20);
+
+    // New means filed at or after the queue time. The threshold is one value of the build and it
+    // cannot move; it has no upper bound, so the claim is only that the bug was opened after this
+    // build was queued, and the date beside the marker settles a bug that was not.
+    [Fact]
+    public void OnlyABugFiledAtOrAfterTheQueueTimeCarriesTheMarker()
+    {
+        TestFailureReportModel model = Build("en-US",
+            Failure("A", Read(810, result: true, created: Queued), Read(811, result: true, created: Queued.AddMinutes(5)),
+                Read(812, result: true, created: Queued.AddSeconds(-1)), Read(813, result: true)));
+        string html = TestFailureReportFixture.Render(model);
+        TestFailureReportValidator.Validate(new StringReader(html), model);
+        string view = View(html);
+        foreach (int id in new[] { 810, 811 })
+        {
+            Assert.Contains("<a class=\"open-bug-marker bug-new\" rel=\"noreferrer\" href=\"", Entry(view, id), StringComparison.Ordinal);
+            Assert.Contains("title=\"Bug " + id.ToString(CultureInfo.InvariantCulture) + ", Opened after this build was queued\"", Entry(view, id), StringComparison.Ordinal);
+            Assert.Contains("<span class=\"sr-only\">Open bug, Opened after this build was queued </span><span aria-hidden=\"true\">✦</span> #"
+                + id.ToString(CultureInfo.InvariantCulture), Entry(view, id), StringComparison.Ordinal);
+            Assert.Contains("<span class=\"trend bug-new\" title=\"Opened after this build was queued\"><span aria-hidden=\"true\">✦</span> New</span>",
+                Entry(view, id), StringComparison.Ordinal);
+        }
+        // One second before the queue time is not after it, and the date says so on the same line.
+        foreach (int id in new[] { 812, 813 })
+        {
+            Assert.Contains("<a class=\"open-bug-marker\" rel=\"noreferrer\" href=\"", Entry(view, id), StringComparison.Ordinal);
+            Assert.DoesNotContain("bug-new", Entry(view, id), StringComparison.Ordinal);
+            Assert.DoesNotContain("✦", Entry(view, id), StringComparison.Ordinal);
+        }
+        // New is a claim about a date: without one there is no claim, and no date on the line either.
+        Assert.Contains("<span class=\"bug-created\">Created on: 9/16/2026</span>", Entry(view, 812), StringComparison.Ordinal);
+        Assert.DoesNotContain("bug-created", Entry(view, 813), StringComparison.Ordinal);
+        Assert.Contains("<span class=\"bug-meta\"><span class=\"bug-assignee\">Unassigned</span></span>", Entry(view, 813), StringComparison.Ordinal);
+    }
+
+    // IsOpen is null for a bug that never came back and for one that came back without a System.State,
+    // and the second has a creation date. Every new fact needs IsOpen true, so the grey chip keeps
+    // meaning exactly unknown and no line pairs a date with Not read.
+    [Fact]
+    public void ABugThatCameBackWithoutAStateStaysGreyWhateverItCarries()
+    {
+        AdoTestBug stateless = new()
+        {
+            Id = 820, Title = "Bug 820", WorkItemType = "Bug", TeamProject = TestFailureReportFixture.Project, IsResolved = true,
+            CreatedDate = Queued.AddMinutes(5), AssignedTo = new AdoIdentityRef { DisplayName = "Nadia Roy" },
+            IsAssociatedWithResult = true, WebUrl = TestFailureReportFixture.Untrusted,
+        };
+        TestFailureReportModel model = Build("en-US", Failure("A", stateless));
+        string html = TestFailureReportFixture.Render(model);
+        TestFailureReportValidator.Validate(new StringReader(html), model);
+        string entry = Entry(View(html), 820);
+        Assert.Contains("<a class=\"bug-marker bug-unread\" rel=\"noreferrer\" href=\"", entry, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"bug-unread\">Not read</span>", entry, StringComparison.Ordinal);
+        string body = html[html.IndexOf("<body", StringComparison.Ordinal)..];
+        foreach (string absent in new[] { "bug-new", "✦", "bug-created", "bug-assignee", "bug-meta", "Nadia Roy", "Unassigned" })
+            Assert.DoesNotContain(absent, body, StringComparison.Ordinal);
+    }
+
+    // No queue time, no threshold: no bug is marked and the summary makes no count, rather than
+    // reading an unknown threshold as zero. The dates still show.
+    [Fact]
+    public void WithoutAQueueTimeNoBugIsMarkedAndTheSummaryLeavesOutTheCount()
+    {
+        TestFailureReportModel model = Build("en-US", queued: false, failures: Failure("A", Read(810, result: true, created: Queued.AddMinutes(5))));
+        string html = TestFailureReportFixture.Render(model);
+        TestFailureReportValidator.Validate(new StringReader(html), model);
+        string view = View(html);
+        string body = html[html.IndexOf("<body", StringComparison.Ordinal)..];
+        Assert.Contains("<p class=\"cluster-summary\">Open bugs: 1</p>", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("Opened after this build was queued", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("bug-new", body, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"bug-created\">Created on: 9/16/2026</span>", view, StringComparison.Ordinal);
+    }
+
+    // The summary line of the view that holds the dates and the assignees, as By error has one.
+    [Theory]
+    [InlineData("en-US", "Open bugs: 3 · Opened after this build was queued: 2")]
+    [InlineData("fr-CA", "Bogues ouverts : 3 · Ouverts après la mise en file de ce build : 2")]
+    public void TheSummaryLineCountsTheBugsFiledAfterTheBuildWasQueued(string culture, string summary)
+    {
+        TestFailureReportModel model = Build(culture,
+            Failure("A", Read(810, result: true, created: Queued), Read(811, result: true, created: Queued.AddMinutes(5))),
+            Failure("B", Read(812, result: true, created: Queued.AddSeconds(-1))));
+        string html = TestFailureReportFixture.Render(model);
+        TestFailureReportValidator.Validate(new StringReader(html), model);
+        Assert.Contains("<p class=\"cluster-summary\">" + summary + "</p>", View(html), StringComparison.Ordinal);
+    }
+
+    // One BugChip serves every view, so the marker reaches the Overview's narrow column, the By error
+    // facts line, the Details card's bug list and an attempt's associated bugs with no drift. The
+    // assignee is in the card, which is the text the report's search matches.
+    [Theory]
+    [InlineData("en-US", "Assigned To: Nadia Roy", "Associated bugs")]
+    [InlineData("fr-CA", "Assigné à : Nadia Roy", "Bogues associés")]
+    public void TheMarkerReachesEveryPlaceABugChipAppearsAndTheNameIsInTheCard(string culture, string assigned, string associated)
+    {
+        TestFailureReportModel model = TestFailureReportFixture.Model("large", culture);
+        string html = TestFailureReportFixture.Render(model);
+        TestFailureReportValidator.Validate(new StringReader(html), model);
+        string chip = "<a class=\"open-bug-marker bug-new\" rel=\"noreferrer\" href=\""
+            + SinkEncoding.Attribute(AdoWebLinks.WorkItem(TestFailureReportFixture.Collection, TestFailureReportFixture.Project, 5101).AbsoluteUri) + "\"";
+        Assert.Contains("<td class=\"col-bug\">" + chip, html, StringComparison.Ordinal);
+        Assert.Contains("fact-tracked\">" + model.Labels["WithOpenBug"] + " <strong>1</strong> " + chip, html, StringComparison.Ordinal);
+        Assert.Contains("<li data-bug=\"5101\" data-open-bug>" + chip, html, StringComparison.Ordinal);
+        Assert.Contains("<dt>" + associated + "</dt><dd>" + chip, html, StringComparison.Ordinal);
+        // The name sits inside the failure card, the text the search model reads.
+        string anchor = "f-" + model.Failures.Single(static failure => failure.ShortName == "SubmitOrder").Ordinal.ToString(CultureInfo.InvariantCulture);
+        string card = html[html.IndexOf("<article class=\"card failure-card\" id=\"" + anchor + "\"", StringComparison.Ordinal)..];
+        Assert.Contains("<span class=\"bug-assignee\">" + assigned + "</span>", card[..card.IndexOf("</article>", StringComparison.Ordinal)], StringComparison.Ordinal);
+        // Bug 5104 was filed at the queue time and 5105 one minute before it; only the first is marked.
+        Assert.Contains("<li data-bug=\"5104\" data-open-bug><a class=\"open-bug-marker bug-new\"", html, StringComparison.Ordinal);
+        Assert.Contains("<li data-bug=\"5105\" data-open-bug><a class=\"open-bug-marker\"", html, StringComparison.Ordinal);
+        // Bug 5106 came back with an owner and no date: the owner shows and no marker does.
+        string entry = Entry(View(html), 5106);
+        Assert.DoesNotContain("bug-new", entry, StringComparison.Ordinal);
+        Assert.DoesNotContain("bug-created", entry, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"bug-assignee\">"
+            + Messages.Get(AdoMessage.TestReportLabelValue, model.Culture, Messages.Get(AdoMessage.ReportAssignedTo, model.Culture), "Priya Gagné")
+            + "</span>", entry, StringComparison.Ordinal);
+    }
+
     private static string View(string html)
     {
         int start = html.IndexOf("<section class=\"view\" id=\"bugs\" data-view>", StringComparison.Ordinal);
@@ -220,10 +347,12 @@ public sealed class BugsViewTests
 
     private static IEnumerable<string> Rows(string entry) => Regex.Matches(entry, "<tr data-index-for=\"([^\"]+)\">").Select(m => m.Groups[1].Value);
 
-    private static AdoTestBug Read(int id, bool result = false, bool testCase = false, string? project = null) => new()
+    private static AdoTestBug Read(int id, bool result = false, bool testCase = false, string? project = null,
+        DateTimeOffset? created = null, string? assignee = null) => new()
     {
         Id = id, Title = "Bug " + id.ToString(CultureInfo.InvariantCulture), State = "Active", WorkItemType = "Bug", StateCategory = "InProgress",
         TeamProject = project ?? TestFailureReportFixture.Project, IsOpen = true, IsResolved = true, IsAssociatedWithResult = result, IsLinkedToTestCase = testCase,
+        CreatedDate = created, AssignedTo = assignee is null ? null : new AdoIdentityRef { DisplayName = assignee },
         WebUrl = TestFailureReportFixture.Untrusted,
     };
 
@@ -236,12 +365,22 @@ public sealed class BugsViewTests
         Attempts = [new AdoTestAttempt { Number = 1, RunId = 201, ResultId = 11, Outcome = "Failed", OutcomeClass = AdoTestOutcomeClass.Failure, ErrorMessage = "Failed " + name }],
     };
 
-    private static TestFailureReportModel Build(string culture, params AdoTestFailure[] failures)
+    private static TestFailureReportModel Build(string culture, params AdoTestFailure[] failures) => Build(culture, true, failures);
+
+    private static TestFailureReportModel Build(string culture, bool queued, params AdoTestFailure[] failures)
     {
         AdoBuildTestFailureSet source = TestFailureReportFixture.Set("failed");
+        AdoBuild build = source.Build;
         return TestFailureReportModelBuilder.Build(new AdoBuildTestFailureSet
         {
-            Build = source.Build, Runs = source.Runs, Summary = source.Summary, History = source.History, Failures = failures, FailedCount = failures.Length,
+            Build = queued ? build : new AdoBuild
+            {
+                Id = build.Id, BuildNumber = build.BuildNumber, Definition = build.Definition, SourceBranch = build.SourceBranch,
+                SourceVersion = build.SourceVersion, RepositoryType = build.RepositoryType, RepositoryId = build.RepositoryId,
+                Result = build.Result, FinishTime = build.FinishTime, TeamProject = build.TeamProject, CollectionUri = build.CollectionUri,
+                WebUrl = build.WebUrl,
+            },
+            Runs = source.Runs, Summary = source.Summary, History = source.History, Failures = failures, FailedCount = failures.Length,
             Status = source.Status, RetrievedAt = source.RetrievedAt, CollectionUri = source.CollectionUri,
         }, TestFailureReportFixture.Options(culture));
     }

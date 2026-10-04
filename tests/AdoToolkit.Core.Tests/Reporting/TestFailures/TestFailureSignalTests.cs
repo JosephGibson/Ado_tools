@@ -70,7 +70,8 @@ public sealed class TestFailureSignalTests
         // A build outside the history window keeps its ID.
         Assert.Matches("<dt>Failing since</dt><dd><a rel=\"noreferrer\" href=\"[^\"]+buildId=999\">999</a>", html);
         string unread = Render(History("U F"), failingSince: 400);
-        Assert.DoesNotContain("class=\"trend ", unread, StringComparison.Ordinal);
+        // No trend of its own: the bug's own New chip shares the chip shape and is not one.
+        Assert.DoesNotContain("class=\"trend trend-", unread, StringComparison.Ordinal);
         Assert.Contains("<td class=\"col-trend\"></td>", View(unread, "overview"), StringComparison.Ordinal);
     }
 

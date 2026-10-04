@@ -22,6 +22,7 @@ documentation starts at the [README](../../README.md).
 | [release-0.8.0.md](release-0.8.0.md) | 0.8.0 release notes: faster failed-test retrieval, `-SkipAttachments`, the planned history read, the report density pass and V-34 to V-36 |
 | [release-0.8.5.md](release-0.8.5.md) | 0.8.5 release notes: the failed-test report restyle, with the Overview cards, the error clusters and the bug coverage; no cmdlet or schema change |
 | [release-0.9.0.md](release-0.9.0.md) | 0.9.0 release notes: the agent worktrees, the three subagents, the review workflow, and the gate and the test runs side by side; no product change |
+| [release-0.9.5.md](release-0.9.5.md) | 0.9.5 release notes: surrogate-safe report cuts, the pipeline identifier guard, and the gate, package and live-check fixes |
 
 Release notes for the current and the previous version are in `docs/`.
 
@@ -39,5 +40,6 @@ Comments in `src/`, `tests/` and `tools/`, test tags and cmdlet help notes cite 
 | `V-31`, `V-32` | The requests of `Export-AdoTestCase -IncludeDetail`, under [Known limitations](release-0.6.0.md#known-limitations) in the 0.6.0 notes |
 | `V-33` | Concurrent requests of `Get-AdoBuildTestFailure` and `Export-AdoBuildTestFailure` on Server 2020, under [Known limitations](release-0.7.0.md#known-limitations) in the 0.7.0 notes |
 | `V-34` to `V-36` | Server 2020 behavior that `tests/Live/Probes.Live.ps1` probes for the next version: result lists with details, compressed responses and the attachments of sub-results, under [Known limitations](release-0.8.0.md#known-limitations) in the 0.8.0 notes |
+| `V-37` | `System.CreatedDate` and `System.AssignedTo` in a work item batch field projection, and the shape of the identity, under [Known limitations](../release-0.9.15.md#known-limitations) in the 0.9.15 notes |
 | `S0-n` to `S5-n` | An [acceptance criterion](ado-toolkit-spec.md#22-delivery-slices-and-acceptance-criteria), §22; also a test tag |
 | `F01` to `F16` | A finding in [plans/server-2020-audit-fixes.md](plans/server-2020-audit-fixes.md) |

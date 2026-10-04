@@ -144,9 +144,9 @@ The folder is not named `TestResults` (DD-024).
 | `TestRuns/stack-english.txt`, `TestRuns/stack-french.txt` | Stack traces: frames with and without paths, headers, inner-exception and rethrow separators, async and generic types, URLs, unsafe schemes | V-29 |
 | `TestRuns/messages.txt` | Assertion messages of MSTest, NUnit and xUnit, French markers, quoted text, numbers and URLs | V-29 |
 | `TestRuns/hostile-text.txt` | Tags, closing script tags, event attributes, quotes, traversal and reserved names, combining characters, French spacing | V-29 |
-| `TestRuns/workitems-bugs.json` | The bugs associated with `result-detail-201-1.json`: 2001 Active and 2002 Closed | V-30 |
+| `TestRuns/workitems-bugs.json` | The bugs associated with `result-detail-201-1.json`: 2001 Active, created and assigned through an identity object, and 2002 Closed, created and unassigned | V-30 |
 | `TestRuns/workitems-testcase-links.json` | Test Case 1010 with relations: bugs through three link types, a User Story, Shared Steps, and a hyperlink, artifact link, attachment and unreadable URL that are never requested | V-30 |
-| `TestRuns/workitems-linked.json` | The linked work items: 3001 Bug Active, 3002 Bug Closed, 3050 User Story, 3060 Shared Steps, 3080 of the custom type `Défaut de production` | V-30 |
+| `TestRuns/workitems-linked.json` | The linked work items: 3001 Bug Active, created and assigned through a bare identity string, 3002 Bug Closed, 3050 User Story, 3060 Shared Steps, 3080 of the custom type `Défaut de production`, created and unassigned | V-30 |
 | `TestRuns/workitemtypecategory-bug.json` | `Microsoft.BugCategory` holding Bug and the custom type | V-30 |
 | `TestRuns/workitemtype-states-bug.json` | The Bug states New, Active, Resolved and Closed with their categories | V-30 |
 

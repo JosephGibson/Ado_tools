@@ -12,7 +12,7 @@ $InformationPreference = 'SilentlyContinue'
 # Opt-in, installed module only (signed or unsigned). Holds every response and downloaded byte in memory and
 # writes nothing. Never prints work values: only PASS|FAIL|INCONCLUSIVE <V-ID> <structural note>.
 $checkStates = [System.Collections.Generic.List[string]]::new()
-$items = @('V-19', 'V-20', 'V-21', 'V-22', 'V-23', 'V-24', 'V-25', 'V-30')
+$items = @('V-19', 'V-20', 'V-21', 'V-22', 'V-23', 'V-24', 'V-25', 'V-30', 'V-37')
 function Write-AdoLiveResult {
     param([Parameter(Mandatory = $true)][string] $Text)
     $checkStates.Add($Text.Split(' ')[0])
@@ -29,6 +29,12 @@ if ([string]::IsNullOrWhiteSpace($env:ADOTOOLKIT_LIVE_PROFILE) -or
 }
 $hasRerun = [int]::TryParse($env:ADOTOOLKIT_LIVE_RERUN_BUILD_ID, [ref] $rerunId) -and $rerunId -gt 0
 $hasReattempt = [int]::TryParse($env:ADOTOOLKIT_LIVE_REATTEMPT_BUILD_ID, [ref] $reattemptId) -and $reattemptId -gt 0
+# A bug the developer knows is assigned. Without it, an absent System.AssignedTo cannot be told
+# from nobody assigned, and V-37 settles only the creation date.
+$assignedBugId = 0
+$hasAssignedBug = [int]::TryParse($env:ADOTOOLKIT_LIVE_ASSIGNED_BUG_ID, [ref] $assignedBugId) -and $assignedBugId -gt 0
+# The bugs the module reported, handed from the V-30 block to V-37.
+$reportedBugs = @()
 
 function Invoke-AdoTestRequest {
     param([Parameter(Mandatory = $true)][string] $Uri, [string] $Accept = 'application/json')
@@ -413,6 +419,7 @@ try {
         $set = Get-AdoBuildTestFailure -BuildId $buildId -HistoryCount 1 -WarningAction SilentlyContinue
         # The module leaves closed bugs out, so BUGS counts the open and the unread ones.
         $bugs = @($set.Failures | ForEach-Object { $_.Bugs })
+        $reportedBugs = $bugs
         $codes = @($set.Diagnostics | ForEach-Object Code)
         $counts = [ordered]@{
             TYPES = $types.Count; STATES = $stateCount; TESTS = @($set.Failures).Count; BUGS = $bugs.Count
@@ -429,6 +436,54 @@ try {
         else { Write-AdoLiveResult "PASS V-30 BUG_ROUTES_AND_LOOKUP_AGREE $note" }
     }
     catch { Write-AdoLiveResult 'FAIL V-30 CHECK_FAILED' }
+
+    # V-37: the two bug fields added in 0.9.15. The bug lookup runs inside the cmdlet, where the raw
+    # response is not visible, so this check sends its own projected request for the bugs the module
+    # reported, with the seven-field list the resolver uses, and compares what came back with what
+    # the module produced for the same IDs. Only counts, shape names and verdict codes are printed:
+    # no identity, no date, no title.
+    try {
+        # Only bugs the module read whole: a bug that never came back has no fields to compare, and
+        # counting it would read a degraded lookup, which V-30 already reports, as a field difference.
+        $moduleIds = @(@($reportedBugs | Where-Object { $_.IsResolved } | ForEach-Object { [int] $_.Id }) |
+                Where-Object { $_ -gt 0 } | Sort-Object -Unique)
+        $requested = @(@($moduleIds) + @(if ($hasAssignedBug) { $assignedBugId } else { @() }) | Sort-Object -Unique)
+        if ($moduleIds.Count -eq 0) { Write-AdoLiveResult 'INCONCLUSIVE V-37 NO_BUGS_ON_REPORTED_TESTS' }
+        else {
+            $projection = @('System.Id', 'System.Title', 'System.State', 'System.WorkItemType', 'System.TeamProject',
+                'System.CreatedDate', 'System.AssignedTo')
+            $body = '{"ids":[' + ((@($requested | ForEach-Object { $_.ToString([cultureinfo]::InvariantCulture) })) -join ',') +
+                '],"fields":[' + ((@($projection | ForEach-Object { '"' + $_ + '"' })) -join ',') + '],"errorPolicy":"omit"}'
+            $returned = @(((Invoke-AdoTestBatch -Body $body).Content | ConvertFrom-Json).value | Where-Object { $null -ne $_ })
+            $evidence = Get-AdoLiveBugFieldEvidence -Item $returned -CountedId $moduleIds -AssignedId $(if ($hasAssignedBug) { $assignedBugId } else { 0 })
+            $module = @($reportedBugs | Where-Object { $moduleIds -contains [int] $_.Id } | Sort-Object -Property Id -Unique)
+            $moduleCreated = @($module | Where-Object { $null -ne $_.CreatedDate }).Count
+            $moduleAssigned = @($module | Where-Object { $null -ne $_.AssignedTo }).Count
+            $counts = [ordered]@{
+                REQUESTED = $requested.Count; COUNTED = $evidence.Returned
+                CREATED_DATE = $evidence.CreatedDate; ASSIGNED_TO = $evidence.AssignedTo
+                MODULE_CREATED_DATE = $moduleCreated; MODULE_ASSIGNED_TO = $moduleAssigned
+                UNKNOWN_SHAPES = $evidence.Unknown
+            }
+            $shapes = if ($evidence.Shape.Count -gt 0) { ($evidence.Shape) -join ',' } else { 'NONE' }
+            Write-AdoLiveResult ('NOTE V-37 BUG_FIELDS ' + (Format-AdoLiveCounts -Counts $counts) + ' SHAPES=' + $shapes)
+            $named = $hasAssignedBug -and $evidence.AssignedReturned
+            if ($evidence.Returned -eq 0) { Write-AdoLiveResult 'INCONCLUSIVE V-37 NO_BUGS_ON_REPORTED_TESTS' }
+            elseif ($evidence.CreatedDate -lt $evidence.Returned) { Write-AdoLiveResult 'FAIL V-37 CREATED_DATE_ABSENT' }
+            elseif ($evidence.Unknown -gt 0) {
+                Write-AdoLiveResult ('FAIL V-37 ASSIGNED_TO_SHAPE_UNKNOWN=' + $evidence.Unknown.ToString([cultureinfo]::InvariantCulture))
+            }
+            elseif ($named -and -not $evidence.AssignedPresent) { Write-AdoLiveResult 'FAIL V-37 ASSIGNED_TO_OMITTED' }
+            elseif ($moduleCreated -ne $evidence.CreatedDate -or $moduleAssigned -ne $evidence.AssignedTo) {
+                Write-AdoLiveResult 'FAIL V-37 MODULE_COUNTS_DIFFER'
+            }
+            # Nothing came back assigned and no known assigned bug was named: the field may be
+            # omitted or nobody may be assigned, and the two cannot be told apart.
+            elseif (-not $named -and $evidence.AssignedTo -eq 0) { Write-AdoLiveResult 'INCONCLUSIVE V-37 NO_ASSIGNED_BUG' }
+            else { Write-AdoLiveResult 'PASS V-37 BUG_FIELDS_PRESENT_AND_SHAPED' }
+        }
+    }
+    catch { Write-AdoLiveResult 'FAIL V-37 CHECK_FAILED' }
 
     # S5-10 also requires the manual acceptance run in plan section 8.
     if ($checkStates.Contains('FAIL')) { exit 1 }

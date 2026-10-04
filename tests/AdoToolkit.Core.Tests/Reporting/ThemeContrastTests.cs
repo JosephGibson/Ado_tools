@@ -32,16 +32,17 @@ public sealed class ThemeContrastTests
         }
     }
 
-    // The failed-test report has its own status, link, New, recurring and soft text colours, brighter
-    // than the shared ones on screen and darker in print. Each is text, so it keeps 4.5:1 on every
-    // surface of the shared palette; the filled New chip keeps it under its text, the page colour.
+    // The failed-test report has its own status, link, New, recurring, bug-opened-after-queued and soft
+    // text colours, brighter than the shared ones on screen and darker in print. Each is text, so it
+    // keeps 4.5:1 on every surface of the shared palette; the filled New chip keeps it under its text,
+    // the page colour.
     [Fact]
     public void TheFailedTestReportsOwnColoursKeepTextContrastOnEverySurface()
     {
         string shared = Asset("report-base.css"), own = Asset("test-failures.css");
         int sharedPrint = shared.IndexOf("@media print", StringComparison.Ordinal), ownPrint = own.IndexOf("@media print", StringComparison.Ordinal);
         Assert.True(sharedPrint > 0 && ownPrint > 0);
-        string[] colours = ["--fail", "--pass", "--flaky", "--link", "--new", "--recurring", "--text-soft"];
+        string[] colours = ["--fail", "--fail-new", "--pass", "--flaky", "--link", "--new", "--recurring", "--text-soft"];
         Dictionary<string, string> ownScreen = Properties(own[..ownPrint]), ownPaper = Properties(own[ownPrint..]);
         Assert.All(colours, colour => Assert.True(ownScreen.ContainsKey(colour) && ownPaper.ContainsKey(colour), colour));
         Dictionary<string, string> screen = Properties(shared[..sharedPrint]);

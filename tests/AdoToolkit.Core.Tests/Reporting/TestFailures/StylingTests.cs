@@ -163,9 +163,10 @@ public sealed class StylingTests
         // The glyphs and chips carry their words, and every status cell says its counts as its title.
         TestFailureReportModel model = TestFailureReportFixture.Model("partial", culture);
         string html = TestFailureReportFixture.Render(model);
-        foreach (string view in new[] { "overview", "bugs" })
-            Assert.Contains("</h2>\n<p data-no-matches hidden>", View(html, view), StringComparison.Ordinal);
-        Assert.Contains("</h2>\n<p class=\"cluster-summary\">", View(html, "by-error"), StringComparison.Ordinal);
+        Assert.Contains("</h2>\n<p data-no-matches hidden>", View(html, "overview"), StringComparison.Ordinal);
+        // By error and Open bugs each open on a summary line, not a legend.
+        foreach (string view in new[] { "by-error", "bugs" })
+            Assert.Contains("</h2>\n<p class=\"cluster-summary\">", View(html, view), StringComparison.Ordinal);
         Assert.DoesNotContain("class=\"text-muted legend\"", html, StringComparison.Ordinal);
         Assert.False(model.Labels.ContainsKey("GroupLegend"));
         Assert.False(Enum.TryParse<AdoMessage>("TestReportGroupLegend", out _));
@@ -225,15 +226,17 @@ public sealed class StylingTests
     }
 
     [Theory]
-    [InlineData("en-US", "Not read")]
-    [InlineData("fr-CA", "Non lu")]
-    public void CardMarksAnUnreadBugAndHasNoOpenBadge(string culture, string unread)
+    [InlineData("en-US", "Not read", "Assigned To: Nadia Roy")]
+    [InlineData("fr-CA", "Non lu", "Assigné à : Nadia Roy")]
+    public void CardMarksAnUnreadBugAndHasNoOpenBadge(string culture, string unread, string assigned)
     {
         TestFailureReportModel model = TestFailureReportFixture.Model("partial", culture);
         string html = TestFailureReportFixture.Render(model);
         string card = Section(html, "<article class=\"card failure-card\" id=\"f-1\"", "</article>");
-        // Every bug that was read is open, so only the one that was not read says something.
-        Assert.EndsWith("<span class=\"bug-state\">Active</span>", Section(card, "<li data-bug=\"801\" data-open-bug>", "</li>"), StringComparison.Ordinal);
+        // Every bug that was read is open, so only the one that was not read says it could not be read.
+        // The bug read whole carries when it was filed and who has it, inside the card that search reads.
+        Assert.EndsWith("<span class=\"bug-assignee\">" + assigned + "</span></span>",
+            Section(card, "<li data-bug=\"801\" data-open-bug>", "</li>"), StringComparison.Ordinal);
         Assert.EndsWith("</a> <span class=\"bug-unread\">" + unread + "</span>", Section(card, "<li data-bug=\"802\">", "</li>"), StringComparison.Ordinal);
         Assert.DoesNotContain("bug-open", html, StringComparison.Ordinal);
         Assert.False(model.Labels.ContainsKey("Open"));

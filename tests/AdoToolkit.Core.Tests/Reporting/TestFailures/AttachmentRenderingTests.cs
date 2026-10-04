@@ -81,7 +81,7 @@ public sealed class AttachmentRenderingTests
         Rendered report = Render(directory, (status, null, null), (status, null, null));
         Assert.Equal(2, report.Html.Split("<p class=\"attachment-status\">" + note + "</p>").Length - 1);
         Assert.DoesNotContain("data-local-file", report.Html, StringComparison.Ordinal);
-        Assert.Contains(">Screenshot.PNG <span role=\"img\"", report.Html, StringComparison.Ordinal);
+        Assert.Contains(">Screenshot.PNG</a>", report.Html, StringComparison.Ordinal);
         Assert.Contains("data-download-status=\"" + status.ToString().ToLowerInvariant() + "\"", report.Html, StringComparison.Ordinal);
         TestFailureReportValidator.Validate(new StringReader(report.Html), report.Model, null);
     }

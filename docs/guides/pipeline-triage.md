@@ -137,12 +137,14 @@ cancellation still stop the retrieval:
 ### The HTML report
 
 `Export-AdoBuildTestFailure` writes one dark HTML report per build, by default to your
-Downloads folder as `Build-<id>-TestFailures.html`. Its views are an overview table, the
-same rows grouped by error, the open bugs with the tests linked to each, one card per test
-with every attempt, the build's runs with the run history, and diagnostics when something
-could not be retrieved. In the overview and by-error tables, a test with an open bug has an
-**Open bug** link to the lowest-numbered one, each card lists the test's open bugs, and
-**Without an open bug** shows only the tests that still need one. Flaky
+Downloads folder as `Build-<id>-TestFailures.html`. Its views are an overview table with
+cards that sum up the build, the run history with the build's runs, one card per test with
+every attempt, the same rows grouped by error, the open bugs with the tests linked to each,
+and diagnostics when something could not be retrieved. In the overview and by-error tables,
+a test with an open bug shows the lowest-numbered one as a red chip in its **Open bugs**
+column, each card lists the test's open bugs, and **Without an open bug** shows only the
+tests that still need one; the overview's cards and the last group of the Open bugs view
+list them too. Flaky
 tests are left out unless you add `-IncludeFlaky`. Times are shown in the time zone of the
 computer that exported the report. The command returns the report as a `FileInfo` and
 shows its `file:///` address in the console, like `Write-Host`; `-InformationAction Ignore`

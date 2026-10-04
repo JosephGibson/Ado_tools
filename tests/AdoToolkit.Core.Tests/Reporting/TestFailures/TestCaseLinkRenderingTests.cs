@@ -13,15 +13,15 @@ public sealed class TestCaseLinkRenderingTests
     {
         string resolved = TestFailureReportFixture.Render("failed", culture);
         string row = Section(resolved, "<tr data-index-for=\"f-1\">", "</tr>");
-        Assert.Contains("/_workitems/edit/901\">#901 <span role=\"img\"", row, StringComparison.Ordinal);
+        Assert.Contains("/_workitems/edit/901\">#901</a>", row, StringComparison.Ordinal);
         string heading = Section(resolved, "<article class=\"card failure-card\" id=\"f-1\"", "</header>");
-        Assert.Contains("/_workitems/edit/901\">" + label + " #901 <span role=\"img\"", heading, StringComparison.Ordinal);
+        Assert.Contains("/_workitems/edit/901\">" + label + " #901</a>", heading, StringComparison.Ordinal);
         Assert.Contains("<span class=\"test-case-title\">Valider la commande</span>", heading, StringComparison.Ordinal);
         Assert.Contains("<span class=\"test-case-state\">Ready</span>", heading, StringComparison.Ordinal);
         Assert.Contains("data-test-case=\"901\"", heading, StringComparison.Ordinal);
         string unresolved = TestFailureReportFixture.Render("partial", culture);
-        Assert.Contains("/_workitems/edit/902\">#902 <span", Section(unresolved, "<tr data-index-for=\"f-1\">", "</tr>"), StringComparison.Ordinal);
-        Assert.Contains("/_workitems/edit/902\">" + label + " #902 <span", unresolved, StringComparison.Ordinal);
+        Assert.Contains("/_workitems/edit/902\">#902</a>", Section(unresolved, "<tr data-index-for=\"f-1\">", "</tr>"), StringComparison.Ordinal);
+        Assert.Contains("/_workitems/edit/902\">" + label + " #902</a>", unresolved, StringComparison.Ordinal);
         Assert.DoesNotContain("class=\"test-case-title\"", unresolved, StringComparison.Ordinal);
         Assert.DoesNotContain("class=\"test-case-state\"", unresolved, StringComparison.Ordinal);
         Assert.Contains("data-diagnostic=\"UnresolvedTestCase\"", unresolved, StringComparison.Ordinal);

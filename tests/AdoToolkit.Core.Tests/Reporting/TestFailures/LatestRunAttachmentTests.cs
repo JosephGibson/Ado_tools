@@ -54,7 +54,7 @@ public sealed class LatestRunAttachmentTests
         Assert.Contains("data-attempt-count=\"3\"", html, StringComparison.Ordinal);
         foreach (int run in new[] { 201, 202 })
         {
-            Assert.Contains("run-" + run.ToString(Culture) + ".log <span role=\"img\"", html, StringComparison.Ordinal);
+            Assert.Contains("run-" + run.ToString(Culture) + ".log</a>", html, StringComparison.Ordinal);
             Assert.Contains("runId=" + run.ToString(Culture) + "&amp;resultId=11", html, StringComparison.Ordinal);
         }
         Assert.Contains("<span class=\"attachment-size\">3 bytes</span>", html, StringComparison.Ordinal);
@@ -98,7 +98,7 @@ public sealed class LatestRunAttachmentTests
         string html = File.ReadAllText(result.Report.FullName);
         // Every attachment stays listed as a link to its result.
         foreach (string name in new[] { "early.png", "screen.PNG", "page.html", "trace.dat", "report.htm" })
-            Assert.Contains(name + " <span role=\"img\"", html, StringComparison.Ordinal);
+            Assert.Contains(">" + name + "</a>", html, StringComparison.Ordinal);
     }
 
     // A run is inside the window when it started at or after GeneratedAt minus the window. Outside

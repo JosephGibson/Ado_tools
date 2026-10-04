@@ -78,6 +78,25 @@ public static class StackTraceLexer
         return result.AsReadOnly();
     }
 
+    // The method of the first frame whose method starts with the prefix, such as a test's root
+    // namespace and a dot, or null. Only the first lines are read: the frame that matters is near
+    // the top, and a trace can be a megabyte long.
+    internal static string? FirstFrame(string text, string prefix, int maximumLines = 64)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentException.ThrowIfNullOrEmpty(prefix);
+        int start = 0;
+        for (int line = 0; line < maximumLines && start < text.Length; line++)
+        {
+            int end = text.IndexOfAny(['\r', '\n'], start);
+            if (end < 0) end = text.Length;
+            Match frame = Frame.Match(text[start..end]);
+            if (frame.Success && frame.Groups["method"].Value.StartsWith(prefix, StringComparison.Ordinal)) return frame.Groups["method"].Value.TrimEnd();
+            start = end < text.Length && text[end] == '\r' && end + 1 < text.Length && text[end + 1] == '\n' ? end + 2 : end + 1;
+        }
+        return null;
+    }
+
     private static void AddGroup(List<CodeToken> tokens, Match match, string group, CodeTokenKind kind) =>
         Tokenize.WithUrls(tokens, kind, match.Groups[group].Value);
 

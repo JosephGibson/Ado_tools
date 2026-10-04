@@ -3,13 +3,18 @@ using AdoToolkit.Core.Connections;
 
 namespace AdoToolkit.Core.Reporting.Charts;
 
-// One square per build, oldest first, told apart by shape as well as colour: filled when the test
-// failed, half filled when it was flaky, hollow when it passed, dashed when it did not run, dotted for
-// any other outcome and hatched when the build could not be read. The build number and the status
-// are the square's accessible name and its title; the stylesheet outlines the current build.
+// One cell per build, oldest first, told apart by shape and glyph as well as colour: filled when
+// the test failed, tinted when it was flaky, hollow when it passed, dashed when it did not run,
+// dotted for any other outcome and hatched when the build could not be read. The build number and
+// the status are the cell's accessible name and its title; label, when given, is the cell's text,
+// such as the day the build finished. The stylesheet outlines the current build.
 public static class HistoryStrip
 {
-    public static void Write(TextWriter writer, IReadOnlyList<AdoTestHistoryEntry> entries, Uri collectionUri, string teamProject, CultureInfo culture)
+    public static void Write(TextWriter writer, IReadOnlyList<AdoTestHistoryEntry> entries, Uri collectionUri, string teamProject, CultureInfo culture) =>
+        Write(writer, entries, collectionUri, teamProject, culture, null);
+
+    public static void Write(TextWriter writer, IReadOnlyList<AdoTestHistoryEntry> entries, Uri collectionUri, string teamProject, CultureInfo culture,
+        Func<AdoTestHistoryEntry, string?>? label)
     {
         ArgumentNullException.ThrowIfNull(writer);
         ArgumentNullException.ThrowIfNull(entries);
@@ -26,7 +31,9 @@ public static class HistoryStrip
             writer.Write("\" data-build-id=\""); writer.Write(entry.BuildId.ToString(CultureInfo.InvariantCulture));
             writer.Write("\" title=\""); writer.Write(name); writer.Write("\" aria-label=\""); writer.Write(name); writer.Write("\"");
             if (entry.IsCurrent) writer.Write(" aria-current=\"true\"");
-            writer.Write("></a></li>");
+            writer.Write("><span class=\"history-glyph\" aria-hidden=\"true\">"); writer.Write(StatusPresentation.Glyph(entry.Outcome)); writer.Write("</span>");
+            if (label?.Invoke(entry) is { } text) { writer.Write("<span class=\"history-date\">"); writer.Write(SinkEncoding.Attribute(text)); writer.Write("</span>"); }
+            writer.Write("</a></li>");
         }
         writer.Write("</ol>");
     }

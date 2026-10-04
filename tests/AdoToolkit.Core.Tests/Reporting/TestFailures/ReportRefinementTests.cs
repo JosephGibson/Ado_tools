@@ -73,16 +73,25 @@ public sealed class ReportRefinementTests
         };
         model = TestFailureReportModelBuilder.WithAttachments(model, [failure], [], null);
         string html = TestFailureReportFixture.Render(model);
+        // The Open bugs column holds the lowest open bug as a red chip and how many more, with their
+        // numbers as its title.
         string row = Section(html, "<tr data-index-for=\"f-1\">", "</tr>");
-        Assert.Contains("<a class=\"open-bug-marker\" rel=\"noreferrer\" href=\"https://ado.example.test/tfs/Collection%20A/Bugs%20%2F%20%C3%A9t%C3%A9/_workitems/edit/920\">",
+        Assert.Contains("<td class=\"col-bug\"><a class=\"open-bug-marker\" rel=\"noreferrer\" href=\"https://ado.example.test/tfs/Collection%20A/Bugs%20%2F%20%C3%A9t%C3%A9/_workitems/edit/920\">"
+            + "<span class=\"sr-only\">" + (culture == "en-US" ? "Open bug" : "Bogue ouvert") + " </span>#920</a> <span class=\"bug-more\" title=\"#950\">+1</span></td>",
             row, StringComparison.Ordinal);
         Assert.Single(Regex.Matches(row, "class=\"open-bug-marker\""));
-        Assert.Matches(@"\.open-bug-marker, \.open-bug-marker:visited \{[^{}]*color: var\(--fail\);[^{}]*border-color: var\(--fail\);", html);
-        // The card has no Open badge; it marks the one bug that was not read.
+        Assert.Matches(@"\.open-bug-marker, \.bug-marker \{[^{}]*border: 1px solid var\(--fail\);", html);
+        Assert.Contains(".open-bug-marker, .open-bug-marker:visited { color: var(--fail); }", html, StringComparison.Ordinal);
+        Assert.Matches(@"\.bug-marker\.bug-unread \{ border-color: var\(--text-muted\);", html);
+        // The card shows every bug as the same chip: red when open, grey when it could not be read,
+        // which it also says in words.
         string card = Section(html, "<article class=\"card failure-card\"", "</article>");
         Assert.DoesNotContain("bug-open", html, StringComparison.Ordinal);
+        Assert.Equal(2, Regex.Count(card, "<li data-bug=\"9[25]0\" data-open-bug><a class=\"open-bug-marker\""));
         Assert.Single(Regex.Matches(card, "class=\"bug-unread\""));
-        Assert.Contains("class=\"bug-unread\"", Section(card, "<li data-bug=\"900\">", "</li>"), StringComparison.Ordinal);
+        string unread = Section(card, "<li data-bug=\"900\">", "</li>");
+        Assert.StartsWith("<li data-bug=\"900\"><a class=\"bug-marker bug-unread\"", unread, StringComparison.Ordinal);
+        Assert.Contains("class=\"bug-unread\"", unread, StringComparison.Ordinal);
         TestFailureReportValidator.Validate(new StringReader(html), model);
     }
 
@@ -116,10 +125,11 @@ public sealed class ReportRefinementTests
         TestFailureReportValidator.Validate(new StringReader(html), model);
     }
 
-    // A table cell ignores max-width, so a long name widened the cell and pushed the Open bug marker
-    // out of sight. The name itself is cut, with the whole name as its title, and the marker follows it.
+    // A table cell ignores max-width, so a long name widened the cell and pushed the columns after it
+    // out of sight. The name itself is cut, with the whole name as its title; the class and the open
+    // bug each have a column of their own.
     [Fact]
-    public void ALongNameIsCutBeforeTheOpenBugMarkerAndKeepsItsWholeTextAsTitle()
+    public void ALongNameIsCutInItsOwnColumnAndKeepsItsWholeTextAsTitle()
     {
         TestFailureReportModel model = TestFailureReportFixture.Model();
         string name = "Submit" + string.Concat(Enumerable.Repeat("AndConfirmTheOrderTwice", 8));
@@ -133,10 +143,13 @@ public sealed class ReportRefinementTests
         string html = TestFailureReportFixture.Render(model);
         TestFailureReportValidator.Validate(new StringReader(html), model);
         string row = Section(html, "<tr data-index-for=\"f-1\">", "</tr>");
-        Assert.Contains("<td class=\"col-test\"><a href=\"#f-1\"><span class=\"test-name\" title=\"" + name + "\">" + name + "</span></a> <a class=\"open-bug-marker\"",
-            row, StringComparison.Ordinal);
+        Assert.Contains("<td class=\"col-test\"><a href=\"#f-1\"><span class=\"test-name\" title=\"" + name + "\">" + name + "</span></a></td>"
+            + "<td class=\"col-class\"><span class=\"class-name\" title=\"CheckoutTests\">CheckoutTests</span></td>", row, StringComparison.Ordinal);
+        Assert.Contains("<td class=\"col-bug\"><a class=\"open-bug-marker\"", row, StringComparison.Ordinal);
         string css = TestFailureAssets.Read("test-failures.css");
         Assert.Matches(@"\.col-test \.test-name \{[^{}]*display: inline-block;[^{}]*max-width: [^;]+;[^{}]*overflow: hidden;[^{}]*text-overflow: ellipsis;", css);
+        // The class is cut the same way, through its inner span.
+        Assert.Matches(@"\.class-name, \.values \{[^{}]*display: inline-block;[^{}]*max-width: [^;]+;[^{}]*overflow: hidden;[^{}]*text-overflow: ellipsis;", css);
         // The cell keeps its line but no longer claims a width it cannot have.
         Assert.DoesNotMatch(@"\.col-test \{[^{}]*max-width", css);
     }

@@ -105,9 +105,10 @@ public sealed class TestBugResolutionTests
         TestFailureReportModel model = TestFailureReportModelBuilder.Build(set, TestFailureReportFixture.Options("en-US"));
         string html = TestFailureReportFixture.Render(model);
         TestFailureReportValidator.Validate(new StringReader(html), model);
-        // The overview and by-error rows mark only the test with an open bug.
-        Assert.Equal(2, Count(html, ">Missing</span></a> <a class=\"open-bug-marker\" rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/4003\">Open bug</a>"));
-        Assert.Equal(2, Count(html, "class=\"open-bug-marker\""));
+        // The Open bugs column of the overview and by-error rows has a chip for the test with an open bug only.
+        Assert.Equal(2, Count(html, "<td class=\"col-bug\"><a class=\"open-bug-marker\" rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/4003\""
+            + " title=\"Vérifié en recette\"><span class=\"sr-only\">Open bug </span>#4003</a></td>"));
+        Assert.Equal(4, Count(html, "<td class=\"col-bug\"></td>"));
         foreach (string closed in new[] { "data-bug=\"4001\"", "data-bug=\"4002\"", "edit/4001", "edit/4002", "Corrigé hier", "Doublon" })
             Assert.DoesNotContain(closed, html, StringComparison.Ordinal);
         Assert.Contains("<li data-bug=\"4003\" data-open-bug>", html, StringComparison.Ordinal);
@@ -148,10 +149,9 @@ public sealed class TestBugResolutionTests
         TestFailureReportValidator.Validate(new StringReader(html), model);
         Assert.Contains("data-diagnostic=\"BugLookupFailed\"", html, StringComparison.Ordinal);
         Assert.Contains("Les bogues des tests du build 401 n’ont pas pu être lus", html, StringComparison.Ordinal);
-        Assert.Contains("<li data-bug=\"2001\"><a rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/2001\">#2001",
-            html, StringComparison.Ordinal);
-        // The card says that the bug was not read.
-        Assert.Contains("</a> <span class=\"bug-unread\">Non lu</span></li>", html, StringComparison.Ordinal);
+        // The card shows the bug as a grey chip and says that it was not read.
+        Assert.Contains("<li data-bug=\"2001\"><a class=\"bug-marker bug-unread\" rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/2001\""
+            + " title=\"Non lu\">#2001</a> <span class=\"bug-unread\">Non lu</span></li>", html, StringComparison.Ordinal);
         Assert.DoesNotContain("class=\"open-bug-marker\"", html, StringComparison.Ordinal);
         Assert.DoesNotContain("class=\"bug-open\"", html, StringComparison.Ordinal);
         Assert.DoesNotContain("data-open-bug", html, StringComparison.Ordinal);
@@ -205,10 +205,11 @@ public sealed class TestBugResolutionTests
         string html = TestFailureReportFixture.Render(model);
         TestFailureReportValidator.Validate(new StringReader(html), model);
         string card = Card(html, model.Failures.Single(static failure => failure.ShortName == "Valid"));
-        Assert.Contains("<li data-bug=\"2003\"><a rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/2003\">#2003",
-            card, StringComparison.Ordinal);
+        Assert.Contains("<li data-bug=\"2003\"><a class=\"bug-marker bug-unread\" rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/2003\""
+            + " title=\"Not read\">#2003</a>", card, StringComparison.Ordinal);
         Assert.Equal(2, Count(card, "<dt>Associated bugs</dt>"));
-        Assert.Equal(2, Count(card, "_workitems/edit/2003\">#2003"));
+        // In the card and in the attempt, the same grey chip.
+        Assert.Equal(2, Count(card, "<a class=\"bug-marker bug-unread\" rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/2003\" title=\"Not read\">#2003</a>"));
     }
 
     [Fact]
@@ -293,8 +294,8 @@ public sealed class TestBugResolutionTests
         TestFailureReportModel model = TestFailureReportModelBuilder.Build(set, TestFailureReportFixture.Options("en-US"));
         string html = TestFailureReportFixture.Render(model);
         TestFailureReportValidator.Validate(new StringReader(html), model);
-        Assert.Contains("<li data-bug=\"5004\" data-open-bug><a rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/5004\">#5004",
-            html, StringComparison.Ordinal);
+        Assert.Contains("<li data-bug=\"5004\" data-open-bug><a class=\"open-bug-marker\" rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/5004\""
+            + " title=\"Hors collection, ouvert\"><span class=\"sr-only\">Open bug </span>#5004</a>", html, StringComparison.Ordinal);
         Assert.DoesNotContain("5003", html, StringComparison.Ordinal);
     }
 
@@ -324,8 +325,9 @@ public sealed class TestBugResolutionTests
         Assert.Equal(3, Count(card, "<li data-bug="));
         // The attempt links its open associated bug and no other.
         Assert.Equal(1, Count(card, "<dt>Associated bugs</dt>"));
-        Assert.Contains("<dt>Associated bugs</dt><dd><a rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/2001\">#2001",
+        Assert.Contains("<dt>Associated bugs</dt><dd><a class=\"open-bug-marker\" rel=\"noreferrer\" href=\"https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/2001\"",
             card, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"sr-only\">Open bug </span>#2001</a></dd>", card, StringComparison.Ordinal);
         string text = TestFailureMarkup.Text(card);
         foreach (string closed in new[] { "2002", "3002", "Ancien délai d’expiration", "Arrondi du total" })
         {

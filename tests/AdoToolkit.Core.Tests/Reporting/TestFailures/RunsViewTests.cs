@@ -16,29 +16,41 @@ public sealed class RunsViewTests
     [Theory]
     [InlineData("grouped", "en-US", "Test runs")]
     [InlineData("partial", "fr-CA", "Séries de tests")]
-    public void RunsTableHasItsOwnHeadingBeforeTheHistoryHeading(string variant, string culture, string heading)
+    public void HistoryComesFirstThenTheRunsTableUnderItsOwnHeading(string variant, string culture, string heading)
     {
         string view = View(Render(Model(variant, culture)));
-        int runs = view.IndexOf("<h3>" + heading + "</h3>\n<div class=\"table-scroll\"><table class=\"runs-table\">", StringComparison.Ordinal);
-        Assert.True(runs > 0);
-        Assert.True(view.IndexOf("<section class=\"history-panel\" id=\"history\">", StringComparison.Ordinal) > runs);
+        // The chart and its table right under the view's heading, then the runs.
+        int chart = view.IndexOf("</h2>\n<section class=\"history-panel\" id=\"history\">\n<h3>", StringComparison.Ordinal);
+        int runs = view.IndexOf("</section>\n<h3>" + heading + "</h3>\n<div class=\"table-scroll\"><table class=\"runs-table\">", StringComparison.Ordinal);
+        Assert.True(chart > 0 && runs > chart);
     }
 
     [Fact]
     public void RunsTableShowsFailedDurationAndReportedTests()
     {
-        // Run 201 gets statistics and an end time; the other runs keep neither.
-        string html = Render(Model("grouped", change: run => run.Id != 201 ? run : Copy(run, completed: run.StartedDate!.Value.AddSeconds(3725),
-            counts: new Dictionary<string, int>(StringComparer.Ordinal) { ["Passed"] = 35, ["Failed"] = 2, ["Error"] = 1, ["Timeout"] = 1, ["NotExecuted"] = 1 })));
+        // Run 201 gets statistics and an end time, run 202 statistics without a failure; the other
+        // runs keep neither.
+        string html = Render(Model("grouped", change: run => run.Id switch
+        {
+            201 => Copy(run, completed: run.StartedDate!.Value.AddSeconds(3725),
+                counts: new Dictionary<string, int>(StringComparer.Ordinal) { ["Passed"] = 35, ["Failed"] = 2, ["Error"] = 1, ["Timeout"] = 1, ["NotExecuted"] = 1 }),
+            202 => Copy(run, counts: new Dictionary<string, int>(StringComparer.Ordinal) { ["Passed"] = 40 }),
+            _ => run,
+        }));
         string view = View(html);
+        Assert.Contains("<tr><th scope=\"col\">Test run</th><th scope=\"col\" class=\"num\">ID</th><th scope=\"col\">Stage</th>", view, StringComparison.Ordinal);
         Assert.Contains("<th scope=\"col\" class=\"num\">Duration</th><th scope=\"col\" class=\"num\">Tests</th><th scope=\"col\" class=\"num\">Passed</th>"
             + "<th scope=\"col\" class=\"num\">Failed</th><th scope=\"col\" class=\"num\">Reported tests</th><th scope=\"col\">Attachments</th></tr>", view, StringComparison.Ordinal);
-        // Duration, tests, passed, failed (the failure-class outcomes), reported tests.
-        Assert.Equal(["1:02:05", "40", "38", "4", "2"], Numbers(Row(view, 201)));
-        // No end time and no statistics: both cells are empty, not zero.
-        Assert.Equal(["", "40", "38", "", "1"], Numbers(Row(view, 200)));
-        Assert.Equal(["", "40", "38", "", "2"], Numbers(Row(view, 202)));
-        Assert.Equal(["", "40", "38", "", "1"], Numbers(Row(view, 203)));
+        // ID, duration, tests, passed, failed (the failure-class outcomes), reported tests. Passed and
+        // failed counts carry their status glyph.
+        Assert.Equal(["201", "1:02:05", "40", "✓ 38", "✕ 4", "2"], Numbers(Row(view, 201)));
+        Assert.Contains("<td class=\"num\"><span class=\"run-count status-failed\"><span aria-hidden=\"true\">✕</span> 4</span></td>", Row(view, 201), StringComparison.Ordinal);
+        Assert.Contains("<td class=\"num\"><span class=\"run-count status-passed\"><span aria-hidden=\"true\">✓</span> 38</span></td>", Row(view, 201), StringComparison.Ordinal);
+        // No end time and no statistics: both cells are empty, not zero. A count of zero is muted.
+        Assert.Equal(["200", "", "40", "✓ 38", "", "1"], Numbers(Row(view, 200)));
+        Assert.Equal(["202", "", "40", "✓ 38", "0", "2"], Numbers(Row(view, 202)));
+        Assert.Contains("<td class=\"num\"><span class=\"text-muted\">0</span></td>", Row(view, 202), StringComparison.Ordinal);
+        Assert.Equal(["203", "", "40", "✓ 38", "", "1"], Numbers(Row(view, 203)));
     }
 
     [Theory]
@@ -48,9 +60,9 @@ public sealed class RunsViewTests
     {
         string html = Render(Model(variant));
         string view = View(html);
-        foreach (string header in new[] { "Duration", "Tests", "Passed", "Failed", "Reported tests" })
+        foreach (string header in new[] { "ID", "Duration", "Tests", "Passed", "Failed", "Reported tests" })
             Assert.Contains("<th scope=\"col\" class=\"num\">" + header + "</th>", view, StringComparison.Ordinal);
-        Assert.Equal(5 * Regex.Count(view, "<tr data-run="), Regex.Count(view[..view.IndexOf("</table>", StringComparison.Ordinal)], "<td class=\"num\">"));
+        Assert.Equal(6 * Regex.Count(view, "<tr data-run="), Regex.Count(Section(view, "<table class=\"runs-table\">", "</table>"), "<td class=\"num\">"));
         Assert.Matches(@"\.num \{ text-align: end; \}", html);
         // The history table keeps its markup; its four count columns are aligned by position.
         Assert.Matches(@"\.history-data th:nth-child\(n\+4\):nth-child\(-n\+7\), \.history-data td:nth-child\(n\+4\):nth-child\(-n\+7\) \{ text-align: end; \}", html);
@@ -130,7 +142,9 @@ public sealed class RunsViewTests
         string view = View(html);
         // Attempt order puts the second French run last: it is the run whose larger attachments are downloaded.
         Assert.StartsWith("<tr data-run=\"203\" data-latest-run>", Row(view, 203), StringComparison.Ordinal);
-        Assert.Contains("<span class=\"text-muted\">203</span> <span class=\"latest-run\">" + label + "</span></td>", Row(view, 203), StringComparison.Ordinal);
+        // The label ends the run cell, so it lines up; the ID has a column of its own.
+        Assert.Contains(">Synthetic Tests_FR</a> <span class=\"latest-run\">" + label + "</span></span></td><td class=\"num\">203</td>", Row(view, 203), StringComparison.Ordinal);
+        Assert.Matches(@"\.runs-table tr\[data-latest-run\] > td:first-child \{ box-shadow: inset 3px 0 0 var\(--current\); \}", html);
         Assert.Equal(1, Regex.Count(view, "data-latest-run"));
         Assert.Equal(1, Regex.Count(view, "class=\"latest-run\""));
         Assert.StartsWith("<tr data-run=\"200\" class=\"outside-window\">", Row(view, 200), StringComparison.Ordinal);
@@ -150,7 +164,7 @@ public sealed class RunsViewTests
         string view = View(Render(model));
         string start = model.AttachmentWindowStart.ToOffset(model.GeneratedAt.Offset).ToString("g", model.Culture);
         string sentence = SinkEncoding.Attribute(Messages.Get(AdoMessage.TestReportWindowNote, model.Culture, start, omitted));
-        Assert.Contains("</tbody></table></div>\n<p class=\"window-note\">" + sentence + "</p>\n<section class=\"history-panel\"", view, StringComparison.Ordinal);
+        Assert.Contains("</tbody></table></div>\n<p class=\"window-note\">" + sentence + "</p>\n<h3>", view, StringComparison.Ordinal);
         Assert.Equal(1, Regex.Count(view, "class=\"window-note\""));
         string text = TestFailureMarkup.Text(sentence);
         Assert.Contains(start, text, StringComparison.Ordinal);
@@ -159,38 +173,41 @@ public sealed class RunsViewTests
     }
 
     [Theory]
-    [InlineData("en-US", "History by test", "Consecutive failures")]
-    [InlineData("fr-CA", "Historique par test", "Échecs consécutifs")]
-    public void HistoryByTestHasOneRowPerTestOneCellPerBuildAndTheFailureStreak(string culture, string heading, string streak)
+    [InlineData("en-US", "History by test", "Trend", "Since 9/15/2026")]
+    [InlineData("fr-CA", "Historique par test", "Tendance", "Depuis le 2026-09-15")]
+    public void HistoryByTestHasOneRowPerTestOneCellPerBuildAndTheTrend(string culture, string heading, string trend, string since)
     {
         TestFailureReportModel model = Model("flaky", culture);
         string view = View(Render(model));
         int start = view.IndexOf("<h3>" + heading + "</h3>\n<div class=\"table-scroll\"><table class=\"failure-table history-by-test\">", StringComparison.Ordinal);
-        Assert.True(start > view.IndexOf("id=\"history\"", StringComparison.Ordinal));
+        Assert.True(start > view.IndexOf("<table class=\"runs-table\">", StringComparison.Ordinal));
         string table = view[start..view.IndexOf("</table>", start, StringComparison.Ordinal)];
-        // One column per build, oldest first, then the streak.
-        Assert.Contains("<th scope=\"col\">Test</th>" + string.Concat(model.History.Select(static build => "<th scope=\"col\" class=\"col-build\">" + build.BuildNumber + "</th>"))
-            + "<th scope=\"col\" class=\"num\">" + streak + "</th></tr></thead>", table, StringComparison.Ordinal);
+        // Number, test, class, one column per build, oldest first, then the trend.
+        Assert.Contains("<th scope=\"col\">#</th><th scope=\"col\">Test</th><th scope=\"col\">" + (culture == "en-US" ? "Class" : "Classe") + "</th>"
+            + string.Concat(model.History.Select(static build => "<th scope=\"col\" class=\"col-build\">" + build.BuildNumber + "</th>"))
+            + "<th scope=\"col\" class=\"col-trend\">" + trend + "</th></tr></thead>", table, StringComparison.Ordinal);
         Assert.Equal(["f-1", "f-2"], Regex.Matches(table, "<tr data-index-for=\"([^\"]+)\">").Select(static match => match.Groups[1].Value));
         string failed = Section(table, "<tr data-index-for=\"f-1\">", "</tr>"), flaky = Section(table, "<tr data-index-for=\"f-2\">", "</tr>");
-        // Unavailable, not run, failed, failed: two builds in a row end with this one.
+        // Unavailable, not run, failed, failed: failing since the build before this one.
         Assert.Equal(["status-unavailable", "status-notrun", "status-failed", "status-failed"], CellStatuses(failed));
-        Assert.EndsWith("<td class=\"num\">2</td>", failed, StringComparison.Ordinal);
-        // Failed in the build before and flaky in this one: flaky counts.
+        Assert.Matches("<td class=\"col-trend\"><a class=\"trend trend-since\"[^>]*>" + since + "</a></td>$", failed);
+        // Failed in the build before and flaky in this one: flaky recurs too.
         Assert.Equal(["status-unavailable", "status-notrun", "status-failed", "status-flaky"], CellStatuses(flaky));
-        Assert.EndsWith("<td class=\"num\">2</td>", flaky, StringComparison.Ordinal);
-        Assert.Contains("<td class=\"col-test\"><a href=\"#f-2\"><span class=\"test-name\" title=\"RetryPayment\">RetryPayment</span></a> <span class=\"text-muted\">CheckoutTests</span></td>", flaky, StringComparison.Ordinal);
+        Assert.Matches("<td class=\"col-trend\"><a class=\"trend trend-since\"[^>]*>" + since + "</a></td>$", flaky);
+        Assert.Contains("<td class=\"col-test\"><a href=\"#f-2\"><span class=\"test-name\" title=\"RetryPayment\">RetryPayment</span></a></td>"
+            + "<td class=\"col-class\"><span class=\"class-name\" title=\"CheckoutTests\">CheckoutTests</span></td>", flaky, StringComparison.Ordinal);
         // Every cell names its outcome for a reader who cannot see the glyph.
         Assert.Equal(8, Regex.Count(table, "<td class=\"col-build\"><span class=\"status-glyph status-[a-z]+\" role=\"img\" aria-label=\"[^\"]+\">"));
     }
 
-    // The grouped fixture: its tests carry no history cells, and the streak ends at a pass.
+    // The grouped fixture: its tests carry no history cells, so they have no trend; a failure after a
+    // pass is new, whatever came before.
     [Fact]
-    public void HistoryByTestShowsDashesWithoutCellsAndStopsTheStreakAtAnyOtherOutcome()
+    public void HistoryByTestShowsDashesWithoutCellsAndANewFailureAfterAPass()
     {
         string grouped = View(Render(Model("grouped")));
         string row = Section(grouped, "<table class=\"failure-table history-by-test\">", "</table>");
-        Assert.Equal(2, Regex.Count(row, "<td class=\"col-build\"><span class=\"text-muted\">—</span></td><td class=\"num\"><span class=\"text-muted\">—</span></td></tr>"));
+        Assert.Equal(2, Regex.Count(row, "<td class=\"col-build\"><span class=\"text-muted\">—</span></td><td class=\"col-trend\"></td></tr>"));
 
         AdoBuildTestFailureSet set = TestFailureReportFixture.Set("partial");
         AdoTestFailure source = set.Failures[0];
@@ -207,7 +224,8 @@ public sealed class RunsViewTests
             Build = set.Build, Runs = set.Runs, Summary = set.Summary, History = set.History, Failures = [passedBefore], FailedCount = 1, RetrievedAt = set.RetrievedAt,
             CollectionUri = set.CollectionUri,
         }, TestFailureReportFixture.Options("en-US"))));
-        Assert.EndsWith("<td class=\"num\">1</td>", Section(view, "<tr data-index-for=\"f-1\">", "</tr>"), StringComparison.Ordinal);
+        Assert.EndsWith("<td class=\"col-trend\"><span class=\"trend trend-new\"><span aria-hidden=\"true\">✦</span> New</span></td>",
+            Section(view, "<tr data-index-for=\"f-1\">", "</tr>"), StringComparison.Ordinal);
         // No failure, no table.
         TestFailureReportModel empty = TestFailureReportModelBuilder.Build(new AdoBuildTestFailureSet
         { Build = set.Build, Runs = set.Runs, Summary = set.Summary, History = set.History, RetrievedAt = set.RetrievedAt, CollectionUri = set.CollectionUri },
@@ -239,8 +257,10 @@ public sealed class RunsViewTests
     {
         string html = Render(Model("partial"));
         Assert.Equal(["20260916.0", "20260916.1", "20260916.2", "20260916.3"],
-            Regex.Matches(html, "<text class=\"chart-caption\" x=\"[0-9.]+\" y=\"[0-9.]+\">(20260916\\.[0-3]) ↗</text>").Select(static match => match.Groups[1].Value));
-        Assert.DoesNotMatch("<text class=\"chart-caption\"[^>]*>[0-9] ↗</text>", html);
+            Regex.Matches(html, "<text class=\"chart-caption\" x=\"[0-9.]+\" y=\"[0-9.]+\">(20260916\\.[0-3])</text>").Select(static match => match.Groups[1].Value));
+        Assert.DoesNotMatch("<text class=\"chart-caption\"[^>]*>[0-9]</text>", html);
+        // No arrow after a link or a caption: every one of them goes to Azure DevOps.
+        Assert.DoesNotContain("↗", html, StringComparison.Ordinal);
 
         static string Chart(params string[] numbers)
         {
@@ -257,7 +277,7 @@ public sealed class RunsViewTests
         // A number of more than 28 characters is cut in the label only; the title and the table keep it whole.
         string name = new('x', 40);
         string cut = Chart(name);
-        Assert.Contains(">" + new string('x', 27) + "… ↗</text>", cut, StringComparison.Ordinal);
+        Assert.Contains(">" + new string('x', 27) + "…</text>", cut, StringComparison.Ordinal);
         Assert.Equal(2, Regex.Count(cut, name));
     }
 
@@ -368,7 +388,9 @@ public sealed class RunsViewTests
 
     private static string Row(string view, int run) => Section(view, "<tr data-run=\"" + run.ToString(CultureInfo.InvariantCulture) + "\"", "</tr>");
 
-    private static IEnumerable<string> Numbers(string row) => Regex.Matches(row, "<td class=\"num\">([^<]*)</td>").Select(static match => match.Groups[1].Value);
+    // The text of each numeric cell.
+    private static IEnumerable<string> Numbers(string row) =>
+        Regex.Matches(row, "<td class=\"num\">(.*?)</td>").Select(static match => TestFailureMarkup.Text(match.Groups[1].Value));
 
     private static IEnumerable<string> CellStatuses(string row) =>
         Regex.Matches(row, "<td class=\"col-build\"><span class=\"status-glyph (status-[a-z]+)\"").Select(static match => match.Groups[1].Value);

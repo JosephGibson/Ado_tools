@@ -40,7 +40,7 @@ staged module, for example the one `verify` leaves under artifacts/verify:
 Every failing test fails in every run of its group, so it has one result record per run. With
 -SubResults above zero each record is a rerun group and each sub-result is an attempt.
 
-The scenarios of the examples are the ones that docs/plans/0.8.0-test-failure-report.md records.
+The scenarios of the examples are the ones that docs/archive/plans/0.8.0-test-failure-report.md records.
 Each also runs with -LatencyMilliseconds 0 and 80, and with -ResultBytes 1000, which gives each
 listed result about the size of a real one.
 

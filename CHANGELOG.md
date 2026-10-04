@@ -6,6 +6,22 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.8.5 - 2026-10-03
+
+### Added
+
+- The failed-test report's Overview ends with cards that sum up the build: new and recurring tests, the most common errors, the tests without an open bug and, in a grouped build, each group.
+- By error names each error's exception type and the frame of the tests' own code where they fail, underlines the parts of the message that differ between tests, and shows a sample message for an error that two tests or more share.
+- Open bugs says on one line what each bug covers: its linked tests, the tests of the same Test Case or with the same error that it leaves out, how many failed results a link through test results reaches, and in a last group the tests without an open bug.
+
+### Changed
+
+- The failed-test report's views come in the order Overview, Runs and history, Details, By error, Open bugs. Every part of a test has a column of its own, a recurring failure says since which day instead of **N in a row**, bugs are red chips (grey when they could not be read), status colours are brighter, and the legends and ↗ glyphs are gone.
+- By error also groups messages that differ only in paths, URLs or hexadecimal IDs, and groups an MSTest failure by its exception instead of its "Test method … threw exception:" line.
+- A test's card shows its run history by date, its bugs as chips and its attachments, each file once, before its attempts; the Runs and history view starts with the run history chart.
+
+Details: [release notes](docs/release-0.8.5.md)
+
 ## 0.8.0 - 2026-10-03
 
 ### Added
@@ -33,7 +49,7 @@ Details: [release notes](docs/release-0.8.0.md)
 
 - The module itself is unchanged apart from its version number: the cmdlets, the reports, the help and the configuration file are those of 0.7.5.
 
-Details: [release notes](docs/release-0.7.10.md)
+Details: [release notes](docs/archive/release-0.7.10.md)
 
 ## 0.7.5 - 2026-10-02
 

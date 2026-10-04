@@ -77,7 +77,7 @@ public static class RunHistoryChart
                 Rect(writer, x - 3, top - 3, BarWidth + 6, BarBottom + 6 - top, "chart-current");
                 Text(writer, center, 16, Messages.Get(AdoMessage.TestReportThisRun, culture), "chart-caption");
             }
-            Text(writer, center, BarBottom + 22, labels[i] + " ↗", "chart-caption");
+            Text(writer, center, BarBottom + 22, labels[i], "chart-caption");
             writer.Write("</a>");
         }
         writer.Write("</svg></div>");
@@ -173,8 +173,8 @@ public static class RunHistoryChart
             writer.Write("<tr data-build-id=\""); writer.Write(N(item.BuildId)); writer.Write("\"><th scope=\"row\"><a rel=\"noreferrer\" href=\"");
             writer.Write(E(AdoWebLinks.BuildTestResult(collectionUri, teamProject, item.BuildId).AbsoluteUri)); writer.Write("\"");
             if (item.IsCurrent) writer.Write(" aria-current=\"true\"");
-            writer.Write('>'); writer.Write(E(item.BuildNumber)); StatusPresentation.ExternalGlyph(writer, culture); writer.Write("</a>");
-            if (item.IsCurrent) { writer.Write(' '); writer.Write(E(Messages.Get(AdoMessage.TestReportThisRun, culture))); }
+            writer.Write('>'); writer.Write(E(item.BuildNumber)); writer.Write("</a>");
+            if (item.IsCurrent) { writer.Write(" <span class=\"this-run\">"); writer.Write(E(Messages.Get(AdoMessage.TestReportThisRun, culture))); writer.Write("</span>"); }
             writer.Write("</th>");
             foreach (string value in new[] { item.SourceBranch ?? "–", Date(item.FinishTime, culture, offset) ?? "–",
                 item.Passed.ToString(culture), item.Failed.ToString(culture), item.Flaky.ToString(culture), item.Other.ToString(culture) })

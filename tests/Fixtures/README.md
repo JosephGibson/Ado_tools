@@ -184,6 +184,7 @@ have no other format. They change only through the `update-goldens` skill.
 | `Reports/testfailures-partial.*` | The failure limit, counted-only failures, the partial banner, an unresolved Test Case, a bug that could not be read, diagnostics | V-16, V-26, V-30 |
 | `Reports/testfailures-hostile.*` | Closing script tags, handler text, quoted attributes, traversal names, unsafe response URLs, French spacing, an invalid Test Case reference | V-16, V-26, V-29 |
 | `Reports/testfailures-grouped.*` | English and French stages, a run outside the attachment window, a passing retry, a repeated message and trace, text and JSON attachments, a Resolved bug linked through the Test Case | V-19, V-22, V-30 |
+| `Reports/testfailures-large.*` | Sixteen tests in two stages with ten builds of history: error clusters that differ in numbers, paths and GUIDs, an MSTest first line, a shared helper frame, new, recurring and flaky tests, a bug that covers some failed results, a test of the same Test Case left out, an unread bug, a Timeout outcome, attachments on several attempts and one too large | V-19, V-22, V-30 |
 
 In an HTML golden, of either report, the script body is `__SCRIPT_ASSET__` and its CSP hash
 is `sha256-__SCRIPT_SHA256__`; an exported report carries the real script and hash.

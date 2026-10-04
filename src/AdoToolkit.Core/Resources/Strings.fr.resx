@@ -250,7 +250,6 @@
   <data name="TestReportLatestError" xml:space="preserve"><value>Dernière erreur</value></data>
   <data name="TestReportNoErrorMessage" xml:space="preserve"><value>Aucun message d’erreur</value></data>
   <data name="TestReportGroupFailed" xml:space="preserve"><value>{0} sur {1} en échec</value></data>
-  <data name="TestReportGroupLegend" xml:space="preserve"><value>✕ en échec à la fin · ≈ en échec, puis réussi · ✓ sans échec · n/m : tentatives en échec sur l’ensemble des tentatives</value></data>
   <data name="TestReportNotShown" xml:space="preserve"><value>non affichés</value></data>
   <data name="TestReportFailingIn" xml:space="preserve"><value>En échec dans</value></data>
   <data name="TestReportAnyGroup" xml:space="preserve"><value>Tous</value></data>
@@ -279,7 +278,6 @@
   <data name="TestReportRunAttachmentCounts" xml:space="preserve"><value>{0} répertoriées, {1} téléchargées</value></data>
   <data name="TestReportLatestRun" xml:space="preserve"><value>Dernière série de tests</value></data>
   <data name="TestReportHistoryByTest" xml:space="preserve"><value>Historique par test</value></data>
-  <data name="TestReportConsecutiveFailures" xml:space="preserve"><value>Échecs consécutifs</value></data>
   <data name="TestReportKilobytes" xml:space="preserve"><value>{0:N1} Ko</value></data>
   <data name="TestReportMegabytes" xml:space="preserve"><value>{0:N1} Mo</value></data>
   <data name="TestReportNotListed" xml:space="preserve"><value>non répertoriées</value></data>
@@ -287,12 +285,33 @@
   <data name="TestReportAttachmentsNotListedNote" xml:space="preserve"><value>Les pièces jointes n’ont pas été répertoriées : les tests en échec ont été rassemblés avec Get-AdoBuildTestFailure -SkipAttachments.</value></data>
   <data name="TestReportLabelValue" xml:space="preserve"><value>{0} : {1}</value></data>
   <data name="TestReportNew" xml:space="preserve"><value>Nouveau</value></data>
-  <data name="TestReportInARow" xml:space="preserve"><value>{0} fois de suite</value></data>
   <data name="TestReportInARowSince" xml:space="preserve"><value>{0} fois de suite depuis {1}</value></data>
   <data name="TestReportAttemptLevels" xml:space="preserve"><value>Tentatives ({0})</value></data>
   <data name="TestReportStageLevel" xml:space="preserve"><value>phase</value></data>
   <data name="TestReportJobLevel" xml:space="preserve"><value>travail</value></data>
   <data name="TestReportInstanceLevel" xml:space="preserve"><value>instance</value></data>
+  <data name="TestReportClass" xml:space="preserve"><value>Classe</value></data>
+  <data name="TestReportTrend" xml:space="preserve"><value>Tendance</value></data>
+  <data name="TestReportNewTests" xml:space="preserve"><value>Nouveaux</value></data>
+  <data name="TestReportRecurringTests" xml:space="preserve"><value>Récurrents</value></data>
+  <data name="TestReportNoComparison" xml:space="preserve"><value>Sans comparaison</value></data>
+  <data name="TestReportNewAndRecurring" xml:space="preserve"><value>Nouveaux et récurrents</value></data>
+  <data name="TestReportCommonErrors" xml:space="preserve"><value>Erreurs les plus fréquentes</value></data>
+  <data name="TestReportAllWithoutOpenBug" xml:space="preserve"><value>Tous les tests sans bogue ouvert</value></data>
+  <data name="TestReportByGroup" xml:space="preserve"><value>Par groupe</value></data>
+  <data name="TestReportOnlyHere" xml:space="preserve"><value>Ici seulement</value></data>
+  <data name="TestReportDistinctErrors" xml:space="preserve"><value>Erreurs distinctes</value></data>
+  <data name="TestReportSampleMessage" xml:space="preserve"><value>Exemple de message</value></data>
+  <data name="TestReportCommonFrame" xml:space="preserve"><value>Appel commun</value></data>
+  <data name="TestReportDiffers" xml:space="preserve"><value>Diffère d’un test à l’autre</value></data>
+  <data name="TestReportValues" xml:space="preserve"><value>Valeurs</value></data>
+  <data name="TestReportWithOpenBug" xml:space="preserve"><value>Avec bogue ouvert</value></data>
+  <data name="TestReportLinkedTests" xml:space="preserve"><value>Tests liés</value></data>
+  <data name="TestReportSameTestCase" xml:space="preserve"><value>Même cas de test, non lié</value></data>
+  <data name="TestReportSameError" xml:space="preserve"><value>Même erreur, non lié</value></data>
+  <data name="TestReportResultsCovered" xml:space="preserve"><value>{0} des {1} résultats en échec</value></data>
+  <data name="TestReportSince" xml:space="preserve"><value>Depuis le {0}</value></data>
+  <data name="TestReportSinceBuild" xml:space="preserve"><value>Depuis le build {0}</value></data>
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Exporter le rapport des tests en échec</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Exporter le rapport des tests en échec et télécharger les pièces jointes dans {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Téléchargement des pièces jointes : {0} de {1}</value></data>

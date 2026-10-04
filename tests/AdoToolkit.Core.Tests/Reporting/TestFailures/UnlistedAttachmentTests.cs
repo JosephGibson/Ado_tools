@@ -27,7 +27,7 @@ public sealed class UnlistedAttachmentTests
             + note + "</span></span>", html, StringComparison.Ordinal);
         Assert.DoesNotContain("<span class=\"count-label\">" + label + "</span><strong", html, StringComparison.Ordinal);
         // Every run says so, the one that started before the window included, and none is muted.
-        string view = Section(html, "<section class=\"view\" id=\"runs\" data-view>", "</section>\n");
+        string view = Section(html, "<section class=\"view\" id=\"runs\" data-view>", "</section>\n<section class=\"view\"");
         Assert.Equal([200, 201, 202, 203], Regex.Matches(view, "<tr data-run=\"([0-9]+)\"").Select(static match => int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)));
         Assert.Equal(4, Regex.Count(view, "<td>" + cell + "</td></tr>"));
         Assert.DoesNotContain("outside-window", view, StringComparison.Ordinal);

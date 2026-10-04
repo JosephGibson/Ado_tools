@@ -28,6 +28,10 @@ public sealed class RunHistoryChartTests
         Assert.Contains(current, html, StringComparison.Ordinal);
         Assert.Contains(unavailable, html, StringComparison.Ordinal);
         Assert.Contains("data-build-id=\"3\" aria-current=\"true\"", html, StringComparison.Ordinal);
+        // In the table, this build's row says so in a pill after its link; no arrow follows a link.
+        Assert.Contains("\" aria-current=\"true\">" + SinkEncoding.Attribute(history[2].BuildNumber) + "</a> <span class=\"this-run\">" + current + "</span></th>",
+            html, StringComparison.Ordinal);
+        Assert.DoesNotContain("↗", html, StringComparison.Ordinal);
         Assert.DoesNotContain("remote.example.test", html, StringComparison.Ordinal);
         foreach (AdoBuildTestSummary item in history)
         {

@@ -2,7 +2,7 @@
 
 Prepared on 2026-10-03 from the uncommitted changes on the branch `0.8.0`, which starts at
 `main` after the pull request of 0.7.10 was squash-merged as `0ece91b`. The work followed the
-[0.8.0 plan](plans/0.8.0-test-failure-report.md), phases 0 to 8. Its section 3 holds the
+[0.8.0 plan](archive/plans/0.8.0-test-failure-report.md), phases 0 to 8. Its section 3 holds the
 measurements, its section 7 the developer's decisions, and its section 9 the evidence of each
 phase. 0.8.0 makes the failed-test report faster to gather and quicker to read: a switch that
 leaves out the attachment lists, compressed responses, a planned history read, timing lines,
@@ -188,7 +188,7 @@ No existing test was deleted; the four renamed ones replace their earlier versio
 | A printed failed-test report can leave a card's header alone above a page break | Each attempt avoids a break inside it, as in 0.7.10, so that an attempt prints on one page |
 | Shift+Tab, the real clipboard, the print dialog and native tooltips were not checked in a browser | Headless Edge cannot drive them; check 5 below does. The titles of the band are pinned by a test |
 | Reading the Test Cases and bugs beside the attachment lists (phase 2, optional) | Dropped: each stage line must count its own requests, which needs a second counter and clock for that branch, to save at most about 0.1 s at 20 ms, and nothing with `-SkipAttachments` |
-| The findings of 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged apart from those closed above; see the [0.7.10](release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
+| The findings of 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged apart from those closed above; see the [0.7.10](archive/release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
 
 ### Known limitations
 
@@ -208,7 +208,7 @@ plan, not a regression.
 | The history read is faster only where it is the long pole | When many tests fail, the main read fills the request gate and the planned history read changes only the order of the same requests: the wall time moved by −3 to +6%, inside the spread of the runs. It is 36 to 40% faster when few tests fail and the history is long. For a build with many failures, `-SkipAttachments` lowers the wait, and so would compression if the server gives it (V-35) |
 | Decisions that stand | §15.9 step 3 (a listing reads eight fields; the new listing type holds exactly them), §17 (no cache across invocations), Q-30 (dark on screen, light in print; no light theme) and the 0.7.0 rule that every attempt keeps its full error message and stack trace are unchanged |
 | Synthetic timings | Every figure in these notes comes from the synthetic server on the development PC. They rank the costs; the stage lines of `-Verbose` give the real ones at work |
-| Limits carried over | The [0.7.10](release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations), [0.7.0](archive/release-0.7.0.md#known-limitations), [0.6.5](archive/release-0.6.5.md#known-limitations) and [0.6.0](archive/release-0.6.0.md#known-limitations) known limitations still apply, with V-31, V-32 and V-02 |
+| Limits carried over | The [0.7.10](archive/release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations), [0.7.0](archive/release-0.7.0.md#known-limitations), [0.6.5](archive/release-0.6.5.md#known-limitations) and [0.6.0](archive/release-0.6.0.md#known-limitations) known limitations still apply, with V-31, V-32 and V-02 |
 
 ## Work-PC Live checks
 

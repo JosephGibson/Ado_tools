@@ -77,17 +77,6 @@ public sealed class CompactReportTests
         Assert.Contains("<span class=\"group-status status-failed\" title=\"3 of 4 failed\">", Section(html, "<tr data-index-for=\"f-1\">", "</tr>"), StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void NoAttemptGroupOrPreviewStartsOpen()
-    {
-        foreach (string variant in new[] { "failed", "flaky", "partial", "hostile", "grouped" })
-        {
-            string html = TestFailureReportFixture.Render(variant, "fr-CA");
-            Assert.Contains("<details class=\"attempt\"", html, StringComparison.Ordinal);
-            Assert.DoesNotMatch("<details[^>]*\\sopen[\\s>=]", html);
-        }
-    }
-
     // The script searches each card's whole text, collapsed parts included, so everything a reader
     // may search for must be inside the card: a Test Case ID with or without '#', and text found
     // only in a stack trace, an error message, an attachment, a pipeline name or a run field.

@@ -3,6 +3,7 @@ using AdoToolkit.Core.Http;
 
 namespace AdoToolkit.Core.Tests.Http;
 
+[Trait("Culture", "Invariant")]
 public sealed class CancellationTests
 {
     [Fact]
@@ -82,17 +83,18 @@ public sealed class CancellationTests
         Assert.Single(handler.Requests);
     }
 
-    // Twelve reads of 20 ms take longer than one inactivity window, and none comes near it.
+    // Twelve reads of 100 ms take longer than one inactivity window of a second, and none comes near it,
+    // with room for a busy machine.
     [Fact]
     [Trait("Acceptance", "S0-3")]
     public async Task DownloadInactivityBudgetResetsAfterEachRead()
     {
         using FakeHttpMessageHandler handler = new();
-        using DripStream stream = new(12, TimeSpan.FromMilliseconds(20));
+        using DripStream stream = new(12, TimeSpan.FromMilliseconds(100));
         handler.Enqueue(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StreamContent(stream) });
         using HttpClient client = new(handler);
         AdoHttpPipeline pipeline = new(client, new Uri("https://ado.example.test/Collection"), TimeSpan.FromSeconds(5),
-            downloadTimeout: TimeSpan.FromSeconds(5), inactivityTimeout: TimeSpan.FromMilliseconds(200));
+            downloadTimeout: TimeSpan.FromSeconds(5), inactivityTimeout: TimeSpan.FromSeconds(1));
         Assert.Equal(new string('x', 12), Encoding.UTF8.GetString(await Download(pipeline)));
         Assert.True(stream.Disposed);
     }

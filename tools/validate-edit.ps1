@@ -36,6 +36,9 @@ catch {
 }
 $path = $editedPath
 if (-not [System.IO.Path]::IsPathRooted($path)) { $path = Join-Path $hookRoot $path }
+# Discovery leaves a Claude Code worktree under .claude/worktrees out of the main checkout, so a
+# file edited in one is checked against that worktree, whichever checkout the hook started in.
+$hookRoot = Get-WorktreeRoot -Path $path -Root $hookRoot
 if (-not (Test-IsRepositoryPath -Path $path -Root $hookRoot) -or -not (Test-IsAgentSafePath -Path $path -Root $hookRoot)) { exit 0 }
 if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { exit 0 }
 if (-not (Test-IsSafeRepositoryFile -File (Get-Item -LiteralPath $path -Force) -Root $hookRoot)) { exit 0 }

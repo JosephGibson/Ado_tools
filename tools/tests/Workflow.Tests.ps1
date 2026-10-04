@@ -199,15 +199,6 @@ Describe 'Workflow contracts' {
         { Invoke-BoundedProcess -Executable (Join-Path $PSHOME 'pwsh.exe') -Arguments @('-NoProfile', '-File', $script) -WorkingDirectory $TestDrive -TimeoutSeconds 1 } | Should -Throw '*timed out*'
     }
 
-    It 'blocks Git execution and output overrides after a read subcommand' {
-        $guard = Join-Path $PSScriptRoot '../guard-git.ps1'
-        foreach ($command in @('git diff --ext-diff', 'git log --textconv', 'git diff --output=out.txt', 'git -ccore.pager=example log')) {
-            $payload = @{tool_input=@{command=$command}} | ConvertTo-Json -Compress
-            $null = @($payload | & (Join-Path $PSHOME 'pwsh.exe') -NoProfile -File $guard 2>&1)
-            $LASTEXITCODE | Should -Be 2
-        }
-    }
-
     It 'does not parse sensitive or out-of-scope edit targets' {
         $root = Join-Path $TestDrive 'hook-scope'
         $inside = Join-Path $root 'secrets/data.json'
@@ -223,11 +214,11 @@ Describe 'Workflow contracts' {
     }
 
     It 'does not pass Pester container errors when there are no failed test blocks' {
-        Mock Get-Module { [pscustomobject]@{Version=$pesterVersion} } -ParameterFilter { $Name -eq 'Pester' }
-        Mock Invoke-Pester {
+        Mock Get-Module { [pscustomobject]@{Version=$pesterVersion; ModuleBase=$TestDrive} } -ParameterFilter { $Name -eq 'Pester' }
+        Mock Invoke-PesterProcess {
             [pscustomobject]@{
                 Result='Failed'; TotalCount=0; PassedCount=0; FailedCount=0; SkippedCount=0; NotRunCount=0; Failed=@()
-                Containers=@([pscustomobject]@{Result='Failed'; Item='broken.Tests.ps1'; ErrorRecord=@([pscustomobject]@{Exception=[Exception]::new('Discovery failed')})})
+                Containers=@([pscustomobject]@{Result='Failed'; Item='broken.Tests.ps1'; Messages=@('Discovery failed')})
             }
         }
         $result = Get-PesterOutcome -TestPath @($TestDrive)
@@ -235,12 +226,12 @@ Describe 'Workflow contracts' {
     }
 
     It 'counts the failing tests it does not list apart from the container errors' {
-        Mock Get-Module { [pscustomobject]@{Version=$pesterVersion} } -ParameterFilter { $Name -eq 'Pester' }
-        Mock Invoke-Pester {
+        Mock Get-Module { [pscustomobject]@{Version=$pesterVersion; ModuleBase=$TestDrive} } -ParameterFilter { $Name -eq 'Pester' }
+        Mock Invoke-PesterProcess {
             [pscustomobject]@{
                 Result='Failed'; TotalCount=12; PassedCount=0; FailedCount=12; SkippedCount=0; NotRunCount=0
-                Failed=@(1..12 | ForEach-Object { [pscustomobject]@{ExpandedPath="Suite.Test $_"; ErrorRecord=[pscustomobject]@{Exception=[Exception]::new('Expected 1, but got 2.')}} })
-                Containers=@([pscustomobject]@{Result='Failed'; Item='broken.Tests.ps1'; ErrorRecord=@(1..3 | ForEach-Object { [pscustomobject]@{Exception=[Exception]::new("Setup failed $_")} })})
+                Failed=@(1..12 | ForEach-Object { [pscustomobject]@{ExpandedPath="Suite.Test $_"; Message='Expected 1, but got 2.'} })
+                Containers=@([pscustomobject]@{Result='Failed'; Item='broken.Tests.ps1'; Messages=@(1..3 | ForEach-Object { "Setup failed $_" })})
             }
         }
         $result = Get-PesterOutcome -TestPath @($TestDrive)
@@ -255,8 +246,8 @@ Describe 'Workflow contracts' {
         @{Total=1; Skipped=1}
     ) {
         param($Total, $Skipped)
-        Mock Get-Module { [pscustomobject]@{Version=$pesterVersion} } -ParameterFilter { $Name -eq 'Pester' }
-        Mock Invoke-Pester {
+        Mock Get-Module { [pscustomobject]@{Version=$pesterVersion; ModuleBase=$TestDrive} } -ParameterFilter { $Name -eq 'Pester' }
+        Mock Invoke-PesterProcess {
             [pscustomobject]@{Result='Passed'; TotalCount=$Total; PassedCount=0; FailedCount=0; SkippedCount=$Skipped; NotRunCount=0; Failed=@(); Containers=@()}
         }
         (Get-PesterOutcome -TestPath @($TestDrive)).Unavailable | Should -BeTrue

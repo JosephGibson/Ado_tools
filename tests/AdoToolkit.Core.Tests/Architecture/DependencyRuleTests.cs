@@ -2,6 +2,7 @@ using System.Reflection;
 
 namespace AdoToolkit.Core.Tests.Architecture;
 
+[Trait("Culture", "Invariant")]
 public sealed class DependencyRuleTests
 {
     [Fact]

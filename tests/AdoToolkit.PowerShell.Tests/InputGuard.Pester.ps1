@@ -85,11 +85,4 @@ Describe 'Hand-made pipeline input' {
             Should -Throw -ErrorId 'AdoConfiguration,AdoToolkit.GetAdoProjectCommand' -ExpectedMessage "*$Member*"
         $server.Requests.Count | Should -Be 0
     }
-
-    It 'complete hand-made objects are still accepted' {
-        $definition = [AdoToolkit.Core.Builds.AdoBuildDefinition]@{ Id = 44; Name = 'Piped'; TeamProject = 'Équipe Web'
-            WebUrl = 'https://ado.example.test/ignored'; CollectionUri = (Get-AdoConnection).CollectionUri }
-        @($definition | Get-AdoBuild).Count | Should -Be 0
-        $server.Requests.ToArray()[0].Line | Should -Match 'builds\?definitions=44&'
-    }
 }

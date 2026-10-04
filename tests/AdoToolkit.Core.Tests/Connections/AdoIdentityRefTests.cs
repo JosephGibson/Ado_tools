@@ -1,5 +1,6 @@
 namespace AdoToolkit.Core.Tests.Connections;
 
+[Trait("Culture", "Invariant")]
 public sealed class AdoIdentityRefTests
 {
     // An identity held as a field value is shown through ToString: a PowerShell table cell of

@@ -223,3 +223,54 @@ Describe 'Skill layout' {
             "Skill 'orphan' has no body at .agents/skills/orphan/SKILL.md.")
     }
 }
+
+Describe 'Subagent layout' {
+    It 'accepts a subagent named after its file, with a description and a hook helper under tools' {
+        $root = Join-Path $TestDrive 'agents-valid'
+        New-Fixture (Join-Path $root 'tools/guard.ps1') 'exit 0'
+        New-Fixture (Join-Path $root '.claude/agents/sample-reviewer.md') @'
+---
+name: sample-reviewer
+description: Reviews the sample area. Mentions tools/other.ps1, which is no hook.
+tools: Read, Grep
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: pwsh.exe
+          args: ["-NoProfile", "-File", "${CLAUDE_PROJECT_DIR}/tools/guard.ps1"]
+---
+
+# Sample reviewer
+'@
+        $outcome = Get-Layout $root
+        $outcome.Failures | Should -BeNullOrEmpty
+        $outcome.Summary | Should -Contain '1 configured PowerShell hook helper(s) checked'
+        $outcome.Summary | Should -Contain '1 subagent(s) named after their files'
+    }
+
+    It 'reports a name that differs from the file, a missing description and a hook helper outside tools' {
+        $root = Join-Path $TestDrive 'agents-broken'
+        New-Fixture (Join-Path $root 'escaped.ps1') 'exit 0'
+        New-Fixture (Join-Path $root '.claude/agents/renamed.md') "---`nname: other`ndescription: Reviews.`n---`n"
+        New-Fixture (Join-Path $root '.claude/agents/silent.md') "---`nname: silent`n---`n"
+        New-Fixture (Join-Path $root '.claude/agents/escaping.md') @'
+---
+name: escaping
+description: Runs a hook outside tools.
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: pwsh.exe
+          args: ["-File", "${CLAUDE_PROJECT_DIR}/tools/../escaped.ps1"]
+---
+'@
+        (Get-Layout $root).Failures | Sort-Object | Should -Be @(
+            ".claude/agents/renamed.md: the front matter name must be 'renamed'.",
+            ".claude/agents/silent.md: the front matter needs a description.",
+            'Hook helper ''${CLAUDE_PROJECT_DIR}/tools/../escaped.ps1'' must resolve under tools/.')
+    }
+}

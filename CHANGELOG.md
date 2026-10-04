@@ -6,6 +6,14 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.9.0 - 2026-10-04
+
+### Changed
+
+- The module itself is unchanged apart from its version number: the cmdlets, the reports, the help and the configuration file are those of 0.8.5.
+
+Details: [release notes](docs/release-0.9.0.md)
+
 ## 0.8.5 - 2026-10-03
 
 ### Added
@@ -41,7 +49,7 @@ Details: [release notes](docs/release-0.8.5.md)
 
 - In the failed-test report, keyboard focus and a test reached from its row no longer land under the header, a long test name no longer hides its **Open bug** link, Back returns to the test's row, printed status squares keep their colour, error and bug headings name their rows for screen readers, and French labels keep a no-break space before the colon.
 
-Details: [release notes](docs/release-0.8.0.md)
+Details: [release notes](docs/archive/release-0.8.0.md)
 
 ## 0.7.10 - 2026-10-02
 

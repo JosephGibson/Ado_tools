@@ -1,5 +1,6 @@
 namespace AdoToolkit.Core.Tests.Connections;
 
+[Trait("Culture", "Invariant")]
 public sealed class SessionCacheTests
 {
     [Fact]

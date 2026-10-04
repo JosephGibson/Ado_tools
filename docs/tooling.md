@@ -38,6 +38,10 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
   `secrets` directories, sensitive file names (`SensitiveFileGlobs`, including every
   `.env*` name), and links. A
   directory named like a sensitive file is excluded with everything in it.
+- Also excluded, by path from the root: the Git worktrees that Claude Code creates in
+  `.claude/worktrees/<name>/` (`WorktreeDirectoryPaths`). ripgrep runs from the root it
+  searches, so the exclusion applies at that root only: inside a worktree, discovery lists
+  the worktree's own files.
 - Hidden shared configuration such as `.claude/` and `.github/` is included.
 - Content search skips binary files and files above 1 MiB. Nothing is indexed or cached.
 
@@ -46,13 +50,17 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
 | Stage | Checks |
 | --- | --- |
 | `powershell-lint` | Parses every PowerShell file and runs PSScriptAnalyzer with `PSScriptAnalyzerSettings.psd1` |
-| `powershell-test` | Runs `tools/tests/*.Tests.ps1` with Pester 5.x |
+| `powershell-test` | Runs `tools/tests/*.Tests.ps1` with Pester 5.x, each file in a pwsh process of its own, as many at once as there are logical processors, and merges their results (`Invoke-PesterProcess`, `tools/lib/processes.ps1`). Nothing a process prints reaches the output |
 | `configuration` | Parses JSON strictly and XML (`.xml`, `.config`, `.csproj`, `.props`, `.targets`, `.slnx`, `.resx`, `.ps1xml`) with DTDs prohibited |
 | `documentation` | In every Markdown file: each relative link resolves, each heading anchor exists, and each code span that starts with `src/`, `tests/`, `tools/`, `docs/`, `.claude/`, `.agents/` or `.github/` names an existing path |
-| `tooling-layout` | `.claude/settings.json` is valid, hook scripts live under `tools/`, every `@import` in `CLAUDE.md` and `.claude/rules/*.md` resolves, and every skill has a body and a Claude wrapper with the same name and description |
+| `tooling-layout` | `.claude/settings.json` is valid, hook scripts of the settings and of the subagents live under `tools/`, every `@import` in `CLAUDE.md` and `.claude/rules/*.md` resolves, every skill has a body and a Claude wrapper with the same name and description, and every `.claude/agents/<name>.md` has a description and the name `<name>` |
 | `workflow-lint` | Runs actionlint on every file in `.github/workflows/`: the YAML, the workflow schema and the expressions. Its shellcheck and pyflakes integrations are switched off, because every run block is PowerShell |
 | `project-check` | The product gate, `tools/check.ps1` |
 
+- `project-check` starts first and runs beside the in-process stages, which run one after
+  another in the `verify` process. The result lists the stages in the order above, each
+  with its own `DurationMs`; a run lasts about as long as the longer of the two. A failure
+  or timeout of `project-check` is reported the same while an in-process stage still runs.
 - A missing tool makes its stage `unavailable` and the result `incomplete`.
 - The `documentation` stage skips files under `docs/archive/` other than the two index
   files, and files under `tests/Fixtures/` other than the catalog. In `CHANGELOG.md` and
@@ -65,6 +73,8 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
 - An external stage runs with `CI=true`, `NO_COLOR=1` and UTF-8 pipes, for at most 300
   seconds (`project-check`: 900; actionlint: 120). On timeout its process tree is stopped.
   The last 120 output lines are kept, 2,000 characters each.
+- A test file that `Invoke-PesterProcess` runs, in `powershell-test` or in the product
+  gate, has at most 600 seconds. On timeout its process tree is stopped and the file fails.
 - Pass, fail and incomplete come from exit codes and structured outcomes, never from
   console text. Output lines of an external stage that mention something skipped, missing
   or not installed become advisory warnings; they never change the result.
@@ -72,23 +82,30 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
 ### Product gate
 
 `verify` shows the lines of `tools/check.ps1` that start with `check: ` as the stage
-summary. The gate:
+summary: build, Core tests en-US, Core tests fr-CA, package, product Pester, in that order
+whichever step ends first. The gate:
 
 1. Checks the SDK, restored assets and required build modules; missing prerequisites exit `2`.
-2. Builds `AdoToolkit.slnx` in Release without restoring.
-3. Runs the Core tests twice, with `ADOTOOLKIT_TEST_CULTURE` set to `en-US`, then `fr-CA`,
-   and `ADOTOOLKIT_UPDATE_GOLDEN` cleared. Each run writes TRX results to a new folder
-   under `artifacts/verify/`; `Get-AdoTestOutcome` reads the counters. A skipped or
-   undiscovered test, or a missing counter, exits `2`.
-4. Stages with `tools/package/Publish-AdoToolkitPackage.ps1 -NoBuild` and validates with
-   `Assert-AdoPackage` (see [Packaging and releases](#packaging-and-releases)).
-5. Runs `tests/AdoToolkit.PowerShell.Tests/*.Pester.ps1` against the staged module in a
-   child process (`Invoke-AdoReportingChild`). The child writes its result lines to the
-   file named by `ADOTOOLKIT_GATE_REPORT`, so nothing a cmdlet prints reaches the gate's
-   output. No tests, a skipped test or a test that did not run exits `2`.
-   `ADOTOOLKIT_CONFIG_PATH` names a file that does not exist.
+2. Builds `AdoToolkit.slnx` in Release without restoring, and reads the version.
+3. Starts the two Core test runs, which need only the build, side by side. Each has its own
+   `ADOTOOLKIT_TEST_CULTURE` and `ADOTOOLKIT_UPDATE_GOLDEN` cleared: `en-US` runs every test,
+   `fr-CA` runs `--filter Culture!=Invariant`, every class but those that `tests/AGENTS.md`
+   marks culture-invariant. Each run writes TRX results to a new folder under
+   `artifacts/verify/`; `Get-AdoTestOutcome` reads the counters. A skipped or undiscovered
+   test, a selection that discovers no test, or a missing counter, exits `2`.
+4. Meanwhile, stages with `tools/package/Publish-AdoToolkitPackage.ps1 -NoBuild` and
+   validates with `Assert-AdoPackage` (see [Packaging and releases](#packaging-and-releases)).
+5. Then runs `tests/AdoToolkit.PowerShell.Tests/*.Pester.ps1` against the staged module,
+   each file in a pwsh process of its own, side by side (`Invoke-PesterProcess`). Nothing
+   a cmdlet prints reaches the gate's output. No tests, a skipped test or a test that did
+   not run exits `2`. `ADOTOOLKIT_CONFIG_PATH` names a file that does not exist.
+6. Once product Pester has ended, reports every step in the order above, then exits `1`
+   when any failed and `2` when any other was incomplete. A packaging failure ends the gate
+   at once and stops the Core runs.
 
-With `-SkipTests`, the gate builds and stages the package only.
+The Core runs start as processes with argument arrays and environments of their own
+(`Start-AdoGateProcess` in `tools/lib/test-results.ps1`). With `-SkipTests`, the gate builds
+and stages the package only.
 
 ### Stage contracts
 
@@ -100,6 +117,9 @@ Definitions live in `tools/lib/validation.ps1`.
 | External | `Name`, `Executable`, `Arguments`, optional `TimeoutSeconds` (1–3600) and `ExitCodeContract` | Exit code and bounded output; `ExitCodeContract = 'dev'` maps exit `2` to incomplete |
 
 Script blocks receive state through arguments; `GetNewClosure()` loses library scope.
+External stages run one after another in a runspace of their own, which loads
+`tools/dev.ps1`; the in-process stages run in the `verify` runspace meanwhile. An in-process
+stage reads no build output and writes nothing to `bin/`, `obj/` or `artifacts/`.
 
 ## Prerequisites
 
@@ -287,19 +307,92 @@ completely; an unsigned one is accepted.
 | `.claude/rules/*.md` | One `@` import of a nested file each, with the `paths` globs that make Claude load it |
 | `.agents/skills/<name>/SKILL.md` | The body of a skill; Codex reads it |
 | `.claude/skills/<name>/SKILL.md` | A wrapper with the same name and description that tells Claude to read the body |
+| `.claude/agents/<name>.md` | A Claude subagent: `area-reviewer`, `docs-sync`, `fr-translator` |
+| `.claude/workflows/repo-review.js` | The saved Claude workflow that reviews the repository by area |
 | `.claude/settings.json` | Permissions and hooks for Claude |
 
 Skill purposes and procedures live in their bodies. `release` and `rewrite` require
 explicit invocation; `fix-bug` and `update-goldens` may be selected automatically.
 
+Subagents and workflows are Claude-only. Codex reads `AGENTS.md` and `.agents/skills/`
+and has no counterpart of either.
+
 | Hook | Event | Behavior |
 | --- | --- | --- |
 | `tools/guard-git.ps1` | Before a shell command | Checks command text against the Git boundary in `AGENTS.md`; not a sandbox |
-| `tools/validate-edit.ps1` | After an edit | Parses the edited PowerShell, JSON or XML file and reports a syntax error, or that `tools/dev.ps1`, which it loads, does not load. The file is already written; the hook cannot undo it |
+| `tools/validate-edit.ps1` | After an edit | Parses the edited PowerShell, JSON or XML file and reports a syntax error, or that `tools/dev.ps1`, which it loads, does not load. A file in `.claude/worktrees/<name>/` is checked against that worktree, whether `CLAUDE_PROJECT_DIR` names the worktree or the main checkout. The file is already written; the hook cannot undo it |
+| `tools/guard-readonly.ps1` | Before a shell command of `area-reviewer` or `docs-sync`, from their front matter | Allows one plain `git diff` command or `tools/dev.ps1 find` command, without chaining, pipes, redirection or substitution; not a sandbox |
+
+Dot-sourced, `tools/guard-git.ps1` and `tools/guard-readonly.ps1` define their functions
+and stop. `tools/tests/Hooks.Tests.ps1` checks their rules and their answer to each payload
+in its own process, and calls each hook once, as Claude Code does, for its exit code.
 
 - `.claude/settings.json` denies reading and editing secret-like paths, and allows the
-  `tools/dev.ps1` commands, the Release build, Core test runs and the five Git commands
-  without a prompt. Every other command follows the user's permission mode. Codex uses
-  its own permissions.
+  `tools/dev.ps1` commands, `dotnet restore AdoToolkit.slnx --locked-mode`, the Release
+  build, Core test runs and the five Git commands without a prompt. The restore rule
+  cannot tell a worktree from the main checkout; `AGENTS.md` makes it routine only inside
+  a worktree. Every other command follows the user's permission mode. Codex uses its own
+  permissions.
 - To add a rule: write it into the nested `AGENTS.md` of the subtree. A new nested file
   also needs a `.claude/rules/` import and a row in the map of `AGENTS.md`.
+
+### Subagents
+
+| Agent | Tools | Does |
+| --- | --- | --- |
+| `area-reviewer` | Read, Grep, Glob; a shell for `git diff` and `find` only | Reviews one of the nine review areas against the nested rules of its paths, or verifies another review's findings adversarially. Each finding has a file and line, the rule or decision it breaks, and a failure scenario |
+| `docs-sync` | As `area-reviewer` | Given a diff or a behavior change: the guides and help topics, in both cultures, that no longer match the code, `yaml` block and `ms.date` problems, and breaches of the French rules |
+| `fr-translator` | Read, Grep, Glob, Edit, Write; no shell | Writes fr-CA help prose and `Strings.fr.resx` entries from the English text, and names the checks that prove them for the caller to run |
+
+- Each definition names the nested `AGENTS.md` files its agent reads first. Subagents load
+  `CLAUDE.md`, and through it `AGENTS.md`; whether they load the path-scoped
+  `.claude/rules/*.md` files is not documented.
+- All three use the session's model (`model: inherit`) and no worktree: their work must
+  land in this tree.
+- Claude Code notices a new or changed file in `.claude/agents/` only when that directory
+  existed at session start. A session started without it needs a restart.
+
+### Review workflow
+
+Ask Claude to run the `repo-review` workflow, with these arguments:
+
+| Argument | Values | Default |
+| --- | --- | --- |
+| `scope` | `repo`: every area. `changes`: the areas with files that differ from `base`, committed or not | `repo` |
+| `mode` | `report`: findings only. `fix`: fix the confirmed findings and run `verify` | `report` |
+| `base` | The branch or tag that `changes` compares with. A local `main` can lag behind the `main` that pull requests target | `origin/main` |
+
+1. Scope, `changes` only: one Explore agent lists the changed, added and deleted files with
+   `git diff` and `git status`.
+2. Review: one `area-reviewer` per area, in parallel.
+3. Verify: as soon as an area's review returns, one `area-reviewer` tries to refute its
+   findings, all of them in one run.
+4. Fix, `fix` only: one agent per area with confirmed findings fixes them in this tree,
+   never in a worktree, and may follow `fix-bug` without its final `verify`. It edits only
+   the paths its area owns and returns any other edit, such as a help topic of another
+   area, `Strings.resx`, `Strings.fr.resx`, `AdoMessage.cs` or a test file of another area,
+   as deferred. Two dotnet runs in one tree collide on `bin/`, `obj/` and `artifacts/`,
+   so the five Core and module areas fix one at a time; tooling and packaging run only the
+   tooling tests, one at a time; help and user documentation run nothing.
+5. Gate, `fix` only: one agent applies the deferred edits, runs `verify` once and reports
+   each failure by stage.
+
+- A run starts at most 29 agents: 1 scope, 9 reviewers, 9 verifiers, 9 fixers and 1 gate.
+- The result lists confirmed, refuted and unverified findings, the fixes applied, the
+  findings not fixed with the reason, and the gate result.
+- The nine areas are defined twice, with their paths in `AREAS` of the workflow and with
+  their rules in the table of `.claude/agents/area-reviewer.md`. Change both together.
+
+### Worktrees
+
+- Claude Code creates a worktree in `.claude/worktrees/<name>/` for `claude --worktree`,
+  the EnterWorktree tool or an agent with `isolation: worktree`. `.gitignore` ignores the
+  directory, so `git add --all` does not stage a worktree, and discovery excludes it, so
+  `find`, `powershell-lint` and `documentation` do not read its copies.
+- A worktree builds on its own: product tests find their root through the nearest
+  `AdoToolkit.slnx`, `.editorconfig` sets `root = true`, and `nuget.config` clears
+  inherited sources. It starts without restored assets, so `project-check` exits `2` there
+  until `dotnet restore AdoToolkit.slnx --locked-mode` runs inside it.
+- The agent may create a worktree, and never commits in, merges or removes one.
+- A plan in `docs/plans/` lists for each phase the files it touches and the phases it
+  depends on, so phases with disjoint files can run as parallel worktree sessions.

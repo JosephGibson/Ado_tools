@@ -57,26 +57,18 @@ function Get-PesterOutcome {
         }
     }
 
-    # Verbosity None keeps Pester off the host: this command's contract is one JSON
-    # document on stdout, and Pester's normal output would be printed beside it.
-    $configuration = New-PesterConfiguration
-    $configuration.Run.Path = $TestPath
-    $configuration.Run.PassThru = $true
-    $configuration.Run.Exit = $false
-    $configuration.Run.Throw = $false
-    $configuration.Output.Verbosity = 'None'
-    $result = Invoke-Pester -Configuration $configuration
+    $result = Invoke-PesterProcess -TestPath $TestPath -PesterManifest (Join-Path $pester[0].ModuleBase 'Pester.psd1')
 
     $failures = New-Object System.Collections.ArrayList
     # Discovery and BeforeAll errors can fail a container without failing an It block.
     foreach ($container in @($result.Containers | Where-Object { $_.Result -eq 'Failed' })) {
-        foreach ($record in @($container.ErrorRecord)) {
-            [void] $failures.Add("$($container.Item): $($record.Exception.Message)")
+        foreach ($message in @($container.Messages)) {
+            [void] $failures.Add("$($container.Item): $message")
         }
     }
     $listed = @($result.Failed | Select-Object -First 10)
     foreach ($test in $listed) {
-        $reason = @("$($test.ErrorRecord.Exception.Message)" -split "`r?`n" | Where-Object { $_ } | Select-Object -First 1)
+        $reason = @("$($test.Message)" -split "`r?`n" | Where-Object { $_ } | Select-Object -First 1)
         [void] $failures.Add("$($test.ExpandedPath): $reason")
     }
     if ($result.FailedCount -gt $listed.Count) {
@@ -248,18 +240,48 @@ function Get-DocumentationOutcome {
     }
 }
 
-# name and description from the front matter of a SKILL.md file.
-function Get-SkillFrontMatter {
+# name, description and the lines of the front matter of a skill or a subagent file.
+function Get-MarkdownFrontMatter {
     param([Parameter(Mandatory = $true)][string] $Path)
 
-    $result = @{ name = $null; description = $null }
+    $result = @{ name = $null; description = $null; Lines = @() }
     $lines = @(Get-Content -LiteralPath $Path)
     if ($lines.Count -eq 0 -or $lines[0] -ne '---') { return $result }
+    $frontMatter = New-Object System.Collections.Generic.List[string]
     foreach ($line in $lines | Select-Object -Skip 1) {
         if ($line -eq '---') { break }
+        $frontMatter.Add($line)
         if ($line -match '^(name|description):\s*(.*)$') { $result[$matches[1]] = $matches[2].Trim() }
     }
+    $result.Lines = $frontMatter.ToArray()
     return $result
+}
+
+# A Claude subagent: Claude Code selects it by its description and knows it by the name in its
+# front matter, which must equal the file name.
+function Get-AgentLayoutOutcome {
+    param([Parameter(Mandatory = $true)][object] $ProjectProfile)
+
+    $failures = New-Object System.Collections.ArrayList
+    $hookScripts = New-Object System.Collections.ArrayList
+    $count = 0
+    foreach ($file in $ProjectProfile.Files) {
+        $relativePath = Get-RelativeRepositoryPath -Path $file.FullName -Root $ProjectProfile.Root
+        if ($relativePath -notmatch '^\.claude/agents/([^/]+)\.md$') { continue }
+        $name = $matches[1]
+        $count++
+        $frontMatter = Get-MarkdownFrontMatter -Path $file.FullName
+        if ($frontMatter.name -cne $name) { [void] $failures.Add("${relativePath}: the front matter name must be '$name'.") }
+        if ([string]::IsNullOrWhiteSpace($frontMatter.description)) { [void] $failures.Add("${relativePath}: the front matter needs a description.") }
+        # The scripts under its hooks key, checked as those of .claude/settings.json are.
+        $inHooks = $false
+        foreach ($line in $frontMatter.Lines) {
+            if ($line -match '^\S') { $inHooks = $line -match '^hooks:' }
+            if (-not $inHooks) { continue }
+            foreach ($match in [regex]::Matches($line, '[^\s"''\[\],]+\.ps1(?=["''\],\s]|$)')) { [void] $hookScripts.Add($match.Value) }
+        }
+    }
+    return [pscustomobject]@{ Failures = @($failures); Count = $count; HookScripts = @($hookScripts) }
 }
 
 # A skill has one body, under .agents/skills, and a Claude wrapper with the same name and
@@ -274,7 +296,7 @@ function Get-SkillLayoutOutcome {
         if ($relativePath -notmatch '^(\.agents|\.claude)/skills/([^/]+)/SKILL\.md$') { continue }
         $agent = $matches[1]
         $name = $matches[2]
-        $frontMatter = Get-SkillFrontMatter -Path $file.FullName
+        $frontMatter = Get-MarkdownFrontMatter -Path $file.FullName
         if ($frontMatter.name -cne $name) { [void] $failures.Add("${relativePath}: the front matter name must be '$name'.") }
         if (-not $skills.Contains($name)) { $skills[$name] = @{} }
         $skills[$name][$agent] = [pscustomobject]@{ Path = $relativePath; Description = $frontMatter.description; File = $file }
@@ -356,6 +378,10 @@ function Get-ToolingLayoutOutcome {
         }
     }
 
+    $agentLayout = Get-AgentLayoutOutcome -ProjectProfile $ProjectProfile
+    foreach ($failure in $agentLayout.Failures) { [void] $failures.Add($failure) }
+    $hookScripts = @(@($hookScripts) + @($agentLayout.HookScripts) | Sort-Object -Unique)
+
     foreach ($hookScript in $hookScripts) {
         $relativePath = $hookScript.Replace('\', '/')
         $relativePath = $relativePath -replace '^\$\{CLAUDE_PROJECT_DIR\}/?', ''
@@ -402,7 +428,7 @@ function Get-ToolingLayoutOutcome {
 
     return [pscustomobject]@{
         Failures = @($failures)
-        Summary = @("$($hookScripts.Count) configured PowerShell hook helper(s) checked", "$($skillLayout.Count) skill(s) paired between .agents and .claude")
+        Summary = @("$($hookScripts.Count) configured PowerShell hook helper(s) checked", "$($skillLayout.Count) skill(s) paired between .agents and .claude", "$($agentLayout.Count) subagent(s) named after their files")
         Warnings = @()
     }
 }
@@ -583,6 +609,13 @@ function Get-ProjectValidationPlan {
     }
 }
 
+function Test-IsInProcessStage {
+    param([Parameter(Mandatory = $true)][object] $Stage)
+
+    $action = $Stage.PSObject.Properties['Action']
+    return $null -ne $action -and $null -ne $action.Value
+}
+
 function Invoke-ValidationStage {
     param(
         [Parameter(Mandatory = $true)][object] $Stage,
@@ -593,7 +626,7 @@ function Invoke-ValidationStage {
     # per-finding detail without a child process and without printing beside this command's
     # JSON. External stages keep the exit-code path below.
     $action = $Stage.PSObject.Properties['Action']
-    if ($null -ne $action -and $null -ne $action.Value) {
+    if (Test-IsInProcessStage -Stage $Stage) {
         $actionArguments = @{}
         $actionArgumentProperty = $Stage.PSObject.Properties['ActionArguments']
         if ($null -ne $actionArgumentProperty -and $null -ne $actionArgumentProperty.Value) {
@@ -752,6 +785,66 @@ catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }
     }
 }
 
+# An external stage spends its time in a process of its own: the product gate builds and tests
+# for minutes. The external stages therefore run, one after another, in a runspace of their own
+# while the in-process stages run in this one. The runspace loads tools/dev.ps1 as this one did;
+# its parameter names differ from those of tools/dev.ps1, which dot-sourcing would overwrite.
+function Start-ExternalValidationStage {
+    param(
+        [Parameter(Mandatory = $true)][object[]] $Stage,
+        [Parameter(Mandatory = $true)][string] $Root
+    )
+
+    $program = {
+        param([string] $DevScriptPath, [object[]] $ExternalStages, [string] $VerificationRoot)
+        Set-StrictMode -Version 2.0
+        $ErrorActionPreference = 'Stop'
+        . $DevScriptPath
+        foreach ($externalStage in $ExternalStages) {
+            $watch = [System.Diagnostics.Stopwatch]::StartNew()
+            $result = Invoke-ValidationStage -Stage $externalStage -Root $VerificationRoot
+            $result | Add-Member -NotePropertyName DurationMs -NotePropertyValue $watch.ElapsedMilliseconds
+            $result
+        }
+    }
+    $runner = [powershell]::Create()
+    [void] $runner.AddScript($program.ToString()).AddParameters(@{
+            DevScriptPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'dev.ps1'
+            ExternalStages = $Stage
+            VerificationRoot = $Root
+        })
+    return [pscustomobject]@{ Runner = $runner; Handle = $runner.BeginInvoke(); Stage = $Stage }
+}
+
+# The results of the external stages, one per stage. A stage the runspace returned nothing for
+# failed, with the reason the runspace stopped.
+function Wait-ExternalValidationStage {
+    param([Parameter(Mandatory = $true)][object] $Run)
+
+    $results = @()
+    $reason = 'The stage returned no result.'
+    try { $results = @($Run.Runner.EndInvoke($Run.Handle)) }
+    catch {
+        $exception = $_.Exception
+        while ($null -ne $exception.InnerException) { $exception = $exception.InnerException }
+        $reason = $exception.Message
+    }
+    foreach ($item in $Run.Stage) {
+        $result = @($results | Where-Object { $_.Name -eq $item.Name }) | Select-Object -First 1
+        if ($null -ne $result) { $result; continue }
+        [pscustomobject]@{ Name = $item.Name; Status = 'fail'; ExitCode = 1; Summary = @($reason); Warnings = @(); AdvisoryWarnings = $false; DurationMs = 0 }
+    }
+}
+
+# Stopping the runspace runs the finally block of Invoke-BoundedProcess, which stops the
+# process tree of a stage still running.
+function Stop-ExternalValidationStage {
+    param([Parameter(Mandatory = $true)][object] $Run)
+
+    if ($Run.Runner.InvocationStateInfo.State -eq [System.Management.Automation.PSInvocationState]::Running) { $Run.Runner.Stop() }
+    $Run.Runner.Dispose()
+}
+
 function Invoke-ProjectVerification {
     param(
         [string] $Root = $script:RepositoryRoot,
@@ -775,7 +868,7 @@ function Invoke-ProjectVerification {
     # Load the supported Pester before any stage runs. Linting a test file makes
     # PSScriptAnalyzer resolve Describe/It/Should, which auto-loads the *highest* installed
     # Pester; if that is a 6.x, importing 5.x afterwards fails with "assembly with same name
-    # is already loaded" and the suite cannot run at all.
+    # is already loaded". The test stage hands this Pester to the processes that run the files.
     if (@($plan | Where-Object { $_.Name -eq 'powershell-test' }).Count -gt 0) {
         $pesterModule = @(Get-BuildModule -Name Pester)
         $loadedPester = @(Get-BuildModule -Name Pester -Loaded)
@@ -784,14 +877,27 @@ function Invoke-ProjectVerification {
         }
     }
 
-    $stages = @(
-        foreach ($item in $plan) {
+    # The external stages start first and run beside the in-process stages. Each stage keeps its
+    # own duration, and the result lists the stages in the order of the plan.
+    $external = @($plan | Where-Object { -not (Test-IsInProcessStage -Stage $_) })
+    $run = $null
+    if ($external.Count -gt 0) { $run = Start-ExternalValidationStage -Stage $external -Root $projectProfile.Root }
+    $results = @{}
+    try {
+        foreach ($item in $plan | Where-Object { Test-IsInProcessStage -Stage $_ }) {
             $watch = [System.Diagnostics.Stopwatch]::StartNew()
             $result = Invoke-ValidationStage -Stage $item -Root $projectProfile.Root
             $result | Add-Member -NotePropertyName DurationMs -NotePropertyValue $watch.ElapsedMilliseconds
-            $result
+            $results[$item.Name] = $result
         }
-    )
+        if ($null -ne $run) {
+            foreach ($result in Wait-ExternalValidationStage -Run $run) { $results[$result.Name] = $result }
+        }
+    }
+    finally {
+        if ($null -ne $run) { Stop-ExternalValidationStage -Run $run }
+    }
+    $stages = @(foreach ($item in $plan) { $results[$item.Name] })
 
     # Every warning is reported, but only a stage that knows its own state can make the
     # run incomplete. Text scraped from a passing external stage reports and nothing more.

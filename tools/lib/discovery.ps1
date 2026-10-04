@@ -46,6 +46,7 @@ function Test-IsSafeRepositoryFile {
     # the workspace, where the secret-path exclusions would not protect it.
     if (($File.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { return $false }
     if (-not (Test-IsRepositoryPath -Path $File.FullName -Root $Root) -or -not (Test-IsAgentSafePath -Path $File.FullName -Root $Root)) { return $false }
+    if (Test-IsWorktreePath -RelativePath (Get-RelativeRepositoryPath -Path $File.FullName -Root $Root)) { return $false }
     $directory = $File.Directory
     while ($null -ne $directory -and -not [string]::Equals($directory.FullName, $Root.TrimEnd('\', '/'), [System.StringComparison]::OrdinalIgnoreCase)) {
         if (($directory.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 -or (Test-IsExcludedDirectoryName -Name $directory.Name)) { return $false }
@@ -67,6 +68,7 @@ function Test-IsSafeRepositoryTarget {
         if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { return $false }
         $relative = (Get-RelativeRepositoryPath -Path $target -Root $current).TrimEnd('/')
         if ($relative -eq '.') { return $true }
+        if (Test-IsWorktreePath -RelativePath $relative) { return $false }
         foreach ($part in $relative.Split('/')) {
             $current = Join-Path $current $part
             $item = Get-Item -LiteralPath $current -Force -ErrorAction Stop
@@ -96,11 +98,50 @@ function Test-IsExcludedRepositoryDirectory {
     return Test-IsExcludedDirectoryName -Name $Directory.Name
 }
 
+# A path, relative to the repository root, that is or lies in a directory of worktrees.
+function Test-IsWorktreePath {
+    param([Parameter(Mandatory = $true)][string] $RelativePath)
+
+    $path = $RelativePath.Replace('\', '/').TrimEnd('/')
+    foreach ($worktrees in $script:WorktreeDirectoryPaths) {
+        if ([string]::Equals($path, $worktrees, [System.StringComparison]::OrdinalIgnoreCase) -or
+            $path.StartsWith($worktrees + '/', [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+    return $false
+}
+
+# The checkout that holds a path: the root, or the worktree under it whose files discovery
+# leaves out of the root's file set. A worktree can hold worktrees of its own.
+function Get-WorktreeRoot {
+    param([Parameter(Mandatory = $true)][string] $Path, [Parameter(Mandatory = $true)][string] $Root)
+
+    $current = [System.IO.Path]::GetFullPath($Root).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+    while ((Test-IsRepositoryPath -Path $Path -Root $current)) {
+        $relative = Get-RelativeRepositoryPath -Path $Path -Root $current
+        $next = $null
+        foreach ($worktrees in $script:WorktreeDirectoryPaths) {
+            if (-not $relative.StartsWith($worktrees + '/', [System.StringComparison]::OrdinalIgnoreCase)) { continue }
+            $parts = $relative.Substring($worktrees.Length + 1).Split('/')
+            # A file directly in the worktree directory belongs to no worktree.
+            if ($parts.Count -gt 1) { $next = Join-Path $current (Join-Path $worktrees $parts[0]) }
+        }
+        if ($null -eq $next) { break }
+        $current = [System.IO.Path]::GetFullPath($next)
+    }
+    return $current
+}
+
 function Get-RepositoryExclusionGlobs {
     $globs = New-Object System.Collections.ArrayList
     foreach ($name in @($script:ExcludedDirectoryNames) + @($script:SensitiveDirectoryNames)) {
         [void] $globs.Add("!$name/**")
         [void] $globs.Add("!**/$name/**")
+    }
+    # Anchored to the root, so a search whose root is itself a worktree still sees its files.
+    # Excluding the directory itself also keeps ripgrep from descending into it.
+    foreach ($path in $script:WorktreeDirectoryPaths) {
+        [void] $globs.Add("!$path")
+        [void] $globs.Add("!$path/**")
     }
     foreach ($glob in $script:SensitiveFileGlobs) {
         [void] $globs.Add("!$glob")
@@ -117,6 +158,27 @@ function Get-RepositorySearchGlobs {
     return @('--no-config', '--no-ignore') + @(Get-RepositoryExclusionGlobs | ForEach-Object { @('--iglob', $_) })
 }
 
+# ripgrep matches an anchored glob against the path relative to its working directory, so it
+# runs from the root it searches, with . as the search path, and prints paths below the root.
+function Invoke-RepositoryRipgrep {
+    param(
+        [Parameter(Mandatory = $true)][string] $Executable,
+        [Parameter(Mandatory = $true)][string] $Root,
+        [Parameter(Mandatory = $true)][string[]] $Arguments
+    )
+
+    Push-Location -LiteralPath $Root
+    try {
+        $lines = @(& $Executable @Arguments 2>$null)
+        return [pscustomobject]@{
+            ExitCode = $LASTEXITCODE
+            Paths = @($lines | Where-Object { -not [string]::IsNullOrWhiteSpace([string] $_) } |
+                    ForEach-Object { Join-Path $Root (([string] $_) -replace '^\.[\\/]', '') })
+        }
+    }
+    finally { Pop-Location }
+}
+
 function Get-RepositoryFiles {
     param([Parameter(Mandatory = $true)][string] $Root)
 
@@ -128,14 +190,10 @@ function Get-RepositoryFiles {
     $ripgrep = Get-FirstCommand -Names @('rg')
     if ($null -ne $ripgrep) {
         $globArguments = Get-RepositorySearchGlobs
-        $paths = @(& $ripgrep.Source '--files' '--hidden' '--no-messages' @globArguments '--' $resolvedRoot 2>$null)
-        if ($LASTEXITCODE -le 1) {
+        $listing = Invoke-RepositoryRipgrep -Executable $ripgrep.Source -Root $resolvedRoot -Arguments (@('--files', '--hidden', '--no-messages') + $globArguments + @('--', '.'))
+        if ($listing.ExitCode -le 1) {
             $files = New-Object System.Collections.ArrayList
-            foreach ($path in $paths) {
-                $candidatePath = [string] $path
-                if (-not [System.IO.Path]::IsPathRooted($candidatePath)) {
-                    $candidatePath = Join-Path $resolvedRoot $candidatePath
-                }
+            foreach ($candidatePath in $listing.Paths) {
                 try {
                     $item = Get-Item -LiteralPath $candidatePath -Force -ErrorAction Stop
                     if ($item -is [System.IO.FileInfo] -and (Test-IsSafeRepositoryFile -File $item -Root $resolvedRoot)) {
@@ -157,7 +215,8 @@ function Get-RepositoryFiles {
         foreach ($child in $children) {
             if ($child -is [System.IO.DirectoryInfo]) {
                 $isLink = ($child.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0
-                if (-not $isLink -and -not (Test-IsExcludedRepositoryDirectory -Directory $child)) { $directories.Enqueue($child.FullName) }
+                if (-not $isLink -and -not (Test-IsExcludedRepositoryDirectory -Directory $child) -and
+                    -not (Test-IsWorktreePath -RelativePath (Get-RelativeRepositoryPath -Path $child.FullName -Root $resolvedRoot))) { $directories.Enqueue($child.FullName) }
             }
             elseif ($child -is [System.IO.FileInfo] -and (Test-IsSafeRepositoryFile -File $child -Root $resolvedRoot)) {
                 [void] $files.Add($child)
@@ -434,13 +493,12 @@ function Find-ProjectSource {
     if ($searchResults.Count -lt $Limit -and $null -ne $ripgrep) {
         $searchTool = 'ripgrep'
         $ignoreGlobs = Get-RepositorySearchGlobs
-        $output = @(& $ripgrep.Source '--files-with-matches' '--hidden' '--fixed-strings' '--ignore-case' '--no-messages' '--max-filesize' '1M' '--sort' 'path' @ignoreGlobs '--' $Query $Root 2>$null)
-        if ($LASTEXITCODE -gt 1) { throw "ripgrep failed while searching for '$Query'." }
-        foreach ($line in $output) {
-            $fullPath = [string] $line
-            if ([string]::IsNullOrWhiteSpace($fullPath) -or
-                -not (Test-IsRepositoryPath -Path $fullPath -Root $Root) -or
+        $search = Invoke-RepositoryRipgrep -Executable $ripgrep.Source -Root $Root -Arguments (@('--files-with-matches', '--hidden', '--fixed-strings', '--ignore-case', '--no-messages', '--max-filesize', '1M', '--sort', 'path') + $ignoreGlobs + @('--', $Query, '.'))
+        if ($search.ExitCode -gt 1) { throw "ripgrep failed while searching for '$Query'." }
+        foreach ($fullPath in $search.Paths) {
+            if (-not (Test-IsRepositoryPath -Path $fullPath -Root $Root) -or
                 -not (Test-IsAgentSafePath -Path $fullPath -Root $Root) -or
+                (Test-IsWorktreePath -RelativePath (Get-RelativeRepositoryPath -Path $fullPath -Root $Root)) -or
                 -not $seen.Add($fullPath)) { continue }
             [void] $searchResults.Add([pscustomobject]@{ Path = Get-RelativeRepositoryPath -Path $fullPath -Root $Root; Match = 'content' })
             if ($searchResults.Count -ge $Limit) { break }

@@ -5,6 +5,7 @@ using AdoToolkit.Core.TestRuns;
 namespace AdoToolkit.Core.Tests.TestRuns;
 
 [Trait("Acceptance", "S5-1")]
+[Trait("Culture", "Invariant")]
 public sealed class TestFailureRetrievalTests
 {
     private static readonly TestFailureQuery NoHistory = new() { HistoryCount = 1 };

@@ -12,5 +12,3 @@ global using AdoToolkit.Core.Connections;
 global using AdoToolkit.Core.Diagnostics;
 global using AdoToolkit.Core.Resources;
 global using AdoToolkit.Core.Tests.Support;
-
-[assembly: Xunit.v3.Parallelization(Mode = Xunit.Sdk.ParallelMode.None)]

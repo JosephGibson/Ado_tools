@@ -32,42 +32,42 @@ Describe 'Product test completeness' {
     }
 }
 
-Describe 'Product Pester child process' {
-    # A cmdlet run with -WhatIf prints "What if:" straight to the host. That text once reached the
-    # gate's output, where a test folder named "missing" made it look like a warning.
-    It 'returns only the report, not what the child or its tests print to the host' {
-        $report = Join-Path $TestDrive 'report.txt'
-        $script = @'
-[Console]::Out.WriteLine('What if: Performing the operation "Export" on target "C:\temp\missing\Build-401-TestFailures.html".')
-Write-Host 'skipped (not installed)'
-Write-Warning 'a missing tool'
-[System.IO.File]::WriteAllLines($env:ADOTOOLKIT_GATE_REPORT, [string[]] @('check: product Pester: 3 passed, 0 failed, 0 skipped, 3 discovered'))
-exit 0
+Describe 'Product gate steps' {
+    It 'gives a step its own environment and literal arguments, and returns its exit code and lines' {
+        $script = Join-Path $TestDrive 'step.ps1'
+        Set-Content -LiteralPath $script -Value @'
+foreach ($argument in $args) { [Console]::Out.WriteLine($argument) }
+[Console]::Out.WriteLine("set=$env:ADOTOOLKIT_STEP_SET removed=$env:ADOTOOLKIT_STEP_REMOVED")
+[Console]::Error.WriteLine('on stderr')
+exit 3
 '@
-        # PowerShell forwards a child's warning and information records to the caller's streams;
-        # none of them may leave the function either.
-        $streams = @(Invoke-AdoReportingChild -Script $script -ReportPath $report *>&1)
-        $streams.Count | Should -Be 1
-        $streams[0].ExitCode | Should -Be 0
-        $streams[0].Lines | Should -Be @('check: product Pester: 3 passed, 0 failed, 0 skipped, 3 discovered')
+        $previous = $env:ADOTOOLKIT_STEP_REMOVED
+        try {
+            $env:ADOTOOLKIT_STEP_REMOVED = 'parent'
+            $handle = Start-AdoGateProcess -FilePath (Join-Path $PSHOME 'pwsh.exe') -ArgumentList @('-NoProfile', '-File', $script, 'a b', 'c;d|e') -Environment @{
+                ADOTOOLKIT_STEP_SET = 'child'
+                ADOTOOLKIT_STEP_REMOVED = $null
+            }
+            $result = Wait-AdoGateProcess -Handle $handle
+            Stop-AdoGateProcess -Handle $handle
+
+            $result.ExitCode | Should -Be 3
+            $result.Lines | Should -Be @('a b', 'c;d|e', 'set=child removed=', 'on stderr')
+            $env:ADOTOOLKIT_STEP_REMOVED | Should -Be 'parent'
+            $env:ADOTOOLKIT_STEP_SET | Should -BeNullOrEmpty
+        }
+        finally { $env:ADOTOOLKIT_STEP_REMOVED = $previous }
     }
 
-    It 'keeps the child exit code and report of a failing run' {
-        $report = Join-Path $TestDrive 'failing-report.txt'
-        $script = "[System.IO.File]::WriteAllLines(`$env:ADOTOOLKIT_GATE_REPORT, [string[]] @('check: product Pester: 2 passed, 1 failed, 0 skipped, 3 discovered', 'Suite.Test: Expected 1, but got 2.')); exit 1"
-        $result = Invoke-AdoReportingChild -Script $script -ReportPath $report
-        $result.ExitCode | Should -Be 1
-        $result.Lines.Count | Should -Be 2
-        $result.Lines[1] | Should -Be 'Suite.Test: Expected 1, but got 2.'
-    }
+    It 'stops a step that still runs' {
+        $handle = Start-AdoGateProcess -FilePath (Join-Path $PSHOME 'pwsh.exe') -ArgumentList @('-NoProfile', '-Command', 'Start-Sleep -Seconds 60')
+        $id = $handle.Process.Id
 
-    It 'fails with the child output when no report was written, even if the child exits successfully' {
-        $previous = $env:ADOTOOLKIT_GATE_REPORT
-        $result = Invoke-AdoReportingChild -Script "Write-Output 'stopped before the tests'; exit 0" -ReportPath (Join-Path $TestDrive 'absent-report.txt')
-        $result.ExitCode | Should -Be 1
-        $result.Lines[0] | Should -Be 'The child process wrote no report.'
-        $result.Lines | Should -Contain 'stopped before the tests'
-        $env:ADOTOOLKIT_GATE_REPORT | Should -Be $previous
+        Stop-AdoGateProcess -Handle $handle
+
+        $deadline = [DateTime]::UtcNow.AddSeconds(10)
+        while ($null -ne (Get-Process -Id $id -ErrorAction SilentlyContinue) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 50 }
+        Get-Process -Id $id -ErrorAction SilentlyContinue | Should -BeNullOrEmpty
     }
 }
 

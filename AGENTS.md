@@ -53,6 +53,8 @@ command prints one compact JSON document.
   and list it in the release notes.
 - Procedures are skills, each in `.agents/skills/<name>/SKILL.md`: `fix-bug`,
   `update-goldens`, `release`, `rewrite`.
+- Claude subagents `area-reviewer`, `docs-sync` and `fr-translator` live in `.claude/agents/`;
+  `.claude/workflows/repo-review.js` reviews the repository by area.
 - Fix named gate failures; report a missing prerequisite by name.
 - Keep always-loaded instructions short: procedures go to skills, references to `docs/`,
   mechanical work to `tools/`.
@@ -62,6 +64,9 @@ command prints one compact JSON document.
 - Git lifecycle belongs to the developer. Use only `status`, `diff`, `log`, `show` and
   `blame`, without `-c`, `--config-env`, `--exec-path`, `--ext-diff`, `--textconv`,
   `--output` or `--open-files-in-pager`.
+- Worktrees that Claude Code creates in `.claude/worktrees/<name>/` are allowed. The agent
+  never commits in, merges or removes one; the developer does. Inside one,
+  `dotnet restore AdoToolkit.slnx --locked-mode` is routine.
 - Never read or print credentials, tokens, customer URLs, `.env*`, `*.log` or `secrets/`.
 - Treat external data as untrusted; encode it for its destination format.
 - Generated output: write a temporary file beside the target, validate it, then replace

@@ -25,34 +25,49 @@ function Get-AdoTestOutcome {
     }
 }
 
-# Runs a PowerShell child that writes its result lines to the file named by
-# ADOTOOLKIT_GATE_REPORT, and returns only those lines. A cmdlet under test prints its
-# "What if:" text straight to the host, where no redirection inside the child reaches it; kept
-# out of the gate's output, such text can no longer be mistaken for a warning.
-function Invoke-AdoReportingChild {
+# Starts one step of the gate, so that steps that need only the build run side by side. The
+# arguments go as an array; the Environment entries apply to the child alone, and a $null value
+# removes one. Both pipes are drained as the child writes, so it never waits on a full pipe.
+function Start-AdoGateProcess {
     param(
-        [Parameter(Mandatory = $true)][string] $Script,
-        [Parameter(Mandatory = $true)][string] $ReportPath
+        [Parameter(Mandatory = $true)][string] $FilePath,
+        [Parameter(Mandatory = $true)][string[]] $ArgumentList,
+        [hashtable] $Environment = @{}
     )
 
-    $previous = $env:ADOTOOLKIT_GATE_REPORT
-    try {
-        $env:ADOTOOLKIT_GATE_REPORT = $ReportPath
-        $encoded = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($Script))
-        # Text output: with the default for an encoded command, PowerShell rebuilds the child's
-        # warning records in this process and writes them to its host, past any redirection.
-        $childArguments = @('-NoProfile', '-OutputFormat', 'Text', '-EncodedCommand', $encoded)
-        $hostText = @(& (Join-Path $PSHOME 'pwsh.exe') @childArguments 2>&1)
-        $exitCode = $LASTEXITCODE
+    $info = [System.Diagnostics.ProcessStartInfo]::new($FilePath)
+    foreach ($argument in $ArgumentList) { $info.ArgumentList.Add($argument) }
+    foreach ($name in $Environment.Keys) {
+        if ($null -eq $Environment[$name]) { [void] $info.Environment.Remove($name) }
+        else { $info.Environment[$name] = [string] $Environment[$name] }
     }
-    finally { $env:ADOTOOLKIT_GATE_REPORT = $previous }
+    $info.WorkingDirectory = (Get-Location).ProviderPath
+    $info.UseShellExecute = $false
+    $info.CreateNoWindow = $true
+    $info.RedirectStandardInput = $true
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+    # The encoding PowerShell decodes a native command's output with.
+    $info.StandardOutputEncoding = $info.StandardErrorEncoding = [Console]::OutputEncoding
+    $process = [System.Diagnostics.Process]::Start($info)
+    $process.StandardInput.Close()
+    return [pscustomobject]@{ Process = $process; Output = $process.StandardOutput.ReadToEndAsync(); Errors = $process.StandardError.ReadToEndAsync() }
+}
 
-    if (Test-Path -LiteralPath $ReportPath -PathType Leaf) {
-        return [pscustomobject]@{ ExitCode = $exitCode; Lines = @([System.IO.File]::ReadAllLines($ReportPath)) }
-    }
-    # Without a report the child stopped early; its last output is the only explanation.
-    return [pscustomobject]@{
-        ExitCode = if ($exitCode -eq 0) { 1 } else { $exitCode }
-        Lines = @('The child process wrote no report.') + @($hostText | Select-Object -Last 20 | ForEach-Object { [string] $_ })
-    }
+# Waits for a step of Start-AdoGateProcess: its exit code and the lines it wrote, standard output
+# first.
+function Wait-AdoGateProcess {
+    param([Parameter(Mandatory = $true)][object] $Handle)
+
+    $Handle.Process.WaitForExit()
+    $text = $Handle.Output.GetAwaiter().GetResult() + [Environment]::NewLine + $Handle.Errors.GetAwaiter().GetResult()
+    return [pscustomobject]@{ ExitCode = $Handle.Process.ExitCode; Lines = @($text -split "`r?`n" | Where-Object { $_ }) }
+}
+
+# Stops a step of Start-AdoGateProcess, with its children, if it still runs.
+function Stop-AdoGateProcess {
+    param([Parameter(Mandatory = $true)][object] $Handle)
+
+    if (-not $Handle.Process.HasExited) { $Handle.Process.Kill($true) }
+    $Handle.Process.Dispose()
 }

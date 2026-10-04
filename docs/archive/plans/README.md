@@ -19,6 +19,7 @@ History, not a work queue. These plans delivered AdoToolkit v1 in slices 0 to 5 
 | --- | --- |
 | [server-2020-audit-fixes.md](server-2020-audit-fixes.md) | 2026-09-17: findings `F01` to `F16`, each with its failing regression test and its correction |
 | [0.8.0-test-failure-report.md](0.8.0-test-failure-report.md) | 2026-10-03: the 0.8.0 plan for faster failed-test retrieval and the report density pass, with its measurements, the developer's decisions and the evidence of each phase |
+| [0.8.5-report-styling.md](0.8.5-report-styling.md) | 2026-10-03: the 0.8.5 plan for the failed-test report restyle, with its design, the developer's decisions over three rounds of previews and the evidence of each step |
 
 - The acceptance criteria are defined in §22 of the
   [specification](../ado-toolkit-spec.md#22-delivery-slices-and-acceptance-criteria).

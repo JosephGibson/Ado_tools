@@ -8,6 +8,7 @@
 | `CHANGELOG.md` | End users, also as the opening of each GitHub release | One short section per version that links its release notes. The `release` skill writes it, and `verify` requires it for the current version |
 | `docs/schemas/testcase.v1.schema.json` | Consumers of the JSON report | Public contract; `JsonSchemaValidationTests` validates reports against it |
 | `docs/tooling.md` | Developers and agents | Reference for `tools/` and the agent setup: terse, tables, exact commands |
+| `docs/plans/` | The developer and agents | Each phase of a plan lists the files it touches and the phases it depends on, so phases with disjoint files can run as parallel worktree sessions |
 | `docs/archive/` | History | Never edit a file. Only `docs/archive/README.md` and `docs/archive/plans/README.md` change |
 
 ## Rules

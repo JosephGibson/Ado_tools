@@ -135,9 +135,13 @@ no upstream pushes to `origin`. Stop on detached HEAD or `main`.
 Run `git show --no-patch v<new>`: success means the version was already released, so stop.
 List unrelated working-tree paths above the commands; command 1 stages everything.
 
-Take `gh`'s state from `diagnose`. winget puts a tool on the PATH of new terminals only, so
-`missing` just after an install means "open a new terminal", not "unavailable". Without `gh`,
-give the compare-page command below as command 2 instead.
+Report `gh`'s state from `diagnose`, but do not pick the commands from it: command 1 falls
+back on its own. winget puts a tool on the PATH of new terminals only, so `missing` just
+after an install means "open a new terminal", not "unavailable". Creating a pull request also
+needs a token allowed to write one: a fine-grained PAT without pull-request write reads the
+repository, the checks and the runs and still refuses `createPullRequest`. Nothing short of
+the create settles that, because `gh pr create --dry-run` exits `0` without exercising the
+permission, so the fallback belongs in the command and not in a probe.
 
 Set `<message>` to one line, `AdoToolkit <new>: <summary>`, following
 `git log --oneline`. The summary contains no quote; the message has no body or trailer.
@@ -148,35 +152,37 @@ findings. Fill every placeholder in these templates and give each on one line in
 code block. State that command 1 publishes the release the moment it pushes the tag, before
 any pull-request review.
 
-Command 1 commits, tags, pushes both together and opens the pull request with its final
-title, so nothing about it has to be typed by hand.
+Command 1 commits, tags, pushes both together, and then takes the pull request as far as it
+can with its final title already set: `gh pr create` where that works, and otherwise the
+compare page, printed and opened with the title and the body encoded, where the developer
+creates it and keeps the title. One template serves both, and the commit message and the
+pull-request title are one variable, so neither can drift from the other.
 
 ```powershell
-git add --all && git commit -m '<message>' && git tag -a v<new> -m 'AdoToolkit <new>' && git push --atomic <remote> <branch> v<new> && gh pr create --base main --head <branch> --title '<message>' --body 'Release of AdoToolkit <new>, published from tag v<new>. Changes: CHANGELOG.md and docs/release-<new>.md. Merge with Squash and merge, keeping this title.'
+$title = '<message>'; $body = 'Release of AdoToolkit <new>, published from tag v<new>. Changes: CHANGELOG.md and docs/release-<new>.md. Merge with Squash and merge, keeping this title.'; git add --all && git commit -m $title && git tag -a v<new> -m 'AdoToolkit <new>' && git push --atomic <remote> <branch> v<new> && & { $created = $false; if (Get-Command gh -ErrorAction Ignore) { gh pr create --base main --head <branch> --title $title --body $body; $created = $LASTEXITCODE -eq 0 }; if (-not $created) { $repo = (git remote get-url <remote>) -replace '^(?:\w+://)?(?:[^@/]+@)?([^:/]+)[:/]+', 'https://$1/' -replace '(?:\.git)?/?$'; $url = "$repo/compare/main...<branch>?quick_pull=1&title=$([uri]::EscapeDataString($title))&body=$([uri]::EscapeDataString($body))"; $url; Start-Process $url } }
 ```
 
-If only its last step fails, the release is already published and the branch and tag are
-pushed: run the `gh pr create` part alone, or the compare-page command. Nothing is pushed
-twice.
+The block runs only when the push succeeded, so a chain that stops earlier publishes nothing
+and opens nothing. A missing `gh`, and a `gh pr create` that exits non-zero, both end on the
+compare page; nothing is pushed twice. When the create was refused for the token, the release
+is already published and the branch and the tag are pushed, so `gh pr create` alone is enough
+once that token may write a pull request.
 
 Command 2 waits for the Verify check of `.github/workflows/verify.yml` and then opens the
-pull request, so a browser that opens is the signal that the check passed. If it reports no
-check yet, the run has not registered; repeat it.
+pull request, so a browser that opens is the signal that the check passed. It needs the pull
+request to exist, by command 1 or by the compare page. If it reports no check yet, the run
+has not registered; repeat it.
 
 ```powershell
 gh pr checks <branch> --watch --fail-fast && gh pr view <branch> --web
 ```
 
-Without `gh`, command 2 is this one instead. It prints and opens the compare page with the
-title and body encoded, and the developer creates the pull request there, keeping the title.
-
-```powershell
-$title = '<message>'; $body = 'Release of AdoToolkit <new>, published from tag v<new>. Changes: CHANGELOG.md and docs/release-<new>.md.'; $repo = (git remote get-url <remote>) -replace '^(?:\w+://)?(?:[^@/]+@)?([^:/]+)[:/]+', 'https://$1/' -replace '(?:\.git)?/?$'; $url = "$repo/compare/main...<branch>?quick_pull=1&title=$([uri]::EscapeDataString($title))&body=$([uri]::EscapeDataString($body))"; $url; Start-Process $url
-```
+Without `gh` there is no command 2: the developer watches the Verify check on the pull
+request page and merges from there.
 
 Developer steps after running them:
 
-1. On the pull request that command 2 opened, merge with Squash and merge, keeping the
+1. On the pull request that command 1 opened, merge with Squash and merge, keeping the
    commit title GitHub proposes: `<message> (#<n>)`, the pull-request title then its number.
 2. Watch the release workflow and compare its five assets and checksums with the table in the
    notes. For failures, use Release workflow in `docs/tooling.md`.

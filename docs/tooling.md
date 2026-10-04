@@ -137,7 +137,7 @@ stage reads no build output and writes nothing to `bin/`, `obj/` or `artifacts/`
 | actionlint | `workflow-lint` | `winget install --id rhysd.actionlint --exact --source winget` |
 | ripgrep (recommended) | Faster discovery | `winget install --id BurntSushi.ripgrep.MSVC --exact --source winget` |
 | Codex CLI and `jq` (optional) | The plan critique of `critique-plan`: the critic runs through `codex exec` on the developer's ChatGPT plan. The skill names a missing tool; no stage needs it | Installed for the account, with both on `PATH` |
-| GitHub CLI (recommended) | The release handoff: it opens the pull request and watches its check. Listed only where workflow files exist; no stage needs it | `winget install --id GitHub.cli --exact --source winget`, then `gh auth login` |
+| GitHub CLI (recommended) | The release handoff: it opens the pull request and watches its check. Creating a pull request needs a token allowed to write one; reading checks and runs does not, and `gh pr create --dry-run` exits `0` without exercising that permission. Listed only where workflow files exist; no stage needs it | `winget install --id GitHub.cli --exact --source winget`, then `gh auth login`; a fine-grained PAT needs Pull requests: Read and write |
 
 - Pester stays on 5.x because the tooling depends on its result format.
 - winget extends `PATH` for new processes: open a new terminal after it installs a tool.
@@ -256,7 +256,9 @@ proposes: the pull-request title, then ` (#<number>)`. The `release` skill sets 
 of a release pull request, `AdoToolkit <version>: <summary>`: its first handoff command ends
 with `gh pr create`, which opens the pull request with that title already set, and its second
 runs `gh pr checks <branch> --watch --fail-fast` and opens the page once this check passes.
-Where the GitHub CLI is absent, the skill gives a prefilled compare page instead.
+That first command falls back by itself, after the push it has already made, to printing and
+opening a prefilled compare page: when `gh` is absent, and equally when `gh pr create` is
+refused, as it is for a token that may not write a pull request.
 
 ### Setup action
 

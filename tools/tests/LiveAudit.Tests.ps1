@@ -332,6 +332,92 @@ Describe 'Approved live-check audit regressions with synthetic data only' {
         Should -Invoke Invoke-AdoTestRequest -Exactly -Times 2 -ParameterFilter { $Uri -match '6\.0-preview\.1$' -or $Uri -match 'Microsoft\.BugCategory' }
     }
 
+    # V-37: the two bug fields of 0.9.15, read from the module's own projection.
+    It 'V-37 names an identity shape without reading its value, for <Case>' -TestCases @(
+        @{ Case = 'an identity object'; Value = [pscustomobject]@{ displayName = 'CustomerAlpha'; uniqueName = 'CustomerBeta'; id = 'CustomerGamma' }; Shape = 'IDENTITY_OBJECT' }
+        @{ Case = 'an object named only by its unique name'; Value = [pscustomobject]@{ uniqueName = 'CustomerBeta' }; Shape = 'IDENTITY_OBJECT' }
+        @{ Case = 'an object named only by its id'; Value = [pscustomobject]@{ id = 'CustomerGamma' }; Shape = 'IDENTITY_OBJECT' }
+        @{ Case = 'an object naming nobody'; Value = [pscustomobject]@{ imageUrl = 'https://ado.example.test/avatar' }; Shape = 'OTHER' }
+        @{ Case = 'a bare string'; Value = 'CustomerDelta'; Shape = 'STRING' }
+        @{ Case = 'a blank string'; Value = '   '; Shape = 'EMPTY' }
+        @{ Case = 'JSON null'; Value = $null; Shape = 'EMPTY' }
+        @{ Case = 'a number'; Value = 42; Shape = 'OTHER' }
+    ) {
+        param($Case, $Value, $Shape)
+        $result = Get-AdoLiveIdentityShape $Value
+        $result | Should -Be $Shape
+        $result | Should -Not -Match 'Customer'
+    }
+
+    It 'V-37 counts the two fields over the bugs the module read, and the named assigned bug apart' {
+        $items = @(
+            [pscustomobject]@{ id = 3001; fields = [pscustomobject]@{ 'System.CreatedDate' = '2026-09-15T22:05:00Z'; 'System.AssignedTo' = [pscustomobject]@{ displayName = 'CustomerAlpha' } } }
+            [pscustomobject]@{ id = 3002; fields = [pscustomobject]@{ 'System.CreatedDate' = '2026-09-10T11:00:00Z' } }
+            [pscustomobject]@{ id = 3003; fields = [pscustomobject]@{ 'System.CreatedDate' = '2026-09-11T11:00:00Z'; 'System.AssignedTo' = $null } }
+            # Not among the module's bugs: its shape is still evidence, its counts are not.
+            [pscustomobject]@{ id = 9001; fields = [pscustomobject]@{ 'System.CreatedDate' = '2026-09-12T11:00:00Z'; 'System.AssignedTo' = 'CustomerDelta' } }
+        )
+        $evidence = Get-AdoLiveBugFieldEvidence -Item $items -CountedId @(3001, 3002, 3003) -AssignedId 9001
+        $evidence.Returned | Should -Be 3
+        $evidence.CreatedDate | Should -Be 3
+        $evidence.AssignedTo | Should -Be 1
+        $evidence.Unknown | Should -Be 0
+        $evidence.Shape | Should -Be @('EMPTY', 'IDENTITY_OBJECT', 'STRING')
+        $evidence.AssignedReturned | Should -BeTrue
+        $evidence.AssignedPresent | Should -BeTrue
+        ($evidence | Out-String) | Should -Not -Match 'Customer'
+    }
+
+    It 'V-37 sees an absent field and an unnameable identity' {
+        $items = @(
+            [pscustomobject]@{ id = 3001; fields = [pscustomobject]@{ 'System.State' = 'CustomerEpsilon' } }
+            [pscustomobject]@{ id = 3002; fields = [pscustomobject]@{ 'System.CreatedDate' = '2026-09-10T11:00:00Z'; 'System.AssignedTo' = [pscustomobject]@{ imageUrl = 'https://ado.example.test/a' } } }
+        )
+        $evidence = Get-AdoLiveBugFieldEvidence -Item $items -CountedId @(3001, 3002) -AssignedId 0
+        $evidence.CreatedDate | Should -Be 1
+        $evidence.Unknown | Should -Be 1
+        $evidence.AssignedReturned | Should -BeFalse
+        # A named bug that never came back cannot settle the assignee half.
+        $absent = Get-AdoLiveBugFieldEvidence -Item $items -CountedId @(3001) -AssignedId 9001
+        $absent.AssignedReturned | Should -BeFalse
+        $absent.AssignedPresent | Should -BeFalse
+    }
+
+    It 'V-37 reports <Verdict> for the projected bug read, with counts and shapes only' -TestCases @(
+        @{ Verdict = 'PASS V-37 BUG_FIELDS_PRESENT_AND_SHAPED'; Assigned = 'CustomerAlpha'; Created = '2026-09-15T22:05:00Z'; Resolved = $true; Named = 0; ModuleAssigned = $true }
+        @{ Verdict = 'INCONCLUSIVE V-37 NO_ASSIGNED_BUG'; Assigned = $null; Created = '2026-09-15T22:05:00Z'; Resolved = $true; Named = 0; ModuleAssigned = $false }
+        @{ Verdict = 'INCONCLUSIVE V-37 NO_BUGS_ON_REPORTED_TESTS'; Assigned = 'CustomerAlpha'; Created = '2026-09-15T22:05:00Z'; Resolved = $false; Named = 0; ModuleAssigned = $true }
+        @{ Verdict = 'FAIL V-37 CREATED_DATE_ABSENT'; Assigned = 'CustomerAlpha'; Created = $null; Resolved = $true; Named = 0; ModuleAssigned = $true }
+        @{ Verdict = 'FAIL V-37 ASSIGNED_TO_SHAPE_UNKNOWN=1'; Assigned = 'OBJECT_WITHOUT_NAME'; Created = '2026-09-15T22:05:00Z'; Resolved = $true; Named = 0; ModuleAssigned = $true }
+        @{ Verdict = 'FAIL V-37 ASSIGNED_TO_OMITTED'; Assigned = 'CustomerAlpha'; Created = '2026-09-15T22:05:00Z'; Resolved = $true; Named = 3001; ModuleAssigned = $true }
+        @{ Verdict = 'FAIL V-37 MODULE_COUNTS_DIFFER'; Assigned = 'CustomerAlpha'; Created = '2026-09-15T22:05:00Z'; Resolved = $true; Named = 0; ModuleAssigned = $false }
+    ) {
+        param($Verdict, $Assigned, $Created, $Resolved, $Named, $ModuleAssigned)
+        $connection = [pscustomobject]@{ CollectionUri = [uri] 'https://ado.example.test/Collection'; RequestTimeoutSeconds = 30 }
+        $assignedBugId = $Named
+        $hasAssignedBug = $Named -gt 0
+        $reportedBugs = @([pscustomobject]@{
+                Id = 3001; IsResolved = $Resolved
+                CreatedDate = if ($null -eq $Created) { $null } else { [datetimeoffset] '2026-09-15T22:05:00Z' }
+                AssignedTo = if ($ModuleAssigned) { [pscustomobject]@{ DisplayName = 'CustomerAlpha' } } else { $null }
+            })
+        # The named assigned bug, when one is given, is the same ID and comes back without the field.
+        $fields = @()
+        if ($null -ne $Created) { $fields += '"System.CreatedDate":"' + $Created + '"' }
+        if ($Named -eq 0 -and $null -ne $Assigned) {
+            $fields += if ($Assigned -eq 'OBJECT_WITHOUT_NAME') { '"System.AssignedTo":{"imageUrl":"https://ado.example.test/a"}' }
+            else { '"System.AssignedTo":{"displayName":"' + $Assigned + '"}' }
+        }
+        Mock Invoke-AdoTestBatch { [pscustomobject]@{ Content = '{"value":[{"id":3001,"fields":{' + ($fields -join ',') + '}}]}' } }
+        $lines = @(. (Get-LiveSection 'TestFailures' 'BUG_FIELDS_PRESENT_AND_SHAPED'))
+        $text = $lines -join "`n"
+        $text | Should -Match ([regex]::Escape($Verdict))
+        $text | Should -Not -Match 'Customer'
+        $text | Should -Not -Match '2026-09'
+        # One verdict for the ID, after its note at most.
+        @($lines | Where-Object { $_ -match '^(PASS|FAIL|INCONCLUSIVE) V-37 ' }).Count | Should -Be 1
+    }
+
     It 'F16 omits dynamic keys from smoke exception paths too' {
         Get-AdoSafeJsonPath '$.customFields[0].value.CustomerZeta' | Should -Be 'UNPRINTABLE'
         Get-AdoSafeJsonPath '$.fields.SystemTitle' | Should -Be 'UNPRINTABLE'

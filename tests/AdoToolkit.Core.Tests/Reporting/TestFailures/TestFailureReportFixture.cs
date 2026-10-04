@@ -47,7 +47,7 @@ internal static class TestFailureReportFixture
         {
             Build = new AdoBuild { Id = 401, BuildNumber = hostile ? Hostile : "20260916.3", Definition = new AdoBuildDefinitionRef { Id = 12, Name = "Synthetic UI tests" },
                 SourceBranch = "refs/heads/main", SourceVersion = "0123456789abcdef0123456789abcdef01234567", RepositoryType = "TfsGit",
-                RepositoryId = "11111111-2222-3333-4444-555555555555", Result = "failed", FinishTime = Clock.AddMinutes(-12),
+                RepositoryId = "11111111-2222-3333-4444-555555555555", Result = "failed", QueueTime = Clock.AddMinutes(-20), FinishTime = Clock.AddMinutes(-12),
                 TeamProject = Project, CollectionUri = Collection, WebUrl = Untrusted },
             Runs = [new AdoTestRun { Id = 201, Name = "Synthetic Windows tests", BuildId = 401, State = "Completed", StartedDate = Clock.AddMinutes(-15),
                 TeamProject = Project, CollectionUri = Collection }],
@@ -83,7 +83,9 @@ internal static class TestFailureReportFixture
                 Storage = "Synthetic.Tests.dll", CollectionUri = Collection,
                 TestCase = new AdoTestCaseLink { Id = 901, Title = "Valider la commande", State = "Ready", IsResolved = true, WebUrl = Untrusted },
                 // Resolved is not a Completed category, so the bug is still open.
-                Bugs = [Bug(804, "Libellé « Confirmée » absent", "Resolved", "Resolved", true, associated: false, linked: true)],
+                // Filed three minutes after the build went into the queue, so the chip carries the marker.
+                Bugs = [Bug(804, "Libellé « Confirmée » absent", "Resolved", "Resolved", true, associated: false, linked: true,
+                    created: Clock.AddMinutes(-22), assignee: "Nadia Roy")],
                 Attempts = [Attempt(1, 200, "Timed out waiting for #submit", File(61, 200, 11, "old-run.txt")), Attempt(2, 201, null),
                     Attempt(3, 202, French, File(62, 202, 13, "Details.json"), File(63, 202, 13, "console.log")), Attempt(4, 203, French)] },
             new() { Ordinal = 2, Classification = AdoTestFailureClassification.Failed, TestName = "Synthetic.HomeTests.ShowBanner", ShortName = "ShowBanner",
@@ -95,7 +97,8 @@ internal static class TestFailureReportFixture
         return new AdoBuildTestFailureSet
         {
             Build = new AdoBuild { Id = 401, BuildNumber = "20260916.4", Definition = new AdoBuildDefinitionRef { Id = 12, Name = "Synthetic UI tests" },
-                SourceBranch = "refs/heads/main", Result = "failed", FinishTime = Clock.AddMinutes(-5), TeamProject = Project, CollectionUri = Collection, WebUrl = Untrusted },
+                SourceBranch = "refs/heads/main", Result = "failed", QueueTime = Clock.AddMinutes(-25), FinishTime = Clock.AddMinutes(-5),
+                TeamProject = Project, CollectionUri = Collection, WebUrl = Untrusted },
             Runs = [Run(200, "Tests_EN", 1, Clock.AddDays(-10)), Run(201, "Tests_EN", 2, Clock.AddMinutes(-20)), Run(202, "Tests_FR", 1, Clock.AddMinutes(-19)),
                 Run(203, "Tests_FR", 2, Clock.AddMinutes(-10))],
             Summary = summary, History = [summary], Failures = failures, FailedCount = 2, Status = AdoTestFailureStatus.Complete,
@@ -166,10 +169,13 @@ internal static class TestFailureReportFixture
         ];
         AdoTestAttachment Attachment(int id, int run, int result, string name, long size, AdoTestAttachmentStatus status = AdoTestAttachmentStatus.NotRequested) => new()
         { Id = id, RunId = run, ResultId = result, FileName = name, Size = size, AttachmentType = "GeneralAttachment", Kind = AttachmentKinds.FromFileName(name), DownloadStatus = status };
-        AdoTestBug Read(int id, string title, string state, bool associated, bool linked) => new()
+        // The build was queued 60 minutes before the clock, so created tells each bug apart: after the
+        // queue time, at it, a minute before it, long before it, and one bug with no date at all.
+        AdoTestBug Read(int id, string title, string state, bool associated, bool linked, DateTimeOffset? created = null, string? assignee = null) => new()
         {
             Id = id, Title = title, State = state, WorkItemType = "Bug", TeamProject = Project, IsOpen = true, IsResolved = true,
             StateCategory = state switch { "New" => "Proposed", "Resolved" => "Resolved", _ => "InProgress" },
+            CreatedDate = created, AssignedTo = assignee is null ? null : new AdoIdentityRef { DisplayName = assignee, UniqueName = "owner@example.test" },
             IsAssociatedWithResult = associated, IsLinkedToTestCase = linked, WebUrl = Untrusted,
         };
         List<AdoTestFailure> failures = [];
@@ -222,13 +228,17 @@ internal static class TestFailureReportFixture
             }
             AdoTestBug[] bugs = spec.Bugs switch
             {
-                "b5101" => [Read(5101, "Checkout times out on submit when the payment frame is slow", "Active", true, false)],
-                "b5102" => [Read(5102, "Import fails when the agent data folder moves", "Active", false, true)],
+                "b5101" => [Read(5101, "Checkout times out on submit when the payment frame is slow", "Active", true, false,
+                    clock.AddMinutes(-55), "Nadia Roy")],
+                "b5102" => [Read(5102, "Import fails when the agent data folder moves", "Active", false, true, clock.AddDays(-9), "Luc Beaulieu")],
                 // Bug 5103 could not be read.
                 "b5103" => [new AdoTestBug { Id = 5103, IsAssociatedWithResult = true, WebUrl = Untrusted }],
-                "b5104all" or "b5104part" => [Read(5104, "Search result count is off by the hidden items", "Active", true, false)],
-                "b5105" => [Read(5105, "Footer missing on narrow screens", "Resolved", false, true)],
-                "b5106" => [Read(5106, "Refund throws when the payment has no provider", "New", true, false)],
+                // Filed at the queue time itself: the marker takes the boundary.
+                "b5104all" or "b5104part" => [Read(5104, "Search result count is off by the hidden items", "Active", true, false, clock.AddMinutes(-60))],
+                // One minute before it: not marked.
+                "b5105" => [Read(5105, "Footer missing on narrow screens", "Resolved", false, true, clock.AddMinutes(-61))],
+                // Read and open with no creation date: no claim about its age, but its owner still shows.
+                "b5106" => [Read(5106, "Refund throws when the payment has no provider", "New", true, false, assignee: "Priya Gagné")],
                 _ => [],
             };
             failures.Add(new AdoTestFailure
@@ -261,7 +271,7 @@ internal static class TestFailureReportFixture
         {
             Build = new AdoBuild { Id = 412, BuildNumber = "20260916.12", Definition = new AdoBuildDefinitionRef { Id = 31, Name = "Synthetic web tests" },
                 SourceBranch = "refs/heads/main", SourceVersion = "89abcdef0123456789abcdef0123456789abcdef", RepositoryType = "TfsGit",
-                RepositoryId = "22222222-3333-4444-5555-666666666666", Result = "failed", FinishTime = clock.AddMinutes(-5),
+                RepositoryId = "22222222-3333-4444-5555-666666666666", Result = "failed", QueueTime = clock.AddMinutes(-60), FinishTime = clock.AddMinutes(-5),
                 TeamProject = Project, CollectionUri = Collection, WebUrl = Untrusted },
             Runs = runs, Summary = history[^1], History = history, Failures = failures,
             FailedCount = failures.Count(static failure => failure.Classification == AdoTestFailureClassification.Failed),
@@ -282,7 +292,9 @@ internal static class TestFailureReportFixture
         // bug 802, which could not be read. Elsewhere 802 is closed, so it is absent here although every
         // attempt still names it as associated; the flaky test has that closed bug only.
         Bugs = flaky ? []
-            : [Bug(801, hostile ? Hostile : "Le total ignore la remise", hostile ? Hostile : "Active", "InProgress", true, linked: true),
+            // Filed two minutes after the build went into the queue, and assigned; a name is remote text too.
+            : [Bug(801, hostile ? Hostile : "Le total ignore la remise", hostile ? Hostile : "Active", "InProgress", true, linked: true,
+                    created: Clock.AddMinutes(-18), assignee: hostile ? Hostile : "Nadia Roy"),
                 .. unresolved ? [new AdoTestBug { Id = 802, IsAssociatedWithResult = true, WebUrl = Untrusted }] : Array.Empty<AdoTestBug>()],
         Attempts = flaky ? [Attempt(1, false, hostile), Attempt(2, true, hostile)] : [Attempt(1, false, hostile)],
         History = [History(398, AdoTestHistoryOutcome.Unavailable), History(399, AdoTestHistoryOutcome.NotRun), History(400, AdoTestHistoryOutcome.Failed),
@@ -311,9 +323,11 @@ internal static class TestFailureReportFixture
         AdditionalFields = new Dictionary<string, object?>(StringComparer.Ordinal) { ["futureField"] = hostile ? Hostile : "Forward-compatible value" }, WebUrl = Untrusted,
     };
 
-    private static AdoTestBug Bug(int id, string title, string state, string category, bool open, bool associated = true, bool linked = false) => new()
+    private static AdoTestBug Bug(int id, string title, string state, string category, bool open, bool associated = true, bool linked = false,
+        DateTimeOffset? created = null, string? assignee = null) => new()
     {
         Id = id, Title = title, State = state, WorkItemType = "Bug", TeamProject = Project, StateCategory = category, IsOpen = open, IsResolved = true,
+        CreatedDate = created, AssignedTo = assignee is null ? null : new AdoIdentityRef { DisplayName = assignee, UniqueName = "nroy@example.test" },
         IsAssociatedWithResult = associated, IsLinkedToTestCase = linked, WebUrl = Untrusted,
     };
 

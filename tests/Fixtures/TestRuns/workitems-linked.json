@@ -9,7 +9,9 @@
         "System.Title": "Le total ignore la remise",
         "System.State": "Active",
         "System.WorkItemType": "Bug",
-        "System.TeamProject": "Équipe Web"
+        "System.TeamProject": "Équipe Web",
+        "System.CreatedDate": "2026-09-15T22:05:00Z",
+        "System.AssignedTo": "CONTOSO\\lbeaulieu"
       },
       "url": "https://ado.example.test/Collection/_apis/wit/workItems/3001"
     },
@@ -57,7 +59,8 @@
         "System.Title": "Remise perdue en production",
         "System.State": "Nouveau",
         "System.WorkItemType": "Défaut de production",
-        "System.TeamProject": "Équipe Web"
+        "System.TeamProject": "Équipe Web",
+        "System.CreatedDate": "2026-09-10T11:00:00Z"
       },
       "url": "https://ado.example.test/Collection/_apis/wit/workItems/3080"
     }

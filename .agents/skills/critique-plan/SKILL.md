@@ -11,7 +11,7 @@ yourself, not even when the command fails, and never fabricate a finding or a ve
 
 1. Choose the artifact. A saved plan is the file under `docs/plans/`; a plan held in the
    session, including a plan mode plan, goes in through a quoted heredoc. The critic reads
-   one plan at a time. Over 10,000 characters it stops with exit `2`: ask the developer to
+   one plan at a time. Over 50,000 characters it stops with exit `2`: ask the developer to
    confirm the size before `--force`, or critique one phase at a time.
 2. Run it from the repository root, in the background, writing the raw critique to the
    session scratchpad and never into the repository:

@@ -39,11 +39,19 @@ public sealed class TestBugResolutionTests
         Assert.True(tested.IsResolved);
         Assert.True(tested.IsLinkedToTestCase);
         Assert.False(tested.IsAssociatedWithResult);
+        // Server 2020 may send the assignee as a bare DOMAIN\user string; it is the only name the payload holds.
+        Assert.Equal(new DateTimeOffset(2026, 9, 15, 22, 5, 0, TimeSpan.Zero), tested.CreatedDate);
+        Assert.Equal(@"CONTOSO\lbeaulieu", tested.AssignedTo?.DisplayName);
+        Assert.Null(tested.AssignedTo!.Id);
+        Assert.Null(tested.AssignedTo.UniqueName);
         Assert.Equal("https://ado.example.test/Collection/%C3%89quipe%20Web/_workitems/edit/3001", tested.WebUrl.AbsoluteUri);
         // A custom link type to a custom type in the Bug category still counts.
         Assert.Equal("Défaut de production", valid.Bugs[1].WorkItemType);
         Assert.Equal("Proposed", valid.Bugs[1].StateCategory);
         Assert.True(valid.Bugs[1].IsOpen);
+        // Read, open and nobody on it: a date and no identity.
+        Assert.Equal(new DateTimeOffset(2026, 9, 10, 11, 0, 0, TimeSpan.Zero), valid.Bugs[1].CreatedDate);
+        Assert.Null(valid.Bugs[1].AssignedTo);
         Assert.True(valid.HasOpenBug);
         Assert.All(set.Failures.Where(static failure => failure.ShortName != "Valid"), static failure => Assert.Empty(failure.Bugs));
         Assert.Empty(set.Diagnostics);
@@ -53,7 +61,8 @@ public sealed class TestBugResolutionTests
         // Hyperlinks, artifact links, attachments and unreadable URLs are never requested.
         string bugs = Assert.Single(handler.Requests, static request => request.Body?.Contains(TestRunFixture.BugBatch, StringComparison.Ordinal) == true).Body!;
         Assert.Contains("\"ids\":[3001,3002,3050,3060,3080]", bugs, StringComparison.Ordinal);
-        Assert.Contains("\"fields\":[\"System.Id\",\"System.Title\",\"System.State\",\"System.WorkItemType\",\"System.TeamProject\"]", bugs, StringComparison.Ordinal);
+        Assert.Contains("\"fields\":[\"System.Id\",\"System.Title\",\"System.State\",\"System.WorkItemType\",\"System.TeamProject\","
+            + "\"System.CreatedDate\",\"System.AssignedTo\"]", bugs, StringComparison.Ordinal);
         Assert.Single(handler.Requests, static request => request.Uri.AbsolutePath.EndsWith("/workitemtypecategories/Microsoft.BugCategory", StringComparison.Ordinal));
         Assert.All(handler.Requests.Where(static request => request.Uri.AbsolutePath.EndsWith("/states", StringComparison.Ordinal)),
             static request => Assert.EndsWith("api-version=6.0-preview.1", request.Uri.Query, StringComparison.Ordinal));
@@ -74,12 +83,73 @@ public sealed class TestBugResolutionTests
         Assert.True(open.IsAssociatedWithResult);
         Assert.False(open.IsLinkedToTestCase);
         Assert.True(open.IsOpen);
+        // An identity object keeps its three parts, and the date is read in UTC whatever the payload's offset.
+        Assert.Equal(new DateTimeOffset(2026, 9, 14, 8, 12, 30, 400, TimeSpan.Zero), open.CreatedDate);
+        Assert.Equal(TimeSpan.Zero, open.CreatedDate!.Value.Offset);
+        Assert.Equal("Nadia Roy", open.AssignedTo?.DisplayName);
+        Assert.Equal("11111111-aaaa-bbbb-cccc-222222222222", open.AssignedTo!.Id);
+        Assert.Equal(@"CONTOSO\nroy", open.AssignedTo.UniqueName);
         Assert.True(valid.HasOpenBug);
         Assert.Null(valid.TestCase);
         Assert.Empty(set.Diagnostics);
         // With no linked work items there is nothing to check against the Bug category.
         Assert.DoesNotContain(handler.Requests, static request => request.Uri.AbsolutePath.Contains("/workitemtypecategories/", StringComparison.Ordinal));
         Assert.DoesNotContain(handler.Requests, static request => request.Body?.Contains(TestRunFixture.TestCaseBatch, StringComparison.Ordinal) == true);
+    }
+
+    // The bug read never loses a name the payload holds: a bare string, or the first of displayName,
+    // uniqueName and id that an identity object carries. Null means nobody is assigned, or that
+    // nothing nameable came back; a date that cannot be parsed is simply no date.
+    [Fact]
+    public async Task EveryIdentityShapeKeepsTheNameItHoldsAndAnUnparseableDateMakesNoClaim()
+    {
+        const string Created = "2026-09-15T22:05:00Z";
+        JsonObject Bug(int id, Action<JsonObject> fields)
+        {
+            JsonObject item = Item(id, "Bogue " + id.ToString(CultureInfo.InvariantCulture), "Active");
+            fields((JsonObject)item["fields"]!);
+            return item;
+        }
+        JsonNode[] items =
+        [
+            Bug(6001, f => { f["System.CreatedDate"] = Created; f["System.AssignedTo"] = @"CONTOSO\lbeaulieu"; }),
+            Bug(6002, f => { f["System.CreatedDate"] = Created; f["System.AssignedTo"] = new JsonObject
+                { ["displayName"] = "Nadia Roy", ["id"] = "11111111-aaaa-bbbb-cccc-222222222222", ["uniqueName"] = @"CONTOSO\nroy" }; }),
+            Bug(6003, f => { f["System.CreatedDate"] = Created; f["System.AssignedTo"] = new JsonObject { ["uniqueName"] = @"CONTOSO\pgagne" }; }),
+            Bug(6004, f => { f["System.CreatedDate"] = Created; f["System.AssignedTo"] = new JsonObject { ["id"] = "33333333-dddd-eeee-ffff-444444444444" }; }),
+            Bug(6005, f => { f["System.CreatedDate"] = Created; f["System.AssignedTo"] = new JsonObject { ["imageUrl"] = "https://ado.example.test/avatar" }; }),
+            Bug(6006, f => { f["System.CreatedDate"] = Created; f["System.AssignedTo"] = "   "; }),
+            Bug(6007, f => { f["System.CreatedDate"] = Created; f["System.AssignedTo"] = null; }),
+            Bug(6008, f => f["System.CreatedDate"] = "hier matin"),
+        ];
+        TestRunFixture fixture = Scenario(Detail(101, null, 6001, 6002, 6003, 6004, 6005, 6006, 6007, 6008), Detail(102), Detail(103))
+            .RouteBatch(TestRunFixture.BugBatch, Items(items))
+            .Route("workitemtype-states-bug.json", "/workitemtypes/Bug/states");
+        using FakeHttpMessageHandler handler = fixture.Handler();
+        AdoBuildTestFailureSet set = await RetrieveAsync(handler);
+        Dictionary<int, AdoTestBug> bugs = Failure(set, "Valid").Bugs.ToDictionary(static bug => bug.Id);
+        Assert.Equal([6001, 6002, 6003, 6004, 6005, 6006, 6007, 6008], bugs.Keys.Order());
+        Assert.Empty(set.Diagnostics);
+
+        Assert.Equal(@"CONTOSO\lbeaulieu", bugs[6001].AssignedTo?.DisplayName);
+        Assert.Null(bugs[6001].AssignedTo!.UniqueName);
+        Assert.Equal("Nadia Roy", bugs[6002].AssignedTo?.DisplayName);
+        Assert.Equal("11111111-aaaa-bbbb-cccc-222222222222", bugs[6002].AssignedTo!.Id);
+        Assert.Equal(@"CONTOSO\nroy", bugs[6002].AssignedTo!.UniqueName);
+        // No displayName: the unique name is the name, and it is kept in both places.
+        Assert.Equal(@"CONTOSO\pgagne", bugs[6003].AssignedTo?.DisplayName);
+        Assert.Equal(@"CONTOSO\pgagne", bugs[6003].AssignedTo!.UniqueName);
+        Assert.Null(bugs[6003].AssignedTo!.Id);
+        // Only an ID: it names somebody, so the report says so rather than Unassigned.
+        Assert.Equal("33333333-dddd-eeee-ffff-444444444444", bugs[6004].AssignedTo?.DisplayName);
+        Assert.Equal("33333333-dddd-eeee-ffff-444444444444", bugs[6004].AssignedTo!.Id);
+        // An object with nothing nameable, a blank string, JSON null and an absent field all give null.
+        foreach (int id in new[] { 6005, 6006, 6007, 6008 }) Assert.Null(bugs[id].AssignedTo);
+        foreach (int id in new[] { 6001, 6002, 6003, 6004, 6005, 6006, 6007 })
+            Assert.Equal(new DateTimeOffset(2026, 9, 15, 22, 5, 0, TimeSpan.Zero), bugs[id].CreatedDate);
+        // A date that cannot be parsed is no claim at all, and no lookup problem.
+        Assert.Null(bugs[6008].CreatedDate);
+        Assert.All(bugs.Values, static bug => Assert.True(bug.IsOpen));
     }
 
     [Fact]
@@ -112,8 +182,9 @@ public sealed class TestBugResolutionTests
         foreach (string closed in new[] { "data-bug=\"4001\"", "data-bug=\"4002\"", "edit/4001", "edit/4002", "Corrigé hier", "Doublon" })
             Assert.DoesNotContain(closed, html, StringComparison.Ordinal);
         Assert.Contains("<li data-bug=\"4003\" data-open-bug>", html, StringComparison.Ordinal);
-        // Every listed bug is open, so the card says nothing more after the state.
-        Assert.Contains("<span class=\"bug-state\">Vérifié</span></li>", html, StringComparison.Ordinal);
+        // Every listed bug is open; this one came back without a date or an assignee, so it says only that.
+        Assert.Contains("<span class=\"bug-state\">Vérifié</span> <span class=\"bug-meta\"><span class=\"bug-assignee\">Unassigned</span></span></li>",
+            html, StringComparison.Ordinal);
         Assert.DoesNotContain("class=\"bug-open\"", html, StringComparison.Ordinal);
         Assert.DoesNotContain("class=\"bug-unread\"", html, StringComparison.Ordinal);
     }
@@ -140,6 +211,9 @@ public sealed class TestBugResolutionTests
         Assert.Null(kept.IsOpen);
         Assert.Null(kept.Title);
         Assert.Null(kept.State);
+        // A bug that could not be read makes no claim about its age or its owner.
+        Assert.Null(kept.CreatedDate);
+        Assert.Null(kept.AssignedTo);
         Assert.True(kept.IsAssociatedWithResult);
         Assert.False(valid.HasOpenBug);
         Assert.DoesNotContain(handler.Requests, static request => request.Uri.AbsolutePath.Contains("/workitemtype", StringComparison.Ordinal));

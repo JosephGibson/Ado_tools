@@ -188,4 +188,7 @@ Developer steps after running them:
    notes. For failures, use Release workflow in `docs/tooling.md`.
 3. Run the work-PC live checks with the published package.
 4. Start the next branch from the updated `main`: the squash leaves the commits of
-   `<branch>`, and the tag `v<new>`, out of its history.
+   `<branch>`, and the tag `v<new>`, out of its history. Start it without tracking,
+   `git switch --create <next> --no-track origin/main`, and let its first push set the
+   upstream, `git push --set-upstream origin <next>`. A branch created from `origin/main`
+   tracks `main`, and then a bare `git push` writes to `main` instead of the branch.

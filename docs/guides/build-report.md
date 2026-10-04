@@ -129,9 +129,9 @@ page.
 | --- | --- |
 | Overview | One row per failed test, each part in a column of its own: its status and number, Test Case number, name, class, trend, the lowest-numbered open bug that tracks it with **+N** when there are more, one status column per group of attempts, and the first line of its latest error. Under the table, cards describe the whole build: how many tests are **New**, **Recurring** or have **No comparison**; the **Most common errors** of two tests or more, each opening its group in By error; how many tests are **Without an open bug**, with the three that most need one; and, in a grouped build, per group how many tests failed, were flaky or failed only there. A card that would be empty is left out, and the filters act on the table only |
 | Runs and history | First the run history: a chart with the failed count above each bar, and the same numbers as a table of builds where **This run** marks this build. Then the build's test runs with their ID, stage, job, the attempt numbers that the runs have (stage, job or job instance), start, duration, test counts with the passed and failed ones marked `✓` and `✕`, the number of reported tests, and how many attachments are listed and downloaded, or **Not listed** for a set gathered with `-SkipAttachments`. In a grouped build each group of runs has its own heading; the latest run is marked and runs outside the attachment window are greyed. Last, a table with one row per reported test, its outcome in each build and its trend |
-| Details | One card per test: its class and name, Test Case number and title, links and full name, then its run history, its open bugs with title and state, and its attachments, then its metadata and its attempts |
+| Details | One card per test: its class and name, Test Case number and title, links and full name, then its run history, its open bugs with title and state and, for a bug that was read whole, the day it was filed, **✦ New** and its assignee, and its attachments, then its metadata and its attempts |
 | By error | The same rows, grouped under their latest error, largest group first, with the number of distinct errors above the table. Each group names its exception type and the error line of its first test; a part of the line that differs between the tests is underlined, and resting the pointer on it lists the values. A group of two tests or more also says how many tests failed or were flaky, how many are new or recurring, how many have an open bug and which bugs, how many fail in each group of attempts, and the frame of the tests' own code where they fail, when they share one; a closed **Sample message** shows the start of the first test's message. The **Values** column shows each test's own values. Tests without an error message come last |
-| Open bugs | One entry per bug, on one line: how many tests are linked to it, its number, title and state, its work item type and project when they are not a Bug of the build's project, then what it covers: **Linked tests**, **Same Test Case, not linked**, **Same error, not linked**, which opens that group in By error, and, in a grouped build, how many of its tests fail in each group. Then a row for each test linked to it, saying whether the link comes from a test result, the Test Case or both; a link through test results that reaches only some of a test's failed results says how many, such as **Test result: 1 of 4 failed results**. Tests that share a Test Case with a linked test but not the bug follow, greyed. The bug with the most tests comes first, and a test with several bugs appears under each. Bugs that could not be read come last, marked **Not read**. A last group lists the tests **Without an open bug**. The tab shows the number of bugs |
+| Open bugs | A summary line counts the bugs this view lists, as the tab does, and how many of them were opened after the build was queued; the second count is left out when the build has no queue time. Then one entry per bug, on one line: how many tests are linked to it, its number, title and state, the day it was filed, **✦ New** when it was filed after the build was queued, who it is assigned to or **Unassigned**, its work item type and project when they are not a Bug of the build's project, then what it covers: **Linked tests**, **Same Test Case, not linked**, **Same error, not linked**, which opens that group in By error, and, in a grouped build, how many of its tests fail in each group. Then a row for each test linked to it, saying whether the link comes from a test result, the Test Case or both; a link through test results that reaches only some of a test's failed results says how many, such as **Test result: 1 of 4 failed results**. Tests that share a Test Case with a linked test but not the bug follow, greyed. The bug with the most tests comes first, and a test with several bugs appears under each. Bugs that could not be read come last, marked **Not read**. A last group lists the tests **Without an open bug**. The tab shows the number of bugs |
 | Diagnostics | Shown only when something could not be retrieved: one line per diagnostic, errors first, then warnings, then information, with the number of each in the heading |
 
 In the Overview, By error and Open bugs tables, each group cell reads `✕ 7/7`: `✕` means the
@@ -141,10 +141,19 @@ read them in words, such as "7 of 7 failed". In the overview, each square after 
 that attempt. A latest error that is too long for its cell is cut, and so are a long test name
 and class; rest the pointer on any of them to read it whole.
 
-Colour carries meaning, always with a glyph or text: red for failures and open bugs, green for
-passes, amber for flaky tests, violet for **✦ New** and orange for **Since**. A bug that could
-not be read is grey wherever it shows: it may be closed, so its test counts as without an
-open bug.
+Colour carries meaning, always with a glyph or text: red for failures and open bugs, a paler red
+on screen with **✦** for a bug opened after the build was queued, green for passes, amber for
+flaky tests, violet for the test's **✦ New** chip and orange for **Since**. In print every
+colour of the report is darkened instead, the bug marker with them. A bug that could not be read
+is grey wherever it shows: it may be closed, so its test counts as without an open bug.
+
+**✦** on a bug chip means the bug was filed at or after the build's queue time — not that it was
+filed for this build. There is no upper bound on the window, so a report generated today for an
+older build can mark a bug that was filed for a later one; the day the bug was filed is on its
+line, beside the marker. The marker, the day and the assignee are shown only for a bug the
+report read whole: a bug marked **Not read** says nothing more, and a build with no queue time
+marks no bug at all. Whether Server 2020 sends the creation date and the assignee at all awaits
+confirmation at work (V-37); without them the line simply shows neither.
 
 The Trend column says **✦ New** when the build before this one ran the test and it did not
 fail, and **Since** a date when the test also failed or was flaky in the build before: the
@@ -217,7 +226,8 @@ instance, `__default` when there is none.
 Press `/` or use the Search box. Every word you type must appear somewhere in a test's card,
 collapsed attempts included: error messages, stack traces, JSON and text attachments shown in
 the report, stage and job names, run and attempt fields such as run name, machine or
-failure type, the days of its run history, and bug titles and states. Case and accents are
+failure type, the days of its run history, and bug titles, states, filing days and assignees,
+so typing an owner's name leaves the tests whose bugs that person has. Case and accents are
 ignored, so `echec` finds « Échec ». `12345` and `#12345` both find the tests linked to Test
 Case 12345. Attempts that match are marked in their summary line; nothing opens by itself.
 **Failing in** narrows the list to tests whose last attempt in a group failed, or failed only

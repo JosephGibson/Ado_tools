@@ -174,6 +174,11 @@ Describe 'Failed test retrieval' -Tag 'S5-1', 'S5-3' {
             $set.Failures[1].Bugs[0].State | Should -Be 'Active'
             $set.Failures[1].Bugs[0].StateCategory | Should -Be 'InProgress'
             $set.Failures[1].Bugs[0].IsOpen | Should -BeTrue
+            # The bug's age and owner, read in the same batch: both reach PowerShell, neither joins the table.
+            $set.Failures[1].Bugs[0].CreatedDate | Should -Be ([datetimeoffset]::new(2026, 9, 14, 8, 12, 30, 400, [timespan]::Zero))
+            $set.Failures[1].Bugs[0].AssignedTo | Should -BeOfType ([AdoToolkit.Core.Connections.AdoIdentityRef])
+            $set.Failures[1].Bugs[0].AssignedTo.DisplayName | Should -Be 'Nadia Roy'
+            $set.Failures[1].Bugs[0].AssignedTo.UniqueName | Should -Be 'CONTOSO\nroy'
             $set.Failures[1].Bugs[0].IsAssociatedWithResult | Should -BeTrue
             $set.Failures[1].HasOpenBug | Should -BeTrue
             $set.Failures[0].HasOpenBug | Should -BeFalse

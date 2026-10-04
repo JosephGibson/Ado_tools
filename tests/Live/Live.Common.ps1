@@ -364,3 +364,64 @@ function Get-AdoLiveAttachmentOverlap {
         Counts = [ordered]@{ RESULT = @($Result | Sort-Object -Unique).Count; SUB_RESULTS = $own.Count; SHARED = $shared.Count }
     }
 }
+
+# V-37: the shape of an identity field value, by name only. IDENTITY_OBJECT names somebody through
+# displayName, uniqueName or id; STRING is a non-empty string, the DOMAIN\user shape; EMPTY is JSON
+# null or a blank string, which the toolkit reads as nobody assigned; OTHER is a shape the toolkit
+# cannot name, including an object carrying none of the three. The value itself never leaves here.
+function Get-AdoLiveIdentityShape {
+    param([AllowNull()][object] $Value)
+    if ($null -eq $Value) { return 'EMPTY' }
+    if ($Value -is [string]) { if ([string]::IsNullOrWhiteSpace($Value)) { return 'EMPTY' } else { return 'STRING' } }
+    if ($Value -is [psobject] -and -not ($Value -is [array]) -and -not ($Value -is [valuetype])) {
+        foreach ($name in @('displayName', 'uniqueName', 'id')) {
+            if (-not [string]::IsNullOrWhiteSpace([string] (Get-AdoLivePropertyValue $Value $name))) { return 'IDENTITY_OBJECT' }
+        }
+    }
+    return 'OTHER'
+}
+
+# V-37: what a projected work item batch carried for System.CreatedDate and System.AssignedTo.
+# CountedId are the bugs the module itself reported, the only ones its own counts can be compared
+# with; AssignedId, when given, is a bug the developer knows is assigned, which is what tells an
+# omitted field from nobody assigned. Only counts and shape names are returned.
+function Get-AdoLiveBugFieldEvidence {
+    param(
+        [AllowEmptyCollection()][object[]] $Item = @(),
+        [AllowEmptyCollection()][int[]] $CountedId = @(),
+        [int] $AssignedId = 0
+    )
+    $returned = 0
+    $created = 0
+    $assigned = 0
+    $unknown = 0
+    $shapes = [System.Collections.Generic.List[string]]::new()
+    $assignedReturned = $false
+    $assignedPresent = $false
+    foreach ($entry in $Item) {
+        $fields = Get-AdoLivePropertyValue $entry 'fields'
+        $id = 0
+        if (-not [int]::TryParse([string] (Get-AdoLivePropertyValue $entry 'id'), [ref] $id)) { $id = 0 }
+        $hasCreated = $null -ne $fields -and $null -ne $fields.PSObject.Properties['System.CreatedDate'] -and
+            -not [string]::IsNullOrWhiteSpace([string] (Get-AdoLivePropertyValue $fields 'System.CreatedDate'))
+        $hasAssigned = $null -ne $fields -and $null -ne $fields.PSObject.Properties['System.AssignedTo']
+        $shape = if ($hasAssigned) { Get-AdoLiveIdentityShape (Get-AdoLivePropertyValue $fields 'System.AssignedTo') } else { 'ABSENT' }
+        if ($hasAssigned) {
+            $shapes.Add($shape)
+            if ($shape -eq 'OTHER') { $unknown++ }
+        }
+        if ($AssignedId -gt 0 -and $id -eq $AssignedId) {
+            $assignedReturned = $true
+            $assignedPresent = $hasAssigned -and $shape -in @('IDENTITY_OBJECT', 'STRING')
+        }
+        if ($CountedId -notcontains $id) { continue }
+        $returned++
+        if ($hasCreated) { $created++ }
+        if ($shape -in @('IDENTITY_OBJECT', 'STRING')) { $assigned++ }
+    }
+    return [pscustomobject]@{
+        Returned = $returned; CreatedDate = $created; AssignedTo = $assigned; Unknown = $unknown
+        Shape = @($shapes | Sort-Object -Unique)
+        AssignedReturned = $assignedReturned; AssignedPresent = $assignedPresent
+    }
+}

@@ -117,13 +117,26 @@ DevOps Server 2020 (V-30).
 $set.Failures | Format-Table Ordinal, ShortName, HasOpenBug
 $set.Failures | Where-Object HasOpenBug -eq $false            # failures that no open bug tracks
 $set.Failures[0].Bugs                                         # Id, IsOpen, State, WorkItemType, Title
+$set.Failures[0].Bugs |
+    Format-Table Id, State, CreatedDate,
+        @{ Name = 'AssignedTo'; Expression = { $_.AssignedTo.DisplayName } }
 ```
 
 A bug is open unless its state is in the Completed or Removed state category of its
 project and type, so a `Resolved` bug is still open and stays in the list. Each bug also
 has `StateCategory`, `TeamProject`, `WebUrl`, and `IsAssociatedWithResult` and
 `IsLinkedToTestCase`, which say where it was found. `IsOpen` is `True`, or empty for a bug
-that could not be read; such a bug stays in the list because it may be open. An attempt's
+that could not be read; such a bug stays in the list because it may be open.
+
+`CreatedDate` is the day the bug was filed, in UTC, and `AssignedTo` is who has it, as an
+identity with `DisplayName`, `UniqueName` and `Id`. Neither joins the default table, which
+keeps its width for `Title`; select them as above. `AssignedTo` is empty both when nobody is
+assigned and when the bug could not be read, and `CreatedDate` is empty when the bug could not
+be read or the server did not send the field; `IsOpen` tells the two apart, because it is
+`True` only for a bug that was read whole. Whether Server 2020 returns `System.CreatedDate`
+and `System.AssignedTo` in a work item batch field projection, and which shape the identity
+takes there, is not confirmed (V-37); both properties simply stay empty if they do not come
+back. An attempt's
 `AssociatedBugIds` is still the server's own list and can name a closed bug. The lookup
 reports recoverable lookup problems as warnings. Authentication, authorization and
 cancellation still stop the retrieval:
@@ -144,7 +157,12 @@ and diagnostics when something could not be retrieved. In the overview and by-er
 a test with an open bug shows the lowest-numbered one as a red chip in its **Open bugs**
 column, each card lists the test's open bugs, and **Without an open bug** shows only the
 tests that still need one; the overview's cards and the last group of the Open bugs view
-list them too. Flaky
+list them too. A bug filed at or after the build's queue time carries **✦** on its chip, in a
+lighter red, wherever the chip appears; the Open bugs view counts those bugs above its table,
+and each bug read whole shows the day it was filed and its assignee, or **Unassigned**, on its
+line and in the card, where the report's search can reach the name. The marker claims only
+that the bug was opened after the build was queued: see
+[the report guide](build-report.md#reading-the-report) for what it does and does not say. Flaky
 tests are left out unless you add `-IncludeFlaky`. Times are shown in the time zone of the
 computer that exported the report. The command returns the report as a `FileInfo` and
 shows its `file:///` address in the console, like `Write-Host`; `-InformationAction Ignore`

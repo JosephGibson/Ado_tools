@@ -23,7 +23,7 @@ connections, projects, builds and test runs.
 
 0.9.10 adds no cmdlet, parameter or output property, and changes no configuration setting.
 The configuration file format, the JSON report schema, the help in both cultures and the
-seven-file package layout are unchanged. The [0.9.5 notes](release-0.9.5.md) describe the
+seven-file package layout are unchanged. The [0.9.5 notes](archive/release-0.9.5.md) describe the
 last product changes, and the [0.8.5 notes](archive/release-0.8.5.md) describe the module.
 
 ### Plan critique
@@ -133,7 +133,7 @@ removed.
 | Under Codex the critique is skipped | The critic would be the same model family as the author of the plan, which is no second opinion. The skill records the skip with its reason, and the pass stays owed to a Claude session |
 | Nothing checks that a plan under `docs/plans/` carries its `## Critique` section | `verify` reads links, anchors and paths in Markdown, not the shape of a plan, and a plan is a working document until the developer archives it. The hook, the skill and the rules in `AGENTS.md` and `docs/plans/README.md` carry the requirement |
 | Tag a bug opened in this run as New, in a lighter red, as the developer asked in the last design pass of 0.8.5 | Still open: it needs each bug's creation date (`System.CreatedDate`), a new property of `AdoTestBug`, which is public output, and a live check on Server 2020. 0.9.10 changes no product code |
-| The findings of 0.9.5, 0.9.0, 0.8.5, 0.8.0, 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.9.5](release-0.9.5.md#findings-not-fixed), [0.9.0](archive/release-0.9.0.md#findings-not-fixed), [0.8.5](archive/release-0.8.5.md#findings-not-fixed), [0.8.0](archive/release-0.8.0.md#findings-not-fixed), [0.7.10](archive/release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
+| The findings of 0.9.5, 0.9.0, 0.8.5, 0.8.0, 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.9.5](archive/release-0.9.5.md#findings-not-fixed), [0.9.0](archive/release-0.9.0.md#findings-not-fixed), [0.8.5](archive/release-0.8.5.md#findings-not-fixed), [0.8.0](archive/release-0.8.0.md#findings-not-fixed), [0.7.10](archive/release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
 
 ### Known limitations
 
@@ -143,7 +143,7 @@ removed.
 | A hook change needs a new session | Claude Code reads `.claude/settings.json` at session start, so the plan guard takes effect in the next session, as a new file in `.claude/agents/` does |
 | The critique needs the Codex CLI | `codex` and `jq` on `PATH` and the developer's ChatGPT plan, with a plan of at most 10,000 characters unless the developer confirms the size. No stage needs them, and `verify` never runs the critic |
 | `gh` is recommended, not required | A release prepared without it hands over the prefilled compare page, and the developer creates the pull request there and watches the check on it |
-| Limits carried over | The [0.9.5](release-0.9.5.md#known-limitations), [0.9.0](archive/release-0.9.0.md#known-limitations), [0.8.5](archive/release-0.8.5.md#known-limitations), [0.8.0](archive/release-0.8.0.md#known-limitations), [0.7.10](archive/release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations) and [0.7.0](archive/release-0.7.0.md#known-limitations) known limitations still apply, with V-27, V-28, V-33 to V-36, V-31, V-32 and V-02 |
+| Limits carried over | The [0.9.5](archive/release-0.9.5.md#known-limitations), [0.9.0](archive/release-0.9.0.md#known-limitations), [0.8.5](archive/release-0.8.5.md#known-limitations), [0.8.0](archive/release-0.8.0.md#known-limitations), [0.7.10](archive/release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations) and [0.7.0](archive/release-0.7.0.md#known-limitations) known limitations still apply, with V-27, V-28, V-33 to V-36, V-31, V-32 and V-02 |
 
 ## Work-PC Live checks
 
@@ -156,7 +156,7 @@ still apply: variables stay on the work PC, raw responses are not sent back, and
 | Rank | Check | Evidence to seek |
 | --- | --- | --- |
 | 1 | Record `Get-FileHash` of `%APPDATA%\AdoToolkit\config.json`, install 0.9.10, then run `Get-AdoProfile` and `Connect-Ado` | The hash is unchanged, no warning appears, and `Get-Module AdoToolkit -ListAvailable` shows 0.9.10 with seven files in its folder |
-| 2 | Checks 2 to 4 of the [0.9.5 notes](release-0.9.5.md#work-pc-live-checks), with the 0.9.10 package | As listed there: the one `S0-9` verdict of `tests/Live/Connection.Live.ps1` after its signature note, the Error column and the chart captions of a report whose text is cut, and then the earlier checks with V-33, `-SkipAttachments`, the probes of V-28 and V-34 to V-36, and V-31, V-32, V-02, V-01 and V-03. All still pending |
+| 2 | Checks 2 to 4 of the [0.9.5 notes](archive/release-0.9.5.md#work-pc-live-checks), with the 0.9.10 package | As listed there: the one `S0-9` verdict of `tests/Live/Connection.Live.ps1` after its signature note, the Error column and the chart captions of a report whose text is cut, and then the earlier checks with V-33, `-SkipAttachments`, the probes of V-28 and V-34 to V-36, and V-31, V-32, V-02, V-01 and V-03. All still pending |
 
 ## Local validation and developer handoff
 

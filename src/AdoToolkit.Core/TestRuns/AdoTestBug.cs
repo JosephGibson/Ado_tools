@@ -1,3 +1,5 @@
+using AdoToolkit.Core.Connections;
+
 namespace AdoToolkit.Core.TestRuns;
 
 // An open bug of a reported test: associated with one of its test results, linked to its Test Case
@@ -17,6 +19,10 @@ public sealed class AdoTestBug
     // not be read. Never false in a retrieved set: a closed bug is left out.
     public bool? IsOpen { get; init; }
     public bool IsResolved { get; init; }
+    // The day the bug was filed, as the server records it, in UTC; null when it could not be read.
+    public DateTimeOffset? CreatedDate { get; init; }
+    // Who the bug is assigned to; null when nobody is, or when it could not be read.
+    public AdoIdentityRef? AssignedTo { get; init; }
     public bool IsAssociatedWithResult { get; init; }
     public bool IsLinkedToTestCase { get; init; }
     public required Uri WebUrl { get; init; }

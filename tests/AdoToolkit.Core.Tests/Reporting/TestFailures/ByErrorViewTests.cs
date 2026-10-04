@@ -54,8 +54,9 @@ public sealed class ByErrorViewTests
             "<span class=\"fact status-flaky\"><span aria-hidden=\"true\">≈</span> Flaky <strong>1</strong></span>",
             "<span class=\"fact\"><span class=\"trend trend-new\"><span aria-hidden=\"true\">✦</span> New</span> <strong>1</strong></span>",
             "<span class=\"fact\"><span class=\"trend trend-since\">Recurring</span> <strong>3</strong></span>",
-            "<span class=\"fact fact-tracked\">With an open bug <strong>1</strong> <a class=\"open-bug-marker\"",
-            ">#5101</a></span>",
+            // Bug 5101 was filed after the build was queued, so the facts line carries the marker too.
+            "<span class=\"fact fact-tracked\">With an open bug <strong>1</strong> <a class=\"open-bug-marker bug-new\"",
+            "✦</span> #5101</a></span>",
             "<span class=\"fact fact-untracked\">Without an open bug <strong>3</strong></span>",
             "<span class=\"fact\">Tests_EN <strong>3</strong></span><span class=\"fact\">Tests_FR <strong>3</strong></span>",
             "<span class=\"fact\">Common frame <code title=\"Synthetic.Web.Pages.CheckoutPage.Submit\">CheckoutPage.Submit()</code> <strong>4</strong></span>",

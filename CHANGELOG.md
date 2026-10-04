@@ -6,6 +6,15 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.9.15 - 2026-10-04
+
+### Added
+
+- The failed-test report says how old each open bug is and who has it. A bug filed at or after the build went into the queue carries **✦** on its chip, in a paler red, wherever the chip appears, and the Open bugs view counts those bugs above its table. Each bug the report read whole also shows the day it was filed and its assignee, or **Unassigned**, in the Open bugs view and on the test's card, where the report's search can find an owner by name.
+- `Get-AdoBuildTestFailure` returns `CreatedDate` and `AssignedTo` on each bug of a reported test, read in the work item batch it already sent. Neither joins the default bug table; select them explicitly.
+
+Details: [release notes](docs/release-0.9.15.md)
+
 ## 0.9.10 - 2026-10-04
 
 ### Changed
@@ -22,7 +31,7 @@ Details: [release notes](docs/release-0.9.10.md)
 - Piping an object you built by hand, without its numeric ID, now reports an error for that object in your language and leaves the rest of the pipeline running; it used to end the pipeline with an untranslated .NET error.
 - Four help topics say what their examples do, and four guides link every cmdlet they use, in both English and French.
 
-Details: [release notes](docs/release-0.9.5.md)
+Details: [release notes](docs/archive/release-0.9.5.md)
 
 ## 0.9.0 - 2026-10-04
 

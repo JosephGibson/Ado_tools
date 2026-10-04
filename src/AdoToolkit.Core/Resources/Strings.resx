@@ -273,6 +273,9 @@
   <data name="TestReportNoOpenBugs" xml:space="preserve"><value>No open bug is linked to a test in this report.</value></data>
   <data name="TestReportBugSource" xml:space="preserve"><value>Linked through</value></data>
   <data name="TestReportBugNotRead" xml:space="preserve"><value>Not read</value></data>
+  <data name="TestReportBugOpenedAfterQueued" xml:space="preserve"><value>Opened after this build was queued</value></data>
+  <data name="TestReportBugsOpenedAfterQueued" xml:space="preserve"><value>Opened after this build was queued</value></data>
+  <data name="TestReportUnassigned" xml:space="preserve"><value>Unassigned</value></data>
   <data name="TestReportTestRuns" xml:space="preserve"><value>Test runs</value></data>
   <data name="TestReportReportedTests" xml:space="preserve"><value>Reported tests</value></data>
   <data name="TestReportRunAttachmentCounts" xml:space="preserve"><value>{0} listed, {1} downloaded</value></data>

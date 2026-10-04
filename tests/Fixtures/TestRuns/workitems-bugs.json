@@ -9,7 +9,13 @@
         "System.Title": "Le panier perd un article",
         "System.State": "Active",
         "System.WorkItemType": "Bug",
-        "System.TeamProject": "Équipe Web"
+        "System.TeamProject": "Équipe Web",
+        "System.CreatedDate": "2026-09-14T08:12:30.4Z",
+        "System.AssignedTo": {
+          "displayName": "Nadia Roy",
+          "id": "11111111-aaaa-bbbb-cccc-222222222222",
+          "uniqueName": "CONTOSO\\nroy"
+        }
       },
       "url": "https://ado.example.test/Collection/_apis/wit/workItems/2001"
     },
@@ -21,7 +27,8 @@
         "System.Title": "Ancien délai d’expiration",
         "System.State": "Closed",
         "System.WorkItemType": "Bug",
-        "System.TeamProject": "Équipe Web"
+        "System.TeamProject": "Équipe Web",
+        "System.CreatedDate": "2026-08-01T17:45:00Z"
       },
       "url": "https://ado.example.test/Collection/_apis/wit/workItems/2002"
     }

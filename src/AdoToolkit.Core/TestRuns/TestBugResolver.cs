@@ -16,7 +16,8 @@ namespace AdoToolkit.Core.TestRuns;
 internal sealed class TestBugResolver
 {
     private const string BugCategory = "Microsoft.BugCategory";
-    private static readonly string[] Fields = ["System.Id", "System.Title", "System.State", "System.WorkItemType", "System.TeamProject"];
+    private static readonly string[] Fields = ["System.Id", "System.Title", "System.State", "System.WorkItemType", "System.TeamProject",
+        "System.CreatedDate", "System.AssignedTo"];
     // Used only when a project's metadata cannot be read: the Bug type name, and the Completed and
     // Removed states of the Bug types of the Agile, Scrum and CMMI processes.
     private static readonly string[] DefaultBugTypes = ["Bug"];
@@ -118,7 +119,8 @@ internal sealed class TestBugResolver
                 if (RequestBuilder.IsPathSegment(type)) cache.TryGetStates(owner, type, out known);
                 if (known is null || !known.TryGetValue(state, out category)) Degraded(owner);
             }
-            bugs[id] = new BugData(id, Text(item, "System.Title"), state, type, owner, reported, category, IsOpen(state, category), true);
+            bugs[id] = new BugData(id, Text(item, "System.Title"), state, type, owner, reported, category, IsOpen(state, category), true,
+                WorkItemFieldValues.Date(item.Fields, "System.CreatedDate"), WorkItemFieldValues.Identity(item.Fields, "System.AssignedTo"));
         }
         return Compose(tests, bugs, linkedBugs);
     }
@@ -141,6 +143,7 @@ internal sealed class TestBugResolver
             {
                 Id = bug.Id, Title = bug.Title, State = bug.State, WorkItemType = bug.Type, TeamProject = bug.TeamProject,
                 StateCategory = bug.Category, IsOpen = bug.IsOpen, IsResolved = bug.IsResolved,
+                CreatedDate = bug.CreatedDate, AssignedTo = bug.AssignedTo,
                 IsAssociatedWithResult = test.Associated.Contains(bug.Id), IsLinkedToTestCase = test.Linked.Contains(bug.Id),
                 WebUrl = AdoWebLinks.WorkItem(connection.CollectionUri, bug.Project, bug.Id),
             }).ToArray()));
@@ -208,7 +211,7 @@ internal sealed class TestBugResolver
 
     // Project is used for requests and links; TeamProject is what a resolved bug reported, if usable.
     private sealed record BugData(int Id, string? Title, string? State, string? Type, string Project, string? TeamProject, string? Category,
-        bool? IsOpen, bool IsResolved)
+        bool? IsOpen, bool IsResolved, DateTimeOffset? CreatedDate = null, AdoIdentityRef? AssignedTo = null)
     {
         internal static BugData Unresolved(int id, string project) => new(id, null, null, null, project, null, null, null, false);
     }

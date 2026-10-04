@@ -84,8 +84,8 @@ try {
         . (Join-Path $PSScriptRoot 'lib/test-results.ps1')
         . (Join-Path $PSScriptRoot 'lib/processes.ps1')
         $steps = [System.Collections.Generic.List[object]]::new()
+        $coreRuns = @()
         try {
-            $coreRuns = @()
             if (-not $SkipTests) {
                 # The Core runs need only the build, so they run beside packaging and product Pester.
                 # en-US runs every test. fr-CA leaves out the classes marked [Trait("Culture",
@@ -171,7 +171,8 @@ try {
                     }
                     $failed = $true
                 }
-                elseif ($pesterRun.TotalCount -eq 0 -or $pesterRun.SkippedCount -gt 0 -or $pesterRun.NotRunCount -gt 0) { $incomplete = $true }
+                elseif ($pesterRun.TotalCount -eq 0 -or $pesterRun.Incomplete -or
+                    ($pesterRun.PassedCount + $pesterRun.FailedCount) -ne $pesterRun.TotalCount) { $incomplete = $true }
             }
             if ($failed) { exit 1 }
             if ($incomplete) { exit 2 }
@@ -179,6 +180,11 @@ try {
         finally {
             # A packaging failure or an error ends the gate, and the Core runs stop with it.
             foreach ($step in $steps) { Stop-AdoGateProcess -Handle $step }
+            # Each run reads its report, then gives its folder back: a gate that left them behind
+            # would fill artifacts/verify with the TRX of every run ever made in this checkout.
+            foreach ($run in $coreRuns) {
+                if (Test-Path -LiteralPath $run.Results) { Remove-Item -LiteralPath $run.Results -Recurse -Force }
+            }
         }
     }
     finally { Pop-Location }

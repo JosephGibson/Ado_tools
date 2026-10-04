@@ -102,6 +102,7 @@ public sealed class GetAdoTestCaseCommand : AdoCmdletBase
                 break;
             case ByWorkItem:
                 EnsureInput(WorkItem!, WorkItem!.CollectionUri, resolved);
+                EnsureIdentifier(WorkItem, nameof(WorkItem.Id), WorkItem.Id);
                 inputs.Add((WorkItem.Id, null));
                 break;
             case ByWiql:
@@ -119,6 +120,8 @@ public sealed class GetAdoTestCaseCommand : AdoCmdletBase
                 break;
             case BySuiteObject:
                 EnsureInput(Suite!, Suite!.CollectionUri, resolved);
+                EnsureIdentifier(Suite, nameof(Suite.PlanId), Suite.PlanId);
+                EnsureIdentifier(Suite, nameof(Suite.Id), Suite.Id);
                 inputs.Add((0, new TestSuiteSelection { Project = Suite.TeamProject, PlanId = Suite.PlanId, SuiteId = Suite.Id, Recurse = Recurse, Suite = Suite }));
                 break;
         }

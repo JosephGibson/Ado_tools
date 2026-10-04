@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-02-2026
+ms.date: 10-04-2026
 PlatyPS schema version: 2024-05-01
 title: Connect-Ado
 ---
@@ -51,7 +51,7 @@ Creates a session connection using an explicit collection URL, a named profile, 
 Connect-Ado -Profile work -Project 'Équipe Web'
 ```
 
-Selects the connection for this runspace.
+Selects the connection of the `work` profile for this runspace, with `Équipe Web` as its project.
 
 ## PARAMETERS
 

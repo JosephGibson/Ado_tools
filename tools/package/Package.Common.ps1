@@ -79,7 +79,9 @@ function Assert-AdoPackage {
     $PackagePath = Resolve-AdoPackagePath -Path $PackagePath
     $files = @(Get-AdoPackageFile -PackagePath $PackagePath)
     $names = @($files | ForEach-Object { [System.IO.Path]::GetRelativePath($PackagePath, $_.FullName).Replace('\', '/') })
-    if (@(Compare-Object -ReferenceObject $required -DifferenceObject $names).Count -ne 0) { throw 'Package files differ from the required layout.' }
+    # Case-sensitive, as Install-AdoToolkit.ps1 compares $layout: a case-only difference must fail
+    # here rather than in the installer, on the user's machine, after the release is published.
+    if (@(Compare-Object -ReferenceObject $required -DifferenceObject $names -CaseSensitive).Count -ne 0) { throw 'Package files differ from the required layout.' }
     foreach ($file in $files | Where-Object { $_.Extension -in @('.xml', '.ps1xml') }) {
         $xml = Read-AdoPackageXml -Path $file.FullName
         if ($file.Name -like '*-Help.xml' -and $xml.SelectNodes("//*[local-name()='command']").Count -ne 22) {

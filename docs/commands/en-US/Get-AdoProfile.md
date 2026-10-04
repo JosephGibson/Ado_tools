@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-04-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoProfile
 ---
@@ -39,7 +39,7 @@ Reads the local configuration without contacting the server. Returns profiles so
 Get-AdoProfile -Name 'work*'
 ```
 
-Lists locally saved connection profiles.
+Lists the locally saved connection profiles whose name begins with `work`.
 
 ## PARAMETERS
 

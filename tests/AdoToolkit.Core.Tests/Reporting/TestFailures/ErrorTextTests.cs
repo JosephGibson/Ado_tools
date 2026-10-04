@@ -33,6 +33,23 @@ public sealed class ErrorTextTests
         Assert.DoesNotContain("same-as", html, StringComparison.Ordinal);
     }
 
+    // A summary cut at its character limit must not split a surrogate pair: the lone half reaches
+    // the sink, where the encoder replaces it with U+FFFD, in the Overview cell and in its title.
+    [Fact]
+    public void SummaryCutAtItsLimitKeepsTheAstralCharacterWhole()
+    {
+        // The pair straddles the 240th character, so a raw slice keeps only its high half.
+        string message = new string('x', 239) + "\U0001F600 timed out";
+        Assert.Equal('\uD83D', message[239]);
+
+        string? line = HtmlTestFailureRenderer.LatestError(Failure(1, 1, message, "   at Synthetic.Ui.Checkout.Submit()"));
+
+        Assert.NotNull(line);
+        Assert.DoesNotContain(line, char.IsSurrogate);
+        string html = TestFailureReportFixture.Render(Model([Failure(1, 1, message, "   at Synthetic.Ui.Checkout.Submit()")]));
+        Assert.DoesNotContain("&#xFFFD;", html, StringComparison.Ordinal);
+    }
+
     // 200 failures with 14 attempts that all carry the same message and 40-frame trace: the largest
     // report the guides describe, now that no attempt refers to an earlier one for its text.
     [Fact]

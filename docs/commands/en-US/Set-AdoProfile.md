@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-04-2026
 PlatyPS schema version: 2024-05-01
 title: Set-AdoProfile
 ---
@@ -42,7 +42,8 @@ Writes the profile atomically and preserves unspecified values, unrelated option
 Set-AdoProfile -Name work -CollectionUrl 'https://ado.example.test/Collection' -DefaultProject 'Équipe Web' -DefaultProfile
 ```
 
-Creates or updates a local connection profile.
+Creates or updates the local profile `work` for that collection, with `Équipe Web` as its default
+project, and makes it the default profile.
 
 ### Example 2
 

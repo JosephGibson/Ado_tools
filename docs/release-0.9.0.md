@@ -18,7 +18,7 @@ README lists as confirmed are still connections, projects, builds and test runs.
 
 0.9.0 adds no cmdlet, parameter or output property, and changes no configuration setting.
 The configuration file format, the JSON report schema, the help in both cultures and the
-seven-file package layout are unchanged. The [0.8.5 notes](release-0.8.5.md) still describe
+seven-file package layout are unchanged. The [0.8.5 notes](archive/release-0.8.5.md) still describe
 the module.
 
 ### Worktrees
@@ -117,8 +117,6 @@ None. 0.9.0 corrects no defect of the module or of the tooling.
 
 ### Existing tests changed
 
-| Test | Change |
-| --- | --- |
 Core tests:
 
 | Test | Change |
@@ -160,7 +158,7 @@ No fixture or golden was added, changed or removed.
 | Tag a bug opened in this run as New, in a lighter red, as the developer asked in the last design pass of 0.8.5 | Still open: it needs each bug's creation date (`System.CreatedDate`), a new property of `AdoTestBug`, which is public output, and a live check on Server 2020. 0.9.0 changes no product code |
 | The restore rule of `.claude/settings.json` cannot tell a worktree from the main checkout | A permission rule matches the command text only. `AGENTS.md` limits the routine use to a worktree, and the restore runs in locked mode against the lock files |
 | Two `verify` runs in the same checkout still collide on `bin/`, `obj/` and `artifacts/` | By design: each session that builds works in a worktree of its own. `verify` does not lock the tree |
-| The findings of 0.8.5, 0.8.0, 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.8.5](release-0.8.5.md#findings-not-fixed), [0.8.0](archive/release-0.8.0.md#findings-not-fixed), [0.7.10](archive/release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
+| The findings of 0.8.5, 0.8.0, 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.8.5](archive/release-0.8.5.md#findings-not-fixed), [0.8.0](archive/release-0.8.0.md#findings-not-fixed), [0.7.10](archive/release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
 
 ### Known limitations
 
@@ -171,7 +169,7 @@ No fixture or golden was added, changed or removed.
 | A new `.claude/agents/` folder | Claude Code watches it only when it existed at session start; a session started before needs a restart |
 | A worktree builds on its own | It needs its own restore before `project-check` passes, and its files are not those of the main checkout until the developer merges its branch |
 | The two architecture tests read source text | `ProcessStateTests` and `CultureSelectionTests` find a change of process state, or a read of the culture, by the patterns they search. A change made through a helper in another file, other than the fixtures that `CultureSelectionTests` follows, is not seen |
-| Limits carried over | The [0.8.5](release-0.8.5.md#known-limitations), [0.8.0](archive/release-0.8.0.md#known-limitations), [0.7.10](archive/release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations) and [0.7.0](archive/release-0.7.0.md#known-limitations) known limitations still apply, with V-27, V-28, V-33 to V-36, V-31, V-32 and V-02 |
+| Limits carried over | The [0.8.5](archive/release-0.8.5.md#known-limitations), [0.8.0](archive/release-0.8.0.md#known-limitations), [0.7.10](archive/release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations) and [0.7.0](archive/release-0.7.0.md#known-limitations) known limitations still apply, with V-27, V-28, V-33 to V-36, V-31, V-32 and V-02 |
 
 ## Work-PC Live checks
 
@@ -184,7 +182,7 @@ still apply: variables stay on the work PC, raw responses are not sent back, and
 | Rank | Check | Evidence to seek |
 | --- | --- | --- |
 | 1 | Record `Get-FileHash` of `%APPDATA%\AdoToolkit\config.json`, install 0.9.0, then run `Get-AdoProfile` and `Connect-Ado` | The hash is unchanged, no warning appears, and `Get-Module AdoToolkit -ListAvailable` shows 0.9.0 with seven files in its folder |
-| 2 | Checks 2 to 4 of the [0.8.5 notes](release-0.8.5.md#work-pc-live-checks), with the 0.9.0 package | As listed there: the restyled failed-test report in English and French, then the 0.8.0 checks with V-33, `-SkipAttachments`, the probes of V-28 and V-34 to V-36, and the 0.7.5 checks with V-31, V-32, V-02, V-01 and V-03. All still pending |
+| 2 | Checks 2 to 4 of the [0.8.5 notes](archive/release-0.8.5.md#work-pc-live-checks), with the 0.9.0 package | As listed there: the restyled failed-test report in English and French, then the 0.8.0 checks with V-33, `-SkipAttachments`, the probes of V-28 and V-34 to V-36, and the 0.7.5 checks with V-31, V-32, V-02, V-01 and V-03. All still pending |
 
 ## Local validation and developer handoff
 

@@ -13,6 +13,7 @@ if ([string]::IsNullOrWhiteSpace($env:ADOTOOLKIT_LIVE_PROFILE)) {
     Write-Output 'INCONCLUSIVE S0-9 PROFILE_REQUIRED'
     exit 2
 }
+$settled = $false
 try {
     . (Join-Path $PSScriptRoot '../../tools/package/Package.Common.ps1')
     # Releases ship unsigned with a checksum; a signed release must still verify throughout.
@@ -22,13 +23,16 @@ try {
         Write-Output ('FAIL S0-9 ' + $reason)
         exit 1
     }
-    if ($installed.Signed) { Write-Output 'PASS S0-9 SIGNATURE_VALID' }
-    else { Write-Output 'PASS S0-9 UNSIGNED_RELEASE_INSTALLED' }
+    # S0-9 is one criterion, met by the connection from an installed release: the signature it was
+    # installed with is an observation before that verdict, not a verdict of its own.
+    if ($installed.Signed) { Write-Output 'NOTE S0-9 SIGNATURE_VALID' }
+    else { Write-Output 'NOTE S0-9 UNSIGNED_RELEASE_INSTALLED' }
     Connect-Ado -Profile $env:ADOTOOLKIT_LIVE_PROFILE | Out-Null
     $result = Test-AdoConnection -ErrorAction Stop
     if (-not $result.Success) { Write-Output 'FAIL S0-9 CONNECTION_FAILED'; exit 1 }
     Get-AdoProject -ErrorAction Stop | Out-Null
     Write-Output 'PASS S0-9 CONNECT_TEST_PROJECTS'
+    $settled = $true
     Write-Output 'PASS V-08 WINDOWS_INTEGRATED_ACCESS'
     # Successful requests cannot prove server error-body or error-language behavior.
     Write-Output 'INCONCLUSIVE V-07 NO_ERROR_OBSERVED'
@@ -39,7 +43,8 @@ try {
 catch {
     $code = ($_.FullyQualifiedErrorId -split ',')[0]
     if ($code -notmatch '^Ado[A-Za-z]+$') { $code = 'CHECK_FAILED' }
-    Write-Output ('FAIL S0-9 ' + $code)
+    # A failure after S0-9 was settled does not print a second verdict for it.
+    if (-not $settled) { Write-Output ('FAIL S0-9 ' + $code) }
     Write-Output 'INCONCLUSIVE V-07 ERROR_SHAPE_REQUIRES_WORK_CONFIRMATION'
     Write-Output 'INCONCLUSIVE V-08 ACCESS_NOT_CONFIRMED'
     Write-Output 'INCONCLUSIVE V-14 PROJECT_PAGING_NOT_CONFIRMED'

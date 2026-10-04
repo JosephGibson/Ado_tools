@@ -41,6 +41,7 @@ public sealed class GetAdoTestSuiteCommand : AdoCmdletBase
         if (InputObject is not null)
         {
             EnsureInput(InputObject, InputObject.CollectionUri, connection);
+            EnsureIdentifier(InputObject, nameof(InputObject.Id), InputObject.Id);
             planId = InputObject.Id;
             project = InputObject.TeamProject;
         }

@@ -160,6 +160,27 @@ Describe 'Reads' {
         $env:ADOTOOLKIT_RUNNER_PROBE | Should -BeNullOrEmpty
     }
 
+    # "2 incomplete and never a pass": the Core path proves every discovered test ran, so the
+    # Pester path must too. Both cases hide in an aggregate: a file that discovers nothing adds
+    # zero to the sum, and an inconclusive test is counted as discovered but neither passed nor failed.
+    It 'reports a Pester run as incomplete when <Case>' -TestCases @(
+        @{ Case = 'one file discovers no tests'
+            Content = 'if ($false) { Describe ''Never'' { It ''skipped by discovery'' { 1 | Should -Be 1 } } }' }
+        @{ Case = 'a test is inconclusive'
+            Content = 'Describe ''Probe'' { It ''is inconclusive'' { Set-ItResult -Inconclusive -Because ''a live server is needed'' } }' }
+    ) {
+        param($Case, $Content)
+        $folder = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+        New-TestFile -Path (Join-Path $folder 'Reads.Tests.ps1') -Content "Describe 'Reads' { It 'passes' { 1 | Should -Be 1 } }"
+        New-TestFile -Path (Join-Path $folder 'Quiet.Tests.ps1') -Content $Content
+
+        $outcome = Get-PesterOutcome -TestPath @($folder)
+
+        $outcome.Failures | Should -BeNullOrEmpty
+        $outcome.Unavailable | Should -BeTrue
+        $outcome.Warnings | Should -Not -BeNullOrEmpty
+    }
+
     It 'stops a process that runs past its limit and reports the timeout' {
         $watch = [System.Diagnostics.Stopwatch]::StartNew()
 

@@ -32,10 +32,15 @@ public static class HtmlTestFailureRenderer
         {
             string trimmed = line.Trim();
             if (trimmed.Length == 0) continue;
-            return trimmed.Length <= MaximumSummaryCharacters ? trimmed : trimmed[..MaximumSummaryCharacters] + "…";
+            return trimmed.Length <= MaximumSummaryCharacters ? trimmed : Shorten(trimmed, MaximumSummaryCharacters) + "…";
         }
         return null;
     }
+
+    // At most length characters, without splitting a surrogate pair: a lone half would reach the
+    // sink, where the encoder replaces it with U+FFFD. Document uses it for every other cut.
+    private static string Shorten(string text, int length) =>
+        text.Length <= length ? text : text[..(length > 0 && char.IsHighSurrogate(text[length - 1]) ? length - 1 : length)];
 
     // The error line of the last failed attempt, else of any attempt. Public for the console table
     // of AdoTestFailure, which shows the line that the report's tables show.
@@ -515,10 +520,6 @@ public static class HtmlTestFailureRenderer
             while (end < text.Length && end < SampleCharacters && !(text[end] == '\n' && ++lines > SampleLines)) end++;
             return end >= text.Length ? text : Shorten(text, end).TrimEnd() + "\n…";
         }
-
-        // At most length characters, without splitting a surrogate pair.
-        private static string Shorten(string text, int length) =>
-            text.Length <= length ? text : text[..(length > 0 && char.IsHighSurrogate(text[length - 1]) ? length - 1 : length)];
 
         // One entry per bug, each with the tests it is linked to. A bug that was read comes before one
         // that was not; among read bugs the one with the most tests comes first. Ties follow the bug ID.

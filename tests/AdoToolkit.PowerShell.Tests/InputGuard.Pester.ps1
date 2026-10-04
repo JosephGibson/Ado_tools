@@ -46,6 +46,31 @@ Describe 'Hand-made pipeline input' {
         $server.Requests.Count | Should -Be 0
     }
 
+    # The other half of an incomplete object: InputGuard describes only reference-typed members, so
+    # an absent integer identifier reached Core as 0 and failed there with a terminating
+    # ArgumentOutOfRangeException that carried untranslated text and abandoned the rest of the pipeline.
+    It '<Command> reports a <Type> whose identifier is absent as a per-input error' -TestCases @(
+        @{ Command = 'Get-AdoTestSuite'; Type = 'AdoTestPlan'; Class = 'GetAdoTestSuiteCommand'
+            Bag = @{ Name = 'Plan'; TeamProject = 'Équipe Web' } }
+        @{ Command = 'Get-AdoBuild'; Type = 'AdoBuildDefinition'; Class = 'GetAdoBuildCommand'
+            Bag = @{ Name = 'Web CI'; TeamProject = 'Équipe Web'; WebUrl = 'https://ado.example.test/Collection/_build' } }
+    ) {
+        param($Command, $Type, $Class, $Bag)
+        $failures = $null
+        $inputs = @(1, 2 | ForEach-Object { [pscustomobject] ($Bag + @{ CollectionUri = $server.Uri }) })
+
+        $output = @($inputs | & $Command -ErrorAction SilentlyContinue -ErrorVariable failures -WarningAction SilentlyContinue)
+
+        $output.Count | Should -Be 0
+        # One error per input: a zero identifier does not stop the pipeline.
+        @($failures).Count | Should -Be 2
+        foreach ($failure in $failures) {
+            $failure.FullyQualifiedErrorId | Should -Be "AdoRequest,AdoToolkit.$Class"
+            [string] $failure | Should -Match "\b$Type\b"
+        }
+        $server.Requests.Count | Should -Be 0
+    }
+
     It 'Get-AdoTestCase reports an incomplete suite' {
         { Get-AdoTestCase -Suite ([pscustomobject]@{ Id = 44; PlanId = 1 }) -ErrorAction Stop } |
             Should -Throw -ErrorId 'AdoRequest,AdoToolkit.GetAdoTestCaseCommand' -ExpectedMessage '*AdoTestSuite*'

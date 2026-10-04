@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-02-2026
+ms.date: 10-04-2026
 PlatyPS schema version: 2024-05-01
 title: Get-AdoProject
 ---
@@ -39,7 +39,7 @@ Lit toutes les pages de projets avec l’API version 6.0. Filtre Name avec les c
 Get-AdoProject -Name 'Équipe*' -Top 5
 ```
 
-Liste les projets de la collection connectée.
+Liste au plus cinq projets de la collection connectée dont le nom commence par `Équipe`.
 
 ## PARAMETERS
 

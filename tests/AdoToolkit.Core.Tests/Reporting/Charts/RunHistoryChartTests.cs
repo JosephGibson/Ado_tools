@@ -115,6 +115,29 @@ public sealed class RunHistoryChartTests
         }
     }
 
+    // A bar caption cut at its character limit must not split a surrogate pair: the lone half
+    // reaches the sink, where the encoder replaces it with U+FFFD under a correct tooltip.
+    [Fact]
+    public void BarCaptionCutAtItsLimitKeepsTheAstralCharacterWhole()
+    {
+        // The pair straddles the last character the caption keeps, so a raw slice keeps its high half.
+        string number = new string('N', 26) + "\U0001F680 integration suite";
+        Assert.Equal('\uD83D', number[26]);
+        AdoBuildTestSummary item = new()
+        {
+            BuildId = 1, BuildNumber = number, SourceBranch = "refs/heads/main",
+            FinishTime = new DateTimeOffset(2026, 9, 16, 12, 30, 0, TimeSpan.Zero),
+            Passed = 1, Failed = 0, Flaky = 0, Other = 0, IsAvailable = true, IsCurrent = true,
+            WebUrl = new Uri("https://remote.example.test/wrong"),
+        };
+
+        string html = Render([item], CultureInfo.GetCultureInfo("en-US"));
+
+        // The sink encodes a lone half as the replacement character, so the caption would
+        // contradict the tooltip, which carries the whole build number.
+        Assert.DoesNotContain("&#xFFFD;", html, StringComparison.Ordinal);
+    }
+
     private static string Render(IReadOnlyList<AdoBuildTestSummary> history, CultureInfo culture)
     {
         using StringWriter writer = new(culture);

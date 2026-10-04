@@ -28,6 +28,8 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
   `unavailable` is `2`.
 - In PowerShell, `& .\tools\dev.ps1 <command> -Format Object` returns objects.
 - Several stages: `& .\tools\dev.ps1 verify -Stage @('configuration', 'tooling-layout')`.
+  Every supplied name is checked against the plan, an empty one included, so a selection that
+  names no stage is refused instead of running the whole gate.
 
 ## Discovery
 
@@ -50,7 +52,7 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
 | Stage | Checks |
 | --- | --- |
 | `powershell-lint` | Parses every PowerShell file and runs PSScriptAnalyzer with `PSScriptAnalyzerSettings.psd1` |
-| `powershell-test` | Runs `tools/tests/*.Tests.ps1` with Pester 5.x, each file in a pwsh process of its own, as many at once as there are logical processors, and merges their results (`Invoke-PesterProcess`, `tools/lib/processes.ps1`). Nothing a process prints reaches the output |
+| `powershell-test` | Runs `tools/tests/*.Tests.ps1` with Pester 5.x, each file in a pwsh process of its own, as many at once as there are logical processors, and merges their results (`Invoke-PesterProcess`, `tools/lib/processes.ps1`). Nothing a process prints reaches the output. Incomplete when a file discovers no test, or a test is skipped, not run or inconclusive |
 | `configuration` | Parses JSON strictly and XML (`.xml`, `.config`, `.csproj`, `.props`, `.targets`, `.slnx`, `.resx`, `.ps1xml`) with DTDs prohibited |
 | `documentation` | In every Markdown file: each relative link resolves, each heading anchor exists, and each code span that starts with `src/`, `tests/`, `tools/`, `docs/`, `.claude/`, `.agents/` or `.github/` names an existing path |
 | `tooling-layout` | `.claude/settings.json` is valid, hook scripts of the settings and of the subagents live under `tools/`, every `@import` in `CLAUDE.md` and `.claude/rules/*.md` resolves, every skill has a body and a Claude wrapper with the same name and description, and every `.claude/agents/<name>.md` has a description and the name `<name>` |
@@ -91,14 +93,16 @@ whichever step ends first. The gate:
    `ADOTOOLKIT_TEST_CULTURE` and `ADOTOOLKIT_UPDATE_GOLDEN` cleared: `en-US` runs every test,
    `fr-CA` runs `--filter Culture!=Invariant`, every class but those that `tests/AGENTS.md`
    marks culture-invariant. Each run writes TRX results to a new folder under
-   `artifacts/verify/`; `Get-AdoTestOutcome` reads the counters. A skipped or undiscovered
-   test, a selection that discovers no test, or a missing counter, exits `2`.
+   `artifacts/verify/`; `Get-AdoTestOutcome` reads the counters, then the gate removes the
+   folder. A skipped or undiscovered test, a selection that discovers no test, or a missing
+   counter, exits `2`.
 4. Meanwhile, stages with `tools/package/Publish-AdoToolkitPackage.ps1 -NoBuild` and
    validates with `Assert-AdoPackage` (see [Packaging and releases](#packaging-and-releases)).
 5. Then runs `tests/AdoToolkit.PowerShell.Tests/*.Pester.ps1` against the staged module,
    each file in a pwsh process of its own, side by side (`Invoke-PesterProcess`). Nothing
-   a cmdlet prints reaches the gate's output. No tests, a skipped test or a test that did
-   not run exits `2`. `ADOTOOLKIT_CONFIG_PATH` names a file that does not exist.
+   a cmdlet prints reaches the gate's output. Completeness is read per file, as for the Core
+   runs: a file that discovers no test, or any test that is skipped, not run or inconclusive,
+   exits `2`. `ADOTOOLKIT_CONFIG_PATH` names a file that does not exist.
 6. Once product Pester has ended, reports every step in the order above, then exits `1`
    when any failed and `2` when any other was incomplete. A packaging failure ends the gate
    at once and stops the Core runs.
@@ -168,7 +172,7 @@ Use `.agents/skills/release/SKILL.md` to prepare a release.
 | `tools/package/Test-AdoToolkitPortable.ps1` | Extracts the portable zip and starts its launcher offline, with empty `PATH` and `PSModulePath`; checks the module, the PowerShell version, the architecture and the loaded paths |
 | `tools/package/Install-AdoToolkit.ps1` | End-user installer, shipped beside the zip: checks the zip against its checksum, requires exactly the module layout under one `AdoToolkit/<version>/` folder, installs for the current user and replaces the same version only when the new copy is complete. `-ExpectedThumbprint` also requires valid signatures |
 | `tools/package/Set-AdoToolkitPackageSignature.ps1`, `tools/package/Install-AdoToolkitPackage.ps1` | The signed flow for a staged package, when a code-signing certificate exists |
-| `tools/package/Package.Common.ps1`, `tools/package/Portable.Common.ps1` | Shared path, layout, archive and signature checks |
+| `tools/package/Package.Common.ps1`, `tools/package/Portable.Common.ps1` | Shared path, layout, archive and signature checks. `Assert-AdoPackage` compares the seven file names case-sensitively, as the installer compares `$layout`, so a case-only difference fails in the gate and not on a user's machine |
 | `tools/package/portable/` | The launcher and `README.txt` shipped inside the portable zip |
 | `tools/BuildModules.psd1` | The module versions that a release build requires exactly |
 

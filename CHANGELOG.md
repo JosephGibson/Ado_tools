@@ -6,6 +6,14 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.9.10 - 2026-10-04
+
+### Changed
+
+- The module itself is unchanged apart from its version number: the cmdlets, the reports, the help and the configuration file are those of 0.9.5. This version changes the tools and the procedures that develop AdoToolkit.
+
+Details: [release notes](docs/release-0.9.10.md)
+
 ## 0.9.5 - 2026-10-04
 
 ### Fixed
@@ -22,7 +30,7 @@ Details: [release notes](docs/release-0.9.5.md)
 
 - The module itself is unchanged apart from its version number: the cmdlets, the reports, the help and the configuration file are those of 0.8.5.
 
-Details: [release notes](docs/release-0.9.0.md)
+Details: [release notes](docs/archive/release-0.9.0.md)
 
 ## 0.8.5 - 2026-10-03
 

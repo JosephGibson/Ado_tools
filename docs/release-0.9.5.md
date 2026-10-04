@@ -25,7 +25,7 @@ README lists as confirmed are still connections, projects, builds and test runs.
 
 0.9.5 adds no cmdlet, parameter or output property, and changes no configuration setting.
 The configuration file format, the JSON report schema, the help structure in both cultures
-and the seven-file package layout are unchanged. The [0.9.0 notes](release-0.9.0.md) describe
+and the seven-file package layout are unchanged. The [0.9.0 notes](archive/release-0.9.0.md) describe
 the agent tooling and the test runs; the [0.8.5 notes](archive/release-0.8.5.md) describe the
 module.
 
@@ -190,7 +190,7 @@ through `PSObject.Properties`, so a result without it is read on its totals alon
 | `tests/AdoToolkit.PowerShell.Tests/TestRuns.Pester.ps1`, the test that sends the same requests with 6 at a time, asserts an exact concurrency peak and failed once during this validation | The assertion reads the peak the fake server observed and requires exactly 2; under a loaded gate a third request overlapped, "Expected 2, but got 3". It passed in every other run, and nothing in 0.9.5 touches retrieval, the HTTP pipeline or the fake server, so the flake predates this release. Replacing the exact peak with the bound, or separating the stages whose request counts the test relies on, changes a product test and belongs to a pass of its own |
 | Tag a bug opened in this run as New, in a lighter red, as the developer asked in the last design pass of 0.8.5 | Still open: it needs each bug's creation date (`System.CreatedDate`), a new property of `AdoTestBug`, which is public output, and a live check on Server 2020 |
 | 94 `pester-*.txt` files left in `artifacts/verify/` by the reporting child of the gate | Not a defect of this tree: 0.9.0 deleted the code that wrote them, and the newest is dated before that change. They were removed by hand before the final validation, with the 323 TRX folders of T1 |
-| The findings of 0.9.0, 0.8.5, 0.8.0, 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.9.0](release-0.9.0.md#findings-not-fixed), [0.8.5](archive/release-0.8.5.md#findings-not-fixed), [0.8.0](archive/release-0.8.0.md#findings-not-fixed), [0.7.10](archive/release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
+| The findings of 0.9.0, 0.8.5, 0.8.0, 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.9.0](archive/release-0.9.0.md#findings-not-fixed), [0.8.5](archive/release-0.8.5.md#findings-not-fixed), [0.8.0](archive/release-0.8.0.md#findings-not-fixed), [0.7.10](archive/release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
 
 ### Known limitations
 
@@ -200,7 +200,7 @@ through `PSObject.Properties`, so a result without it is read on its totals alon
 | A hand-made input is guarded member by member | `EnsureComplete` covers every reference-typed member that `InputGuard` describes; integers are covered where a cmdlet reads them. An object with a plausible but wrong identifier is a valid request, and the server answers it |
 | Completeness is read from Pester's counters | A test that Pester reports as passed is counted as run. A file that fails during discovery is already a failure, not an incomplete run |
 | The case-sensitive layout check compares names | The gate and the installer compare file names, not the filesystem. Windows refuses a direct case-only rename, which is why the regression test renames through a staging name |
-| Limits carried over | The [0.9.0](release-0.9.0.md#known-limitations), [0.8.5](archive/release-0.8.5.md#known-limitations), [0.8.0](archive/release-0.8.0.md#known-limitations), [0.7.10](archive/release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations) and [0.7.0](archive/release-0.7.0.md#known-limitations) known limitations still apply, with V-27, V-28, V-33 to V-36, V-31, V-32 and V-02 |
+| Limits carried over | The [0.9.0](archive/release-0.9.0.md#known-limitations), [0.8.5](archive/release-0.8.5.md#known-limitations), [0.8.0](archive/release-0.8.0.md#known-limitations), [0.7.10](archive/release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations) and [0.7.0](archive/release-0.7.0.md#known-limitations) known limitations still apply, with V-27, V-28, V-33 to V-36, V-31, V-32 and V-02 |
 
 ## Work-PC Live checks
 
@@ -216,7 +216,7 @@ a user can see and the one live check that changed.
 | 1 | Record `Get-FileHash` of `%APPDATA%\AdoToolkit\config.json`, install 0.9.5, then run `Get-AdoProfile` and `Connect-Ado` | The hash is unchanged, no warning appears, and `Get-Module AdoToolkit -ListAvailable` shows 0.9.5 with seven files in its folder |
 | 2 | Run `tests/Live/Connection.Live.ps1` with `ADOTOOLKIT_LIVE_PROFILE` set | The first line is `NOTE S0-9 SIGNATURE_VALID` or `NOTE S0-9 UNSIGNED_RELEASE_INSTALLED`, and exactly one `S0-9` verdict follows, `PASS S0-9 CONNECT_TEST_PROJECTS`. Exit `2` for the `V-07`, `V-08`, `V-14` and `V-16` lines is expected |
 | 3 | Export a failed-test report for a build whose tests carry an error message longer than 240 characters, and read the Error column | Each cell ends in an ellipsis and holds no replacement character; the cell's tooltip holds the whole line. A build number longer than 28 characters gives the same result in the chart's bar captions. Only a message or build number with an astral character at the cut can show the defect, so a clean report is consistent with the fix and does not prove it |
-| 4 | Checks 1 and 2 of the [0.9.0 notes](release-0.9.0.md#work-pc-live-checks), with the 0.9.5 package | As listed there: the restyled failed-test report in English and French, then the 0.8.0 checks with V-33, `-SkipAttachments`, the probes of V-28 and V-34 to V-36, and the 0.7.5 checks with V-31, V-32, V-02, V-01 and V-03. All still pending |
+| 4 | Checks 1 and 2 of the [0.9.0 notes](archive/release-0.9.0.md#work-pc-live-checks), with the 0.9.5 package | As listed there: the restyled failed-test report in English and French, then the 0.8.0 checks with V-33, `-SkipAttachments`, the probes of V-28 and V-34 to V-36, and the 0.7.5 checks with V-31, V-32, V-02, V-01 and V-03. All still pending |
 
 ## Local validation and developer handoff
 

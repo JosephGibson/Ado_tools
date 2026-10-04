@@ -22,7 +22,7 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
 | `verify -Stage <name>` | Only the named stages. Never a pass: `incomplete`, or `fail` |
 | `verify -SkipTests` | Every check except tests. Never a pass: `incomplete`, or `fail` |
 | `diagnose` | Presence and version of each required tool and of ripgrep |
-| `bootstrap [-Install]` | Diagnostics; `-Install` installs missing modules from PSGallery for the current user and actionlint/ripgrep with winget. Never installs the .NET SDK |
+| `bootstrap [-Install]` | Diagnostics; `-Install` installs missing modules from PSGallery for the current user and actionlint, ripgrep and the GitHub CLI with winget. Never installs the .NET SDK |
 
 - `Status` decides the exit code: `ok` or `pass` is `0`, `fail` is `1`, `incomplete` or
   `unavailable` is `2`.
@@ -136,6 +136,8 @@ stage reads no build output and writes nothing to `bin/`, `obj/` or `artifacts/`
 | PlatyPS 1.x | Compiled help in the gate and in packaging | `Install-Module Microsoft.PowerShell.PlatyPS -MinimumVersion 1.0 -MaximumVersion 1.999.999 -Scope CurrentUser -Repository PSGallery` |
 | actionlint | `workflow-lint` | `winget install --id rhysd.actionlint --exact --source winget` |
 | ripgrep (recommended) | Faster discovery | `winget install --id BurntSushi.ripgrep.MSVC --exact --source winget` |
+| Codex CLI and `jq` (optional) | The plan critique of `critique-plan`: the critic runs through `codex exec` on the developer's ChatGPT plan. The skill names a missing tool; no stage needs it | Installed for the account, with both on `PATH` |
+| GitHub CLI (recommended) | The release handoff: it opens the pull request and watches its check. Listed only where workflow files exist; no stage needs it | `winget install --id GitHub.cli --exact --source winget`, then `gh auth login` |
 
 - Pester stays on 5.x because the tooling depends on its result format.
 - winget extends `PATH` for new processes: open a new terminal after it installs a tool.
@@ -251,7 +253,10 @@ git push <remote> :refs/tags/v<version>; git tag -d v<version>
 
 A pull request that passes is merged with Squash and merge, under the commit title GitHub
 proposes: the pull-request title, then ` (#<number>)`. The `release` skill sets the title
-of a release pull request, `AdoToolkit <version>: <summary>`.
+of a release pull request, `AdoToolkit <version>: <summary>`: its first handoff command ends
+with `gh pr create`, which opens the pull request with that title already set, and its second
+runs `gh pr checks <branch> --watch --fail-fast` and opens the page once this check passes.
+Where the GitHub CLI is absent, the skill gives a prefilled compare page instead.
 
 ### Setup action
 
@@ -316,7 +321,8 @@ completely; an unsigned one is accepted.
 | `.claude/settings.json` | Permissions and hooks for Claude |
 
 Skill purposes and procedures live in their bodies. `release` and `rewrite` require
-explicit invocation; `fix-bug` and `update-goldens` may be selected automatically.
+explicit invocation; `fix-bug`, `update-goldens` and `critique-plan` may be selected
+automatically.
 
 Subagents and workflows are Claude-only. Codex reads `AGENTS.md` and `.agents/skills/`
 and has no counterpart of either.
@@ -325,11 +331,13 @@ and has no counterpart of either.
 | --- | --- | --- |
 | `tools/guard-git.ps1` | Before a shell command | Checks command text against the Git boundary in `AGENTS.md`; not a sandbox |
 | `tools/validate-edit.ps1` | After an edit | Parses the edited PowerShell, JSON or XML file and reports a syntax error, or that `tools/dev.ps1`, which it loads, does not load. A file in `.claude/worktrees/<name>/` is checked against that worktree, whether `CLAUDE_PROJECT_DIR` names the worktree or the main checkout. The file is already written; the hook cannot undo it |
+| `tools/guard-plan.ps1` | Before an ExitPlanMode call, and after a `Write` | Blocks a plan that records no critique pass, and reminds when a plan written under `docs/plans/` records none. It reads the plan text of the call and checks the record, not the run; see [Plan critique](#plan-critique) |
 | `tools/guard-readonly.ps1` | Before a shell command of `area-reviewer` or `docs-sync`, from their front matter | Allows one plain `git diff` command or `tools/dev.ps1 find` command, without chaining, pipes, redirection or substitution; not a sandbox |
 
-Dot-sourced, `tools/guard-git.ps1` and `tools/guard-readonly.ps1` define their functions
-and stop. `tools/tests/Hooks.Tests.ps1` checks their rules and their answer to each payload
-in its own process, and calls each hook once, as Claude Code does, for its exit code.
+Dot-sourced, `tools/guard-git.ps1`, `tools/guard-plan.ps1` and `tools/guard-readonly.ps1`
+define their functions and stop. `tools/tests/Hooks.Tests.ps1` checks their rules and their
+answer to each payload in its own process, and runs each hook as Claude Code does, for its
+exit code and its output.
 
 - `.claude/settings.json` denies reading and editing secret-like paths, and allows the
   `tools/dev.ps1` commands, `dotnet restore AdoToolkit.slnx --locked-mode`, the Release
@@ -355,6 +363,29 @@ in its own process, and calls each hook once, as Claude Code does, for its exit 
   land in this tree.
 - Claude Code notices a new or changed file in `.claude/agents/` only when that directory
   existed at session start. A session started without it needs a restart.
+
+### Plan critique
+
+The last step of planning is a critique from another model family. `critique-plan` sends
+the plan to the developer's personal `critique` skill, which runs an OpenAI model through
+`codex exec`. That skill is not part of this repository: it lives under
+`~/.claude/skills/critique/` and needs `codex` and `jq` on `PATH`.
+
+| Step | What it does |
+| --- | --- |
+| Artifact | A plan file under `docs/plans/`, or the text of a plan mode plan through a quoted heredoc. Over 10,000 characters the critic stops with exit `2` until the developer confirms the size |
+| Run | `bash ~/.claude/skills/critique/critique --raw --repo --out "$OUT" <plan>`, from the repository root, in the background, with the raw critique written to the session scratchpad. `--repo` lets the critic read this tree read-only, so a finding cites `path:line`; it resolves the root with `git rev-parse` |
+| Triage | A decision, a golden or the public contract names what a finding would change; none of them refutes it. A finding is rejected only on evidence that the behavior it questions is still intended |
+| Record | A `## Critique` section in the plan: each finding with `applied`, `rejected` or `owed` |
+
+- The pass is Claude-only. Under Codex the critic would be the same model family, so the
+  skill records `Critique: skipped` with the reason, and the pass stays owed.
+- `tools/guard-plan.ps1` blocks an ExitPlanMode call whose plan records no pass, and
+  reminds after a `Write` that creates a plan under `docs/plans/` without one. It checks
+  the record, not the run, and an `Edit` is not inspected, so the reminder arrives once,
+  when the file appears.
+- Claude Code reads `.claude/settings.json` at session start, so a change to the hook takes
+  effect in the next session.
 
 ### Review workflow
 

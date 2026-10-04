@@ -157,6 +157,11 @@ function Get-ProjectDiagnostics {
         [void] $tools.Add($state)
     }
     [void] $tools.Add((Get-ToolState -Name 'ripgrep' -Commands @('rg') -Level 'recommended'))
+    # gh is no prerequisite of verify: the release handoff uses it to open the pull request. It is
+    # listed only where workflow files show that the remote is GitHub, as actionlint is.
+    if (@(Get-WorkflowFile -ProjectProfile $projectProfile).Count -gt 0) {
+        [void] $tools.Add((Get-ToolState -Name 'gh' -Commands @('gh') -Level 'recommended'))
+    }
 
     $requiredProblems = @($tools | Where-Object { $_.Level -eq 'required' -and $_.State -ne 'present' })
     return [pscustomobject]@{

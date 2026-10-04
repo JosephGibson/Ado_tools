@@ -12,7 +12,7 @@ param()
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
-$script:ReadOnlySubcommands = @('status', 'diff', 'log', 'show', 'blame')
+$script:ReadOnlySubcommands = @('status', 'diff', 'log', 'show', 'blame', 'rev-parse')
 
 # Options that make Git run a program of the caller's choosing. A read-only subcommand
 # carrying one of these is an arbitrary-code path, not a read: `git -c core.pager=<cmd>
@@ -201,7 +201,7 @@ function Get-GitGuardReason {
     $command = [string](Get-Property -Object $toolInput -Name 'command')
     if ([string]::IsNullOrWhiteSpace($command) -or -not (Test-IsBlockedGitCommand -CommandText $command)) { return $null }
     return 'Blocked by tools/guard-git.ps1: the user owns Git repository state. ' +
-        'Only git status, diff, log, show and blame are allowed, and not with ' +
+        'Only git ' + ($script:ReadOnlySubcommands -join ', ') + ' are allowed, and not with ' +
         ($script:ForbiddenGitOptions -join ', ') + '. Ask the user to run other Git commands.'
 }
 

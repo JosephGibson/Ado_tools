@@ -52,7 +52,9 @@ command prints one compact JSON document.
   and `docs/schemas/testcase.v1.schema.json`. Change it only when the change is the fix,
   and list it in the release notes.
 - Procedures are skills, each in `.agents/skills/<name>/SKILL.md`: `fix-bug`,
-  `update-goldens`, `release`, `rewrite`.
+  `update-goldens`, `release`, `rewrite`, `critique-plan`.
+- A plan is critiqued before it is presented or saved: follow `critique-plan`, and record
+  in the plan which findings it applied, rejected and left owed.
 - Claude subagents `area-reviewer`, `docs-sync` and `fr-translator` live in `.claude/agents/`;
   `.claude/workflows/repo-review.js` reviews the repository by area.
 - Fix named gate failures; report a missing prerequisite by name.
@@ -61,9 +63,10 @@ command prints one compact JSON document.
 
 ## Boundaries
 
-- Git lifecycle belongs to the developer. Use only `status`, `diff`, `log`, `show` and
-  `blame`, without `-c`, `--config-env`, `--exec-path`, `--ext-diff`, `--textconv`,
-  `--output` or `--open-files-in-pager`.
+- Git lifecycle belongs to the developer. Use only `status`, `diff`, `log`, `show`,
+  `blame` and `rev-parse`, without `-c`, `--config-env`, `--exec-path`, `--ext-diff`,
+  `--textconv`, `--output` or `--open-files-in-pager`. The plan critique reads the
+  repository root with `rev-parse`.
 - Worktrees that Claude Code creates in `.claude/worktrees/<name>/` are allowed. The agent
   never commits in, merges or removes one; the developer does. Inside one,
   `dotnet restore AdoToolkit.slnx --locked-mode` is routine.

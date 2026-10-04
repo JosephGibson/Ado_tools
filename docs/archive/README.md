@@ -8,7 +8,7 @@ documentation starts at the [README](../../README.md).
 | Document | Contents |
 | --- | --- |
 | [ado-toolkit-spec.md](ado-toolkit-spec.md) | Technical specification v1.0: architecture, behavior, security, testing, packaging, design decisions, open questions and the verification ledger |
-| [plans/](plans/README.md) | Slice plans, session evidence and the Server 2020 audit fixes |
+| [plans/](plans/README.md) | Slice plans, session evidence, the Server 2020 audit fixes and the 0.8.0 plan |
 | [design.md](design.md) | Design rationale for the first version of the developer tooling in `tools/` |
 | [release-0.2.0.md](release-0.2.0.md) | 0.2.0 release audit: findings, Server 2020 REST contracts and the rules for work-PC live checks |
 | [release-0.3.0.md](release-0.3.0.md) | 0.3.0 release notes: failed-test report changes and the portable release |
@@ -18,6 +18,7 @@ documentation starts at the [README](../../README.md).
 | [release-0.6.5.md](release-0.6.5.md) | 0.6.5 release notes: the changelog, the pull request check, workflow lint and the release handoff; no product change |
 | [release-0.7.0.md](release-0.7.0.md) | 0.7.0 release notes: concurrent requests, the Open bugs view, attachments of every test run, the failed-test report rework and V-33 |
 | [release-0.7.5.md](release-0.7.5.md) | 0.7.5 release notes: audit fixes, French spacing, help and guide corrections and tooling hardening |
+| [release-0.7.10.md](release-0.7.10.md) | 0.7.10 release notes: squash merge of pull requests in the release procedure; no product change |
 
 Release notes for the current and the previous version are in `docs/`.
 

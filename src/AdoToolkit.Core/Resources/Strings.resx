@@ -250,7 +250,6 @@
   <data name="TestReportLatestError" xml:space="preserve"><value>Latest error</value></data>
   <data name="TestReportNoErrorMessage" xml:space="preserve"><value>No error message</value></data>
   <data name="TestReportGroupFailed" xml:space="preserve"><value>{0} of {1} failed</value></data>
-  <data name="TestReportGroupLegend" xml:space="preserve"><value>✕ ended failed · ≈ failed, then passed · ✓ did not fail · n/m: failed attempts out of all attempts</value></data>
   <data name="TestReportNotShown" xml:space="preserve"><value>not shown</value></data>
   <data name="TestReportFailingIn" xml:space="preserve"><value>Failing in</value></data>
   <data name="TestReportAnyGroup" xml:space="preserve"><value>Any</value></data>
@@ -279,7 +278,6 @@
   <data name="TestReportRunAttachmentCounts" xml:space="preserve"><value>{0} listed, {1} downloaded</value></data>
   <data name="TestReportLatestRun" xml:space="preserve"><value>Latest run</value></data>
   <data name="TestReportHistoryByTest" xml:space="preserve"><value>History by test</value></data>
-  <data name="TestReportConsecutiveFailures" xml:space="preserve"><value>Consecutive failures</value></data>
   <data name="TestReportKilobytes" xml:space="preserve"><value>{0:N1} KB</value></data>
   <data name="TestReportMegabytes" xml:space="preserve"><value>{0:N1} MB</value></data>
   <data name="TestReportNotListed" xml:space="preserve"><value>not listed</value></data>
@@ -287,12 +285,33 @@
   <data name="TestReportAttachmentsNotListedNote" xml:space="preserve"><value>Attachments were not listed: the failed tests were gathered with Get-AdoBuildTestFailure -SkipAttachments.</value></data>
   <data name="TestReportLabelValue" xml:space="preserve"><value>{0}: {1}</value></data>
   <data name="TestReportNew" xml:space="preserve"><value>New</value></data>
-  <data name="TestReportInARow" xml:space="preserve"><value>{0} in a row</value></data>
   <data name="TestReportInARowSince" xml:space="preserve"><value>{0} in a row since {1}</value></data>
   <data name="TestReportAttemptLevels" xml:space="preserve"><value>Attempts ({0})</value></data>
   <data name="TestReportStageLevel" xml:space="preserve"><value>stage</value></data>
   <data name="TestReportJobLevel" xml:space="preserve"><value>job</value></data>
   <data name="TestReportInstanceLevel" xml:space="preserve"><value>instance</value></data>
+  <data name="TestReportClass" xml:space="preserve"><value>Class</value></data>
+  <data name="TestReportTrend" xml:space="preserve"><value>Trend</value></data>
+  <data name="TestReportNewTests" xml:space="preserve"><value>New</value></data>
+  <data name="TestReportRecurringTests" xml:space="preserve"><value>Recurring</value></data>
+  <data name="TestReportNoComparison" xml:space="preserve"><value>No comparison</value></data>
+  <data name="TestReportNewAndRecurring" xml:space="preserve"><value>New and recurring</value></data>
+  <data name="TestReportCommonErrors" xml:space="preserve"><value>Most common errors</value></data>
+  <data name="TestReportAllWithoutOpenBug" xml:space="preserve"><value>All tests without an open bug</value></data>
+  <data name="TestReportByGroup" xml:space="preserve"><value>By group</value></data>
+  <data name="TestReportOnlyHere" xml:space="preserve"><value>Only here</value></data>
+  <data name="TestReportDistinctErrors" xml:space="preserve"><value>Distinct errors</value></data>
+  <data name="TestReportSampleMessage" xml:space="preserve"><value>Sample message</value></data>
+  <data name="TestReportCommonFrame" xml:space="preserve"><value>Common frame</value></data>
+  <data name="TestReportDiffers" xml:space="preserve"><value>Differs between tests</value></data>
+  <data name="TestReportValues" xml:space="preserve"><value>Values</value></data>
+  <data name="TestReportWithOpenBug" xml:space="preserve"><value>With an open bug</value></data>
+  <data name="TestReportLinkedTests" xml:space="preserve"><value>Linked tests</value></data>
+  <data name="TestReportSameTestCase" xml:space="preserve"><value>Same Test Case, not linked</value></data>
+  <data name="TestReportSameError" xml:space="preserve"><value>Same error, not linked</value></data>
+  <data name="TestReportResultsCovered" xml:space="preserve"><value>{0} of {1} failed results</value></data>
+  <data name="TestReportSince" xml:space="preserve"><value>Since {0}</value></data>
+  <data name="TestReportSinceBuild" xml:space="preserve"><value>Since build {0}</value></data>
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Export failed-test report</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Export failed-test report and download attachments to {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Downloading attachments: {0} of {1}</value></data>

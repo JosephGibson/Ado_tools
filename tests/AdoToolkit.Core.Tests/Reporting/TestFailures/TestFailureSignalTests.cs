@@ -1,3 +1,5 @@
+using AdoToolkit.Core.Connections;
+using AdoToolkit.Core.Reporting;
 using AdoToolkit.Core.Reporting.TestFailures;
 using AdoToolkit.Core.TestRuns;
 
@@ -35,37 +37,57 @@ public sealed class TestFailureSignalTests
     [InlineData("O F")]
     public void NothingIsSaidWithoutAComparablePreviousBuild(string cells) => Assert.Null(TestFailureSignal.Of(History(cells)));
 
-    // The failed fixture's test failed in build 20260916.2 and again in this one; the build before
-    // those did not run it.
+    // The failed fixture's test failed in build 20260916.2, which finished on 9/15/2026, and again in
+    // this one; the build before those did not run it. The chip says since when and links to the tests
+    // of that build; how many builds in a row is its title, never its text.
     [Theory]
-    [InlineData("en-US", "2 in a row", "2 in a row since 20260916.2", "Failing since")]
-    [InlineData("fr-CA", "2 fois de suite", "2 fois de suite depuis 20260916.2", "En échec depuis")]
-    public void RowsAndTheCardSayHowLongATestHasFailed(string culture, string row, string card, string failingSince)
+    [InlineData("en-US", "Since 9/15/2026", "2 in a row since 20260916.2", "Failing since")]
+    [InlineData("fr-CA", "Depuis le 2026-09-15", "2 fois de suite depuis 20260916.2", "En échec depuis")]
+    public void RowsAndTheCardSaySinceWhenATestHasFailed(string culture, string since, string title, string failingSince)
     {
         TestFailureReportModel model = TestFailureReportFixture.Model("failed", culture);
         string html = TestFailureReportFixture.Render(model);
         TestFailureReportValidator.Validate(new StringReader(html), model);
+        string chip = "<a class=\"trend trend-since\" rel=\"noreferrer\" href=\"" + SinceUri(400) + "\" title=\"" + title + "\">" + since + "</a>";
         foreach (string view in new[] { "overview", "by-error", "bugs" })
-            Assert.Contains("<span class=\"test-name\" title=\"SubmitOrder\">SubmitOrder</span></a> <span class=\"signal status-failed\"><span aria-hidden=\"true\">✕</span> "
-                + row + "</span>", View(html, view), StringComparison.Ordinal);
+            Assert.Contains("<td class=\"col-trend\">" + chip + "</td>", View(html, view), StringComparison.Ordinal);
+        Assert.Contains("<td class=\"col-trend\">" + chip + "</td></tr>", Section(html, "<table class=\"failure-table history-by-test\">", "</table>"),
+            StringComparison.Ordinal);
         string cardHtml = Section(html, "<article class=\"card failure-card\"", "</article>");
-        Assert.Contains("</ol><span class=\"history-signal status-failed\"><span aria-hidden=\"true\">✕</span> " + card + "</span></div>", cardHtml, StringComparison.Ordinal);
+        Assert.Contains("</ol>" + chip + "</div>", cardHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain(title, TestFailureMarkup.Text(html), StringComparison.Ordinal);
         // Failing since names a build of the history window by its number, not by its ID.
-        Assert.Matches("<dt>" + failingSince + "</dt><dd><a rel=\"noreferrer\" href=\"[^\"]+buildId=400\">20260916\\.2 <span role=\"img\"", cardHtml);
+        Assert.Matches("<dt>" + failingSince + "</dt><dd><a rel=\"noreferrer\" href=\"[^\"]+buildId=400\">20260916\\.2</a>", cardHtml);
     }
 
     [Fact]
     public void ANewFailureSaysNewAndAnUnreadPreviousBuildSaysNothing()
     {
         string html = Render(History("P F"), failingSince: 999);
-        Assert.Contains("</a> <span class=\"signal status-failed\"><span aria-hidden=\"true\">✕</span> New</span>", View(html, "overview"), StringComparison.Ordinal);
-        Assert.Contains("<span class=\"history-signal status-failed\"><span aria-hidden=\"true\">✕</span> New</span>", html, StringComparison.Ordinal);
+        const string Chip = "<span class=\"trend trend-new\"><span aria-hidden=\"true\">✦</span> New</span>";
+        Assert.Contains("<td class=\"col-trend\">" + Chip + "</td>", View(html, "overview"), StringComparison.Ordinal);
+        Assert.Contains("</ol>" + Chip + "</div>", Section(html, "<article class=\"card failure-card\"", "</article>"), StringComparison.Ordinal);
         // A build outside the history window keeps its ID.
-        Assert.Matches("<dt>Failing since</dt><dd><a rel=\"noreferrer\" href=\"[^\"]+buildId=999\">999 <span role=\"img\"", html);
+        Assert.Matches("<dt>Failing since</dt><dd><a rel=\"noreferrer\" href=\"[^\"]+buildId=999\">999</a>", html);
         string unread = Render(History("U F"), failingSince: 400);
-        Assert.DoesNotContain("class=\"signal", unread, StringComparison.Ordinal);
-        Assert.DoesNotContain("class=\"history-signal", unread, StringComparison.Ordinal);
+        Assert.DoesNotContain("class=\"trend ", unread, StringComparison.Ordinal);
+        Assert.Contains("<td class=\"col-trend\"></td>", View(unread, "overview"), StringComparison.Ordinal);
     }
+
+    // The day comes from the build in the report's history; a build that is not in it is named by its
+    // number.
+    [Fact]
+    public void ASinceChipWithoutTheDayOfItsBuildNamesTheBuild()
+    {
+        string dated = Render(History("P F F"), failingSince: 399);
+        Assert.Contains("href=\"" + SinceUri(399) + "\" title=\"2 in a row since b1\">Since 9/14/2026</a>", dated, StringComparison.Ordinal);
+        string older = Render(History("P F F F F F"), failingSince: 396);
+        Assert.Contains("href=\"" + SinceUri(396) + "\" title=\"5 in a row since b1\">Since build b1</a>", older, StringComparison.Ordinal);
+        Assert.DoesNotContain(">Since 9/", older, StringComparison.Ordinal);
+    }
+
+    private static string SinceUri(int build) => SinkEncoding.Attribute(
+        AdoWebLinks.BuildTestResult(TestFailureReportFixture.Collection, TestFailureReportFixture.Project, build).AbsoluteUri);
 
     // The failed fixture with its one test given these history cells and this Failing since build.
     private static string Render(IReadOnlyList<AdoTestHistoryEntry> history, int failingSince)

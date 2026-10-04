@@ -42,17 +42,20 @@ public sealed class StylingTests
         Assert.Contains("<a class=\"sq status-passed\" href=\"#f-2-a2\"", html, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void ExternalLinkGlyphIsSmallAndMuted()
+    // Every link of the report goes to Azure DevOps or within the page, so no link carries an arrow,
+    // and nothing in a link is an image of its own.
+    [Theory]
+    [InlineData("failed")]
+    [InlineData("flaky")]
+    [InlineData("partial")]
+    [InlineData("hostile")]
+    [InlineData("grouped")]
+    public void NoLinkCarriesAnArrow(string variant)
     {
-        Assert.Contains("a > [role=\"img\"] { color: var(--text-muted); font-size: var(--text-11); }", Css, StringComparison.Ordinal);
-        // A history cell is a square without text, so it holds no glyph of its own.
-        Assert.DoesNotMatch("class=\"history-cell[^>]*>[^<]", TestFailureReportFixture.Render());
-        string html = TestFailureReportFixture.Render();
-        // The glyph is a child of its link, which is what the rule selects.
-        Assert.Matches("<a rel=\"noreferrer\" href=\"[^\"]+\">[^<]+ <span role=\"img\" aria-label=\"Open in Azure DevOps\">↗</span></a>", html);
-        Assert.Equal(Regex.Count(html, "<span role=\"img\" aria-label=\"Open in Azure DevOps\">↗</span>"),
-            Regex.Count(html, "<span role=\"img\" aria-label=\"Open in Azure DevOps\">↗</span></a>"));
+        string html = TestFailureReportFixture.Render(variant);
+        Assert.DoesNotContain("↗", html, StringComparison.Ordinal);
+        Assert.DoesNotMatch("<a [^>]*>[^<]*<span [^>]*role=\"img\"", html);
+        Assert.DoesNotContain("[role=\"img\"]", Css, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -60,11 +63,30 @@ public sealed class StylingTests
     {
         string html = TestFailureReportFixture.Render("flaky");
         int rows = Regex.Count(html, "<tr data-index-for=\"f-[0-9]+\">");
-        // Two tests in Overview, By error and History by test; the one with a bug in Bugs.
-        Assert.Equal(7, rows);
+        // Two tests in Overview, By error and History by test; in Open bugs, the one with a bug, then
+        // the other one without an open bug.
+        Assert.Equal(8, rows);
         Assert.Equal(rows, Regex.Count(html,
             "<tr data-index-for=\"f-[0-9]+\"><td class=\"col-number\"><span class=\"status-glyph status-[a-z]+\" role=\"img\" aria-label=\"[^\"]+\">[^<]</span> <span class=\"ordinal\">[0-9]+</span></td>"));
-        Assert.Contains(".ordinal { display: inline-block; min-width: 3ch; text-align: end; }", Css, StringComparison.Ordinal);
+        // As wide as the largest ordinal, so the glyph sits close to it and 1, 10 and 100 end at the same place.
+        Assert.Contains(".ordinal { display: inline-block; min-width: 2ch; text-align: end; }", Css, StringComparison.Ordinal);
+        Assert.Contains(":root:has(#overview tbody > tr:nth-child(100)) .ordinal { min-width: 3ch; }", Css, StringComparison.Ordinal);
+        Assert.Contains(":root:has(#overview tbody > tr:nth-child(1000)) .ordinal { min-width: 4ch; }", Css, StringComparison.Ordinal);
+    }
+
+    // The rule counts the Overview's rows, so its table has exactly one row per test: 100 tests make the
+    // hundredth row, and 99 do not.
+    [Theory]
+    [InlineData(99)]
+    [InlineData(100)]
+    public void TheOverviewHasOneRowPerTestForTheOrdinalWidth(int count)
+    {
+        TestFailureReportModel model = Build("en-US", failures: [.. Enumerable.Range(1, count).Select(index => Failure("T" + index.ToString(CultureInfo.InvariantCulture), "Failed"))]);
+        string html = TestFailureReportFixture.Render(model);
+        string body = Section(View(html, "overview"), "<tbody>", "</tbody>");
+        Assert.Equal(count, Regex.Count(body, "<tr[ >]"));
+        Assert.Equal(count, Regex.Count(body, "<tr data-index-for=\"f-[0-9]+\">"));
+        Assert.Contains("<span class=\"ordinal\">" + count.ToString(CultureInfo.InvariantCulture) + "</span>", body, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -81,16 +103,31 @@ public sealed class StylingTests
     {
         string html = TestFailureReportFixture.Render("flaky", culture);
         foreach (string attempt in new[] { "f-1-a1", "f-2-a1", "f-2-a2" })
-            Assert.Matches("<span class=\"attempt-meta attempt-duration\">[^<]+ s</span> <span class=\"attempt-meta attempt-machine\">SYNTHETIC-AGENT</span>",
+            Assert.Matches("^<details class=\"attempt\" id=\"f-[12]-a[12]\"><summary><span class=\"attempt-title\">[^<]+</span> <span class=\"status-badge status-[a-z]+\">.*?</span> "
+                + "<span class=\"attempt-meta attempt-duration\">[^<]+ s</span> <span class=\"attempt-meta attempt-machine\" title=\"SYNTHETIC-AGENT\">SYNTHETIC-AGENT</span>",
                 Section(html, "<details class=\"attempt\" id=\"" + attempt + "\">", "</summary>"));
+        // The title has a fixed width, wider in French.
+        Assert.Matches(@"\.attempt-title \{ display: inline-block; min-width: 7rem;", Css);
+        Assert.Contains(":lang(fr) .attempt-title { min-width: 8.5rem; }", Css, StringComparison.Ordinal);
         Assert.Matches(@"\.attempt-duration \{ display: inline-block; min-width: [0-9.]+rem; text-align: end; \}", Css);
         Assert.Matches(@"\.attempt-machine \{ display: inline-block; min-width: [0-9.]+rem; \}", Css);
+        Assert.Matches(@"\.attempt-meta\.attempt-machine \{ max-width: 12rem; overflow: hidden; text-overflow: ellipsis;", Css);
         // Failed and Passed badges take the same room, so what follows them lines up.
         Assert.Matches(@"\.attempt > summary \.status-badge \{ min-width: [0-9.]+rem; \}", Css);
         // The summary stays a list item: a flex or grid summary would lose its marker.
         MatchCollection summaries = Regex.Matches(Css, @"\.attempt(\[open\])? > summary \{[^{}]*\}");
         Assert.Equal(2, summaries.Count);
         foreach (Match summary in summaries) Assert.DoesNotContain("display:", summary.Value, StringComparison.Ordinal);
+
+        // A missing duration or machine keeps its place; the server's own outcome follows the machine.
+        TestFailureReportModel model = Build(culture, failures: [new AdoTestFailure
+        {
+            Ordinal = 1, Classification = AdoTestFailureClassification.Failed, ShortName = "A", TestName = "Synthetic.StylingTests.A", CollectionUri = TestFailureReportFixture.Collection,
+            Attempts = [new AdoTestAttempt { Number = 1, RunId = 201, ResultId = 11, Outcome = "Timeout", OutcomeClass = AdoTestOutcomeClass.Failure, ErrorMessage = "Timed out" }],
+        }]);
+        string bare = Section(TestFailureReportFixture.Render(model), "<details class=\"attempt\" id=\"f-1-a1\">", "</summary>");
+        Assert.Matches("</span> <span class=\"attempt-meta attempt-duration\"></span> <span class=\"attempt-meta attempt-machine\"></span> <span class=\"attempt-outcome\">Timeout</span> "
+            + "<span class=\"attempt-error\">Timed out</span>$", bare);
     }
 
     [Theory]
@@ -121,16 +158,18 @@ public sealed class StylingTests
     [Theory]
     [InlineData("en-US")]
     [InlineData("fr-CA")]
-    public void LegendIsAboveEveryTableOfTests(string culture)
+    public void NoLegendAboveATableOfTests(string culture)
     {
+        // The glyphs and chips carry their words, and every status cell says its counts as its title.
         TestFailureReportModel model = TestFailureReportFixture.Model("partial", culture);
         string html = TestFailureReportFixture.Render(model);
-        string legend = "</h2>\n<p class=\"text-muted legend\">" + SinkEncoding.Attribute(model.Labels["GroupLegend"]) + "</p>\n<p data-no-matches hidden>";
-        foreach (string view in new[] { "overview", "by-error", "bugs" }) Assert.Contains(legend, View(html, view), StringComparison.Ordinal);
-        Assert.Equal(3, Regex.Count(html, "class=\"text-muted legend\""));
-        // A view without a table has no legend: no bug here, then no test at all.
-        Assert.Equal(2, Regex.Count(TestFailureReportFixture.Render(Build(culture, failures: [Failure("A", "Failed A")])), "class=\"text-muted legend\""));
-        Assert.Equal(0, Regex.Count(TestFailureReportFixture.Render(Build(culture, failures: [])), "class=\"text-muted legend\""));
+        foreach (string view in new[] { "overview", "bugs" })
+            Assert.Contains("</h2>\n<p data-no-matches hidden>", View(html, view), StringComparison.Ordinal);
+        Assert.Contains("</h2>\n<p class=\"cluster-summary\">", View(html, "by-error"), StringComparison.Ordinal);
+        Assert.DoesNotContain("class=\"text-muted legend\"", html, StringComparison.Ordinal);
+        Assert.False(model.Labels.ContainsKey("GroupLegend"));
+        Assert.False(Enum.TryParse<AdoMessage>("TestReportGroupLegend", out _));
+        Assert.Matches("<span class=\"group-status status-failed\" title=\"[^\"]+\">", View(html, "overview"));
     }
 
     [Fact]
@@ -365,7 +404,7 @@ public sealed class StylingTests
     }
 
     // One type scale: five sizes, the body at 14px/1.45, tables at 13 and code at 12. Only the
-    // brand and the external link glyph go below 12, the minimum for controls and running text.
+    // brand goes below 12, the minimum for controls and running text.
     [Fact]
     public void OneTypeScaleOfFiveSizes()
     {
@@ -378,7 +417,7 @@ public sealed class StylingTests
         Assert.All(sizes, static size => Assert.Matches(@"^var\(--text-(11|12|13|14|16)\)$", size));
         string[] shorthands = [.. Regex.Matches(Css, @"\bfont: ([^;]+);").Select(static match => match.Groups[1].Value)];
         Assert.All(shorthands, static font => Assert.Matches(@"^(400 )?var\(--text-1[2-6]\) var\(--font-mono\)$", font));
-        Assert.Equal([".report-brand", "a > [role=\"img\"]"], Regex.Matches(Css, @"(?m)^([^{}\n]+) \{[^{}]*var\(--text-11\)").Select(static match => match.Groups[1].Value).Order(StringComparer.Ordinal));
+        Assert.Equal([".report-brand"], Regex.Matches(Css, @"(?m)^([^{}\n]+) \{[^{}]*var\(--text-11\)").Select(static match => match.Groups[1].Value));
     }
 
     // Amber means flaky alone. Focus and what is current (the open view, this build, a search match,
@@ -397,11 +436,15 @@ public sealed class StylingTests
     }
 
     // The History data table has the cells of the other tables, and its row headers no background.
+    // Tables outside Details get more room than 0.8.0 gave them: 4 by 12 pixels and a line height of 1.4.
     [Fact]
     public void HistoryDataTableIsAsDenseAsTheOthers()
     {
-        Assert.Contains(".history-data th, .history-data td { padding: 3px var(--space-2); }", Css, StringComparison.Ordinal);
+        Assert.Contains(".failure-table th, .failure-table td, .runs-table th, .runs-table td { padding: 4px var(--space-3); vertical-align: middle; line-height: 1.4; }",
+            Css, StringComparison.Ordinal);
+        Assert.Contains(".history-data th, .history-data td { padding: 4px var(--space-3); }", Css, StringComparison.Ordinal);
         Assert.Contains(".history-data tbody th { background: none; }", Css, StringComparison.Ordinal);
+        Assert.Contains(":where(#overview, #runs, #by-error, #bugs) h3 { margin: var(--space-5) 0 var(--space-2); }", Css, StringComparison.Ordinal);
     }
 
     // A long report lays out only the cards near the screen. Print lays out every card.

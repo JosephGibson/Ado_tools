@@ -42,9 +42,10 @@ public sealed class CompactReportTests
         string html = TestFailureReportFixture.Render(model);
         TestFailureReportValidator.Validate(new StringReader(html), model);
         Assert.Contains("<th scope=\"col\">" + english + "</th><th scope=\"col\">" + french + "</th>", html, StringComparison.Ordinal);
-        // SubmitOrder failed, then passed in English, and failed twice in French.
+        // SubmitOrder failed, then passed in English, and failed twice in French; each status cell
+        // says it in words as its title.
         string row = Section(html, "<tr data-index-for=\"f-1\">", "</tr>");
-        Assert.Matches("status-flaky\">.*1/2</span>.*status-failed\">.*2/2</span>", row);
+        Assert.Matches("status-flaky\" title=\"1 of 2 failed\">.*1/2</span>.*status-failed\" title=\"2 of 2 failed\">.*2/2</span>", row);
         string card = Section(html, "<article class=\"card failure-card\" id=\"f-1\"", "</article>");
         Assert.Contains("data-failing=\"1\"", card, StringComparison.Ordinal);
         string first = Section(card, "<details class=\"attempt-group\" id=\"f-1-g1\">", "<details class=\"attempt-group\" id=\"f-1-g2\">");
@@ -54,7 +55,8 @@ public sealed class CompactReportTests
         Assert.Equal(["f-1-a1", "f-1-a2"], AttemptIds(first));
         Assert.Equal(["f-1-a3", "f-1-a4"], AttemptIds(second));
         // ShowBanner never ran a third group, and its French group did not fail.
-        Assert.Matches("status-failed\">.*1/1</span>.*status-passed\">.*0/1</span>", Section(html, "<tr data-index-for=\"f-2\">", "</tr>"));
+        Assert.Matches("status-failed\" title=\"1 of 1 failed\">.*1/1</span>.*status-passed\" title=\"0 of 1 failed\">.*0/1</span>",
+            Section(html, "<tr data-index-for=\"f-2\">", "</tr>"));
     }
 
     // No distinct pipeline OR run names keeps one list.
@@ -72,7 +74,7 @@ public sealed class CompactReportTests
         Assert.DoesNotContain(" data-failing", html, StringComparison.Ordinal);
         Assert.Contains("<th scope=\"col\">Attempts</th>", html, StringComparison.Ordinal);
         Assert.Equal(["f-1-a1", "f-1-a2", "f-1-a3", "f-1-a4"], AttemptIds(Section(html, "<article class=\"card failure-card\" id=\"f-1\"", "</article>")));
-        Assert.Contains("status-failed\">", Section(html, "<tr data-index-for=\"f-1\">", "</tr>"), StringComparison.Ordinal);
+        Assert.Contains("<span class=\"group-status status-failed\" title=\"3 of 4 failed\">", Section(html, "<tr data-index-for=\"f-1\">", "</tr>"), StringComparison.Ordinal);
     }
 
     [Fact]

@@ -30,40 +30,48 @@ Aucun alias.
 ## DESCRIPTION
 
 Produit, pour chaque `AdoBuildTestFailureSet` reçu de `Get-AdoBuildTestFailure`, un
-rapport HTML sombre dans la culture du rapport. Le rapport compte cinq vues, et une
-sixième pour les diagnostics lorsqu’il y en a. Vue d’ensemble est un tableau d’une ligne
-par test en échec : son numéro de cas de test lié à l’élément de travail, l’état de chaque
-groupe de tentatives qui l’a exécuté et la première ligne de sa dernière erreur. Un test
-qui a au moins un bogue ouvert porte après son nom un lien Bogue ouvert vers le bogue ouvert
-de plus petit numéro. Avant ce lien, Nouveau indique que le build précédent a exécuté le test
-sans échec, et N fois de suite que le test a échoué ou a été instable dans ce build et dans les
-N - 1 builds précédents; rien n’est indiqué lorsque ce build n’a pas pu être lu ou n’a pas
-exécuté le test. Par erreur regroupe les mêmes lignes sous leur dernière erreur.
-Bogues ouverts liste chaque bogue une fois avec les tests qui lui sont liés et indique si
-chaque lien vient d’un résultat de test, du cas de test ou des deux; le bogue qui a le plus
-de tests vient en premier, et un bogue qui n’a pas pu être lu vient en dernier, avec la
-mention Non lu. Détails présente une fiche par test, qui liste ses bogues ouverts avec leur
-ID lié à l’élément de travail, leur titre et leur état. Son historique présente un carré par
-build, distingué par sa forme autant que par sa couleur, plein en cas d’échec, à moitié plein
-si le test est instable, vide en cas de réussite, en tirets s’il n’a pas été exécuté, en
-pointillés pour un autre résultat et hachuré pour un build qui n’a pas pu être lu. La même
-mention Nouveau ou N fois de suite le suit, avec le build où les échecs ont commencé, et le
-champ En échec depuis d’une tentative nomme ce build par son numéro lorsqu’il figure dans
-l’historique. Un bogue est ouvert sauf si son
-état appartient à la catégorie d’états Completed ou Removed; un bogue fermé n’est pas
-affiché, et un bogue qui n’a pas pu être lu n’affiche que le lien vers son ID et la mention
-Non lu. Séries et historique liste les séries de tests du build avec les numéros de
-tentative qu’elles ont, de la phase, du travail ou de l’instance du travail, leur durée, leurs décomptes de tests, les tests signalés et les pièces jointes
-répertoriées et téléchargées, et signale la dernière série de tests. La vue présente
-ensuite l’historique des exécutions sous forme de graphique, de tableau des builds et de
-tableau des tests signalés, avec leur résultat dans chaque build et le nombre de builds
-consécutifs, jusqu’à celui-ci, où chacun a échoué ou a été instable. La date et l’origine
-du rapport figurent sous chaque vue. Chaque groupe, tentative et aperçu de pièce jointe est
-d’abord réduit, et chaque tentative contient son propre
-message d’erreur complet et sa propre arborescence des appels, même lorsqu’une tentative
-antérieure du même test avait le même texte. Toutes les dates et heures sont affichées dans
-le fuseau horaire de l’ordinateur qui exporte le rapport, comme l’heure de génération du
-rapport.
+rapport HTML sombre dans la culture du rapport. Le rapport compte cinq vues, dans cet ordre,
+et une sixième pour les diagnostics lorsqu’il y en a. Vue d’ensemble est un tableau d’une
+ligne par test en échec, chaque partie dans sa propre colonne, soit son état et son numéro,
+son numéro de cas de test lié à l’élément de travail, son nom et sa classe, sa tendance, son
+bogue ouvert de plus petit numéro sous forme de pastille rouge avec le nombre des autres,
+l’état de chaque groupe de tentatives qui l’a exécuté et la première ligne de sa dernière
+erreur. Dans la tendance, Nouveau indique que le build précédent a exécuté le test sans échec,
+et Depuis le suivi d’une date que le test a aussi échoué ou été instable dans le build
+précédent; la date est le jour où le premier build de cette suite d’échecs s’est terminé, la
+pastille mène aux résultats de tests de ce build et son titre indique le nombre de builds
+consécutifs. Rien n’est indiqué lorsque le build précédent n’a pas pu être lu ou n’a pas
+exécuté le test. Sous le tableau, des encadrés résument le build, soit les tests nouveaux et
+récurrents, les erreurs les plus fréquentes, les tests sans bogue ouvert et, lorsque les
+tentatives sont regroupées, chaque groupe. Séries et historique présente l’historique des
+exécutions sous forme de graphique et de tableau des builds, puis liste les séries de tests du
+build avec leur ID, les numéros de tentative qu’elles ont, de la phase, du travail ou de
+l’instance du travail, leur durée, leurs décomptes de tests, les tests signalés et les pièces
+jointes répertoriées et téléchargées, et signale la dernière série de tests; un tableau des
+tests signalés la termine, avec leur résultat dans chaque build et leur tendance. Détails
+présente une fiche par test avec son historique des exécutions, une pastille par build avec
+le jour où il s’est terminé, distinguée par son glyphe et sa forme autant que par sa couleur,
+et la même tendance, ses bogues ouverts, chacun sous forme de pastille liée à l’élément de
+travail avec son titre et son état, et ses pièces jointes, chaque nom de fichier une seule
+fois, tiré de la dernière tentative qui l’a. Le champ En échec depuis d’une tentative nomme ce
+build par son numéro lorsqu’il figure dans l’historique. Par erreur regroupe les mêmes lignes
+sous leur dernière erreur, sans tenir compte des URL, des GUID, des chemins, des ID
+hexadécimaux ni des nombres; chaque groupe nomme son type d’exception et marque les parties de
+sa ligne qui diffèrent d’un test à l’autre, et un groupe de deux tests ou plus indique ce que
+ses tests ont en commun et présente un exemple du premier message. Bogues ouverts liste chaque
+bogue une fois, sur une ligne avec ce qu’il couvre, puis les tests qui lui sont liés, et
+indique si chaque lien vient d’un résultat de test, du cas de test ou des deux, et combien de
+résultats en échec atteint un lien par les résultats de test lorsqu’il ne les atteint pas
+tous; les tests du même cas de test sans le bogue suivent, et les tests sans bogue ouvert
+viennent en dernier. Le bogue qui a le plus de tests vient en premier, et un bogue qui n’a pas
+pu être lu vient en dernier, sous forme de pastille grise avec la mention Non lu. Un bogue est
+ouvert sauf si son état appartient à la catégorie d’états Completed ou Removed; un bogue fermé
+n’est pas affiché, et un bogue qui n’a pas pu être lu n’est pas compté comme ouvert. La date
+et l’origine du rapport figurent sous chaque vue. Chaque groupe, tentative et aperçu de pièce
+jointe est d’abord réduit, et chaque tentative contient son propre message d’erreur complet et
+sa propre arborescence des appels, même lorsqu’une tentative antérieure du même test avait le
+même texte. Toutes les dates et heures sont affichées dans le fuseau horaire de l’ordinateur
+qui exporte le rapport, comme l’heure de génération du rapport.
 
 Lorsque les séries de tests du build portent des noms de phase, de travail ou de série
 différents, par exemple une phase par langue, chaque fiche regroupe ses tentatives selon ces
@@ -85,7 +93,8 @@ messages d’erreur avec retour automatique à la ligne; la copie et l’impress
 tous les appels. La recherche compare chaque mot saisi, sans tenir compte de la casse ni des
 accents, à toute la fiche, tentatives réduites comprises : messages d’erreur, arborescences
 des appels, pièces jointes JSON et texte affichées, noms de phase et de travail, champs
-des séries de tests et des tentatives, et titres et états des bogues. Un ID de cas de test
+des séries de tests et des tentatives, jours de l’historique des exécutions, et titres et
+états des bogues. Un ID de cas de test
 correspond avec ou sans `#`. Lorsqu’au moins un test a un bogue ouvert, le filtre Sans
 bogue ouvert n’affiche que les tests qu’aucun bogue ouvert ne suit encore.
 

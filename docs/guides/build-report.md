@@ -127,29 +127,43 @@ page.
 
 | View | What it shows |
 | --- | --- |
-| Overview | One row per failed test: its number, name and class, **New** or **N in a row**, an **Open bug** link to the lowest-numbered open bug that tracks it, Test Case number, one status column per group of attempts, and the first line of its latest error |
-| By error | The same rows, grouped under their latest error, largest group first. Numbers and GUIDs are ignored when grouping, so "after 30012 ms" and "after 30020 ms" group together |
-| Open bugs | One entry per bug: its number, title and state, then a row for each test linked to it, saying whether the link comes from a test result, the Test Case or both. The bug with the most tests comes first, and a test with several bugs appears under each. Bugs that could not be read come last, marked **Not read**. The tab shows the number of bugs |
-| Details | One card per test: Test Case number and title, links, full name, its open bugs with title and state, and its history as one square per build, then its attempts. A bug that could not be read shows its number and a **Not read** mark |
-| Runs and history | The build's test runs with their stage, job, the attempt numbers that the runs have (stage, job or job instance), duration, test counts, the number of reported tests, and how many attachments are listed and downloaded, or **Not listed** for a set gathered with `-SkipAttachments`; the latest run is marked and runs outside the attachment window are greyed. Below them, the run history: a chart with the failed count above each bar, the same numbers as a table of builds, and a table with one row per reported test, its outcome in each build and the number of builds in a row, ending with this one, in which it failed or was flaky |
+| Overview | One row per failed test, each part in a column of its own: its status and number, Test Case number, name, class, trend, the lowest-numbered open bug that tracks it with **+N** when there are more, one status column per group of attempts, and the first line of its latest error. Under the table, cards describe the whole build: how many tests are **New**, **Recurring** or have **No comparison**; the **Most common errors** of two tests or more, each opening its group in By error; how many tests are **Without an open bug**, with the three that most need one; and, in a grouped build, per group how many tests failed, were flaky or failed only there. A card that would be empty is left out, and the filters act on the table only |
+| Runs and history | First the run history: a chart with the failed count above each bar, and the same numbers as a table of builds where **This run** marks this build. Then the build's test runs with their ID, stage, job, the attempt numbers that the runs have (stage, job or job instance), start, duration, test counts with the passed and failed ones marked `✓` and `✕`, the number of reported tests, and how many attachments are listed and downloaded, or **Not listed** for a set gathered with `-SkipAttachments`. In a grouped build each group of runs has its own heading; the latest run is marked and runs outside the attachment window are greyed. Last, a table with one row per reported test, its outcome in each build and its trend |
+| Details | One card per test: its class and name, Test Case number and title, links and full name, then its run history, its open bugs with title and state, and its attachments, then its metadata and its attempts |
+| By error | The same rows, grouped under their latest error, largest group first, with the number of distinct errors above the table. Each group names its exception type and the error line of its first test; a part of the line that differs between the tests is underlined, and resting the pointer on it lists the values. A group of two tests or more also says how many tests failed or were flaky, how many are new or recurring, how many have an open bug and which bugs, how many fail in each group of attempts, and the frame of the tests' own code where they fail, when they share one; a closed **Sample message** shows the start of the first test's message. The **Values** column shows each test's own values. Tests without an error message come last |
+| Open bugs | One entry per bug, on one line: how many tests are linked to it, its number, title and state, its work item type and project when they are not a Bug of the build's project, then what it covers: **Linked tests**, **Same Test Case, not linked**, **Same error, not linked**, which opens that group in By error, and, in a grouped build, how many of its tests fail in each group. Then a row for each test linked to it, saying whether the link comes from a test result, the Test Case or both; a link through test results that reaches only some of a test's failed results says how many, such as **Test result: 1 of 4 failed results**. Tests that share a Test Case with a linked test but not the bug follow, greyed. The bug with the most tests comes first, and a test with several bugs appears under each. Bugs that could not be read come last, marked **Not read**. A last group lists the tests **Without an open bug**. The tab shows the number of bugs |
 | Diagnostics | Shown only when something could not be retrieved: one line per diagnostic, errors first, then warnings, then information, with the number of each in the heading |
 
 In the Overview, By error and Open bugs tables, each group cell reads `✕ 7/7`: `✕` means the
 last attempt in that group failed, `≈` that it failed, then passed, and `✓` that it never
-failed. The numbers are failed attempts out of all attempts; a line above each table repeats
-this. In the overview, each square after them opens that attempt. A latest error that is too
-long for its cell is cut, and so is a long test name; rest the pointer on either to read it
-whole.
+failed. The numbers are failed attempts out of all attempts; rest the pointer on the cell to
+read them in words, such as "7 of 7 failed". In the overview, each square after them opens
+that attempt. A latest error that is too long for its cell is cut, and so are a long test name
+and class; rest the pointer on any of them to read it whole.
 
-After the name, **New** says that the build before this one ran the test and it did not fail,
-and **3 in a row** that the test failed or was flaky in this build and the two before it.
-Nothing is said when the build before this one could not be read or did not run the test. A
-card says the same after its history, with the build where the run of failures started, for
-example `✕ 3 in a row since 20260914.2`. Its history squares are told apart by shape as well as
-colour: filled for failed, half filled for flaky, hollow for passed, dashed for not run, dotted
-for any other outcome and hatched for a build that could not be read; the current build is
-outlined, and resting the pointer on a square gives its build and outcome. An attempt's
-**Failing since** names the build by its number when that build is in the history.
+Colour carries meaning, always with a glyph or text: red for failures and open bugs, green for
+passes, amber for flaky tests, violet for **✦ New** and orange for **Since**. A bug that could
+not be read is grey wherever it shows: it may be closed, so its test counts as without an
+open bug.
+
+The Trend column says **✦ New** when the build before this one ran the test and it did not
+fail, and **Since** a date when the test also failed or was flaky in the build before: the
+date is the day the first build of that run of failures finished, and the chip opens that
+build's test results. Rest the pointer on it to read how many builds in a row, for example
+"3 in a row since 20260914.2". A build that is not in the history is named by its number,
+such as **Since build 20260901.4**. Nothing is said when the build before this one could not
+be read or did not run the test.
+
+A card says the same after its run history: one chip per build, oldest first, with the day the
+build finished. The chips are told apart by glyph and shape as well as colour: filled for
+failed, tinted for flaky, hollow for passed, dashed for not run, dotted for any other outcome
+and hatched for a build that could not be read; the current build is the last chip, its date in
+bold, and resting the pointer on a chip gives its build and outcome. An attempt's **Failing
+since** names the build by its number when that build is in the history. The card's
+**Attachments** row lists each file name once, from the last attempt that has it: the file,
+linked to its original in Azure DevOps, its size, and the attempt it comes from, which opens
+that attempt at the file with its local copy and preview. **×2** says that two attempts have a
+file of that name; rest the pointer on it to read which.
 
 An attachment larger than 1,024 bytes shows its size in KB or MB; rest the pointer on the
 size to read the exact number of bytes.
@@ -157,11 +171,14 @@ size to read the exact number of bytes.
 In a card, every group and every attempt starts collapsed; reaching a test from its row, with
 `j` or `k`, or with `Enter` opens the attempt of its latest error and the group that holds it.
 An attempt's summary line shows its outcome, duration, machine and the first line of its
-error. Opened, every attempt shows its own full error message and stack trace, even when an
-earlier attempt failed with the same text, so a report with many retries of long traces is
-large. A stack trace that has a frame of the test's own code opens with the framework frames
-hidden and **Hide framework frames** pressed, and an error message opens with **Wrap lines**
-pressed; press either button to change it. Copying and printing always include every frame.
+error, in columns that line up from one attempt to the next. After MSTest's "Test method …
+threw exception:", it shows the exception on the line below, as By error does; the
+overview's latest error and the console table keep the first line. Opened, every attempt
+shows its own full error message and stack trace, even when an earlier attempt failed with the
+same text, so a report with many retries of long traces is large. A stack trace that has a
+frame of the test's own code opens with the framework frames hidden and **Hide framework
+frames** pressed, and an error message opens with **Wrap lines** pressed; press either button
+to change it. Copying and printing always include every frame.
 
 Every date and time in the report is shown in the time zone of the computer that exported it,
 the same zone as the report's own generation time. When the report was made, with which
@@ -200,12 +217,12 @@ instance, `__default` when there is none.
 Press `/` or use the Search box. Every word you type must appear somewhere in a test's card,
 collapsed attempts included: error messages, stack traces, JSON and text attachments shown in
 the report, stage and job names, run and attempt fields such as run name, machine or
-failure type, and bug titles and states. Case and accents are ignored, so `echec` finds
-« Échec ». `12345` and `#12345` both find the tests linked to Test Case 12345. Attempts that
-match are marked in their summary line; nothing opens by itself. **Failing in** narrows the
-list to tests whose last attempt in a group failed, or failed only there. **Without an open
-bug**, shown when at least one test has an open bug, leaves only the tests that no open bug
-tracks yet.
+failure type, the days of its run history, and bug titles and states. Case and accents are
+ignored, so `echec` finds « Échec ». `12345` and `#12345` both find the tests linked to Test
+Case 12345. Attempts that match are marked in their summary line; nothing opens by itself.
+**Failing in** narrows the list to tests whose last attempt in a group failed, or failed only
+there. **Without an open bug**, shown when at least one test has an open bug, leaves only the
+tests that no open bug tracks yet.
 
 Keys, also listed at the foot of the report: `j`/`k` move between tests, `Enter` opens the
 selected test's card, `o` opens or closes an attempt or group, and `Esc` in the Search box

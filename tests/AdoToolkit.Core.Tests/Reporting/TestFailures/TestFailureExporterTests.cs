@@ -67,7 +67,7 @@ public sealed class TestFailureExporterTests
             Assert.DoesNotContain("data-local-file", html, StringComparison.Ordinal);
             Assert.DoesNotContain("data-download-status", html, StringComparison.Ordinal);
             foreach (string name in new[] { "screenshot.PNG", "payload.json", "report.htm", "trace.dat", "noextension" })
-                Assert.Contains(">" + name + " <span role=\"img\"", html, StringComparison.Ordinal);
+                Assert.Contains(">" + name + "</a>", html, StringComparison.Ordinal);
             Assert.Contains("<span class=\"attachment-size\" title=\"2,048 bytes\">2.0 KB</span>", html, StringComparison.Ordinal);
         }
     }

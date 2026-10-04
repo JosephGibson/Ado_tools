@@ -162,6 +162,11 @@ code .framework-frame, code .framework-frame > span { color: var(--tok-framework
   .history-chart { print-color-adjust: exact; }
 }
 :root { --text-11: 11px; --text-12: 12px; --text-13: 13px; --text-14: 14px; --text-16: 16px; --focus: var(--link); --current: var(--link); }
+/* One meaning per colour, always with a glyph or text: status (--pass green, --fail red, --flaky amber, --other grey); new in this
+   build (--new, the only filled chip); a recurring failure (--recurring orange, "Since"); an open bug (red, like a failure; grey
+   when it could not be read). This report's colours are brighter than the shared ones; each keeps at least 5.4:1 on every surface. */
+:root { --fail: #ff6b6b; --pass: #3ddc84; --flaky: #ffc53d; --link: #5eb5ff; --new: #b38cff; --recurring: #ff953e; --text-soft: #d2d6dc; --label-width: 7.5rem; }
+:root:lang(fr) { --label-width: 10rem; }
 html { scroll-padding-top: calc(var(--report-header-height, 11rem) + var(--space-4)); }
 body { font-size: var(--text-14); line-height: 1.45; font-variant-numeric: tabular-nums; }
 code { font-size: var(--text-12); }
@@ -171,7 +176,6 @@ h3, .failure-card h4 { font-size: var(--text-14); margin: var(--space-3) 0 var(-
 h4, h5, h6 { font-size: var(--text-13); margin: var(--space-2) 0 var(--space-1); }
 .failure-card h4 { line-height: 1.3; font-weight: 600; }
 a:where([href^="#"]):visited { color: var(--link); }
-a > [role="img"] { color: var(--text-muted); font-size: var(--text-11); }
 .section-heading { color: var(--text); font-size: var(--text-16); }
 button { cursor: pointer; min-height: 28px; padding: var(--space-1) var(--space-2); font-size: var(--text-12); }
 button:hover { background: var(--surface); border-color: var(--link); }
@@ -221,25 +225,33 @@ input[type="search"] { width: 12rem; min-width: 0; }
 .views .view:not(.is-active) { display: none; }
 .view + .view { margin-top: var(--space-6); }
 .views .view + .view { margin-top: 0; }
-.legend { margin: 0 0 var(--space-2); font-size: var(--text-12); }
+/* Overview, Runs and history, By error and Open bugs have more room than Details, which stays dense. */
+:where(#overview, #runs, #by-error, #bugs) { line-height: 1.5; }
+:where(#overview, #runs, #by-error, #bugs) > .section-heading { margin-bottom: var(--space-4); }
+:where(#overview, #runs, #by-error, #bugs) h3 { margin: var(--space-5) 0 var(--space-2); }
 .window-note { margin: var(--space-2) 0 0; font-size: var(--text-12); color: var(--text-muted); }
 .num { text-align: end; }
 [data-no-matches] { padding: var(--space-4); text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); }
 .failure-table, .runs-table { font-size: var(--text-13); }
-.failure-table th, .failure-table td, .runs-table th, .runs-table td { padding: 3px var(--space-2); vertical-align: middle; }
+.failure-table th, .failure-table td, .runs-table th, .runs-table td { padding: 4px var(--space-3); vertical-align: middle; line-height: 1.4; }
 .failure-table th, .runs-table th { position: sticky; top: var(--report-header-height, 0); z-index: 1; white-space: nowrap; font-size: var(--text-12); }
 .by-error tbody tr:nth-child(even) { background: none; }
 .failure-table tbody tr:hover { background: var(--surface); }
 .failure-table tr.is-current { outline: 1px solid var(--focus); outline-offset: -1px; }
 .col-number { white-space: nowrap; color: var(--text-muted); }
-.ordinal { display: inline-block; min-width: 3ch; text-align: end; }
+.ordinal { display: inline-block; min-width: 2ch; text-align: end; }
+:root:has(#overview tbody > tr:nth-child(100)) .ordinal { min-width: 3ch; }
+:root:has(#overview tbody > tr:nth-child(1000)) .ordinal { min-width: 4ch; }
 .col-test { white-space: nowrap; }
 .col-test a { font-weight: 600; }
-.col-test .test-name { display: inline-block; max-width: 26rem; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
-.col-test .text-muted, .runs-table .text-muted { font-size: var(--text-12); }
-.signal { margin-inline-start: var(--space-2); font-size: var(--text-12); font-weight: 600; white-space: nowrap; }
-.col-case, .col-group { white-space: nowrap; }
-.col-error { width: 45%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); font: var(--text-12) var(--font-mono); }
+.col-test .test-name { display: inline-block; max-width: clamp(10rem, 16vw, 22rem); overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+.col-class, .col-values { white-space: nowrap; color: var(--text-soft); font-size: var(--text-12); }
+.class-name, .values { display: inline-block; max-width: clamp(6rem, 9vw, 11rem); overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+.values { max-width: 20rem; font-family: var(--font-mono); }
+.col-trend, .col-bug, .col-case, .col-group { white-space: nowrap; }
+.col-trend { text-align: center; }
+.runs-table .text-muted { font-size: var(--text-12); }
+.col-error { width: 55%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-soft); font: var(--text-12) var(--font-mono); }
 .status-glyph { display: inline-block; width: 1em; text-align: center; }
 .group-status { font-weight: 600; }
 .mini-strip { display: inline-flex; gap: 2px; margin-inline-start: var(--space-2); vertical-align: middle; }
@@ -250,103 +262,220 @@ a.sq:hover, a.sq:focus-visible { outline: 1px solid var(--link); outline-offset:
 a.sq.status-passed:visited { color: var(--pass); }
 a.sq.status-failed:visited { color: var(--fail); }
 a.sq.status-other:visited { color: var(--other); }
-.cluster-heading th { position: static; background: var(--surface); color: var(--text); font-weight: 400; white-space: normal; padding-block: var(--space-2); }
+/* Trend: New is the only filled chip; a recurring failure says since when, in orange, and links to that build. */
+.trend { display: inline-flex; align-items: baseline; gap: var(--space-1); padding: 0 var(--space-2); border: 1px solid transparent; border-radius: 999px; color: var(--text); font-size: var(--text-12); font-weight: 600; line-height: 1.35; white-space: nowrap; }
+.trend-new { background: var(--new); border-color: var(--new); color: var(--bg); }
+.trend-since { background: color-mix(in srgb, var(--recurring) 18%, transparent); border-color: color-mix(in srgb, var(--recurring) 70%, transparent); color: var(--recurring); }
+a.trend-since, a.trend-since:visited { color: var(--recurring); }
+a.trend-since:hover, a.trend-since:focus-visible { border-color: var(--recurring); text-decoration: none; }
+.trend-none { color: var(--text-muted); font-weight: 400; border-color: var(--separator); }
+/* Bugs are red wherever they show; one that could not be read looks the same in grey. */
+.open-bug-marker, .bug-marker { display: inline-block; padding: 0 var(--space-2); border: 1px solid var(--fail); border-radius: 4px; background: color-mix(in srgb, var(--fail) 12%, transparent); font-size: var(--text-12); font-weight: 600; white-space: nowrap; }
+.bug-marker.bug-unread { border-color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 12%, transparent); font-style: normal; }
+.bug-marker:hover, .bug-marker:focus-visible { background: color-mix(in srgb, var(--text-muted) 24%, transparent); text-decoration: none; }
+.open-bug-marker, .open-bug-marker:visited { color: var(--fail); }
+.open-bug-marker:hover, .open-bug-marker:focus-visible { background: color-mix(in srgb, var(--fail) 24%, transparent); text-decoration: none; }
+.bug-marker, .bug-marker:visited, .bug-more { color: var(--text-muted); }
+.bug-more { font-size: var(--text-12); cursor: help; }
+.fact-tracked { color: var(--fail); }
+/* Group headings of By error and Open bugs: their parts sit on fixed tracks, so they line up from one group to the next. */
+.cluster-heading th { position: static; background: var(--surface); color: var(--text); font-weight: 400; white-space: normal; padding: var(--space-4) var(--space-3) var(--space-2); }
+.cluster-heading:has(+ .cluster-facts) th { border-bottom: 0; }
+.cluster-head { display: grid; grid-template-columns: 3rem minmax(0, 1fr); align-items: baseline; gap: 2px var(--space-3); }
+.cluster-head > .cluster-count { grid-row: 1 / span 2; align-self: start; }
+.cluster-head > :not(.cluster-count) { grid-column: 2; }
+/* A bug's heading is one line: count, chip, then title, state and what the bug covers, wrapping only when it must. */
+.bug-head { display: grid; grid-template-columns: 3rem minmax(7rem, max-content) minmax(0, 1fr); align-items: baseline; gap: 2px var(--space-3); }
+.bug-head > .cluster-count { grid-column: 1; }
+.bug-head > :is(.open-bug-marker, .bug-marker) { grid-column: 2; justify-self: start; }
+.bug-head > .bug-summary { grid-column: 3; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-3); min-width: 0; }
+.bug-summary > .bug-title { color: var(--text); font-weight: 600; }
+.bug-summary > .facts { gap: 2px var(--space-3); }
 .cluster-heading code { overflow-wrap: anywhere; }
 .cluster-heading a { font-weight: 600; }
+.cluster-summary { margin: 0 0 var(--space-2); color: var(--text-muted); font-size: var(--text-13); }
+.exception-type { color: var(--text); font-weight: 600; }
+.cluster-line { color: var(--text); }
+.cluster-line.no-message { color: var(--text-muted); font-style: italic; }
+.error-var { text-decoration: underline dotted; text-underline-offset: .2em; cursor: help; }
+.cluster-facts td { padding: 0 var(--space-3) var(--space-3) calc(3rem + 2 * var(--space-3)); background: var(--surface); white-space: normal; overflow-wrap: anywhere; }
+.facts { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-4); font-size: var(--text-12); color: var(--text-muted); }
+.fact-group { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); }
+.fact-group + .fact-group { padding-inline-start: var(--space-4); border-inline-start: 1px solid var(--separator); }
+.fact strong { color: var(--text); font-size: var(--text-13); }
+.fact-tracked { font-weight: 600; }
+.fact.status-failed, .fact.status-flaky { font-weight: 600; }
+.fact code { color: var(--text); }
+a.fact, a.fact:visited { color: var(--link); }
+.cluster-sample { contain: inline-size; margin-top: var(--space-2); }
+.cluster-sample > summary { width: max-content; max-width: 100%; color: var(--link); font-size: var(--text-12); }
+.cluster-sample .code-section { margin-block: var(--space-2) 0; }
+.failure-table tr.related td { color: var(--text-muted); }
+.failure-table tr.related .col-test a { font-weight: 400; }
+.failure-table tr.related .col-source { font-style: italic; }
 .col-source { white-space: nowrap; color: var(--text-muted); }
 .bug-unread { color: var(--text-muted); font-size: var(--text-12); font-style: italic; }
-.cluster-count { display: inline-block; min-width: 2rem; margin-inline-end: var(--space-2); text-align: center; font-weight: 600; background: var(--surface-2); border: 1px solid var(--separator); border-radius: 4px; }
+.cluster-count { display: inline-block; min-width: 2.5rem; padding-inline: var(--space-1); text-align: center; font-size: var(--text-14); font-weight: 600; background: var(--surface-2); border: 1px solid var(--separator); border-radius: 4px; }
+/* Overview at a glance: one row of compact cards under the table, each a short list. */
+.glance { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--space-3); margin-top: var(--space-4); }
+.glance-panel { min-width: 0; padding: var(--space-2) var(--space-3); background: var(--surface); border: 1px solid var(--separator); border-radius: var(--radius); font-size: var(--text-13); line-height: 1.4; }
+.glance-panel h3 { margin: 0 0 var(--space-1); font-size: var(--text-12); color: var(--text-muted); }
+.glance-counts, .glance-list { display: grid; gap: 2px var(--space-2); margin: 0; padding: 0; list-style: none; }
+.glance-counts { grid-template-columns: max-content max-content; justify-content: start; column-gap: var(--space-3); }
+.glance-counts > li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; }
+.glance-counts .trend { justify-content: center; }
+.glance-counts strong { font-size: var(--text-14); text-align: end; }
+.glance-list { grid-template-columns: minmax(0, 1fr) auto auto; align-items: baseline; }
+.glance-list > li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline; min-width: 0; }
+.glance-list > li > .trend:last-child { grid-column: 2 / -1; justify-self: start; }
+.glance-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.glance-meta { color: var(--text-muted); font-size: var(--text-12); white-space: nowrap; }
+.glance-list > li:has(> .glance-count) { grid-template-columns: 1.5rem minmax(0, 1fr); column-gap: var(--space-2); }
+.glance-count { text-align: end; font-weight: 600; }
+.glance-error { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.glance-error .exception-type { color: var(--link); }
+.glance-line { color: var(--text-muted); font-size: var(--text-12); }
+.glance-note { margin: 0 0 var(--space-1); color: var(--text-muted); font-size: var(--text-12); }
+.glance-more { margin: var(--space-1) 0 0; font-size: var(--text-12); }
+.glance-bar { display: flex; gap: 2px; height: 6px; margin-top: var(--space-2); overflow: hidden; border-radius: 3px; background: var(--surface-2); }
+.glance-bar > span { --share: 0%; flex: 0 1 var(--share); min-width: 2px; }
+.bar-new { background: var(--new); }
+.bar-recurring { background: var(--recurring); }
+.bar-none { background: var(--border); }
+.glance-table { font-size: var(--text-13); }
+.glance-table th, .glance-table td { padding: 2px var(--space-2); background: none; }
+.glance-table thead th { font-size: var(--text-12); }
+.glance-table tbody th { color: var(--text); text-align: start; overflow-wrap: break-word; }
+.glance-table tbody tr:nth-child(even) { background: none; }
+.glance-table tbody tr:last-child > * { border-bottom: 0; }
 .test-case-link { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); font-size: var(--text-13); }
 .test-case-link > a { font-weight: 600; padding: 0 var(--space-2); border: 1px solid var(--separator); border-radius: 4px; background: var(--surface-2); }
 .test-case-title, .test-case-state { font-size: var(--text-12); color: var(--text-muted); }
-.failure-card { content-visibility: auto; contain-intrinsic-size: auto 480px; padding: var(--space-3) var(--space-4); margin-block: 0 var(--space-3); border-top-width: 3px; }
-.failure-card[data-classification="failed"] { border-top-color: var(--fail); }
-.failure-card[data-classification="flaky"] { border-top-color: var(--flaky); }
-.failure-card.is-current { outline: 2px solid var(--focus); outline-offset: 2px; }
+.failure-card { content-visibility: auto; contain-intrinsic-size: auto 480px; padding: var(--space-3) var(--space-4); margin-block: 0 var(--space-3); }
+/* The current card has a quiet ring; a card focused from the keyboard has a thin one in full focus colour. */
+.failure-card.is-current:not(:focus-visible) { outline: 1px solid color-mix(in srgb, var(--current) 55%, transparent); outline-offset: 2px; }
+.failure-card:focus-visible { outline: 1px solid var(--focus); outline-offset: 2px; }
 .failure-card > header { padding: 0; max-width: none; gap: var(--space-2) var(--space-3); }
 .failure-card > header h3 { overflow-wrap: anywhere; margin: 0; font-size: var(--text-16); letter-spacing: -.01em; color: var(--text); }
+.card-class { color: var(--text-muted); font-weight: 400; }
 .failure-number { display: inline-flex; align-items: center; justify-content: center; min-width: 1.8rem; padding-inline: var(--space-1); border: 1px solid var(--separator); border-radius: 4px; color: var(--text-muted); font: var(--text-12) var(--font-mono); }
 .status-badge { font-size: var(--text-12); align-items: center; border-radius: 4px; padding: 0 var(--space-1); }
 .card-links { margin-inline-start: auto; font-size: var(--text-12); gap: var(--space-1) var(--space-3); }
 .name-section { display: flex; align-items: center; gap: var(--space-2); background: var(--code-bg); border: 1px solid var(--separator); border-radius: 6px; padding: 2px var(--space-3); margin-block: var(--space-2); }
 .name-section code { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .name-section button { flex-shrink: 0; min-height: 24px; }
-.metadata-grid { display: flex; flex-wrap: wrap; gap: 2px var(--space-4); margin: var(--space-2) 0; font-size: var(--text-13); }
-.metadata-grid > div { display: flex; gap: var(--space-2); min-width: 0; max-width: 100%; padding-inline-start: var(--space-2); border-inline-start: 1px solid var(--separator); }
-.metadata-grid dt { font-size: var(--text-12); line-height: 1.7; white-space: nowrap; }
+/* Labels and values line up: one label width for the facts and every metadata grid of a card. */
+.metadata-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(var(--label-width) + 12rem)), 1fr)); gap: 2px var(--space-4); margin: var(--space-2) 0; font-size: var(--text-13); }
+.metadata-grid > div { display: grid; grid-template-columns: var(--label-width) minmax(0, 1fr); align-items: baseline; gap: var(--space-2); min-width: 0; max-width: 100%; padding-inline-start: var(--space-2); border-inline-start: 1px solid var(--separator); }
+.metadata-grid > .wide { grid-column: 1 / -1; }
+.metadata-grid dt { font-size: var(--text-12); line-height: 1.7; }
 .metadata-grid dd { white-space: pre-wrap; min-width: 0; }
-.card-history { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-2); }
+.card-facts { display: grid; grid-template-columns: var(--label-width) minmax(0, 1fr); gap: var(--space-1) var(--space-2); margin-block: var(--space-2); }
+.card-history, .card-bugs, .card-attachments { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; padding-inline-start: var(--space-2); border-inline-start: 1px solid var(--separator); }
+.card-bugs, .card-attachments { align-items: baseline; }
+.attachment-summary { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0; padding: 0; list-style: none; font-size: var(--text-13); }
+.attachment-summary > li { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-2); }
+.attachment-summary > li > a:first-child { font-weight: 600; }
+.attachment-attempt, .attachment-more { font-size: var(--text-12); }
+.attachment-more { color: var(--text-muted); }
+.history-line { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-3); min-width: 0; }
 .strip-label { color: var(--text-muted); font-size: var(--text-12); font-weight: 600; }
-.card-bugs { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-2); }
-.bug-list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--text-13); }
-.bug-list > li { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); min-width: 0; }
-.bug-list a { font-weight: 600; }
+.bug-list { display: grid; grid-template-columns: max-content minmax(0, auto) max-content max-content; justify-content: start; gap: 2px var(--space-3); margin: 0; padding: 0; list-style: none; font-size: var(--text-13); }
+.bug-list > li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline; min-width: 0; }
 .bug-title { overflow-wrap: anywhere; }
 .bug-state { color: var(--text-muted); font-size: var(--text-12); }
-.open-bug-marker { padding: 0 var(--space-1); border: 1px solid var(--fail); border-radius: 4px; font-size: var(--text-12); font-weight: 600; white-space: nowrap; }
-.open-bug-marker, .open-bug-marker:visited { color: var(--fail); border-color: var(--fail); }
-.history-strip { margin: 0; gap: 3px; }
+/* Run history: one chip per build with its glyph and the day it finished, told apart by shape too; the trend follows them. */
+.history-strip { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0; }
 .history-strip > li { display: flex; }
-.history-cell { display: block; width: 12px; height: 12px; border: 1px solid currentColor; border-radius: 2px; }
-.history-cell.status-failed { background: var(--fail); }
-.history-cell.status-flaky { background: linear-gradient(to top, var(--flaky) 50%, transparent 50%); }
+.history-cell { display: inline-flex; align-items: baseline; gap: var(--space-1); padding: 0 var(--space-2); border: 1px solid currentColor; border-radius: 4px; font-size: var(--text-12); line-height: 1.5; white-space: nowrap; }
+.history-glyph { font-weight: 600; }
+.history-date { color: var(--text); }
+.history-cell:hover, .history-cell:focus-visible { text-decoration: none; }
+.history-cell.status-failed { background: color-mix(in srgb, var(--fail) 22%, transparent); }
+.history-cell.status-flaky { background: color-mix(in srgb, var(--flaky) 18%, transparent); }
+/* The current build is the last chip, its date in bold: no ring around it. */
+.history-cell[aria-current="true"] { outline: none; }
+.history-cell[aria-current="true"] .history-date { font-weight: 600; }
 .history-cell.status-notrun { border-style: dashed; }
 .history-cell.status-other { border-style: dotted; }
-.history-cell.status-unavailable { background: repeating-linear-gradient(135deg, var(--unavailable) 0 1px, transparent 1px 4px); }
+.history-cell.status-unavailable { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--unavailable) 45%, transparent) 0 1px, transparent 1px 4px); }
 .history-cell:hover, .history-cell:focus-visible { outline: 1px solid var(--link); outline-offset: 2px; }
 a.history-cell.status-passed:visited { color: var(--pass); }
 a.history-cell.status-failed:visited { color: var(--fail); }
 a.history-cell.status-flaky:visited { color: var(--flaky); }
 a.history-cell:is(.status-notrun, .status-other):visited { color: var(--other); }
 a.history-cell.status-unavailable:visited { color: var(--unavailable); }
-.history-signal { font-size: var(--text-12); font-weight: 600; }
 .attempt-group { border: 1px solid var(--separator); border-radius: 6px; margin-block: var(--space-1); background: var(--bg); }
 .attempt-group > summary { padding: 3px var(--space-3); font-size: var(--text-13); border-radius: 6px; background: var(--surface-2); }
 .attempt-group[open] > summary { border-bottom: 1px solid var(--separator); border-end-start-radius: 0; border-end-end-radius: 0; }
 .attempt-group > .attempt { margin: var(--space-1) var(--space-2); }
 .pipeline-names { margin: var(--space-1) var(--space-3); }
-.group-label { font-weight: 600; margin-inline-end: var(--space-1); }
-.group-count { color: var(--text-muted); font-size: var(--text-12); margin-inline-start: var(--space-1); }
+/* Attempt and group summaries keep their parts on fixed widths, so they line up from one attempt, group or card to the next. */
+.group-label { display: inline-block; min-width: 7rem; font-weight: 600; margin-inline-end: var(--space-1); }
+.group-count { display: inline-block; min-width: 7.5rem; color: var(--text-muted); font-size: var(--text-12); margin-inline-start: var(--space-1); }
 .attempt-group > summary .status-badge, .attempt > summary .status-badge { border: 0; padding-block: 0; }
+.attempt-group > summary .status-badge { min-width: 5rem; }
 .attempt { border: 1px solid var(--separator); border-radius: 6px; margin-block: var(--space-1); padding: 0 var(--space-3) var(--space-2); background: var(--surface); }
 .attempt:not([open]) { padding-bottom: 0; }
 .attempt > summary { padding: 2px var(--space-3); margin-inline: calc(-1 * var(--space-3)); font-size: var(--text-13); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 6px; }
 .attempt[open] > summary { white-space: normal; border-bottom: 1px solid var(--separator); border-end-start-radius: 0; border-end-end-radius: 0; background: var(--surface-2); }
 .attempt > summary:hover, .attempt-group > summary:hover { outline: 1px solid var(--link); outline-offset: -1px; }
 .attempt > summary::marker, .attempt-group > summary::marker { color: var(--link); }
-.attempt-title { font-weight: 600; margin-inline-end: var(--space-1); }
-.attempt > summary .status-badge { min-width: 4.2rem; }
+.attempt-title { display: inline-block; min-width: 7rem; font-weight: 600; margin-inline-end: var(--space-1); }
+:lang(fr) .attempt-title { min-width: 8.5rem; }
+.attempt > summary .status-badge { min-width: 5rem; }
 .attempt-meta { color: var(--text-muted); margin-inline-start: var(--space-2); }
 .attempt-duration { display: inline-block; min-width: 4.5rem; text-align: end; }
 .attempt-machine { display: inline-block; min-width: 9rem; }
+.attempt-meta.attempt-machine { max-width: 12rem; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
 .attempt-error { color: var(--text-muted); margin-inline-start: var(--space-2); font: var(--text-12) var(--font-mono); }
-.attempt-outcome { color: var(--text-muted); font-size: var(--text-12); }
+.attempt-outcome { color: var(--text-muted); font-size: var(--text-12); margin-inline-start: var(--space-2); }
 .attempt.is-match > summary, .attempt-group.is-match > summary { box-shadow: inset 3px 0 0 var(--current); }
 .code-section { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); border: 1px solid var(--separator); border-radius: 6px; background: var(--surface-2); margin-block: var(--space-2); overflow: hidden; }
+/* In an attempt that failed, its error message carries the failure's edge. */
+.attempt:has(> summary .status-failed) > .code-section:has(code.lang-error) { border-inline-start: 3px solid var(--fail); }
 .code-section .code-block { display: contents; }
 .code-section .language-label { order: 1; flex: 1 1 10rem; padding: 2px var(--space-3); color: var(--text-muted); font-size: var(--text-12); font-weight: 600; }
 .code-tools { order: 2; display: flex; flex-wrap: wrap; gap: var(--space-1); padding: 2px var(--space-2); }
-.code-tools button { padding: 0 var(--space-2); min-height: 24px; }
+.code-tools button { padding: 0 var(--space-2); min-height: 24px; background: transparent; border-color: transparent; color: var(--text-muted); }
+.code-tools button:hover, .code-tools button:focus-visible { border-color: var(--border); background: var(--surface); color: var(--text); }
+.code-tools button[aria-pressed="true"] { color: var(--link); }
 .code-section pre { order: 3; flex-basis: 100%; width: 100%; max-height: 32rem; overflow: auto; border: 0; border-top: 1px solid var(--separator); border-radius: 0; padding: var(--space-2) var(--space-3); }
 .code-section code { font-size: var(--text-12); line-height: 1.55; }
+.code-section code.lang-stacktrace { line-height: 1.65; }
+.code-section .first-user-frame { background: color-mix(in srgb, var(--current) 10%, transparent); }
+.code-section .framework-frame { opacity: .8; }
 .code-section .diagnostic { order: 4; flex-basis: 100%; margin: 0 var(--space-3) var(--space-2); }
 .code-section.hide-framework .framework-frame { display: none; }
-.sub-result, .iteration { border-inline-start: 2px solid var(--separator); padding-inline-start: var(--space-3); margin-block: var(--space-2); font-size: var(--text-13); }
-.attachment-list { list-style: none; padding: 0; margin-block: var(--space-1); display: flex; flex-wrap: wrap; gap: var(--space-1); overflow-wrap: anywhere; }
-.attachment-list > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-3); background: var(--bg); border: 1px solid var(--separator); border-radius: 6px; padding: 2px var(--space-3); font-size: var(--text-13); }
-.attachment-list > li:has(.attachment-local, .metadata-grid) { flex-basis: 100%; }
+/* A sub-result or an iteration names itself, its status and outcome on one line, its details below. */
+.sub-result, .iteration { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-2); border-inline-start: 2px solid var(--separator); padding-inline-start: var(--space-3); margin-block: var(--space-2); font-size: var(--text-13); }
+.sub-result > :not(h5, h6, .status-badge, .attempt-outcome), .iteration > :not(h5) { flex-basis: 100%; }
+.sub-result > .attempt-outcome { margin-inline-start: 0; }
+.attachment-list { display: grid; gap: var(--space-1); list-style: none; padding: 0; margin-block: var(--space-1); overflow-wrap: anywhere; }
+.attachment-list > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 2px var(--space-3); background: var(--bg); border: 1px solid var(--separator); border-radius: 6px; padding: var(--space-1) var(--space-3); font-size: var(--text-13); }
+.attachment-name { grid-column: 1; }
+.attachment-name > a { font-weight: 600; }
 .attachment-size { color: var(--text-muted); font: var(--text-12) var(--font-mono); }
 .attachment-size[title], .attachment-local > span[title] { cursor: help; }
-.attachment-list .metadata-grid { flex-basis: 100%; margin: 0; }
-.attachment-local { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-2); }
+.attachment-list .metadata-grid { grid-column: 1 / -1; margin: 0; }
+.attachment-local { grid-column: 2; grid-row: 1; display: flex; flex-wrap: wrap; justify-content: end; align-items: baseline; gap: 2px var(--space-2); }
 .attachment-local > span, .attachment-status { color: var(--text-muted); font-size: var(--text-12); }
-.attachment-status { flex-basis: 100%; margin: 0; }
-.attachment-preview { flex-basis: 100%; min-width: 0; }
+.attachment-local code { color: var(--text-muted); }
+.attachment-status { flex-basis: 100%; margin: 0; text-align: end; }
+.attachment-preview { grid-column: 1 / -1; min-width: 0; }
 .attachment-preview > summary { color: var(--link); font-size: var(--text-12); }
 .runs-table td { white-space: nowrap; }
 .runs-table .outside-window td { color: var(--text-muted); }
-.latest-run { padding: 0 var(--space-1); border: 1px solid var(--current); border-radius: 4px; color: var(--current); font-size: var(--text-12); font-weight: 600; white-space: nowrap; }
-.history-panel { background: var(--surface); border: 1px solid var(--separator); border-radius: var(--radius); padding: var(--space-4); margin-block: var(--space-4); }
+.runs-table tr[data-latest-run] > td:first-child { box-shadow: inset 3px 0 0 var(--current); }
+.cell-split { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.group-heading th { position: static; background: var(--surface); color: var(--text); font-size: var(--text-13); padding-top: var(--space-3); }
+.group-runs { margin-inline-start: var(--space-2); color: var(--text-muted); font-size: var(--text-12); font-weight: 400; }
+.run-count { font-weight: 600; }
+.latest-run, .this-run { padding: 0 var(--space-1); border: 1px solid var(--current); border-radius: 4px; color: var(--current); font-size: var(--text-12); font-weight: 600; white-space: nowrap; }
+.history-panel { background: var(--surface); border: 1px solid var(--separator); border-radius: var(--radius); padding: var(--space-4); margin-block: 0 var(--space-4); }
+.history-panel > h3 { margin-top: 0; }
+.history-panel .chart-legend { justify-content: center; }
+.history-panel .history-chart { margin-inline: auto; }
 .history-chart { display: block; width: auto; min-width: 0; max-width: none; }
 .chart-failed { fill: var(--fail); font-size: var(--text-12); font-weight: 600; text-anchor: middle; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); list-style: none; margin: 0 0 var(--space-2); padding: 0; color: var(--text-muted); font-size: var(--text-12); }
@@ -355,7 +484,7 @@ a.history-cell.status-unavailable:visited { color: var(--unavailable); }
 .history-data { margin-top: var(--space-3); border-top: 1px solid var(--separator); }
 .history-data table { font-size: var(--text-13); }
 .history-data caption { text-align: start; color: var(--text-muted); padding: var(--space-2) 0; font-size: var(--text-12); }
-.history-data th, .history-data td { padding: 3px var(--space-2); }
+.history-data th, .history-data td { padding: 4px var(--space-3); }
 .history-data th { white-space: nowrap; }
 .history-data thead th { font-size: var(--text-12); }
 .history-data tbody th { background: none; }
@@ -367,6 +496,14 @@ a.history-cell.status-unavailable:visited { color: var(--unavailable); }
 .history-by-test th { position: static; }
 .history-by-test .col-build { text-align: center; white-space: nowrap; }
 .history-by-test th.col-build { font: 400 var(--text-12) var(--font-mono); }
+/* History by test reads as a heat map: each outcome a small box tinted by its status. */
+.history-by-test .col-build { padding-inline: var(--space-1); }
+.history-by-test td.col-build { padding-block: 3px; }
+.history-by-test td.col-build > .status-glyph { width: 1.75rem; height: 1.25rem; line-height: 1.25rem; border-radius: 3px; background: color-mix(in srgb, currentColor 14%, transparent); }
+.history-by-test td.col-build > .status-failed { background: color-mix(in srgb, var(--fail) 34%, transparent); font-weight: 600; }
+.history-by-test td.col-build > .status-flaky { background: color-mix(in srgb, var(--flaky) 26%, transparent); font-weight: 600; }
+.history-by-test td.col-build > .status-notrun { background: none; border: 1px dashed color-mix(in srgb, var(--other) 55%, transparent); }
+.history-by-test td.col-build > .status-unavailable { background: none; }
 .report-footer { max-width: 1600px; margin-inline: auto; padding: 0 var(--space-5) var(--space-5); }
 .secondary-line { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: var(--space-3) 0 0; font-size: var(--text-12); }
 .secondary-line > div { display: flex; gap: var(--space-2); }
@@ -387,6 +524,7 @@ a.history-cell.status-unavailable:visited { color: var(--unavailable); }
   .view > .table-scroll { overflow: visible; }
 }
 @media (max-width: 900px) {
+  .glance { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); }
   .keyboard-hint { display: none; }
   .results-link { margin-inline-start: 0; }
   .card-links { margin-inline-start: 0; }
@@ -401,6 +539,7 @@ a.history-cell.status-unavailable:visited { color: var(--unavailable); }
   .name-section code { flex-basis: 100%; }
   .filter-controls > label.search { flex-basis: 100%; }
   .diagnostic-list, .diagnostic-list > li { display: block; }
+  .card-facts, .card-history, .card-bugs { display: block; }
 }
 @media print {
   main { padding: 0; max-width: none; }
@@ -420,22 +559,25 @@ a.history-cell.status-unavailable:visited { color: var(--unavailable); }
   .code-section.hide-framework .framework-frame { display: inline; }
   .code-section pre { overflow: visible; max-height: none; }
   .attempt, .attempt-group > summary, .code-section, .attachment-list > li, .diagnostic-list > li { break-inside: avoid; }
+  :root { --fail: #a32222; --pass: #176329; --flaky: #725000; --link: #004d99; --new: #5b2f9e; --recurring: #8a4100; --text-soft: #2e2e2e; }
+  .trend-new { background: none; color: var(--new); }
+  .glance-panel, .cluster-heading, .cluster-facts { break-inside: avoid; }
+  .col-error, .col-values { overflow-wrap: anywhere; }
 }
 @media (forced-colors: active) {
-  .failure-card, .history-panel, .count-chip, .attempt, .attempt-group, .attachment-list > li, .sq, .history-cell { border-color: CanvasText; }
-  .sq.status-failed, .history-cell.status-failed { background: CanvasText; }
-  .history-cell { forced-color-adjust: none; }
-  .history-cell.status-flaky { background: linear-gradient(to top, CanvasText 50%, Canvas 50%); }
-  .history-cell.status-unavailable { background: repeating-linear-gradient(135deg, CanvasText 0 1px, Canvas 1px 4px); }
-  .failure-card.is-current, :focus-visible { outline-color: Highlight; }
+  .failure-card, .history-panel, .glance-panel, .count-chip, .trend, .attempt, .attempt-group, .attachment-list > li, .sq, .history-cell { border-color: CanvasText; }
+  .sq.status-failed { background: CanvasText; }
+  .history-cell.status-failed { border-width: 2px; }
+  .history-cell.status-flaky { border-style: double; border-width: 3px; }
+  .failure-card.is-current:not(:focus-visible), .failure-card:focus-visible, :focus-visible { outline-color: Highlight; }
 }
 </style>
 </head>
 <body>
 <a class="skip-link" href="#overview">Vue d’ensemble</a>
 <header class="top-bar"><div class="top-bar-inner">
-<div class="title-line"><span class="count-chip status-failed"><span class="count-label">✕ Échec</span><strong class="count-value">8</strong></span><span class="count-chip status-flaky" data-zero><span class="count-label">≈ Instable</span><strong class="count-value">0</strong></span><span class="count-chip status-attachments"><span class="count-label">Pièces jointes</span><strong class="count-value">2</strong></span><span class="report-brand">AdoToolkit</span><h1>Rapport des tests en échec</h1><span class="pipeline-name"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build?definitionId=12">Synthetic UI tests <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span><span class="build-number"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401">20260916.3 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span><code title="refs/heads/main">main</code><span class="commit" title="Commit"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_git/11111111-2222-3333-4444-555555555555/commit/0123456789abcdef0123456789abcdef01234567">0123456 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span><span class="build-result status-failed">failed</span><span title="Fin">2026-09-16 13 h 18</span><span class="results-link"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab">Résultat du test <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span><a class="partial-link" href="#diagnostics"><span aria-hidden="true">!</span> Partiel</a></div>
-<div class="nav-line"><nav class="view-links" aria-label="Sections du rapport"><a href="#overview" data-view-link="overview">Vue d’ensemble</a><a href="#by-error" data-view-link="by-error">Par erreur</a><a href="#bugs" data-view-link="bugs">Bogues ouverts 2</a><a href="#details" data-view-link="details">Détails</a><a href="#runs" data-view-link="runs">Séries et historique</a><a href="#diagnostics" data-view-link="diagnostics">Diagnostics 2</a></nav>
+<div class="title-line"><span class="count-chip status-failed"><span class="count-label">✕ Échec</span><strong class="count-value">8</strong></span><span class="count-chip status-flaky" data-zero><span class="count-label">≈ Instable</span><strong class="count-value">0</strong></span><span class="count-chip status-attachments"><span class="count-label">Pièces jointes</span><strong class="count-value">2</strong></span><span class="report-brand">AdoToolkit</span><h1>Rapport des tests en échec</h1><span class="pipeline-name"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build?definitionId=12">Synthetic UI tests</a></span><span class="build-number"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401">20260916.3</a></span><code title="refs/heads/main">main</code><span class="commit" title="Commit"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_git/11111111-2222-3333-4444-555555555555/commit/0123456789abcdef0123456789abcdef01234567">0123456</a></span><span class="build-result status-failed">failed</span><span title="Fin">2026-09-16 13 h 18</span><span class="results-link"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab">Résultat du test</a></span><a class="partial-link" href="#diagnostics"><span aria-hidden="true">!</span> Partiel</a></div>
+<div class="nav-line"><nav class="view-links" aria-label="Sections du rapport"><a href="#overview" data-view-link="overview">Vue d’ensemble</a><a href="#runs" data-view-link="runs">Séries et historique</a><a href="#details" data-view-link="details">Détails</a><a href="#by-error" data-view-link="by-error">Par erreur</a><a href="#bugs" data-view-link="bugs">Bogues ouverts 2</a><a href="#diagnostics" data-view-link="diagnostics">Diagnostics 2</a></nav>
 <div class="interactive filter-controls" data-enhance hidden>
 <label class="search">Rechercher <input type="search" data-filter></label>
 <label><input type="checkbox" data-toggle="attachments">Avec pièces jointes</label>
@@ -446,50 +588,49 @@ a.history-cell.status-unavailable:visited { color: var(--unavailable); }
 <main id="report-content">
 <section class="view" id="overview" data-view>
 <h2 class="section-heading">Vue d’ensemble</h2>
-<p class="text-muted legend">✕ en échec à la fin · ≈ en échec, puis réussi · ✓ sans échec · n/m : tentatives en échec sur l’ensemble des tentatives</p>
 <p data-no-matches hidden>Aucun test ne correspond à ces filtres.</p>
 <div class="table-scroll"><table class="failure-table">
-<thead><tr><th scope="col">#</th><th scope="col">Test</th><th scope="col">Cas de test</th><th scope="col">Tentatives</th><th scope="col">Dernière erreur</th></tr></thead>
+<thead><tr><th scope="col">#</th><th scope="col">Cas de test</th><th scope="col">Test</th><th scope="col">Classe</th><th scope="col" class="col-trend">Tendance</th><th scope="col">Bogues ouverts</th><th scope="col">Tentatives</th><th scope="col">Dernière erreur</th></tr></thead>
 <tbody>
-<tr data-index-for="f-1"><td class="col-number"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span> <span class="ordinal">1</span></td><td class="col-test"><a href="#f-1"><span class="test-name" title="SubmitOrder">SubmitOrder</span></a> <span class="signal status-failed"><span aria-hidden="true">✕</span> 2 fois de suite</span> <a class="open-bug-marker" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801">Bogue ouvert</a> <span class="text-muted">CheckoutTests</span></td><td class="col-case"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/902">#902 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></td><td class="col-group"><span class="group-status status-failed"><span aria-hidden="true">✕</span> <span class="sr-only">Échec</span>1/1</span> <span class="mini-strip"><a class="sq status-failed" href="#f-1-a1" aria-label="Tentative 1 sur 1 : Échec"></a></span></td><td class="col-error" title="Assert.Equal() Failure: Expected: &quot;Confirmed&quot; Actual: &quot;Pending&quot;">Assert.Equal() Failure: Expected: &quot;Confirmed&quot; Actual: &quot;Pending&quot;</td></tr>
+<tr data-index-for="f-1"><td class="col-number"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span> <span class="ordinal">1</span></td><td class="col-case"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/902">#902</a></td><td class="col-test"><a href="#f-1"><span class="test-name" title="SubmitOrder">SubmitOrder</span></a></td><td class="col-class"><span class="class-name" title="CheckoutTests">CheckoutTests</span></td><td class="col-trend"><a class="trend trend-since" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" title="2 fois de suite depuis 20260916.2">Depuis le 2026-09-15</a></td><td class="col-bug"><a class="open-bug-marker" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801" title="Le total ignore la remise"><span class="sr-only">Bogue ouvert </span>#801</a></td><td class="col-group"><span class="group-status status-failed" title="1 sur 1 en échec"><span aria-hidden="true">✕</span> <span class="sr-only">Échec</span>1/1</span> <span class="mini-strip"><a class="sq status-failed" href="#f-1-a1" aria-label="Tentative 1 sur 1 : Échec"></a></span></td><td class="col-error" title="Assert.Equal() Failure: Expected: &quot;Confirmed&quot; Actual: &quot;Pending&quot;">Assert.Equal() Failure: Expected: &quot;Confirmed&quot; Actual: &quot;Pending&quot;</td></tr>
 </tbody></table></div>
+<div class="glance">
+<div class="glance-panel"><h3>Nouveaux et récurrents</h3>
+<ul class="glance-counts"><li><span class="trend trend-new"><span aria-hidden="true">✦</span> Nouveaux</span> <strong>0</strong></li><li><span class="trend trend-since">Récurrents</span> <strong>1</strong></li></ul><div class="glance-bar" aria-hidden="true"><span class="bar-recurring" style="--share: 100%"></span></div></div>
+<div class="glance-panel"><h3>Sans bogue ouvert</h3>
+<p class="glance-note">0 tests sur 1</p></div>
+</div>
 </section>
-<section class="view" id="by-error" data-view>
-<h2 class="section-heading">Par erreur</h2>
-<p class="text-muted legend">✕ en échec à la fin · ≈ en échec, puis réussi · ✓ sans échec · n/m : tentatives en échec sur l’ensemble des tentatives</p>
-<p data-no-matches hidden>Aucun test ne correspond à ces filtres.</p>
-<div class="table-scroll"><table class="failure-table by-error">
-<thead><tr><th scope="col">#</th><th scope="col">Test</th><th scope="col">Cas de test</th><th scope="col">Tentatives</th></tr></thead>
-<tbody class="error-cluster"><tr class="cluster-heading"><th scope="rowgroup" colspan="4"><span class="cluster-count">1</span> <code>Assert.Equal() Failure: Expected: &quot;Confirmed&quot; Actual: &quot;Pending&quot;</code></th></tr>
-<tr data-index-for="f-1"><td class="col-number"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span> <span class="ordinal">1</span></td><td class="col-test"><a href="#f-1"><span class="test-name" title="SubmitOrder">SubmitOrder</span></a> <span class="signal status-failed"><span aria-hidden="true">✕</span> 2 fois de suite</span> <a class="open-bug-marker" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801">Bogue ouvert</a> <span class="text-muted">CheckoutTests</span></td><td class="col-case"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/902">#902 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></td><td class="col-group"><span class="group-status status-failed"><span aria-hidden="true">✕</span> <span class="sr-only">Échec</span>1/1</span></td></tr>
-</tbody>
-</table></div>
+<section class="view" id="runs" data-view>
+<h2 class="section-heading">Séries et historique</h2>
+<section class="history-panel" id="history">
+<h3>Historique des exécutions</h3>
+<ul class="chart-legend"><li><svg class="legend-swatch" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect class="chart-pass" x="0" y="0" width="12" height="12"/></svg> Réussi</li><li><svg class="legend-swatch" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect class="chart-fail" x="0" y="0" width="12" height="12"/></svg> Échec</li><li><svg class="legend-swatch" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect class="chart-other" x="0" y="0" width="12" height="12"/></svg> Autre</li><li><svg class="legend-swatch" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect class="chart-unavailable" x="0" y="0" width="12" height="12"/><path class="chart-hatch" d="M 0 9 l 12 -6"/></svg> Indisponible</li></ul><div class="chart-scroll"><svg class="history-chart" xmlns="http://www.w3.org/2000/svg" role="img" width="376" height="212" viewBox="0 0 376 212"><title>Historique des exécutions</title><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="398"><title>Build 20260916.0; branche refs/heads/main; fin 2026-09-13 13 h 30; ✓ Réussi : 0; ✕ Échec : 0; ≈ Instable : 0; – Autre : 0; Indisponible; Ouvrir dans Azure DevOps</title><rect class="chart-unavailable" x="33" y="56" width="52" height="120"/><path class="chart-hatch" d="M 33 64 l 52 -8"/><path class="chart-hatch" d="M 33 76 l 52 -8"/><path class="chart-hatch" d="M 33 88 l 52 -8"/><path class="chart-hatch" d="M 33 100 l 52 -8"/><path class="chart-hatch" d="M 33 112 l 52 -8"/><path class="chart-hatch" d="M 33 124 l 52 -8"/><path class="chart-hatch" d="M 33 136 l 52 -8"/><path class="chart-hatch" d="M 33 148 l 52 -8"/><path class="chart-hatch" d="M 33 160 l 52 -8"/><path class="chart-hatch" d="M 33 172 l 52 -8"/><text class="chart-caption" x="59" y="124">?</text><text class="chart-caption" x="59" y="198">20260916.0</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="399"><title>Build 20260916.1; branche refs/heads/main; fin 2026-09-14 13 h 30; ✓ Réussi : 42; ✕ Échec : 0; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi : 42</title><rect class="chart-pass" x="119" y="64.667" width="52" height="111.333"/><text class="chart-count" x="145" y="124.333">42</text></g><g data-outcome="other" data-count="2"><title>– Autre : 2</title><rect class="chart-other" x="119" y="58.667" width="52" height="6"/></g><text class="chart-failed" x="145" y="50.667">✕ 0</text><text class="chart-caption" x="145" y="198">20260916.1</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="400"><title>Build 20260916.2; branche refs/heads/main; fin 2026-09-15 13 h 30; ✓ Réussi : 42; ✕ Échec : 1; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi : 42</title><rect class="chart-pass" x="205" y="68" width="52" height="108"/><text class="chart-count" x="231" y="126">42</text></g><g data-outcome="failed" data-count="1"><title>✕ Échec : 1</title><rect class="chart-fail" x="205" y="62" width="52" height="6"/></g><g data-outcome="other" data-count="2"><title>– Autre : 2</title><rect class="chart-other" x="205" y="56" width="52" height="6"/></g><text class="chart-failed" x="231" y="48">✕ 1</text><text class="chart-caption" x="231" y="198">20260916.2</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="401" aria-current="true"><title>Build 20260916.3; branche refs/heads/main; fin 2026-09-16 13 h 30; ✓ Réussi : 42; ✕ Échec : 1; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi : 42</title><rect class="chart-pass" x="291" y="68" width="52" height="108"/><text class="chart-count" x="317" y="126">42</text></g><g data-outcome="failed" data-count="1"><title>✕ Échec : 1</title><rect class="chart-fail" x="291" y="62" width="52" height="6"/></g><g data-outcome="other" data-count="2"><title>– Autre : 2</title><rect class="chart-other" x="291" y="56" width="52" height="6"/></g><text class="chart-failed" x="317" y="48">✕ 1</text><rect class="chart-current" x="288" y="53" width="58" height="126"/><text class="chart-caption" x="317" y="16">Cette exécution</text><text class="chart-caption" x="317" y="198">20260916.3</text></a></svg></div><div class="history-data"><div class="table-scroll"><table><caption>Données de l’historique</caption><thead><tr><th scope="col">Build</th><th scope="col">Branche</th><th scope="col">Fin</th><th scope="col">Réussi</th><th scope="col">Échec</th><th scope="col">Instable</th><th scope="col">Autre</th><th scope="col">État</th></tr></thead><tbody><tr data-build-id="398"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab">20260916.0</a></th><td>refs/heads/main</td><td>2026-09-13 13 h 30</td><td>0</td><td>0</td><td>0</td><td>0</td><td><span class="status-badge status-unavailable"><span aria-hidden="true">?</span> Indisponible</span></td></tr><tr data-build-id="399"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab">20260916.1</a></th><td>refs/heads/main</td><td>2026-09-14 13 h 30</td><td>42</td><td>0</td><td>0</td><td>2</td><td>Disponible</td></tr><tr data-build-id="400"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab">20260916.2</a></th><td>refs/heads/main</td><td>2026-09-15 13 h 30</td><td>42</td><td>1</td><td>0</td><td>2</td><td>Disponible</td></tr><tr data-build-id="401"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" aria-current="true">20260916.3</a> <span class="this-run">Cette exécution</span></th><td>refs/heads/main</td><td>2026-09-16 13 h 30</td><td>42</td><td>1</td><td>0</td><td>2</td><td>Disponible</td></tr></tbody></table></div></div>
 </section>
-<section class="view" id="bugs" data-view>
-<h2 class="section-heading">Bogues ouverts</h2>
-<p class="text-muted legend">✕ en échec à la fin · ≈ en échec, puis réussi · ✓ sans échec · n/m : tentatives en échec sur l’ensemble des tentatives</p>
-<p data-no-matches hidden>Aucun test ne correspond à ces filtres.</p>
-<div class="table-scroll"><table class="failure-table by-error by-bug">
-<thead><tr><th scope="col">#</th><th scope="col">Test</th><th scope="col">Cas de test</th><th scope="col">Tentatives</th><th scope="col">Lié par</th></tr></thead>
-<tbody class="error-cluster" data-bug="801"><tr class="cluster-heading"><th scope="rowgroup" colspan="5"><span class="cluster-count">1</span> <a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801">#801 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span class="bug-title">Le total ignore la remise</span> <span class="bug-state">Active</span></th></tr>
-<tr data-index-for="f-1"><td class="col-number"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span> <span class="ordinal">1</span></td><td class="col-test"><a href="#f-1"><span class="test-name" title="SubmitOrder">SubmitOrder</span></a> <span class="signal status-failed"><span aria-hidden="true">✕</span> 2 fois de suite</span> <span class="text-muted">CheckoutTests</span></td><td class="col-case"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/902">#902 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></td><td class="col-group"><span class="group-status status-failed"><span aria-hidden="true">✕</span> <span class="sr-only">Échec</span>1/1</span></td><td class="col-source">Résultat du test, Cas de test</td></tr>
-</tbody>
-<tbody class="error-cluster" data-bug="802"><tr class="cluster-heading"><th scope="rowgroup" colspan="5"><span class="cluster-count">1</span> <a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/802">#802 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span class="bug-unread">Non lu</span></th></tr>
-<tr data-index-for="f-1"><td class="col-number"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span> <span class="ordinal">1</span></td><td class="col-test"><a href="#f-1"><span class="test-name" title="SubmitOrder">SubmitOrder</span></a> <span class="signal status-failed"><span aria-hidden="true">✕</span> 2 fois de suite</span> <span class="text-muted">CheckoutTests</span></td><td class="col-case"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/902">#902 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></td><td class="col-group"><span class="group-status status-failed"><span aria-hidden="true">✕</span> <span class="sr-only">Échec</span>1/1</span></td><td class="col-source">Résultat du test</td></tr>
-</tbody>
-</table></div>
+<h3>Séries de tests</h3>
+<div class="table-scroll"><table class="runs-table"><thead><tr><th scope="col">Série de tests</th><th scope="col" class="num">ID</th><th scope="col">Début</th><th scope="col" class="num">Durée</th><th scope="col" class="num">Tests</th><th scope="col" class="num">Réussi</th><th scope="col" class="num">Échec</th><th scope="col" class="num">Tests signalés</th><th scope="col">Pièces jointes</th></tr></thead>
+<tbody>
+<tr data-run="201" data-latest-run><td class="col-run"><span class="cell-split"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Synthetic Windows tests</a> <span class="latest-run">Dernière série de tests</span></span></td><td class="num">201</td><td>2026-09-16 13 h 15</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num">1</td><td>2 répertoriées, 0 téléchargées</td></tr>
+</tbody></table></div>
+<p class="window-note">Les pièces jointes sont répertoriées pour les séries de tests commencées le 2026-09-09 13 h 30 ou après. Omises des séries plus anciennes : 0.</p>
+<h3>Historique par test</h3>
+<div class="table-scroll"><table class="failure-table history-by-test">
+<thead><tr><th scope="col">#</th><th scope="col">Test</th><th scope="col">Classe</th><th scope="col" class="col-build">20260916.0</th><th scope="col" class="col-build">20260916.1</th><th scope="col" class="col-build">20260916.2</th><th scope="col" class="col-build">20260916.3</th><th scope="col" class="col-trend">Tendance</th></tr></thead>
+<tbody>
+<tr data-index-for="f-1"><td class="col-number"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span> <span class="ordinal">1</span></td><td class="col-test"><a href="#f-1"><span class="test-name" title="SubmitOrder">SubmitOrder</span></a></td><td class="col-class"><span class="class-name" title="CheckoutTests">CheckoutTests</span></td><td class="col-build"><span class="status-glyph status-unavailable" role="img" aria-label="Indisponible">?</span></td><td class="col-build"><span class="status-glyph status-notrun" role="img" aria-label="Non exécuté">–</span></td><td class="col-build"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span></td><td class="col-build"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span></td><td class="col-trend"><a class="trend trend-since" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" title="2 fois de suite depuis 20260916.2">Depuis le 2026-09-15</a></td></tr>
+</tbody></table></div>
 </section>
 <section class="view" id="details" data-view>
 <h2 class="section-heading">Détails</h2>
 <p data-no-matches hidden>Aucun test ne correspond à ces filtres.</p>
 <article class="card failure-card" id="f-1" tabindex="-1" data-attempt-count="1" data-classification="failed" data-attachment-count="2" data-test-case="902" data-open-bug data-latest-error="f-1-a1">
-<header><span class="failure-number" aria-hidden="true">1</span><span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span><h3 data-short-name>SubmitOrder</h3><span class="test-case-link"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/902">Cas de test #902 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span><span class="card-links"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">Résultat du test <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Série de tests <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></span></header>
+<header><span class="failure-number" aria-hidden="true">1</span><span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span><h3 data-short-name><span class="card-class">CheckoutTests.</span>SubmitOrder</h3><span class="test-case-link"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/902">Cas de test #902</a></span><span class="card-links"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">Résultat du test</a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Série de tests</a></span></header>
 <div class="name-section"><code data-full-name data-copy-value>Synthetic.CheckoutTests.SubmitOrder</code> <button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Nom complet du test">Copier</button></div>
+<div class="card-facts"><div class="card-history"><span class="strip-label">Historique des exécutions</span><div class="history-line"><ol class="history-strip" aria-label="Historique des exécutions"><li><a class="history-cell status-unavailable" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="398" title="20260916.0 : Indisponible" aria-label="20260916.0 : Indisponible"><span class="history-glyph" aria-hidden="true">?</span><span class="history-date">2026-09-13</span></a></li><li><a class="history-cell status-notrun" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="399" title="20260916.1 : Non exécuté" aria-label="20260916.1 : Non exécuté"><span class="history-glyph" aria-hidden="true">–</span><span class="history-date">2026-09-14</span></a></li><li><a class="history-cell status-failed" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="400" title="20260916.2 : Échec" aria-label="20260916.2 : Échec"><span class="history-glyph" aria-hidden="true">✕</span><span class="history-date">2026-09-15</span></a></li><li><a class="history-cell status-failed" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="401" title="20260916.3 : Échec" aria-label="20260916.3 : Échec" aria-current="true"><span class="history-glyph" aria-hidden="true">✕</span><span class="history-date">2026-09-16</span></a></li></ol><a class="trend trend-since" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" title="2 fois de suite depuis 20260916.2">Depuis le 2026-09-15</a></div></div><div class="card-bugs"><span class="strip-label">Bogues</span><ul class="bug-list"><li data-bug="801" data-open-bug><a class="open-bug-marker" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801" title="Le total ignore la remise"><span class="sr-only">Bogue ouvert </span>#801</a> <span class="bug-title">Le total ignore la remise</span> <span class="bug-state">Active</span></li><li data-bug="802"><a class="bug-marker bug-unread" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/802" title="Non lu">#802</a> <span class="bug-unread">Non lu</span></li></ul></div>
+<div class="card-attachments"><span class="strip-label">Pièces jointes</span><ul class="attachment-summary"><li><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_apis/test/Runs/201/Results/11/attachments/51?api-version=6.0-preview.1">Screenshot.PNG</a> <span class="attachment-size" title="1 234 octets">1,2 Ko</span> <a class="attachment-attempt" href="#f-1-a1-att51">Tentative 1 sur 1</a></li><li><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_apis/test/Runs/201/Results/11/attachments/52?api-version=6.0-preview.1&amp;testSubResultId=301">Details.json</a> <span class="attachment-size">256 octets</span> <a class="attachment-attempt" href="#f-1-a1-att52">Tentative 1 sur 1</a></li></ul></div></div>
 <dl class="metadata-grid"><div><dt>Assembly de tests</dt><dd>Synthetic.Tests.dll</dd></div><div><dt>Titre</dt><dd>Valider la commande</dd></div><div><dt>Responsable</dt><dd>Fictional Tester &lt;tester@example.test&gt;</dd></div><div><dt>Priorité</dt><dd>2</dd></div></dl>
-<div class="card-bugs"><span class="strip-label">Bogues</span><ul class="bug-list"><li data-bug="801" data-open-bug><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801">#801 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span class="bug-title">Le total ignore la remise</span> <span class="bug-state">Active</span></li><li data-bug="802"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/802">#802 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span class="bug-unread">Non lu</span></li></ul></div>
-<div class="card-history"><span class="strip-label">Historique des exécutions</span><ol class="history-strip" aria-label="Historique des exécutions"><li><a class="history-cell status-unavailable" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="398" title="20260916.0 : Indisponible" aria-label="20260916.0 : Indisponible"></a></li><li><a class="history-cell status-notrun" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="399" title="20260916.1 : Non exécuté" aria-label="20260916.1 : Non exécuté"></a></li><li><a class="history-cell status-failed" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="400" title="20260916.2 : Échec" aria-label="20260916.2 : Échec"></a></li><li><a class="history-cell status-failed" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="401" title="20260916.3 : Échec" aria-label="20260916.3 : Échec" aria-current="true"></a></li></ol><span class="history-signal status-failed"><span aria-hidden="true">✕</span> 2 fois de suite depuis 20260916.2</span></div>
-<details class="attempt" id="f-1-a1"><summary><span class="attempt-title">Tentative 1 sur 1</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="attempt-meta attempt-duration">1,235 s</span> <span class="attempt-meta attempt-machine">SYNTHETIC-AGENT</span> <span class="attempt-error">Assert.Equal() Failure: Expected: &quot;Confirmed&quot; Actual: &quot;Pending&quot;</span></summary>
-<dl class="metadata-grid"><div><dt>Source de la tentative</dt><dd>Résultat unique</dd></div><div><dt>Série de tests</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Synthetic Windows tests (201) <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div><dt>Résultat du test</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">11 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div><dt>Début</dt><dd>2026-09-16 13 h 15</dd></div><div><dt>Fin</dt><dd>2026-09-16 13 h 16</dd></div><div><dt>Exécuté par</dt><dd>Fictional Runner &lt;runner@example.test&gt;</dd></div><div><dt>Type d’échec</dt><dd>Regression</dd></div><div><dt>État de résolution</dt><dd>Unresolved</dd></div><div><dt>En échec depuis</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400">20260916.2 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div><dt>Bogues associés</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801">#801 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div><dt>Bogues associés</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/802">#802 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></dd></div><div><dt>Commentaire</dt><dd>« Résultat attendu : commande confirmée »</dd></div></dl>
+<details class="attempt" id="f-1-a1"><summary><span class="attempt-title">Tentative 1 sur 1</span> <span class="status-badge status-failed"><span aria-hidden="true">✕</span> Échec</span> <span class="attempt-meta attempt-duration">1,235 s</span> <span class="attempt-meta attempt-machine" title="SYNTHETIC-AGENT">SYNTHETIC-AGENT</span> <span class="attempt-error">Assert.Equal() Failure: Expected: &quot;Confirmed&quot; Actual: &quot;Pending&quot;</span></summary>
+<dl class="metadata-grid"><div><dt>Source de la tentative</dt><dd>Résultat unique</dd></div><div><dt>Série de tests</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Synthetic Windows tests (201)</a></dd></div><div><dt>Résultat du test</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab&amp;runId=201&amp;resultId=11">11</a></dd></div><div><dt>Début</dt><dd>2026-09-16 13 h 15</dd></div><div><dt>Fin</dt><dd>2026-09-16 13 h 16</dd></div><div><dt>Exécuté par</dt><dd>Fictional Runner &lt;runner@example.test&gt;</dd></div><div><dt>Type d’échec</dt><dd>Regression</dd></div><div><dt>État de résolution</dt><dd>Unresolved</dd></div><div><dt>En échec depuis</dt><dd><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400">20260916.2</a></dd></div><div><dt>Bogues associés</dt><dd><a class="open-bug-marker" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801" title="Le total ignore la remise"><span class="sr-only">Bogue ouvert </span>#801</a></dd></div><div><dt>Bogues associés</dt><dd><a class="bug-marker bug-unread" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/802" title="Non lu">#802</a></dd></div><div><dt>Commentaire</dt><dd>« Résultat attendu : commande confirmée »</dd></div></dl>
 <div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Message d’erreur">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button></div><div class="code-block"><div class="language-label">Message d’erreur</div><pre><code class="lang-error">Assert.Equal() Failure: <span class="k">Expected</span>: <span class="s">&quot;Confirmed&quot;</span> <span class="k">Actual</span>: <span class="s">&quot;Pending&quot;</span>
 <span class="u"><a rel="noreferrer" href="https://repo.example.test/source?q=1&amp;line=42">https://repo.example.test/source?q=1&amp;line=42</a></span></code></pre></div></div>
 <div class="code-section"><div class="code-tools interactive" data-enhance hidden><button type="button" class="interactive" data-enhance hidden data-action="copy" aria-label="Copier — Arborescence des appels de procédure (.NET)">Copier</button><button type="button" class="interactive" data-enhance hidden data-action="wrap" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Retour automatique à la ligne</button><button type="button" class="interactive" data-enhance hidden data-action="framework" aria-pressed="false"><span class="toggle-off" aria-hidden="true">○</span><span class="toggle-on" aria-hidden="true">✓</span>Masquer les appels du framework</button></div><div class="code-block"><div class="language-label">Arborescence des appels de procédure (.NET)</div><pre><code class="lang-stacktrace"><span class="t">System.InvalidOperationException</span>: Synthetic failure
@@ -516,8 +657,8 @@ a.history-cell.status-unavailable:visited { color: var(--unavailable); }
 </section>
 <h4>Pièces jointes</h4>
 <ul class="attachment-list">
-<li id="f-1-a1-att51"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_apis/test/Runs/201/Results/11/attachments/51?api-version=6.0-preview.1">Screenshot.PNG <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span class="attachment-size" title="1 234 octets">1,2 Ko</span><dl class="metadata-grid"><div><dt>Commentaire</dt><dd>Synthetic screenshot metadata</dd></div></dl></li>
-<li id="f-1-a1-att52"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_apis/test/Runs/201/Results/11/attachments/52?api-version=6.0-preview.1&amp;testSubResultId=301">Details.json <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span class="attachment-size">256 octets</span><dl class="metadata-grid"><div><dt>ID</dt><dd>301</dd></div></dl></li>
+<li id="f-1-a1-att51"><span class="attachment-name"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_apis/test/Runs/201/Results/11/attachments/51?api-version=6.0-preview.1">Screenshot.PNG</a> <span class="attachment-size" title="1 234 octets">1,2 Ko</span></span><dl class="metadata-grid"><div><dt>Commentaire</dt><dd>Synthetic screenshot metadata</dd></div></dl></li>
+<li id="f-1-a1-att52"><span class="attachment-name"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_apis/test/Runs/201/Results/11/attachments/52?api-version=6.0-preview.1&amp;testSubResultId=301">Details.json</a> <span class="attachment-size">256 octets</span></span><dl class="metadata-grid"><div><dt>ID</dt><dd>301</dd></div></dl></li>
 </ul>
 <h4>Champs personnalisés</h4>
 <dl class="metadata-grid"><div><dt>SyntheticFlag</dt><dd>True</dd></div><div><dt>SyntheticNumber</dt><dd>1234,5</dd></div></dl>
@@ -526,24 +667,29 @@ a.history-cell.status-unavailable:visited { color: var(--unavailable); }
 </details>
 </article>
 </section>
-<section class="view" id="runs" data-view>
-<h2 class="section-heading">Séries et historique</h2>
-<h3>Séries de tests</h3>
-<div class="table-scroll"><table class="runs-table"><thead><tr><th scope="col">Série de tests</th><th scope="col">Début</th><th scope="col" class="num">Durée</th><th scope="col" class="num">Tests</th><th scope="col" class="num">Réussi</th><th scope="col" class="num">Échec</th><th scope="col" class="num">Tests signalés</th><th scope="col">Pièces jointes</th></tr></thead>
-<tbody>
-<tr data-run="201" data-latest-run><td><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=201">Synthetic Windows tests <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> <span class="text-muted">201</span> <span class="latest-run">Dernière série de tests</span></td><td>2026-09-16 13 h 15</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num">1</td><td>2 répertoriées, 0 téléchargées</td></tr>
-</tbody></table></div>
-<p class="window-note">Les pièces jointes sont répertoriées pour les séries de tests commencées le 2026-09-09 13 h 30 ou après. Omises des séries plus anciennes : 0.</p>
-<section class="history-panel" id="history">
-<h3>Historique des exécutions</h3>
-<ul class="chart-legend"><li><svg class="legend-swatch" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect class="chart-pass" x="0" y="0" width="12" height="12"/></svg> Réussi</li><li><svg class="legend-swatch" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect class="chart-fail" x="0" y="0" width="12" height="12"/></svg> Échec</li><li><svg class="legend-swatch" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect class="chart-other" x="0" y="0" width="12" height="12"/></svg> Autre</li><li><svg class="legend-swatch" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect class="chart-unavailable" x="0" y="0" width="12" height="12"/><path class="chart-hatch" d="M 0 9 l 12 -6"/></svg> Indisponible</li></ul><div class="chart-scroll"><svg class="history-chart" xmlns="http://www.w3.org/2000/svg" role="img" width="376" height="212" viewBox="0 0 376 212"><title>Historique des exécutions</title><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="398"><title>Build 20260916.0; branche refs/heads/main; fin 2026-09-13 13 h 30; ✓ Réussi : 0; ✕ Échec : 0; ≈ Instable : 0; – Autre : 0; Indisponible; Ouvrir dans Azure DevOps</title><rect class="chart-unavailable" x="33" y="56" width="52" height="120"/><path class="chart-hatch" d="M 33 64 l 52 -8"/><path class="chart-hatch" d="M 33 76 l 52 -8"/><path class="chart-hatch" d="M 33 88 l 52 -8"/><path class="chart-hatch" d="M 33 100 l 52 -8"/><path class="chart-hatch" d="M 33 112 l 52 -8"/><path class="chart-hatch" d="M 33 124 l 52 -8"/><path class="chart-hatch" d="M 33 136 l 52 -8"/><path class="chart-hatch" d="M 33 148 l 52 -8"/><path class="chart-hatch" d="M 33 160 l 52 -8"/><path class="chart-hatch" d="M 33 172 l 52 -8"/><text class="chart-caption" x="59" y="124">?</text><text class="chart-caption" x="59" y="198">20260916.0 ↗</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="399"><title>Build 20260916.1; branche refs/heads/main; fin 2026-09-14 13 h 30; ✓ Réussi : 42; ✕ Échec : 0; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi : 42</title><rect class="chart-pass" x="119" y="64.667" width="52" height="111.333"/><text class="chart-count" x="145" y="124.333">42</text></g><g data-outcome="other" data-count="2"><title>– Autre : 2</title><rect class="chart-other" x="119" y="58.667" width="52" height="6"/></g><text class="chart-failed" x="145" y="50.667">✕ 0</text><text class="chart-caption" x="145" y="198">20260916.1 ↗</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="400"><title>Build 20260916.2; branche refs/heads/main; fin 2026-09-15 13 h 30; ✓ Réussi : 42; ✕ Échec : 1; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi : 42</title><rect class="chart-pass" x="205" y="68" width="52" height="108"/><text class="chart-count" x="231" y="126">42</text></g><g data-outcome="failed" data-count="1"><title>✕ Échec : 1</title><rect class="chart-fail" x="205" y="62" width="52" height="6"/></g><g data-outcome="other" data-count="2"><title>– Autre : 2</title><rect class="chart-other" x="205" y="56" width="52" height="6"/></g><text class="chart-failed" x="231" y="48">✕ 1</text><text class="chart-caption" x="231" y="198">20260916.2 ↗</text></a><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" data-build-id="401" aria-current="true"><title>Build 20260916.3; branche refs/heads/main; fin 2026-09-16 13 h 30; ✓ Réussi : 42; ✕ Échec : 1; ≈ Instable : 0; – Autre : 2; Disponible; Ouvrir dans Azure DevOps</title><g data-outcome="passed" data-count="42"><title>✓ Réussi : 42</title><rect class="chart-pass" x="291" y="68" width="52" height="108"/><text class="chart-count" x="317" y="126">42</text></g><g data-outcome="failed" data-count="1"><title>✕ Échec : 1</title><rect class="chart-fail" x="291" y="62" width="52" height="6"/></g><g data-outcome="other" data-count="2"><title>– Autre : 2</title><rect class="chart-other" x="291" y="56" width="52" height="6"/></g><text class="chart-failed" x="317" y="48">✕ 1</text><rect class="chart-current" x="288" y="53" width="58" height="126"/><text class="chart-caption" x="317" y="16">Cette exécution</text><text class="chart-caption" x="317" y="198">20260916.3 ↗</text></a></svg></div><div class="history-data"><div class="table-scroll"><table><caption>Données de l’historique</caption><thead><tr><th scope="col">Build</th><th scope="col">Branche</th><th scope="col">Fin</th><th scope="col">Réussi</th><th scope="col">Échec</th><th scope="col">Instable</th><th scope="col">Autre</th><th scope="col">État</th></tr></thead><tbody><tr data-build-id="398"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=398&amp;view=ms.vss-test-web.build-test-results-tab">20260916.0 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></th><td>refs/heads/main</td><td>2026-09-13 13 h 30</td><td>0</td><td>0</td><td>0</td><td>0</td><td><span class="status-badge status-unavailable"><span aria-hidden="true">?</span> Indisponible</span></td></tr><tr data-build-id="399"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=399&amp;view=ms.vss-test-web.build-test-results-tab">20260916.1 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></th><td>refs/heads/main</td><td>2026-09-14 13 h 30</td><td>42</td><td>0</td><td>0</td><td>2</td><td>Disponible</td></tr><tr data-build-id="400"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab">20260916.2 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a></th><td>refs/heads/main</td><td>2026-09-15 13 h 30</td><td>42</td><td>1</td><td>0</td><td>2</td><td>Disponible</td></tr><tr data-build-id="401"><th scope="row"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=401&amp;view=ms.vss-test-web.build-test-results-tab" aria-current="true">20260916.3 <span role="img" aria-label="Ouvrir dans Azure DevOps">↗</span></a> Cette exécution</th><td>refs/heads/main</td><td>2026-09-16 13 h 30</td><td>42</td><td>1</td><td>0</td><td>2</td><td>Disponible</td></tr></tbody></table></div></div>
+<section class="view" id="by-error" data-view>
+<h2 class="section-heading">Par erreur</h2>
+<p class="cluster-summary">Erreurs distinctes : 1 · Tests : 1</p>
+<p data-no-matches hidden>Aucun test ne correspond à ces filtres.</p>
+<div class="table-scroll"><table class="failure-table by-error">
+<thead><tr><th scope="col">#</th><th scope="col">Cas de test</th><th scope="col">Test</th><th scope="col">Classe</th><th scope="col" class="col-trend">Tendance</th><th scope="col">Bogues ouverts</th><th scope="col">Tentatives</th></tr></thead>
+<tbody class="error-cluster" id="e-1"><tr class="cluster-heading"><th scope="rowgroup" colspan="7"><div class="cluster-head"><span class="cluster-count">1</span> <code class="exception-type" title="System.InvalidOperationException">InvalidOperationException</code> <code class="cluster-line">Assert.Equal() Failure: Expected: &quot;Confirmed&quot; Actual: &quot;Pending&quot;</code></div></th></tr>
+<tr data-index-for="f-1"><td class="col-number"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span> <span class="ordinal">1</span></td><td class="col-case"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/902">#902</a></td><td class="col-test"><a href="#f-1"><span class="test-name" title="SubmitOrder">SubmitOrder</span></a></td><td class="col-class"><span class="class-name" title="CheckoutTests">CheckoutTests</span></td><td class="col-trend"><a class="trend trend-since" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" title="2 fois de suite depuis 20260916.2">Depuis le 2026-09-15</a></td><td class="col-bug"><a class="open-bug-marker" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801" title="Le total ignore la remise"><span class="sr-only">Bogue ouvert </span>#801</a></td><td class="col-group"><span class="group-status status-failed" title="1 sur 1 en échec"><span aria-hidden="true">✕</span> <span class="sr-only">Échec</span>1/1</span></td></tr>
+</tbody>
+</table></div>
 </section>
-<h3>Historique par test</h3>
-<div class="table-scroll"><table class="failure-table history-by-test">
-<thead><tr><th scope="col">#</th><th scope="col">Test</th><th scope="col" class="col-build">20260916.0</th><th scope="col" class="col-build">20260916.1</th><th scope="col" class="col-build">20260916.2</th><th scope="col" class="col-build">20260916.3</th><th scope="col" class="num">Échecs consécutifs</th></tr></thead>
-<tbody>
-<tr data-index-for="f-1"><td class="col-number"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span> <span class="ordinal">1</span></td><td class="col-test"><a href="#f-1"><span class="test-name" title="SubmitOrder">SubmitOrder</span></a> <span class="text-muted">CheckoutTests</span></td><td class="col-build"><span class="status-glyph status-unavailable" role="img" aria-label="Indisponible">?</span></td><td class="col-build"><span class="status-glyph status-notrun" role="img" aria-label="Non exécuté">–</span></td><td class="col-build"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span></td><td class="col-build"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span></td><td class="num">2</td></tr>
-</tbody></table></div>
+<section class="view" id="bugs" data-view>
+<h2 class="section-heading">Bogues ouverts</h2>
+<p data-no-matches hidden>Aucun test ne correspond à ces filtres.</p>
+<div class="table-scroll"><table class="failure-table by-error by-bug">
+<thead><tr><th scope="col">#</th><th scope="col">Cas de test</th><th scope="col">Test</th><th scope="col">Classe</th><th scope="col" class="col-trend">Tendance</th><th scope="col">Tentatives</th><th scope="col">Lié par</th></tr></thead>
+<tbody class="error-cluster" data-bug="801"><tr class="cluster-heading"><th scope="rowgroup" colspan="7"><div class="bug-head"><span class="cluster-count">1</span> <a class="open-bug-marker" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/801" title="Le total ignore la remise"><span class="sr-only">Bogue ouvert </span>#801</a> <span class="bug-summary"> <span class="bug-title">Le total ignore la remise</span> <span class="bug-state">Active</span> <span class="facts"><span class="fact-group"><span class="fact">Tests liés <strong>1</strong></span></span></span></span></div></th></tr>
+<tr data-index-for="f-1"><td class="col-number"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span> <span class="ordinal">1</span></td><td class="col-case"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/902">#902</a></td><td class="col-test"><a href="#f-1"><span class="test-name" title="SubmitOrder">SubmitOrder</span></a></td><td class="col-class"><span class="class-name" title="CheckoutTests">CheckoutTests</span></td><td class="col-trend"><a class="trend trend-since" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" title="2 fois de suite depuis 20260916.2">Depuis le 2026-09-15</a></td><td class="col-group"><span class="group-status status-failed" title="1 sur 1 en échec"><span aria-hidden="true">✕</span> <span class="sr-only">Échec</span>1/1</span></td><td class="col-source">Résultat du test, Cas de test</td></tr>
+</tbody>
+<tbody class="error-cluster" data-bug="802"><tr class="cluster-heading"><th scope="rowgroup" colspan="7"><div class="bug-head"><span class="cluster-count">1</span> <a class="bug-marker bug-unread" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/802" title="Non lu">#802</a> <span class="bug-summary"> <span class="bug-unread">Non lu</span> <span class="facts"><span class="fact-group"><span class="fact">Tests liés <strong>1</strong></span></span></span></span></div></th></tr>
+<tr data-index-for="f-1"><td class="col-number"><span class="status-glyph status-failed" role="img" aria-label="Échec">✕</span> <span class="ordinal">1</span></td><td class="col-case"><a rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/902">#902</a></td><td class="col-test"><a href="#f-1"><span class="test-name" title="SubmitOrder">SubmitOrder</span></a></td><td class="col-class"><span class="class-name" title="CheckoutTests">CheckoutTests</span></td><td class="col-trend"><a class="trend trend-since" rel="noreferrer" href="https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_build/results?buildId=400&amp;view=ms.vss-test-web.build-test-results-tab" title="2 fois de suite depuis 20260916.2">Depuis le 2026-09-15</a></td><td class="col-group"><span class="group-status status-failed" title="1 sur 1 en échec"><span aria-hidden="true">✕</span> <span class="sr-only">Échec</span>1/1</span></td><td class="col-source">Résultat du test</td></tr>
+</tbody>
+</table></div>
 </section>
 <section class="view" id="diagnostics" data-view>
 <h2 class="section-heading">Diagnostics <span class="diagnostic-count" data-severity="error">Erreur <strong>1</strong></span> <span class="diagnostic-count" data-severity="warning">Avertissement <strong>1</strong></span></h2>

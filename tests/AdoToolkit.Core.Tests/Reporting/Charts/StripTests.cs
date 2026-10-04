@@ -36,17 +36,28 @@ public sealed class StripTests
         using StringWriter writer = new(CultureInfo.InvariantCulture);
         HistoryStrip.Write(writer, entries, new Uri("https://ado.example.test/Collection/"), "Project", culture);
         string html = writer.ToString();
-        // One square per build, with no text of its own: its class gives the shape of its status, and
-        // its name and title give the build and the status in words. The catalog joins the two, and
-        // French puts a no-break space before the colon.
+        // One cell per build: its class gives the shape of its status, its glyph repeats the status for
+        // the eye only, and its name and title give the build and the status in words. The catalog
+        // joins the two, and French puts a no-break space before the colon.
         string separator = cultureName == "fr-CA" ? " : " : ": ";
         foreach (AdoTestHistoryEntry entry in entries)
         {
             string name = "&lt;build&gt;" + (entry.BuildId - 1).ToString(CultureInfo.InvariantCulture) + separator + StatusPresentation.Label(entry.Outcome, culture);
             Assert.Matches("<li><a class=\"history-cell status-" + StatusPresentation.Css(entry.Outcome) + "\" rel=\"noreferrer\" href=\"[^\"]+\" data-build-id=\""
                 + entry.BuildId.ToString(CultureInfo.InvariantCulture) + "\" title=\"" + name + "\" aria-label=\"" + name + "\"" + (entry.IsCurrent ? " aria-current=\"true\"" : "")
-                + "></a></li>", html);
+                + "><span class=\"history-glyph\" aria-hidden=\"true\">" + System.Text.RegularExpressions.Regex.Escape(StatusPresentation.Glyph(entry.Outcome)) + "</span></a></li>",
+                html);
         }
+        Assert.DoesNotContain("history-date", html, StringComparison.Ordinal);
+
+        // With a label, such as the day the build finished, each cell shows it as encoded text after
+        // its glyph; a build without one shows the glyph alone.
+        using StringWriter dated = new(CultureInfo.InvariantCulture);
+        HistoryStrip.Write(dated, entries, new Uri("https://ado.example.test/Collection/"), "Project", culture,
+            entry => entry.BuildId == 2 ? null : "<day " + entry.BuildId.ToString(CultureInfo.InvariantCulture) + ">");
+        string withDates = dated.ToString();
+        Assert.Equal(5, System.Text.RegularExpressions.Regex.Count(withDates, "</span><span class=\"history-date\">&lt;day [0-9]&gt;</span></a></li>"));
+        Assert.Matches("data-build-id=\"2\"[^>]*><span class=\"history-glyph\" aria-hidden=\"true\">[^<]</span></a></li>", withDates);
         Assert.Equal(6, Enum.GetValues<AdoTestHistoryOutcome>().Select(StatusPresentation.Css).Distinct().Count());
         Assert.Single(System.Text.RegularExpressions.Regex.Matches(html, "aria-current=\"true\""));
         Assert.DoesNotContain("status-legend", html, StringComparison.Ordinal);

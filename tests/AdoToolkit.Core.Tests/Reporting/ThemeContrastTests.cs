@@ -32,6 +32,31 @@ public sealed class ThemeContrastTests
         }
     }
 
+    // The failed-test report has its own status, link, New, recurring and soft text colours, brighter
+    // than the shared ones on screen and darker in print. Each is text, so it keeps 4.5:1 on every
+    // surface of the shared palette; the filled New chip keeps it under its text, the page colour.
+    [Fact]
+    public void TheFailedTestReportsOwnColoursKeepTextContrastOnEverySurface()
+    {
+        string shared = Asset("report-base.css"), own = Asset("test-failures.css");
+        int sharedPrint = shared.IndexOf("@media print", StringComparison.Ordinal), ownPrint = own.IndexOf("@media print", StringComparison.Ordinal);
+        Assert.True(sharedPrint > 0 && ownPrint > 0);
+        string[] colours = ["--fail", "--pass", "--flaky", "--link", "--new", "--recurring", "--text-soft"];
+        Dictionary<string, string> ownScreen = Properties(own[..ownPrint]), ownPaper = Properties(own[ownPrint..]);
+        Assert.All(colours, colour => Assert.True(ownScreen.ContainsKey(colour) && ownPaper.ContainsKey(colour), colour));
+        Dictionary<string, string> screen = Properties(shared[..sharedPrint]);
+        foreach ((string key, string value) in ownScreen) screen[key] = value;
+        Dictionary<string, string> paper = new(screen, StringComparer.Ordinal);
+        foreach ((string key, string value) in Properties(shared[sharedPrint..])) paper[key] = value;
+        foreach ((string key, string value) in ownPaper) paper[key] = value;
+        foreach (Dictionary<string, string> palette in new[] { screen, paper })
+        {
+            foreach (string background in new[] { "--bg", "--surface", "--surface-2", "--code-bg" })
+                foreach (string foreground in colours) Check(palette, foreground, background, 4.5);
+            Check(palette, "--bg", "--new", 4.5);
+        }
+    }
+
     [Fact]
     public void AssetsAreStaticAccessibleAndSelfContained()
     {

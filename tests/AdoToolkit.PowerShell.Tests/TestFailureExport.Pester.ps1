@@ -239,7 +239,7 @@ Describe 'Failed-test report export' {
             $server.Requests.Count | Should -Be 12
             $html = [IO.File]::ReadAllText($file.FullName)
             $html | Should -Not -Match 'data-local-file'
-            $html | Should -Match 'screenshot\.PNG <span role="img"'
+            $html | Should -Match '>screenshot\.PNG</a>'
         }
         finally { Stop-FakeAdoServer -Server $server }
     }
@@ -358,7 +358,7 @@ Describe 'Failed-test report export' {
             $file.PSObject.Properties['AttachmentDirectory'] | Should -BeNullOrEmpty
             $server.Requests.Count | Should -Be 12
             Get-OutputEntry -Path $outputDirectory | Should -Be @('Build-401-TestFailures.html')
-            [IO.File]::ReadAllText($file.FullName) | Should -Match 'screenshot\.PNG <span role="img"'
+            [IO.File]::ReadAllText($file.FullName) | Should -Match '>screenshot\.PNG</a>'
         }
         finally { Stop-FakeAdoServer -Server $server }
     }
@@ -373,7 +373,7 @@ Describe 'Failed-test report export' {
             $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
             $file = $set | Export-AdoBuildTestFailure -Path $outputDirectory -SkipAttachments -AttachmentWindowDays $Days -IncludeFlaky
             $html = [IO.File]::ReadAllText($file.FullName)
-            $html.Contains('screenshot.PNG <span role="img"') | Should -Be $Listed
+            $html.Contains('>screenshot.PNG</a>') | Should -Be $Listed
             $html | Should -Match 'data-attempt-count="1"'
             { $set | Export-AdoBuildTestFailure -Path $outputDirectory -AttachmentWindowDays 0 } | Should -Throw -ErrorId 'ParameterArgumentValidationError,AdoToolkit.ExportAdoBuildTestFailureCommand'
         }

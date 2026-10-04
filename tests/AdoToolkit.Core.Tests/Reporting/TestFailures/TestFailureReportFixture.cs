@@ -30,6 +30,7 @@ internal static class TestFailureReportFixture
     internal static AdoBuildTestFailureSet Set(string variant)
     {
         if (variant == "grouped") return GroupedSet();
+        if (variant == "large") return LargeSet();
         bool hostile = variant == "hostile";
         bool partial = variant == "partial";
         bool flaky = variant == "flaky";
@@ -99,6 +100,173 @@ internal static class TestFailureReportFixture
                 Run(203, "Tests_FR", 2, Clock.AddMinutes(-10))],
             Summary = summary, History = [summary], Failures = failures, FailedCount = 2, Status = AdoTestFailureStatus.Complete,
             RetrievedAt = Clock.AddMinutes(-1), CollectionUri = Collection,
+        };
+    }
+
+    // Sixteen tests in English and French stages, two runs each, with ten builds of history. Errors
+    // that differ in numbers, paths and GUIDs, exception types, an MSTest first line and a shared
+    // helper frame make clusters; histories give new, recurring and unknown trends; bug 5101 covers
+    // one failed result of SubmitOrder and not AddItem, which shares its Test Case; bug 5103 could
+    // not be read; bug 5104 covers some results of one test and all of another.
+    private static AdoBuildTestFailureSet LargeSet()
+    {
+        DateTimeOffset clock = Clock;
+        (string Stage, int FirstRun)[] groups = [("Tests_EN", 300), ("Tests_FR", 302)];
+        List<AdoTestRun> runs = [];
+        foreach ((string stage, int first) in groups)
+            foreach (int attempt in new[] { 1, 2 })
+            {
+                int id = first + attempt - 1;
+                Dictionary<string, int> counts = new(StringComparer.Ordinal) { ["Passed"] = attempt == 1 ? 402 : 9, ["Failed"] = attempt == 1 ? 14 : 5 };
+                if (attempt == 1) counts["NotExecuted"] = 2;
+                runs.Add(new AdoTestRun
+                {
+                    Id = id, Name = "Synthetic " + stage, BuildId = 412, State = "Completed", IsAutomated = true,
+                    StartedDate = clock.AddMinutes(-50 + 8 * (id - 300)), CompletedDate = clock.AddMinutes(-44 + 8 * (id - 300)),
+                    StageName = stage, PhaseName = "UiTests", JobName = "__default", PipelineAttempt = attempt, TotalTests = attempt == 1 ? 418 : 14,
+                    PassedTests = counts["Passed"], OutcomeCounts = counts, TeamProject = Project, CollectionUri = Collection,
+                });
+            }
+        const string Work = @"C:\agent\_work\12\s";
+        string Plain(string test, int line) =>
+            "   at Synthetic.Web." + test + "() in " + Work + @"\tests\" + test.Split('.')[^2] + ".cs:line " + line.ToString(CultureInfo.InvariantCulture);
+        string Trace(string kind, string test, int index) => kind switch
+        {
+            "timeout" => "   at OpenQA.Selenium.Support.UI.DefaultWait`1.Until[TResult](Func`2 condition)\n   at Synthetic.Web.Pages.CheckoutPage.Submit() in " + Work
+                + @"\src\Pages\CheckoutPage.cs:line 88" + "\n" + Plain(test, 41)
+                + "\n   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)",
+            "import" => "   at System.IO.FileStream.ValidateFileHandle(SafeFileHandle fileHandle, String path)\n   at Synthetic.Web.Data.Importer.Load(String path) in " + Work
+                + @"\src\Data\Importer.cs:line 23" + "\n" + Plain(test, 30),
+            "api" => "   at Synthetic.Web.Api.ApiClient.SendAsync(HttpRequestMessage request) in " + Work + @"\src\Api\ApiClient.cs:line 57" + "\n" + Plain(test, 19),
+            "payments" => "   at Synthetic.Web.Api.PaymentsClient.Refund(Guid payment) in " + Work + @"\src\Api\PaymentsClient.cs:line 112" + "\n" + Plain(test, 64),
+            _ => Plain(test, 20 + index),
+        };
+        // Name, error, trace kind, history (P passed, F failed, K flaky, N not run, U unavailable),
+        // attempts per group, Test Case and bugs.
+        (string Name, string? Error, string Trace, string History, string[] Attempts, int TestCase, string? Bugs)[] specs =
+        [
+            ("Checkout.CheckoutTests.SubmitOrder", "System.TimeoutException: Timed out after 3000 ms waiting for #submit", "timeout", "PUFFFFFFFF", ["FF", "FF"], 9101, "b5101"),
+            ("Checkout.CheckoutTests.ApplyCoupon", "System.TimeoutException: Timed out after 4500 ms waiting for #submit", "timeout", "PUPPPFFFFF", ["FF", "P"], 9102, null),
+            ("Checkout.CheckoutTests.PayWithCard", "System.TimeoutException: Timed out after 30000 ms waiting for #submit", "timeout", "PUPPPPPPPK", ["P", "FP"], 9103, null),
+            ("Checkout.CartTests.AddItem", "System.TimeoutException: Timed out after 3000 ms waiting for #submit", "timeout", "PUPPPPPPFF", ["FF", "FF"], 9101, null),
+            ("Data.ImportTests.ImportOrders", "System.IO.FileNotFoundException: Could not find file '" + Work + @"\data\orders-1.json'.", "import", "PUPPPPPFFF", ["F", "F"], 9105, "b5102"),
+            ("Data.ImportTests.ImportCustomers", @"System.IO.FileNotFoundException: Could not find file 'C:\agent\_work\7\s\data\customers.json'.", "import", "PUPPPPPFFF", ["FF", "P"], 9106, null),
+            ("Data.ExportTests.ExportInvoices", "System.IO.FileNotFoundException: Could not find file '/home/agent/work/3/s/out/invoices.json'.", "import", "PUPPPPPPPF", ["P", "FF"], 0, null),
+            ("Api.OrdersApiTests.GetOrder", "Test method Synthetic.Web.Api.OrdersApiTests.GetOrder threw exception: \nSynthetic.Web.Api.ApiException: Order 3f2504e0-4f89-11d3-9a0c-0305e82c3301 was not found (HTTP 404).",
+                "api", "PUPPFFFFFF", ["FF", "FF"], 9108, "b5103"),
+            ("Api.OrdersApiTests.CancelOrder", "Test method Synthetic.Web.Api.OrdersApiTests.CancelOrder threw exception: \nSynthetic.Web.Api.ApiException: Order 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d was not found (HTTP 404).",
+                "api", "PUPPPPFFFF", ["FF", "P"], 9109, null),
+            ("Api.PaymentsApiTests.Refund", "System.NullReferenceException: Object reference not set to an instance of an object.", "payments", "PUPPPPPPPF", ["FF", "FF"], 9110, "b5106"),
+            ("Api.PaymentsApiTests.Capture", "System.NullReferenceException: Object reference not set to an instance of an object.", "payments", "PUPPPPPPKK", ["FP", "P"], 9111, null),
+            ("UI.HomeTests.ShowBanner", "Assert.Equal() Failure: Expected: \"Bienvenue\" Actual: \"Welcome\"", "plain", "PUPPPPPPNF", ["F", "F"], 9112, null),
+            ("UI.HomeTests.ShowFooter", "Assert.True() Failure\nExpected: True\nActual:   False", "plain", "", ["P", "FF"], 9113, "b5105"),
+            ("UI.SearchTests.SearchByVeryLongProductNameThatDoesNotFitInTheColumnAtAll", "Expected 12 results but found 9.", "plain", "PUPFFFFFFF", ["FF", "FF"], 9114, "b5104all"),
+            ("UI.SearchTests.SearchByCategory", "Expected 4 results but found 0.", "plain", "PUPPPPPFFF", ["FF", "P"], 9115, "b5104part"),
+            ("UI.ProfileTests.UpdateAvatar", null, "plain", "PUPPPPPPPF", ["F", "P"], 9116, null),
+        ];
+        AdoTestAttachment Attachment(int id, int run, int result, string name, long size, AdoTestAttachmentStatus status = AdoTestAttachmentStatus.NotRequested) => new()
+        { Id = id, RunId = run, ResultId = result, FileName = name, Size = size, AttachmentType = "GeneralAttachment", Kind = AttachmentKinds.FromFileName(name), DownloadStatus = status };
+        AdoTestBug Read(int id, string title, string state, bool associated, bool linked) => new()
+        {
+            Id = id, Title = title, State = state, WorkItemType = "Bug", TeamProject = Project, IsOpen = true, IsResolved = true,
+            StateCategory = state switch { "New" => "Proposed", "Resolved" => "Resolved", _ => "InProgress" },
+            IsAssociatedWithResult = associated, IsLinkedToTestCase = linked, WebUrl = Untrusted,
+        };
+        List<AdoTestFailure> failures = [];
+        int resultId = 1000;
+        for (int index = 0; index < specs.Length; index++)
+        {
+            var spec = specs[index];
+            string shortName = spec.Name.Split('.')[^1];
+            List<AdoTestAttempt> attempts = [];
+            int number = 0;
+            bool failedAtEnd = false;
+            for (int g = 0; g < groups.Length; g++)
+            {
+                string pattern = spec.Attempts[g];
+                for (int a = 0; a < pattern.Length; a++)
+                {
+                    number++;
+                    resultId++;
+                    bool failed = pattern[a] == 'F';
+                    int[] bugIds = !failed ? [] : spec.Bugs switch
+                    {
+                        "b5101" or "b5104part" when number == 1 => [spec.Bugs == "b5101" ? 5101 : 5104],
+                        "b5103" => [5103], "b5106" => [5106], "b5104all" => [5104],
+                        _ => [],
+                    };
+                    int run = 300 + 2 * g + a, id = 7000 + 10 * resultId;
+                    AdoTestAttachment[] attachments = !failed ? []
+                        : shortName == "SubmitOrder" && a == 0 ? [Attachment(id + 1, run, resultId, "Screenshot.png", 245760), g == 0
+                            ? Attachment(id + 2, run, resultId, "console.log", 12288) : Attachment(id + 2, run, resultId, "network.json", 2048)]
+                        : shortName == "GetOrder" && number == 1 ? [Attachment(id + 1, run, resultId, "response.json", 512),
+                            Attachment(id + 2, run, resultId, "trace.zip", 2516582, AdoTestAttachmentStatus.TooLarge)]
+                        : shortName is "Refund" or "AddItem" && number == 1 ? [Attachment(id + 1, run, resultId, "Screenshot.png", 198000)]
+                        : [];
+                    attempts.Add(new AdoTestAttempt
+                    {
+                        Number = number, Source = number == 1 ? AdoTestAttemptSource.Single : AdoTestAttemptSource.RunAttempt, RunId = run, ResultId = resultId,
+                        Outcome = !failed ? "Passed" : shortName == "ShowBanner" && g == 1 ? "Timeout" : "Failed",
+                        OutcomeClass = failed ? AdoTestOutcomeClass.Failure : AdoTestOutcomeClass.Pass,
+                        ErrorMessage = failed ? spec.Error : null, StackTrace = failed && spec.Error is not null ? Trace(spec.Trace, spec.Name, index) : null,
+                        StartedDate = clock.AddMinutes(-45 + 8 * g), CompletedDate = clock.AddMinutes(-45 + 8 * g).AddSeconds(14),
+                        Duration = TimeSpan.FromMilliseconds(1200 + 977 * index + 311 * a), ComputerName = "SYNTHETIC-AGENT-0" + (3 + g).ToString(CultureInfo.InvariantCulture),
+                        RunBy = new AdoIdentityRef { DisplayName = "Fictional Runner", UniqueName = "runner@example.test" },
+                        FailureType = failed ? "Regression" : null, ResolutionState = failed ? "Unresolved" : null, FailingSinceBuildId = failed ? 405 : null,
+                        AssociatedBugIds = bugIds, Attachments = attachments,
+                        Comment = failed && shortName == "SubmitOrder"
+                            ? "Synthetic comment: the submit button stays disabled until the payment iframe answers, which takes longer on the shared agents." : null,
+                    });
+                }
+                if (pattern[^1] == 'F') failedAtEnd = true;
+            }
+            AdoTestBug[] bugs = spec.Bugs switch
+            {
+                "b5101" => [Read(5101, "Checkout times out on submit when the payment frame is slow", "Active", true, false)],
+                "b5102" => [Read(5102, "Import fails when the agent data folder moves", "Active", false, true)],
+                // Bug 5103 could not be read.
+                "b5103" => [new AdoTestBug { Id = 5103, IsAssociatedWithResult = true, WebUrl = Untrusted }],
+                "b5104all" or "b5104part" => [Read(5104, "Search result count is off by the hidden items", "Active", true, false)],
+                "b5105" => [Read(5105, "Footer missing on narrow screens", "Resolved", false, true)],
+                "b5106" => [Read(5106, "Refund throws when the payment has no provider", "New", true, false)],
+                _ => [],
+            };
+            failures.Add(new AdoTestFailure
+            {
+                Ordinal = index + 1, Classification = failedAtEnd ? AdoTestFailureClassification.Failed : AdoTestFailureClassification.Flaky,
+                TestName = "Synthetic.Web." + spec.Name, ShortName = shortName, Storage = "Synthetic.Web.Tests.dll",
+                Title = spec.TestCase > 0 ? "Synthetic case " + spec.TestCase.ToString(CultureInfo.InvariantCulture) : null,
+                TestCase = spec.TestCase > 0 ? new AdoTestCaseLink { Id = spec.TestCase, Title = "Synthetic case " + spec.TestCase.ToString(CultureInfo.InvariantCulture),
+                    State = "Ready", IsResolved = true, WebUrl = Untrusted } : null,
+                Owner = new AdoIdentityRef { DisplayName = "Fictional Tester", UniqueName = "tester@example.test" }, Priority = 2,
+                Attempts = attempts, Bugs = bugs, CollectionUri = Collection,
+                History = [.. spec.History.Select((code, i) => new AdoTestHistoryEntry
+                {
+                    BuildId = 403 + i, BuildNumber = "20260916." + (3 + i).ToString(CultureInfo.InvariantCulture), IsCurrent = i == spec.History.Length - 1, WebUrl = Untrusted,
+                    Outcome = code switch
+                    {
+                        'P' => AdoTestHistoryOutcome.Passed, 'F' => AdoTestHistoryOutcome.Failed, 'K' => AdoTestHistoryOutcome.Flaky,
+                        'N' => AdoTestHistoryOutcome.NotRun, _ => AdoTestHistoryOutcome.Unavailable,
+                    },
+                })],
+            });
+        }
+        AdoBuildTestSummary[] history = [.. Enumerable.Range(403, 10).Select(build => new AdoBuildTestSummary
+        {
+            BuildId = build, BuildNumber = "20260916." + (build - 400).ToString(CultureInfo.InvariantCulture), IsCurrent = build == 412, IsAvailable = build != 404,
+            Passed = build == 404 ? 0 : 410 - (build - 403), Failed = build == 404 ? 0 : 2 + (build - 403), Flaky = build >= 410 ? 2 : 0, Other = build == 404 ? 0 : 2,
+            SourceBranch = "refs/heads/main", FinishTime = clock.AddDays(build - 412), Result = "failed", WebUrl = Untrusted,
+        })];
+        return new AdoBuildTestFailureSet
+        {
+            Build = new AdoBuild { Id = 412, BuildNumber = "20260916.12", Definition = new AdoBuildDefinitionRef { Id = 31, Name = "Synthetic web tests" },
+                SourceBranch = "refs/heads/main", SourceVersion = "89abcdef0123456789abcdef0123456789abcdef", RepositoryType = "TfsGit",
+                RepositoryId = "22222222-3333-4444-5555-666666666666", Result = "failed", FinishTime = clock.AddMinutes(-5),
+                TeamProject = Project, CollectionUri = Collection, WebUrl = Untrusted },
+            Runs = runs, Summary = history[^1], History = history, Failures = failures,
+            FailedCount = failures.Count(static failure => failure.Classification == AdoTestFailureClassification.Failed),
+            FlakyCount = failures.Count(static failure => failure.Classification == AdoTestFailureClassification.Flaky),
+            Status = AdoTestFailureStatus.Complete, RetrievedAt = clock.AddMinutes(-1), CollectionUri = Collection,
         };
     }
 

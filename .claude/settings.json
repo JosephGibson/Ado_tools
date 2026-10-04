@@ -88,6 +88,24 @@
             "statusMessage": "Checking git guard"
           }
         ]
+      },
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh.exe",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "${CLAUDE_PROJECT_DIR}/tools/guard-plan.ps1"
+            ],
+            "timeout": 15,
+            "statusMessage": "Checking the plan critique"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -106,6 +124,24 @@
             ],
             "timeout": 30,
             "statusMessage": "Validating edited file"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh.exe",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "${CLAUDE_PROJECT_DIR}/tools/guard-plan.ps1"
+            ],
+            "timeout": 15,
+            "statusMessage": "Checking the plan critique"
           }
         ]
       }

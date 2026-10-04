@@ -245,7 +245,7 @@ Describe 'Reads' {
         $outcome = Get-ToolingLayoutOutcome -ProjectProfile (Get-ProjectProfile -Root $repository)
 
         $outcome.Failures | Should -BeNullOrEmpty
-        $outcome.Summary | Should -Be @('3 configured PowerShell hook helper(s) checked', '4 skill(s) paired between .agents and .claude', '3 subagent(s) named after their files')
+        $outcome.Summary | Should -Be @('4 configured PowerShell hook helper(s) checked', '5 skill(s) paired between .agents and .claude', '3 subagent(s) named after their files')
     }
 
     It 'rejects hook helper paths that traverse out of tools' {

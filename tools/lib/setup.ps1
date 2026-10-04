@@ -19,6 +19,7 @@ function Invoke-ToolBootstrap {
         $wingetPackages = @{
             'ripgrep' = 'BurntSushi.ripgrep.MSVC'
             'actionlint' = 'rhysd.actionlint'
+            'gh' = 'GitHub.cli'
         }
         foreach ($tool in $diagnostics.Tools | Where-Object { $_.State -ne 'present' }) {
             try {

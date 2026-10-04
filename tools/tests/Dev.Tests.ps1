@@ -213,6 +213,21 @@ Describe 'tools/dev.ps1' {
             Should -Be @('PowerShell', 'Pester', 'PSScriptAnalyzer', 'dotnet', 'Microsoft.PowerShell.PlatyPS', 'ripgrep')
     }
 
+    # gh opens the pull request of the release handoff. It gates no stage, so it is recommended, and
+    # it is listed only where workflow files show that the remote is GitHub.
+    It 'recommends gh only in a repository that has GitHub workflows' {
+        $withWorkflow = Join-Path $TestDrive 'gh-workflow'
+        New-TestFile -Path (Join-Path $withWorkflow '.github\workflows\verify.yml') -Content 'name: Verify'
+        $withoutWorkflow = Join-Path $TestDrive 'gh-no-workflow'
+        New-TestFile -Path (Join-Path $withoutWorkflow 'app.ps1')
+
+        $listed = @((Get-ProjectDiagnostics -Root $withWorkflow).Tools | Where-Object { $_.Name -eq 'gh' })
+
+        $listed.Count | Should -Be 1
+        $listed[0].Level | Should -Be 'recommended'
+        @((Get-ProjectDiagnostics -Root $withoutWorkflow).Tools | Where-Object { $_.Name -eq 'gh' }) | Should -BeNullOrEmpty
+    }
+
     It 'prohibits DTDs in dependency manifests' {
         $repository = Join-Path $TestDrive 'xml-safety-sample'
         New-TestFile -Path (Join-Path $repository 'sample.csproj') -Content '<!DOCTYPE Project [<!ENTITY unsafe "unsafe">]><Project><ItemGroup><PackageReference Include="Example" Version="1.0" /></ItemGroup></Project>'

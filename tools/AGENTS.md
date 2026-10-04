@@ -11,6 +11,7 @@
 | `tools/lib/test-results.ps1` | Helpers of the product gate: TRX counters, the processes of its steps |
 | `tools/check.ps1` | The product gate, stage `project-check` |
 | `tools/guard-git.ps1`, `tools/validate-edit.ps1` | Claude hooks of every session |
+| `tools/guard-plan.ps1` | Claude hooks of the plan critique: the ExitPlanMode gate, and the reminder for a plan written under `docs/plans/` |
 | `tools/guard-readonly.ps1` | Claude hook of the read-only subagents |
 | `tools/tests/` | Tooling tests, `*.Tests.ps1`, stage `powershell-test` |
 | `tools/package/` | Packaging and release; see `tools/package/AGENTS.md` |

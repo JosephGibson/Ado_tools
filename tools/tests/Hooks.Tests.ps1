@@ -16,13 +16,13 @@ Describe 'tools/guard-git.ps1' {
             'bash -c "' + $git + ' push"'
             'cmd /c ' + $git + ' push'
             $git + ' -c core.pager=start log'
+            $git + ' rev-parse --output=root.txt --show-toplevel'
             $git + ' -ccore.pager=example log'
             $git + ' --exec-path=/tmp status'
             $git + ' diff --ext-diff'
             $git + ' log --textconv'
             $git + ' diff --output=out.txt'
             'x=$(' + $git + ' push)'
-            'branch=$(' + $git + ' rev-parse --abbrev-ref HEAD)'
             'echo `' + $git + ' push`'
             'if true; then ' + $git + ' push; fi'
             'if false; then true; elif ' + $git + ' push; then true; fi'
@@ -44,6 +44,8 @@ Describe 'tools/guard-git.ps1' {
             'grep -n "' + $git + '" notes.md'
             'bash -lc "npm test"'
             'changes=$(' + $git + ' status --short)'
+            # The plan critique resolves the repository root this way; a forbidden option still blocks.
+            'root=$(' + $git + ' rev-parse --show-toplevel)'
             # The arguments of a script started with -File are data, not command text.
             'pwsh -NoProfile -File .\tools\dev.ps1 find -Query ' + $git
             'pwsh -NoProfile -File .\tools\dev.ps1 find -Query ''' + $git + ' commit'''
@@ -226,5 +228,88 @@ Describe 'tools/validate-edit.ps1' {
         $null = @($payload | & $pwsh -NoProfile -File $hook 2>&1)
         $LASTEXITCODE | Should -Be 0
         (Get-ConfigurationOutcome -ProjectProfile (Get-ProjectProfile -Root $repository)).Failures | Should -BeNullOrEmpty
+    }
+}
+
+# The plan guard decides from the plan text of the call alone, and checks that a critique pass is
+# recorded, not that the critic ran. Dot-sourced, it defines its functions and stops.
+Describe 'tools/guard-plan.ps1' {
+    BeforeAll {
+        . (Join-Path $PSScriptRoot '..\guard-plan.ps1')
+    }
+
+    It 'blocks a plan that records no critique pass and lets a recorded verdict through' {
+        $payload = { param([string] $Plan) @{ tool_name = 'ExitPlanMode'; tool_input = @{ plan = $Plan } } | ConvertTo-Json -Compress }
+        $blocked = @(
+            "# Plan`n1. Rewrite the failed-test report."
+            "# Plan`nWe will critique this before the work starts."
+            "# Plan`nThe critique skill would catch anything missed here."
+        )
+        $recorded = @(
+            "# Plan`n## Critique`n- MEDIUM triage rule - applied: step 3 reworded."
+            "# Plan`n### Critique (2026-10-04)`n- LOW naming - rejected: DD-011 settles it."
+            "# Plan`nCritique: skipped - no codex on PATH, so the pass is owed."
+        )
+
+        foreach ($plan in $blocked) {
+            Get-PlanGuardReason -Payload (& $payload $plan) |
+                Should -BeLike 'Blocked by tools/guard-plan.ps1:*' -Because 'the plan gives no finding a verdict'
+        }
+        foreach ($plan in $recorded) {
+            Get-PlanGuardReason -Payload (& $payload $plan) |
+                Should -BeNullOrEmpty -Because 'the plan records its critique pass'
+        }
+    }
+
+    It 'leaves another tool, an empty plan and an unreadable payload to Claude Code' {
+        $others = @(
+            (@{ tool_name = 'Write'; tool_input = @{ plan = 'No critique here.' } } | ConvertTo-Json -Compress)
+            (@{ tool_name = 'ExitPlanMode'; tool_input = @{ plan = '' } } | ConvertTo-Json -Compress)
+            '', ' ', '{not json', '{}', '{"tool_input":{}}'
+        )
+
+        foreach ($other in $others) {
+            Get-PlanGuardReason -Payload $other | Should -BeNullOrEmpty -Because "'$other' names no plan to block"
+        }
+    }
+
+    It 'reminds for a plan file written without the record and stays silent for every other write' {
+        $payload = {
+            param([string] $Path, [string] $Content)
+            @{ tool_name = 'Write'; tool_input = @{ file_path = $Path; content = $Content } } | ConvertTo-Json -Compress
+        }
+
+        Get-PlanWriteReminder -Payload (& $payload 'docs/plans/0.9.6-reports.md' "# 0.9.6`n1. Phase one.") |
+            Should -BeLike '*records no critique pass*'
+        Get-PlanWriteReminder -Payload (& $payload 'C:\Projects\Ado_tools\docs\plans\0.9.6-reports.md' "# 0.9.6`n1. Phase one.") |
+            Should -BeLike '*records no critique pass*' -Because 'Claude Code writes an absolute path'
+
+        $silent = @(
+            (& $payload 'docs/plans/0.9.6-reports.md' "# 0.9.6`n## Critique`n- HIGH scope - applied.")
+            (& $payload 'docs/plans/README.md' '# Plans')
+            (& $payload 'docs/tooling.md' '# Developer tooling')
+            (& $payload 'src/AdoToolkit.Core/Reporting/Report.cs' 'internal sealed class Report { }')
+            (@{ tool_name = 'Edit'; tool_input = @{ file_path = 'docs/plans/0.9.6-reports.md'; content = '# 0.9.6' } } | ConvertTo-Json -Compress)
+        )
+        foreach ($other in $silent) {
+            Get-PlanWriteReminder -Payload $other | Should -BeNullOrEmpty -Because "'$other' needs no reminder"
+        }
+    }
+
+    It 'exits 2 with its reason for a plan, and returns the reminder as context with exit 0, as Claude Code runs it' {
+        $pwsh = Join-Path $PSHOME 'pwsh.exe'
+        $hook = Join-Path $PSScriptRoot '..\guard-plan.ps1'
+
+        $plan = @{ tool_name = 'ExitPlanMode'; tool_input = @{ plan = "# Plan`n1. Ship it." } } | ConvertTo-Json -Compress
+        $output = @($plan | & $pwsh -NoProfile -File $hook 2>&1)
+        $LASTEXITCODE | Should -Be 2
+        "$output" | Should -BeLike 'Blocked by tools/guard-plan.ps1:*'
+
+        $write = @{ tool_name = 'Write'; tool_input = @{ file_path = 'docs/plans/0.9.6-reports.md'; content = '# 0.9.6' } } | ConvertTo-Json -Compress
+        $context = @($write | & $pwsh -NoProfile -File $hook)
+        $LASTEXITCODE | Should -Be 0
+        $parsed = "$context" | ConvertFrom-Json
+        $parsed.hookSpecificOutput.hookEventName | Should -Be 'PostToolUse'
+        $parsed.hookSpecificOutput.additionalContext | Should -BeLike '*critique-plan*'
     }
 }

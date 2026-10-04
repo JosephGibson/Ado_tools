@@ -21,6 +21,7 @@ documentation starts at the [README](../../README.md).
 | [release-0.7.10.md](release-0.7.10.md) | 0.7.10 release notes: squash merge of pull requests in the release procedure; no product change |
 | [release-0.8.0.md](release-0.8.0.md) | 0.8.0 release notes: faster failed-test retrieval, `-SkipAttachments`, the planned history read, the report density pass and V-34 to V-36 |
 | [release-0.8.5.md](release-0.8.5.md) | 0.8.5 release notes: the failed-test report restyle, with the Overview cards, the error clusters and the bug coverage; no cmdlet or schema change |
+| [release-0.9.0.md](release-0.9.0.md) | 0.9.0 release notes: the agent worktrees, the three subagents, the review workflow, and the gate and the test runs side by side; no product change |
 
 Release notes for the current and the previous version are in `docs/`.
 

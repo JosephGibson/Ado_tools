@@ -1,13 +1,14 @@
 ---
 name: release
-description: Prepare an AdoToolkit version bump, release notes, changelog and validated local packages, then give the developer commit/tag/push and pull-request commands. Use only for a requested release.
+description: Prepare an AdoToolkit version bump, release notes, changelog and validated local packages, then give the developer two commands that publish the release and open its pull request. Use only for a requested release.
 ---
 
 # Prepare a release
 
 `<new>`, `<old>` and `<older>` are the next, current and previous versions.
 Prepare the release from the checked-out `<branch>`; its pull request targets `main`.
-Run no Git writes. Give handoff commands only after validation passes.
+Run no Git writes and publish nothing: the developer runs the handoff commands, and they are
+given only after validation passes.
 
 The developer is the author. Add no agent/tool attribution or co-author trailer to
 commits, tags, pull requests, notes, changelog or release text.
@@ -21,13 +22,17 @@ commits, tags, pull requests, notes, changelog or release text.
 | `docs/guides/getting-started.md` | Module and portable zip names |
 | `tools/package/Install-AdoToolkit.ps1` | Zip names in examples |
 
-Run `pwsh -NoProfile -File .\tools\dev.ps1 find -Query '<old>' -Limit 100`.
-Remaining occurrences belong only to history: old notes, changelog, archive or historical
-comparisons in the new notes.
+`pwsh -NoProfile -File .\tools\dev.ps1 find -Query '<old>' -Limit 100` names every file that
+still holds `<old>`. It reports one line per file, so read each file's own matches before
+deciding. Remaining occurrences belong only to history: old notes, the changelog, the archive,
+or historical comparisons in the new notes.
 
-Keep only the current and previous notes under `docs/`. Archive
-`docs/release-<older>.md` using the Archiving procedure in `docs/AGENTS.md`;
-repoint the old notes' and changelog's links.
+Keep only the current and the previous notes under `docs/`. Archive
+`docs/release-<older>.md` by the Archiving procedure in `docs/AGENTS.md`: move the file, add
+its row to `docs/archive/README.md`, and repoint every link that named the old location.
+Markdown under `docs/archive/` is frozen and unchecked, so only live documents need
+repointing; the changelog and the `<old>` notes are the usual two. If the archived notes
+define a `V-nn` item, keep its row in `docs/archive/README.md` resolving to the new place.
 
 ## 2. Write the notes and changelog
 
@@ -38,7 +43,7 @@ Use the final `git diff` and `git status`, following the previous notes' structu
 | Opening | Date, source of the reviewed changes, live-validation status |
 | What changed | Tables by area, describing final behavior |
 | Visible changes for previous users | Every observable change, including public contract changes |
-| Bug fixes | Finding, cause/fix, regression test, files and pre-fix failure evidence |
+| Bug fixes | One row per defect: an ID, the finding with its cause and fix, the regression test, the files. A Pre-fix failures table follows it, from section 3 |
 | Existing tests changed | Edited tests/goldens and reasons |
 | Findings not fixed | Finding and reason |
 | Known limitations | Remaining limits and `V-nn` items |
@@ -62,18 +67,60 @@ Keep tests, tooling and internal details in the notes; if no user behavior chang
 so in one entry. The date matches the notes. `verify` requires the exact version/date
 heading, at least one bullet and the note link; the release workflow publishes this section.
 
-## 3. Validate the final tree
+## 3. Prove each fix failed before it
+
+A Bug fixes row needs evidence that its regression test fails without its fix. Produce it one
+fix at a time, by restoring released source rather than editing the fix away:
+
+1. Copy the file as it stands into the session scratch folder, outside the repository, so no
+   copy can be committed.
+2. Write the released content beside it: `git show <base>:<path>`, where `<base>` is the
+   commit `<branch>` starts at.
+3. Copy the released content over the target and run only the covering test. Record the
+   message, and the run's totals.
+4. Copy the saved file back, then set its `LastWriteTime` to now. `Copy-Item` restores the
+   old timestamp, so MSBuild would skip the rebuild and every later run would test the
+   assembly built from the released source.
+5. Confirm the restore with `git diff --stat -- <path>`: the counts must be those of the
+   branch's own change.
+
+Revert all the files of one fix together; a partial revert may not compile. How to run one
+test:
+
+| Suite | Run |
+| --- | --- |
+| Core | `dotnet test tests/AdoToolkit.Core.Tests --configuration Release --no-restore --filter "FullyQualifiedName~<Name>"` |
+| Product Pester | `tools/check.ps1 -SkipTests` stages the module, then run the one file with `ADOTOOLKIT_MODULE_MANIFEST` naming the staged `AdoToolkit.psd1` and `ADOTOOLKIT_CONFIG_PATH` naming a file that does not exist |
+| Tooling | No build. Import Pester 5 explicitly, because a bare `Invoke-Pester` may load Pester 6, and run the one file |
+
+Record each failure in the Pre-fix failures table, with the totals of every pre-fix run, and
+say that each test passes on the final tree. A fix whose failure cannot be reproduced is
+reported as such: do not claim evidence that was not observed.
+
+## 4. Validate the final tree
 
 | Command | Required result |
 | --- | --- |
 | `pwsh -NoProfile -File .\tools\dev.ps1 verify` | Exit `0`; exit `2` is incomplete |
-| Same with `ADOTOOLKIT_RELEASE_BUILD=1` | Exit `0` with exact module versions from `tools/BuildModules.psd1` |
+| Same with `ADOTOOLKIT_RELEASE_BUILD=1` | Exit `0` with the exact module versions from `tools/BuildModules.psd1`. Set it for that one process; never set it in the shell |
 | `dotnet msbuild src/AdoToolkit.PowerShell/AdoToolkit.PowerShell.csproj -getProperty:Version -nologo` | `<new>` |
 | `pwsh -NoProfile -File .\tools\package\Publish-AdoToolkitPackage.ps1 -NoRestore` | Valid seven-file package under `artifacts/AdoToolkit/<new>/` |
 | `pwsh -NoProfile -File .\tools\package\New-AdoToolkitRelease.ps1` | Module zip, checksum and installer under `artifacts/release/` |
+| `pwsh -NoProfile -File .\tools\package\Test-AdoToolkitPortable.ps1` | The module version, the PowerShell version and the architecture of the portable zip |
+| `Get-FileHash` of each zip | Equal to the hash in its own `.sha256` file, and the shipped installer byte-identical to `tools/package/Install-AdoToolkit.ps1` |
+| `tools/package/Install-AdoToolkit.ps1 -Path <module zip> -WhatIf` | Accepts the checksum and the layout and names the target. It writes nothing and installs nothing |
+| The archive entries | The module zip holds the seven files under `AdoToolkit/<new>/`. The portable zip holds the same seven under `module/`, both launchers, `README.txt` and `bundle.json`, whose PowerShell hash equals the published hash and the pin of the setup action |
+| `pwsh -NoProfile -File .\tools\dev.ps1 diagnose` | Records whether `gh` is present, which decides the handoff commands |
 
-Restore the previous release-build environment value after its check. Counts come from
-the final gate. Any later edit, including validation notes, requires another `verify`.
+The validation section records the final gate, and writing it is itself an edit. So: run the
+gate, write the section from that run, run the gate again, and compare. Adding links to the
+notes raises the documentation stage's link count, so correct the number and run once more.
+The counts in the notes must be those of the last run.
+
+A test that fails once and passes on a repeat of the same command is a flake, not a blocker,
+when nothing in the release touches its subject. Record the command, the failure and the
+passing repeat in the validation section, and add a row to Findings not fixed saying why the
+release does not cause it. A failure that repeats stops the release.
 
 The portable asset requires the official PowerShell archive and published checksum on
 disk. Use the arguments and validation command in `docs/tooling.md`, Packaging and
@@ -81,28 +128,47 @@ releases. Fetch nothing without authorization; if absent, report the portable as
 not built locally. If any required row fails or exits `2`, report command, code and
 named failures, then stop without handoff commands.
 
-## 4. Prepare the developer handoff
+## 5. Prepare the developer handoff
 
-Read `git status --short --branch`: take branch and remote from its first line; an
-unpublished branch uses `origin`. Stop on detached HEAD or `main`.
+Read `git status --short --branch`: take branch and remote from its first line; a branch with
+no upstream pushes to `origin`. Stop on detached HEAD or `main`.
 Run `git show --no-patch v<new>`: success means the version was already released, so stop.
 List unrelated working-tree paths above the commands; command 1 stages everything.
+
+Take `gh`'s state from `diagnose`. winget puts a tool on the PATH of new terminals only, so
+`missing` just after an install means "open a new terminal", not "unavailable". Without `gh`,
+give the compare-page command below as command 2 instead.
 
 Set `<message>` to one line, `AdoToolkit <new>: <summary>`, following
 `git log --oneline`. The summary contains no quote; the message has no body or trailer.
 Leave out the ` (#<n>)` that ends a subject on `main`: the squash merge appends it.
 
 Report the gate, built assets with size/SHA-256, public contract changes and unfixed
-findings. Fill every placeholder in these templates and give each on one line in its
-own code block. State that command 1 publishes immediately when it pushes the tag,
-before pull-request review.
+findings. Fill every placeholder in these templates and give each on one line in its own
+code block. State that command 1 publishes the release the moment it pushes the tag, before
+any pull-request review.
+
+Command 1 commits, tags, pushes both together and opens the pull request with its final
+title, so nothing about it has to be typed by hand.
 
 ```powershell
-git add --all && git commit -m '<message>' && git tag -a v<new> -m 'AdoToolkit <new>' && git push --atomic <remote> <branch> v<new>
+git add --all && git commit -m '<message>' && git tag -a v<new> -m 'AdoToolkit <new>' && git push --atomic <remote> <branch> v<new> && gh pr create --base main --head <branch> --title '<message>' --body 'Release of AdoToolkit <new>, published from tag v<new>. Changes: CHANGELOG.md and docs/release-<new>.md. Merge with Squash and merge, keeping this title.'
 ```
 
-Command 2 prints and opens the compare page, encoding the title/body when run; it uses
-no `gh`.
+If only its last step fails, the release is already published and the branch and tag are
+pushed: run the `gh pr create` part alone, or the compare-page command. Nothing is pushed
+twice.
+
+Command 2 waits for the Verify check of `.github/workflows/verify.yml` and then opens the
+pull request, so a browser that opens is the signal that the check passed. If it reports no
+check yet, the run has not registered; repeat it.
+
+```powershell
+gh pr checks <branch> --watch --fail-fast && gh pr view <branch> --web
+```
+
+Without `gh`, command 2 is this one instead. It prints and opens the compare page with the
+title and body encoded, and the developer creates the pull request there, keeping the title.
 
 ```powershell
 $title = '<message>'; $body = 'Release of AdoToolkit <new>, published from tag v<new>. Changes: CHANGELOG.md and docs/release-<new>.md.'; $repo = (git remote get-url <remote>) -replace '^(?:\w+://)?(?:[^@/]+@)?([^:/]+)[:/]+', 'https://$1/' -replace '(?:\.git)?/?$'; $url = "$repo/compare/main...<branch>?quick_pull=1&title=$([uri]::EscapeDataString($title))&body=$([uri]::EscapeDataString($body))"; $url; Start-Process $url
@@ -110,11 +176,10 @@ $title = '<message>'; $body = 'Release of AdoToolkit <new>, published from tag v
 
 Developer steps after running them:
 
-1. Create the pull request on the opened page, keeping its title.
-2. After the verify workflow passes, merge with Squash and merge. Keep the proposed
-   commit title, `<message> (#<n>)`: the pull-request title, then its number.
-3. Watch the release workflow and compare its five assets/checksums. For failures, use
-   Release workflow in `docs/tooling.md`.
-4. Run work-PC live checks with the published package.
-5. Start the next branch from the updated `main`: the squash leaves the commits of
+1. On the pull request that command 2 opened, merge with Squash and merge, keeping the
+   commit title GitHub proposes: `<message> (#<n>)`, the pull-request title then its number.
+2. Watch the release workflow and compare its five assets and checksums with the table in the
+   notes. For failures, use Release workflow in `docs/tooling.md`.
+3. Run the work-PC live checks with the published package.
+4. Start the next branch from the updated `main`: the squash leaves the commits of
    `<branch>`, and the tag `v<new>`, out of its history.

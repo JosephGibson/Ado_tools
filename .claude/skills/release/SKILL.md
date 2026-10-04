@@ -1,6 +1,6 @@
 ---
 name: release
-description: Prepare an AdoToolkit version bump, release notes, changelog and validated local packages, then give the developer commit/tag/push and pull-request commands. Use only for a requested release.
+description: Prepare an AdoToolkit version bump, release notes, changelog and validated local packages, then give the developer two commands that publish the release and open its pull request. Use only for a requested release.
 argument-hint: "[new version]"
 disable-model-invocation: true
 ---

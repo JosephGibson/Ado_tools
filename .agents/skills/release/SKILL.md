@@ -187,8 +187,13 @@ Developer steps after running them:
 2. Watch the release workflow and compare its five assets and checksums with the table in the
    notes. For failures, use Release workflow in `docs/tooling.md`.
 3. Run the work-PC live checks with the published package.
-4. Start the next branch from the updated `main`: the squash leaves the commits of
-   `<branch>`, and the tag `v<new>`, out of its history. Start it without tracking,
-   `git switch --create <next> --no-track origin/main`, and let its first push set the
-   upstream, `git push --set-upstream origin <next>`. A branch created from `origin/main`
-   tracks `main`, and then a bare `git push` writes to `main` instead of the branch.
+4. Start the next branch from the updated `main`, once the pull request has closed: the
+   squash leaves the commits of `<branch>`, and the tag `v<new>`, out of its history. Give
+   this as one line in its own code block, with `<next>` left for the developer, who names
+   the version after `<new>`. It fetches the merge, creates the branch without tracking and
+   sets its upstream in one go, because a branch created from `origin/main` tracks `main`,
+   and then a bare `git push` writes to `main` instead of the branch.
+
+   ```powershell
+   git fetch origin && git switch --create <next> --no-track origin/main && git push --set-upstream origin <next>
+   ```

@@ -91,7 +91,7 @@ runs it.
 
 | Area | Change |
 | --- | --- |
-| `.agents/skills/release/SKILL.md` | The handoff takes the pull request as far as it can from one template: `gh pr create` where that works, and otherwise the compare page, printed and opened with the title and the body encoded. The commit message and the pull-request title are one variable, so neither can drift from the other, and the block runs only after the push succeeded, so a chain that stops earlier publishes nothing. A `gh pr create` refused for the token ends on the compare page instead of leaving the developer with nothing. The developer steps also give the next branch its commands, `git switch --create <next> --no-track origin/main` and a first push with `--set-upstream`: a branch created from `origin/main` tracks `main`, and a bare `git push` would then write to `main` |
+| `.agents/skills/release/SKILL.md` | The handoff takes the pull request as far as it can from one template: `gh pr create` where that works, and otherwise the compare page, printed and opened with the title and the body encoded. The commit message and the pull-request title are one variable, so neither can drift from the other, and the block runs only after the push succeeded, so a chain that stops earlier publishes nothing. A `gh pr create` refused for the token ends on the compare page instead of leaving the developer with nothing. The developer steps also give the next branch one line of its own, to run once the pull request has closed: it fetches the merge, creates the branch with `--no-track` and sets its upstream with `--set-upstream` in one go, because a branch created from `origin/main` tracks `main`, and a bare `git push` would then write to `main` |
 | `.agents/skills/critique-plan/SKILL.md`, `docs/tooling.md` | The critic's size gate is 50,000 characters instead of 10,000. A plan of this repository's size reaches the critic whole, which is what lets a finding weigh one phase against another |
 
 ### Tests
@@ -154,7 +154,7 @@ evidence and neither is claimed as a fixed defect of the product:
 | Defect | Correction |
 | --- | --- |
 | The 0.9.10 handoff ended at `gh pr create`. A fine-grained token that may read a repository, its checks and its runs still refuses `createPullRequest`, and `gh pr create --dry-run` exits `0` without exercising the permission, so the refusal could only appear after the tag had been pushed and the release published — leaving the developer with a published release and no pull request and nothing in the command to fall back on | `4388117`: one template takes the pull request as far as it can, `gh pr create` where that works and the printed and opened compare page otherwise, with the title and the body encoded. The fallback is in the command, not in a probe |
-| The developer steps told the developer to start the next branch from the updated `main` without saying how. A branch created from `origin/main` tracks `main`, and then a bare `git push` writes to `main` | The steps now give `git switch --create <next> --no-track origin/main` and a first push with `--set-upstream`, with the reason |
+| The developer steps told the developer to start the next branch from the updated `main` without saying how. A branch created from `origin/main` tracks `main`, and then a bare `git push` writes to `main` | The steps now carry one command line — fetch, `git switch --create <next> --no-track origin/main`, then the first push with `--set-upstream` — with the reason beside it |
 
 ### Findings not fixed
 
@@ -248,4 +248,6 @@ uncommitted. The developer owns publication:
    lists the recovery for each cause.
 5. Run the work-PC checks above with the published package, V-37 first, and record any
    inconclusive coverage.
-6. Start the next branch from the updated `main`, without tracking it.
+6. Once the pull request has closed, start the next branch from the updated `main` with the
+   command line the handoff gives: it fetches the merge, creates the branch without tracking
+   and sets its upstream.

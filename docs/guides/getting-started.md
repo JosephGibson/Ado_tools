@@ -30,17 +30,23 @@ without installing it in your user module folder or changing `PATH`. Relative
 report paths start in the extracted folder. Startup needs no internet access;
 commands that query Azure DevOps still need access to your server.
 
-To update, extract a new release into a new folder, close the old console, and use
-the new launcher. Saved profiles remain in your Windows user profile. The bundled
-PowerShell version is tested and pinned for each release; it does not update
-itself. PowerShell fixes are delivered in updated AdoToolkit portable releases.
+To update from AdoToolkit 0.11.0 on, run `Update-AdoToolkit` in the console. It
+installs the newest release in a new folder, `AdoToolkit-<version>-win-x64`, next to
+the old one, which it does not change. Close the console, start `Start-AdoToolkit.cmd`
+in the new folder, and delete the old folder once its console is closed and you have
+moved out any reports saved in it. The command needs HTTPS access to GitHub; whether the
+proxy at work allows it is not confirmed (V-38). From 0.10.5 or older, or when the command
+cannot reach GitHub, extract the new release into a new folder and use its launcher. Saved
+profiles remain in your Windows user profile. The bundled PowerShell version is tested
+and pinned for each release; it does not update itself. PowerShell fixes are delivered
+in updated AdoToolkit portable releases.
 
 The `.zip.sha256` asset and release notes provide the bundle's checksum. To check
 it before extraction, run this in Windows PowerShell or PowerShell 7 and compare
 the result with the published checksum:
 
 ```powershell
-(Get-FileHash .\AdoToolkit-0.10.5-win-x64.zip -Algorithm SHA256).Hash
+(Get-FileHash .\AdoToolkit-0.11.0-win-x64.zip -Algorithm SHA256).Hash
 ```
 
 The launcher uses `RemoteSigned` for its process only. It does not change your
@@ -59,7 +65,7 @@ script is blocked, unblock the original ZIP in Properties and extract it again.
 
    ```powershell
    Unblock-File .\Install-AdoToolkit.ps1
-   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.10.5.zip
+   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.11.0.zip
    ```
 
    The script checks the ZIP against the `.sha256` file and checks that it contains
@@ -83,13 +89,24 @@ unsigned releases can't be loaded, and you need a signed build. For a signed rel
 add `-ExpectedThumbprint <certificate thumbprint>` to require a valid signature on
 the manifest, the format file and every toolkit assembly.
 
+To update a module installed this way, from AdoToolkit 0.11.0 on, run
+`Update-AdoToolkit`. It installs the newest release in its own version folder beside
+the running one, after checking it against both of its checksums, and then asks you to
+open a new PowerShell window: a window that has loaded AdoToolkit keeps that version
+until it closes. It updates only a copy under a folder of `PSModulePath`. It checks no
+code signature and installs GitHub's unsigned release: where signed code is required,
+update with the signed installation under [From source](#from-source) instead. Whether
+the proxy at work lets it reach
+GitHub is not confirmed (V-38). From 0.10.5 or older, or when the command cannot reach
+GitHub, install the new release with the steps above.
+
 To install without the script, check the hash yourself, then unblock the ZIP before
 extracting it so that no extracted file carries the download mark:
 
 ```powershell
-(Get-FileHash .\AdoToolkit-0.10.5.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
-Unblock-File .\AdoToolkit-0.10.5.zip
-Expand-Archive .\AdoToolkit-0.10.5.zip `
+(Get-FileHash .\AdoToolkit-0.11.0.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
+Unblock-File .\AdoToolkit-0.11.0.zip
+Expand-Archive .\AdoToolkit-0.11.0.zip `
     -DestinationPath (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell\Modules')
 ```
 
@@ -103,7 +120,7 @@ PowerShell 7:
 ```powershell
 & .\tools\package\Publish-AdoToolkitPackage.ps1    # restores, builds and stages the package
 & .\tools\package\New-AdoToolkitRelease.ps1        # writes artifacts\release
-& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.10.5.zip
+& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.11.0.zip
 ```
 
 The package script lists every missing prerequisite before it starts. Restore uses
@@ -186,7 +203,8 @@ The collection URL ends with the project name. Connect with: Connect-Ado -Collec
   required property is refused with an error for that input, and the rest of the input
   is still processed.
 - AdoToolkit only reads from Azure DevOps. It never creates, changes or queues
-  anything.
+  anything there. `Update-AdoToolkit` is the one command that contacts anything else:
+  GitHub, for AdoToolkit's own releases.
 
 ## Next steps
 
@@ -202,5 +220,6 @@ Full help: [Connect-Ado](../commands/en-US/Connect-Ado.md),
 [Get-AdoProject](../commands/en-US/Get-AdoProject.md),
 [Get-AdoConnection](../commands/en-US/Get-AdoConnection.md),
 [Disconnect-Ado](../commands/en-US/Disconnect-Ado.md),
-[Remove-AdoProfile](../commands/en-US/Remove-AdoProfile.md), or
+[Remove-AdoProfile](../commands/en-US/Remove-AdoProfile.md),
+[Update-AdoToolkit](../commands/en-US/Update-AdoToolkit.md), or
 `Get-Help <cmdlet> -Full`.

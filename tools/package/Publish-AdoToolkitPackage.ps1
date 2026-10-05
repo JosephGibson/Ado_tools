@@ -68,13 +68,13 @@ try {
     foreach ($culture in @('en-US', 'fr-CA')) {
         $source = Resolve-AdoPackagePath -Path (Join-Path $repository "docs/commands/$culture") -Root $repository
         $documents = @(Get-AdoPackageFile -PackagePath $source | Where-Object Extension -eq '.md')
-        if ($documents.Count -ne 22) { throw 'Expected twenty-two Markdown command help sources per culture.' }
+        if ($documents.Count -ne 23) { throw 'Expected twenty-three Markdown command help sources per culture.' }
         $help = @(Import-MarkdownCommandHelp -LiteralPath $documents.FullName)
         $exported = @(Export-MamlCommandHelp -CommandHelp $help -OutputFolder (Join-Path $helpStaging $culture) -Force)
         if ($exported.Count -ne 1) { throw 'Expected one compiled command help file per culture.' }
         $generated = Resolve-AdoPackagePath -Path $exported[0].FullName -Root $helpStaging
         $xml = Read-AdoPackageXml -Path $generated
-        if ($xml.SelectNodes("//*[local-name()='command']").Count -ne 22) { throw 'Generated help is incomplete.' }
+        if ($xml.SelectNodes("//*[local-name()='command']").Count -ne 23) { throw 'Generated help is incomplete.' }
         $folder = if ($culture -eq 'fr-CA') { 'fr' } else { $culture }
         $helpTarget = Join-Path $staging $folder
         [void] [System.IO.Directory]::CreateDirectory($helpTarget)

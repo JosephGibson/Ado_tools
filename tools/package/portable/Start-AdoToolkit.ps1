@@ -10,7 +10,7 @@ try {
     $module = Import-Module -Name (Join-Path $PSScriptRoot 'module/AdoToolkit.psd1') -Global -PassThru -ErrorAction Stop
     Set-Location -LiteralPath $PSScriptRoot
     if ($SmokeTest) {
-        if ($module.ExportedCmdlets.Count -ne 22) { throw 'The module did not export all 22 cmdlets.' }
+        if ($module.ExportedCmdlets.Count -ne 23) { throw 'The module did not export all 23 cmdlets.' }
         [pscustomobject]@{
             ModuleVersion = $module.Version.ToString()
             PowerShellVersion = $PSVersionTable.PSVersion.ToString()

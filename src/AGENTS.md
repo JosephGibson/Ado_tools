@@ -7,6 +7,8 @@
 - One public type per file.
 - No static session state: connections and caches belong to their runspace
   (`SessionStateRegistry`). A static cache of type metadata is not session state.
+  `UpdateAdoToolkitCommand.TestTransport` is the one mutable static member: a test seam that
+  is null in production and that only the Pester tests set.
 - Human text takes an explicit `CultureInfo`. Machine formats use the invariant culture.
   Identifiers compare ordinally.
 - Warnings are errors. Fix the cause; do not suppress.
@@ -44,3 +46,9 @@
   enters a script element, a path or a URL; links are built from the connection and IDs.
 - Files are written through `AtomicFileWriter`, `AtomicFileReplace` (the configuration
   file) or `GenerationFolderCommit`.
+- `src/AdoToolkit.Core/Update/`, the engine of `Update-AdoToolkit`, is the one exception to
+  the three rules above. Its own `HttpClient` calls GitHub outside `AdoHttpPipeline` and follows
+  redirects only to the three hosts that `UpdateHttp` names; `UpdateFolderCommit` writes the
+  new version; the checked entry names of the portable runtime become paths. It uses nothing
+  of `Http/`, `Connections/` or `Configuration/`, and only the cmdlet and `ModuleManifestReader`
+  use it (`UpdateIsolationTests`).

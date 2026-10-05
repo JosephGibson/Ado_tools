@@ -425,3 +425,64 @@ function Get-AdoLiveBugFieldEvidence {
         AssignedReturned = $assignedReturned; AssignedPresent = $assignedPresent
     }
 }
+
+# V-38: whether a check can run on the newest installed version. Update-AdoToolkit came with 0.11.0.
+function Get-AdoLiveUpdateGate {
+    param([AllowNull()][version] $Installed)
+    if ($null -eq $Installed) { return 'INCONCLUSIVE V-38 INSTALLED_MODULE_REQUIRED' }
+    if ($Installed -lt [version] '0.11.0') { return 'INCONCLUSIVE V-38 UPDATE_CMDLET_REQUIRED' }
+    return $null
+}
+
+# V-38: a manifest with another ModuleVersion, so that a copy of the install runs as an older version.
+function ConvertTo-AdoLiveRelabeledManifest {
+    param([Parameter(Mandatory = $true)][string] $Text, [Parameter(Mandatory = $true)][string] $Version)
+    $relabeled = [regex]::Replace($Text, "(?m)^(\s*ModuleVersion\s*=\s*)'[^']*'", "`${1}'$Version'")
+    if ($relabeled -ceq $Text) { throw 'MANIFEST_VERSION_REQUIRED' }
+    return $relabeled
+}
+
+# V-38: what the child process printed: the status and file count after Update-AdoToolkit, or its
+# error ID, and for each host whether the system proxy carries it. Any other line is ignored.
+function Read-AdoLiveUpdateOutput {
+    param([AllowEmptyCollection()][AllowNull()][string[]] $Line = @())
+    $status = $null
+    $files = -1
+    $errorId = $null
+    $proxy = [ordered]@{}
+    foreach ($text in @($Line)) {
+        if ($text -cmatch '^STATUS ([A-Za-z]+)$') { $status = $Matches[1] }
+        elseif ($text -cmatch '^FILES ([0-9]{1,6})$') { $files = [int] $Matches[1] }
+        elseif ($text -cmatch '^ERROR (.*)$') { $errorId = $Matches[1] }
+        elseif ($text -cmatch '^PROXY (API|SITE|DOWNLOAD) (DIRECT|PROXIED)$') { $proxy[$Matches[1]] = $Matches[2] }
+    }
+    return [pscustomobject]@{ Status = $status; Files = $files; ErrorId = $errorId; Proxy = $proxy }
+}
+
+# V-38: the seven module files installed through the proxy settle that the three GitHub hosts are
+# reachable. A rate limit, a missing release, nothing to install, a configuration refusal (such as a
+# release that needs a newer PowerShell, refused after its download) or a local file error cannot
+# settle it; any other toolkit error, such as a proxy that refuses a host or a redirect to another
+# host, contradicts it.
+function Get-AdoLiveUpdateVerdict {
+    param([AllowNull()][string] $Status, [int] $Files = -1, [AllowNull()][string] $ErrorId)
+    if ($ErrorId) {
+        if ($ErrorId -cnotmatch '^Ado[A-Za-z]+$') { return 'FAIL V-38 CHECK_FAILED' }
+        if ($ErrorId -cin @('AdoThrottled', 'AdoNotFound', 'AdoConfiguration', 'AdoFileOutput')) { return "INCONCLUSIVE V-38 $ErrorId" }
+        return "FAIL V-38 $ErrorId"
+    }
+    if ($Status -ceq 'Installed') {
+        if ($Files -eq 7) { return 'PASS V-38 RELEASE_INSTALLED' }
+        return 'FAIL V-38 INSTALL_INCOMPLETE'
+    }
+    if ($Status -cin @('UpToDate', 'AlreadyInstalled')) { return "INCONCLUSIVE V-38 $Status" }
+    return 'FAIL V-38 CHECK_FAILED'
+}
+
+# V-38: DIRECT or PROXIED, from what the system proxy answers for a destination; never its address.
+# Update.Live.ps1 runs it in the child process, the one whose client makes the requests.
+function Get-AdoLiveProxyNote {
+    param([AllowNull()][uri] $Proxy, [Parameter(Mandatory = $true)][uri] $Destination)
+    if ($null -eq $Proxy -or $Proxy -eq $Destination) { return 'DIRECT' }
+    return 'PROXIED'
+}

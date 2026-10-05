@@ -9,8 +9,9 @@ AdoToolkit release installed for the account. An agent never runs them.
   operation, a status, a diagnostic code).
 - Never print or store a work value: no names, titles, URLs, identities, tokens, response
   bodies or exception messages.
-- Keep responses in memory. Write nothing except a report rendered to a temporary folder
-  that the script deletes.
+- Keep responses in memory. Write nothing except, in a temporary folder that the script
+  deletes, a report it renders or, for V-38, a copy of the installed module and the release
+  that `Update-AdoToolkit` installs beside it.
 - Exit `0` when every check passed, `1` on any `FAIL`, `2` on any `INCONCLUSIVE`.
 - A check passes only on evidence that settles its `V-nn` assumption. An unobserved case is
   `INCONCLUSIVE`; an observation that contradicts the assumption is `FAIL`.

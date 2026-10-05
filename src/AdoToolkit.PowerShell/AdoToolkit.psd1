@@ -12,7 +12,7 @@
         'Get-AdoProfile', 'Set-AdoProfile', 'Remove-AdoProfile', 'Get-AdoProject', 'Get-AdoWorkItem', 'Get-AdoTestCase', 'Export-AdoTestCase',
         'Get-AdoTestPlan', 'Get-AdoTestSuite', 'Invoke-AdoWiql',
         'Get-AdoBuildDefinition', 'Get-AdoBuild', 'Get-AdoBuildTimeline', 'Get-AdoBuildFailure', 'Save-AdoBuildLog',
-        'Get-AdoTestRun', 'Get-AdoBuildTestFailure', 'Export-AdoBuildTestFailure')
+        'Get-AdoTestRun', 'Get-AdoBuildTestFailure', 'Export-AdoBuildTestFailure', 'Update-AdoToolkit')
     FunctionsToExport = @()
     AliasesToExport = @()
     VariablesToExport = @()

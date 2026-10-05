@@ -367,4 +367,54 @@
   <data name="LinkedWorkItemsUnavailable" xml:space="preserve"><value>Les éléments de travail liés aux cas de test n’ont pas pu être lus; ils sont listés avec leur ID seulement.</value></data>
   <data name="UnresolvedLinkedWorkItem" xml:space="preserve"><value>L’élément de travail lié {0} est introuvable ou inaccessible; le lien vers son ID est conservé.</value></data>
   <data name="TestPointsUnavailable" xml:space="preserve"><value>Les points de test du projet {0} n’ont pas pu être lus; les plans, les suites, les configurations et les derniers résultats sont omis.</value></data>
+  <data name="UpdateUpToDate" xml:space="preserve"><value>Vous avez déjà la dernière version d’AdoToolkit, {0}. Rien n’a été téléchargé.</value></data>
+  <data name="UpdateNewerThanRelease" xml:space="preserve"><value>Vous avez AdoToolkit {0}, qui est plus récent que la dernière version publiée, {1}. Rien n’a été téléchargé.</value></data>
+  <data name="UpdateInstalledModule" xml:space="preserve"><value>AdoToolkit {0} est installé dans {1}. Vous aviez {2}. Fermez cette fenêtre PowerShell et ouvrez-en une nouvelle pour l’utiliser.</value></data>
+  <data name="UpdateInstalledPortable" xml:space="preserve"><value>AdoToolkit {0} est installé dans {1}. Vous aviez {2}. Fermez cette fenêtre, puis lancez Start-AdoToolkit.cmd dans {1}. Vous pouvez supprimer {3} une fois sa fenêtre fermée et les rapports que vous y avez enregistrés déplacés ailleurs.</value></data>
+  <data name="UpdateAlreadyInstalledModule" xml:space="preserve"><value>AdoToolkit {0} est déjà installé dans {1}. Fermez cette fenêtre PowerShell et ouvrez-en une nouvelle pour l’utiliser.</value></data>
+  <data name="UpdateAction" xml:space="preserve"><value>Installer AdoToolkit {0}</value></data>
+  <data name="UpdateProgressActivity" xml:space="preserve"><value>Mise à jour d’AdoToolkit vers {0}</value></data>
+  <data name="UpdateProgressDownload" xml:space="preserve"><value>Téléchargement de {0} : {1:N0} sur {2:N0} Ko</value></data>
+  <data name="UpdateRequestLog" xml:space="preserve"><value>GET {0} : HTTP {1}, {2} ms.</value></data>
+  <data name="UpdateRedirectLog" xml:space="preserve"><value>Redirection vers {0}.</value></data>
+  <data name="UpdateVerifiedLog" xml:space="preserve"><value>{0} correspond au condensé SHA-256 indiqué par GitHub et au fichier de somme de contrôle {1}.</value></data>
+  <data name="UpdatePreviousInUse" xml:space="preserve"><value>La copie précédente est encore utilisée par une autre fenêtre PowerShell et a été laissée à l’emplacement {0}. La prochaine mise à jour la supprimera.</value></data>
+  <data name="UpdateUnsupportedLayout" xml:space="preserve"><value>Update-AdoToolkit met à jour une version publiée installée dans un dossier de PSModulePath ou dans un dossier portable, et cette copie s’exécute à partir de {0}. Installez manuellement la dernière version publiée, comme décrit à l’adresse {1}.</value></data>
+  <data name="UpdateLinkedPath" xml:space="preserve"><value>Le chemin d’installation passe par un lien : {0}. Update-AdoToolkit n’écrit pas à travers les liens.</value></data>
+  <data name="UpdatePowerShellTooOld" xml:space="preserve"><value>AdoToolkit {0} nécessite PowerShell {1} ou une version ultérieure, et cette fenêtre exécute PowerShell {2}. Mettez à jour PowerShell, puis exécutez de nouveau Update-AdoToolkit.</value></data>
+  <data name="UpdateProxyAuthentication" xml:space="preserve"><value>Le proxy n’a pas accepté votre authentification Windows pour {0}. Demandez à votre équipe informatique si le proxy autorise {0}.</value></data>
+  <data name="UpdateForbidden" xml:space="preserve"><value>GitHub a refusé la requête pour {0} (HTTP 403).</value></data>
+  <data name="UpdateRateLimited" xml:space="preserve"><value>La limite horaire de GitHub pour les requêtes sans authentification est atteinte pour ce réseau. Réessayez après {0:t}.</value></data>
+  <data name="UpdateRateLimitedLater" xml:space="preserve"><value>La limite horaire de GitHub pour les requêtes sans authentification est atteinte pour ce réseau. Réessayez plus tard.</value></data>
+  <data name="UpdateNoRelease" xml:space="preserve"><value>Il n’y a aucune version publiée d’AdoToolkit sur GitHub.</value></data>
+  <data name="UpdateAssetMissing" xml:space="preserve"><value>La version publiée {0} sur GitHub ne contient aucun fichier {1}.</value></data>
+  <data name="UpdateServer" xml:space="preserve"><value>GitHub n’a pas pu traiter la requête pour {0} (HTTP {1}). Réessayez plus tard.</value></data>
+  <data name="UpdateProxyRefused" xml:space="preserve"><value>Le proxy a refusé la connexion à {0} (HTTP {1}). Demandez à votre équipe informatique s’il est permis de joindre {0}.</value></data>
+  <data name="UpdateUnreachable" xml:space="preserve"><value>{0} est injoignable ({1}). Vérifiez le réseau et le proxy, puis exécutez de nouveau Update-AdoToolkit.</value></data>
+  <data name="UpdateConnectionLost" xml:space="preserve"><value>La connexion a été interrompue pendant le téléchargement de {0}. Exécutez de nouveau Update-AdoToolkit.</value></data>
+  <data name="UpdateRequest" xml:space="preserve"><value>GitHub a répondu HTTP {1} pour {0}.</value></data>
+  <data name="UpdateRedirectBlocked" xml:space="preserve"><value>La requête pour {0} a été redirigée vers {1}, ce qui n’est pas autorisé. Update-AdoToolkit se connecte uniquement à api.github.com, à github.com et à release-assets.githubusercontent.com, en HTTPS.</value></data>
+  <data name="UpdateRedirectLimit" xml:space="preserve"><value>La requête pour {0} a été redirigée trop de fois, ou sans destination.</value></data>
+  <data name="UpdateTimeoutSeconds" xml:space="preserve"><value>La requête pour {0} ne s’est pas terminée dans un délai de {1} secondes. Exécutez de nouveau Update-AdoToolkit.</value></data>
+  <data name="UpdateTimeoutMinutes" xml:space="preserve"><value>Le téléchargement de {0} ne s’est pas terminé dans un délai de {1} minutes. Exécutez de nouveau Update-AdoToolkit.</value></data>
+  <data name="UpdateStalled" xml:space="preserve"><value>Aucune donnée n’a été reçue de {0} pendant {1} secondes. Exécutez de nouveau Update-AdoToolkit.</value></data>
+  <data name="UpdateReleaseFormat" xml:space="preserve"><value>La description que GitHub donne de la dernière version publiée d’AdoToolkit a un format inattendu.</value></data>
+  <data name="UpdateTagInvalid" xml:space="preserve"><value>La dernière version publiée porte l’étiquette {0}, qui n’est pas une étiquette de version comme v1.2.3.</value></data>
+  <data name="UpdateDigestMissing" xml:space="preserve"><value>GitHub n’indique aucun condensé SHA-256 pour {0}, de sorte que le téléchargement ne peut pas être vérifié.</value></data>
+  <data name="UpdateAssetTooLarge" xml:space="preserve"><value>{0} fait {1:N0} octets, ce qui dépasse sa limite de {2:N0} octets.</value></data>
+  <data name="UpdateSizeMismatch" xml:space="preserve"><value>Le téléchargement de {0} compte {1:N0} octets, mais GitHub en indique {2:N0}. Exécutez de nouveau Update-AdoToolkit.</value></data>
+  <data name="UpdateDigestMismatch" xml:space="preserve"><value>{0} ne correspond pas au condensé SHA-256 indiqué par GitHub. Exécutez de nouveau Update-AdoToolkit.</value></data>
+  <data name="UpdateChecksumMismatch" xml:space="preserve"><value>{0} ne correspond pas à son fichier de somme de contrôle {1}. Exécutez de nouveau Update-AdoToolkit.</value></data>
+  <data name="UpdateChecksumFileInvalid" xml:space="preserve"><value>Le fichier de somme de contrôle {0} ne contient aucun hachage SHA-256 pour {1}.</value></data>
+  <data name="UpdateArchiveEntry" xml:space="preserve"><value>L’archive {0} de la version publiée contient une entrée dangereuse ou inattendue : {1}</value></data>
+  <data name="UpdateArchiveLayout" xml:space="preserve"><value>L’archive {0} de la version publiée ne contient pas la structure d’AdoToolkit.</value></data>
+  <data name="UpdateArchiveEntryTooLarge" xml:space="preserve"><value>L’archive {0} de la version publiée contient une entrée trop volumineuse : {1}</value></data>
+  <data name="UpdateArchiveIncomplete" xml:space="preserve"><value>L’archive {0} de la version publiée contient une entrée incomplète : {1}</value></data>
+  <data name="UpdateArchiveAssembly" xml:space="preserve"><value>L’archive {0} de la version publiée contient un assembly qui ne correspond pas à la version {1} : {2}</value></data>
+  <data name="UpdateManifestMismatch" xml:space="preserve"><value>Le module contenu dans {0} ne correspond pas à la version publiée {1}.</value></data>
+  <data name="UpdateTargetExists" xml:space="preserve"><value>Le dossier {0} existe déjà. Déplacez-le ou supprimez-le, puis exécutez de nouveau Update-AdoToolkit.</value></data>
+  <data name="UpdateBusy" xml:space="preserve"><value>Une autre instance d’Update-AdoToolkit effectue une installation dans {0}. Laissez-la se terminer, puis exécutez de nouveau Update-AdoToolkit.</value></data>
+  <data name="UpdateInUse" xml:space="preserve"><value>AdoToolkit {0} est en cours d’utilisation. Fermez toutes les fenêtres PowerShell qui l’ont chargé, puis exécutez de nouveau Update-AdoToolkit.</value></data>
+  <data name="UpdateDiskFull" xml:space="preserve"><value>Il n’y a pas assez d’espace libre dans {0} pour installer AdoToolkit {1}.</value></data>
+  <data name="UpdateFolderUnreadable" xml:space="preserve"><value>Impossible de lire le dossier {0}. Vérifiez que vous pouvez l’ouvrir, puis exécutez de nouveau Update-AdoToolkit.</value></data>
 </root>

@@ -3,7 +3,7 @@ BeforeAll {
     $ErrorActionPreference = 'Stop'
 }
 Describe 'Packaged compiled help and V-17 fallback' {
-    It 'loads all twenty-two complete help topics under <Culture>' -TestCases @(
+    It 'loads all twenty-three complete help topics under <Culture>' -TestCases @(
         @{ Culture = 'en-US'; Expected = 'Selects the connection for this runspace.' },
         @{ Culture = 'fr-CA'; Expected = "Sélectionne la connexion de cet espace d’exécution." },
         @{ Culture = 'fr-FR'; Expected = "Sélectionne la connexion de cet espace d’exécution." },
@@ -38,7 +38,7 @@ $topics = foreach ($command in Get-Command -Module AdoToolkit) {
             $LASTEXITCODE | Should -Be 0
             $result = $output | ConvertFrom-Json
             $result.Culture | Should -Be $Culture
-            $result.Topics.Count | Should -Be 22
+            $result.Topics.Count | Should -Be 23
             ($result.Topics | Where-Object Name -eq 'Connect-Ado').Synopsis | Should -Be $Expected
             foreach ($topic in $result.Topics) {
                 $topic.Synopsis | Should -Not -BeNullOrEmpty

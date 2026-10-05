@@ -12,4 +12,5 @@ public enum AdoProgressPhase
     TestCaseLinks,
     History,
     AttachmentDownload,
+    ReleaseDownload,
 }

@@ -51,7 +51,7 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
 
 | Stage | Checks |
 | --- | --- |
-| `powershell-lint` | Parses every PowerShell file and runs PSScriptAnalyzer with `PSScriptAnalyzerSettings.psd1` |
+| `powershell-lint` | Parses every PowerShell file and runs PSScriptAnalyzer with `PSScriptAnalyzerSettings.psd1` in a pwsh process of its own (`Invoke-ScriptAnalyzerProcess`, `tools/lib/processes.ps1`), which imports the selected PSScriptAnalyzer by path. Its module path holds only `$PSHOME\Modules`, and PowerShell adds back the user's and the shared PowerShell 7 module folders, so a command resolves from those three only, the highest version first: a call to a build module is still validated, and the Windows PowerShell folders and every other folder on the module path of `verify` are neither searched nor able to shadow a command. The findings come back whole through a file in the temporary folder |
 | `powershell-test` | Runs `tools/tests/*.Tests.ps1` with Pester 5.x, each file in a pwsh process of its own, as many at once as there are logical processors, and merges their results (`Invoke-PesterProcess`, `tools/lib/processes.ps1`). Nothing a process prints reaches the output. Incomplete when a file discovers no test, or a test is skipped, not run or inconclusive |
 | `configuration` | Parses JSON strictly and XML (`.xml`, `.config`, `.csproj`, `.props`, `.targets`, `.slnx`, `.resx`, `.ps1xml`) with DTDs prohibited |
 | `documentation` | In every Markdown file: each relative link resolves, each heading anchor exists, and each code span that starts with `src/`, `tests/`, `tools/`, `docs/`, `.claude/`, `.agents/` or `.github/` names an existing path |
@@ -77,6 +77,7 @@ pwsh -NoProfile -File .\tools\dev.ps1 <command>
   The last 120 output lines are kept, 2,000 characters each.
 - A test file that `Invoke-PesterProcess` runs, in `powershell-test` or in the product
   gate, has at most 600 seconds. On timeout its process tree is stopped and the file fails.
+  The analyzer process of `powershell-lint` has 600 seconds too; on timeout the stage fails.
 - Pass, fail and incomplete come from exit codes and structured outcomes, never from
   console text. Output lines of an external stage that mention something skipped, missing
   or not installed become advisory warnings; they never change the result.
@@ -165,7 +166,8 @@ stage reads no build output and writes nothing to `bin/`, `obj/` or `artifacts/`
 
 ## Packaging and releases
 
-Use `.agents/skills/release/SKILL.md` to prepare a release.
+Prepare a release with the `release` skill, `.agents/skills/release/SKILL.md`, which runs the
+three [release scripts](#release-scripts) and leaves the prose to the agent.
 
 | File | Purpose |
 | --- | --- |
@@ -174,6 +176,8 @@ Use `.agents/skills/release/SKILL.md` to prepare a release.
 | `tools/package/Test-AdoToolkitPortable.ps1` | Extracts the portable zip and starts its launcher offline, with empty `PATH` and `PSModulePath`; checks the module, the PowerShell version, the architecture and the loaded paths |
 | `tools/package/Install-AdoToolkit.ps1` | End-user installer, shipped beside the zip: checks the zip against its checksum, requires exactly the module layout under one `AdoToolkit/<version>/` folder, installs for the current user and replaces the same version only when the new copy is complete. `-ExpectedThumbprint` also requires valid signatures |
 | `tools/package/Set-AdoToolkitPackageSignature.ps1`, `tools/package/Install-AdoToolkitPackage.ps1` | The signed flow for a staged package, when a code-signing certificate exists |
+| `tools/package/Start-AdoToolkitRelease.ps1`, `tools/package/Test-AdoToolkitRelease.ps1`, `tools/package/Complete-AdoToolkitRelease.ps1` | Prepare, check and finish a release for the `release` skill; see [Release scripts](#release-scripts) |
+| `tools/package/Release.Common.ps1` | Their shared code: the declared version fields, the notes template, the fragment rules and the handoff commands |
 | `tools/package/Package.Common.ps1`, `tools/package/Portable.Common.ps1` | Shared path, layout, archive and signature checks. `Assert-AdoPackage` compares the seven file names case-sensitively, as the installer compares `$layout`, so a case-only difference fails in the gate and not on a user's machine |
 | `tools/package/portable/` | The launcher and `README.txt` shipped inside the portable zip |
 | `tools/BuildModules.psd1` | The module versions that a release build requires exactly |
@@ -208,6 +212,30 @@ The launcher loads only the module beside it, without user profiles, and sets
 `RemoteSigned` for its own process. It respects Group Policy and persists no execution
 policy or `PATH` change.
 
+### Release scripts
+
+Each prints one compact JSON document, reads Git with `rev-parse`, `status`, `log` and `show`
+only, and never commits, tags or pushes. They keep their state in `artifacts/release/`, which
+Git ignores: `release-prep.json`, `release-check.json` and `handoff.md`.
+
+| Script | Does | Exit |
+| --- | --- | --- |
+| `Start-AdoToolkitRelease.ps1 -Version <new> [-Date <yyyy-MM-dd>] [-WhatIf]` | Refuses on a detached HEAD, on `main`, for an existing tag `v<new>` or GitHub release, and for a version not above `VersionPrefix`; when `gh` is missing or cannot answer, it adds a warning instead of looking the release up. Records `<new>`, `<old>`, `<older>` and the base commit, the newest whose subject starts with `AdoToolkit <old>:`. Bumps the declared version fields, archives the notes of `<older>` by the Archiving procedure of `docs/AGENTS.md`, and writes the `CHANGELOG.md` section and `docs/release-<new>.md` from the change fragments of `docs/unreleased/`, after journaling them. Lists the `release:todo` markers left for the agent and every other line that names `<old>`. A run after a failure resumes and skips each step already done; `-WhatIf` lists the edits and writes nothing | `0`, `1` |
+| `Test-AdoToolkitRelease.ps1` | With `ADOTOOLKIT_RELEASE_BUILD=1` for every child: `verify` with every stage but `documentation`, the version from MSBuild, `Publish-AdoToolkitPackage.ps1 -NoBuild`, `New-AdoToolkitRelease.ps1` with the runtime of `artifacts/runtime-download/` when it is there, `Test-AdoToolkitPortable.ps1`, the runtime hash in `bundle.json` against the pin of the setup action, and `Install-AdoToolkit.ps1 -WhatIf`. Hashes the content and the membership of the tree before the gate and after packaging, apart from `CHANGELOG.md`, the new notes, `docs/archive/README.md` and the fragments, and fails on a difference. Records whether `gh` is present | `0`; `2` when a step is incomplete, such as the `assets` step without the runtime; `1` |
+| `Complete-AdoToolkitRelease.ps1 -Summary <summary>` | Refuses while a `release:todo` marker remains, when the check did not pass, apart from an `assets` step left incomplete by a missing runtime, when the tree differs from its hash before the gate, or when a fragment was added or changed after the journal. Writes the Validation section of the notes between its two `release-check` markers, runs `verify -Stage documentation` and the changelog and README tests, deletes the journaled fragments and writes the handoff, without its second command when the check found no `gh`. A second run after an interruption completes it | `0`, `1` |
+
+- The check and the finalize together run the whole of `verify` on the final tree: between them
+  only the three documents that the agent writes may change, and the hash proves that nothing
+  else did. The tag job and the pull request check run the whole of `verify` again.
+- The bump replaces only the patterns that `AdoReleaseVersionFields` declares, never a bare
+  version: from 0.11.0 on, the README, the guides and the release text name 0.11.0 on purpose.
+  A declared field that still holds `<old>` afterwards fails; any other line is listed for review.
+- The notes template is in `tools/package/Release.Common.ps1`. Their carry-over rows link the
+  Findings not fixed and the Known limitations of every earlier version where its notes are
+  now; a row of older notes that links a single version hands over to that version's list.
+- The validation section holds no link count, duration or local hash: CI builds its own
+  assets, and the release publishes their checksums.
+
 ### Release workflow
 
 `.github/workflows/release.yml` runs when a tag `v<VersionPrefix>` is pushed, or by hand
@@ -225,9 +253,9 @@ for an existing tag:
   `## <version>` heading, then the installation instructions. A relative link in the
   section is pointed at the file as tagged. When the section is missing or empty, step 6
   fails before anything is published.
-- `verify` requires that section for `VersionPrefix` already, in the form the `release`
-  skill defines, so a version without it fails locally, in the pull request check and in
-  step 4.
+- `verify` requires that section for `VersionPrefix` already, in the form that
+  `tools/package/Start-AdoToolkitRelease.ps1` writes, so a version without it fails locally,
+  in the pull request check and in step 4.
 - Scripts and modules are unsigned by decision. Checksums detect a corrupted download;
   they do not replace signatures or a trusted source.
 
@@ -237,7 +265,7 @@ When a run does not publish:
 | --- | --- |
 | A passing fault: a download, the runner | Re-run the failed job from the page of the run |
 | The run did not start, or the workflow file was at fault and is corrected on a branch | Start the workflow by hand on that branch (Actions, Release, Run workflow) with the tag as input. The run takes `.github/workflows/release.yml` from the branch and every other file from the tag, so the tag must hold `.github/actions/setup/action.yml` |
-| The tagged files are at fault: `verify` fails, or the tag does not match the version | Nothing was published. Correct and commit on the branch, remove the tag as below, then tag and push again as the first command of the `release` skill does |
+| The tagged files are at fault: `verify` fails, or the tag does not match the version | Nothing was published. Correct and commit on the branch, remove the tag as below, then tag and push again as the first command of the release handoff does |
 
 ```powershell
 git push <remote> :refs/tags/v<version>; git tag -d v<version>
@@ -252,10 +280,11 @@ git push <remote> :refs/tags/v<version>; git tag -d v<version>
 3. Restores in locked mode and runs `verify`. Any exit code other than `0` fails the check.
 
 A pull request that passes is merged with Squash and merge, under the commit title GitHub
-proposes: the pull-request title, then ` (#<number>)`. The `release` skill sets the title
-of a release pull request, `AdoToolkit <version>: <summary>`: its first handoff command ends
-with `gh pr create`, which opens the pull request with that title already set, and its second
-runs `gh pr checks <branch> --watch --fail-fast` and opens the page once this check passes.
+proposes: the pull-request title, then ` (#<number>)`. The release sets the title of its pull
+request, `AdoToolkit <version>: <summary>`: the first command of the handoff that
+`tools/package/Complete-AdoToolkitRelease.ps1` writes ends with `gh pr create`, which opens the
+pull request with that title already set, and the second runs
+`gh pr checks <branch> --watch --fail-fast` and opens the page once this check passes.
 That first command falls back by itself, after the push it has already made, to printing and
 opening a prefilled compare page: when `gh` is absent, and equally when `gh pr create` is
 refused, as it is for a token that may not write a pull request.
@@ -344,8 +373,8 @@ answer to each payload in its own process, and runs each hook as Claude Code doe
 exit code and its output.
 
 - `.claude/settings.json` denies reading and editing secret-like paths, and allows the
-  `tools/dev.ps1` commands, `dotnet restore AdoToolkit.slnx --locked-mode`, the Release
-  build, Core test runs and the five Git commands without a prompt. The restore rule
+  `tools/dev.ps1` commands, the three release scripts, `dotnet restore AdoToolkit.slnx --locked-mode`,
+  the Release build, Core test runs and the five Git commands without a prompt. The restore rule
   cannot tell a worktree from the main checkout; `AGENTS.md` makes it routine only inside
   a worktree. Every other command follows the user's permission mode. Codex uses its own
   permissions.
@@ -410,15 +439,18 @@ Ask Claude to run the `repo-review` workflow, with these arguments:
    never in a worktree, and may follow `fix-bug` without its final `verify`. It edits only
    the paths its area owns and returns any other edit, such as a help topic of another
    area, `Strings.resx`, `Strings.fr.resx`, `AdoMessage.cs` or a test file of another area,
-   as deferred. Two dotnet runs in one tree collide on `bin/`, `obj/` and `artifacts/`,
-   so the five Core and module areas fix one at a time; tooling and packaging run only the
-   tooling tests, one at a time; help and user documentation run nothing.
-5. Gate, `fix` only: one agent applies the deferred edits, runs `verify` once and reports
-   each failure by stage.
+   as deferred. Each fixed item carries its change fragment, whose `preFix` gives the failure
+   seen before the fix or the reason there is none; the schema refuses an item without one.
+   Two dotnet runs in one tree collide on `bin/`, `obj/` and `artifacts/`, so the five Core
+   and module areas fix one at a time; tooling and packaging run only the tooling tests, one
+   at a time; help and user documentation run nothing.
+5. Gate, `fix` only: one agent applies the deferred edits, writes each fix's fragment to
+   `docs/unreleased/` unchanged, runs `verify` once and reports each failure by stage.
 
 - A run starts at most 29 agents: 1 scope, 9 reviewers, 9 verifiers, 9 fixers and 1 gate.
 - The result lists confirmed, refuted and unverified findings, the fixes applied, the
-  findings not fixed with the reason, and the gate result.
+  findings not fixed with the reason, the fragments written, any fragment that could not be,
+  and the gate result.
 - The nine areas are defined twice, with their paths in `AREAS` of the workflow and with
   their rules in the table of `.claude/agents/area-reviewer.md`. Change both together.
 

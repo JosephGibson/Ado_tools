@@ -26,6 +26,7 @@ documentation starts at the [README](../../README.md).
 | [release-0.9.10.md](release-0.9.10.md) | 0.9.10 release notes: the plan critique skill and its hooks, `rev-parse` in the Git boundary and the `gh` release handoff; no product change |
 | [release-0.9.15.md](release-0.9.15.md) | 0.9.15 release notes: the age and the owner of each open bug in the failed-test report, the New marker and V-37 |
 | [release-0.10.0.md](release-0.10.0.md) | 0.10.0 release notes: `Export-AdoBuildTestFailure -Format Csv`, one formula-safe CSV file per build, and the manual Excel check |
+| [release-0.10.5.md](release-0.10.5.md) | 0.10.5 release notes: the quality pass, 22 review fixes with plain-text console tables and typed errors for bodies that do not decompress, and faster tests |
 
 Release notes for the current and the previous version are in `docs/`.
 

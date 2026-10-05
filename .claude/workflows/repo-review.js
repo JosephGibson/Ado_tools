@@ -64,8 +64,8 @@ const AREAS = [
   {
     key: 'user-docs', title: 'README, guides and release notes', lane: 'docs',
     rules: ['docs/AGENTS.md'],
-    paths: 'README.md, CHANGELOG.md, docs/guides/, docs/release-<version>.md, docs/plans/ and the two indexes of docs/archive/',
-    owns: [/^README\.md$/, /^CHANGELOG\.md$/, /^docs\/guides\//, /^docs\/release-[^/]+\.md$/, /^docs\/plans\//, /^docs\/archive\/(?:plans\/)?README\.md$/],
+    paths: 'README.md, CHANGELOG.md, docs/guides/, docs/release-<version>.md, docs/unreleased/, docs/plans/ and the two indexes of docs/archive/',
+    owns: [/^README\.md$/, /^CHANGELOG\.md$/, /^docs\/guides\//, /^docs\/release-[^/]+\.md$/, /^docs\/unreleased\//, /^docs\/plans\//, /^docs\/archive\/(?:plans\/)?README\.md$/],
   },
   {
     key: 'tooling', title: 'Dev tooling and live checks', lane: 'tooling',
@@ -164,6 +164,36 @@ const VERDICT_SCHEMA = {
   required: ['verdicts'],
 }
 
+// The change fragment of a fix, in the format of docs/unreleased/README.md. The gate step writes
+// it unchanged, so no fixer needs to own docs/unreleased/. preFix is required: the failure that the
+// regression test showed before the fix with its totals, or the reason none could be shown.
+const FRAGMENT_KINDS = ['added', 'changed', 'deprecated', 'removed', 'fixed', 'security', 'internal']
+const LINE = { type: 'string', description: 'one line of text' }
+const FRAGMENT_SCHEMA = {
+  type: 'object',
+  description: 'the change fragment of the fix, in the format of docs/unreleased/README.md',
+  properties: {
+    kind: { type: 'string', enum: FRAGMENT_KINDS, description: 'fixed, or security for a vulnerability' },
+    changelog: { type: 'string', description: 'one line that says what a user sees' },
+    visible: { type: 'string', description: 'optional: the observable change' },
+    contract: { type: 'string', description: 'optional: a public contract change' },
+    finding: { type: 'string', description: 'what was wrong, its cause and the fix, in one line' },
+    regressionTest: { type: 'string', description: 'the test that fails without the fix' },
+    files: { type: 'array', items: { type: 'string' }, description: 'repository paths with forward slashes' },
+    testsChanged: { type: 'string', description: 'optional: an existing test edited, and why' },
+    preFix: {
+      description: 'the failure observed before the fix, or the reason there is none',
+      oneOf: [
+        { type: 'object', properties: { failure: LINE, totals: LINE, condition: LINE }, required: ['failure', 'totals'], additionalProperties: false },
+        { type: 'object', properties: { none: LINE }, required: ['none'], additionalProperties: false },
+        { type: 'object', properties: { notReproduced: LINE }, required: ['notReproduced'], additionalProperties: false },
+      ],
+    },
+  },
+  required: ['kind', 'changelog', 'finding', 'files', 'preFix'],
+  additionalProperties: false,
+}
+
 const FIX_SCHEMA = {
   type: 'object',
   properties: {
@@ -175,9 +205,9 @@ const FIX_SCHEMA = {
           id: { type: 'string' },
           files: { type: 'array', items: { type: 'string' } },
           change: { type: 'string' },
-          regression: { type: 'string', description: 'the regression test and its failure before the fix, or why none applies' },
+          fragment: FRAGMENT_SCHEMA,
         },
-        required: ['id', 'files', 'change'],
+        required: ['id', 'files', 'change', 'fragment'],
       },
     },
     notFixed: {
@@ -188,7 +218,12 @@ const FIX_SCHEMA = {
       type: 'array',
       items: {
         type: 'object',
-        properties: { id: { type: 'string' }, path: { type: 'string' }, edit: { type: 'string', description: 'the exact change to make' } },
+        properties: {
+          id: { type: 'string' },
+          path: { type: 'string' },
+          edit: { type: 'string', description: 'the exact change to make' },
+          fragment: { ...FRAGMENT_SCHEMA, description: 'the change fragment of the fix that this edit completes, when the fix has no item in fixed' },
+        },
         required: ['id', 'path', 'edit'],
       },
     },
@@ -202,6 +237,11 @@ const GATE_SCHEMA = {
     applied: {
       type: 'array',
       items: { type: 'object', properties: { id: { type: 'string' }, path: { type: 'string' } }, required: ['id', 'path'] },
+    },
+    fragments: {
+      type: 'array',
+      items: { type: 'object', properties: { id: { type: 'string' }, path: { type: 'string' } }, required: ['id', 'path'] },
+      description: 'the change fragment files written, one per fix',
     },
     notApplied: {
       type: 'array',
@@ -217,7 +257,29 @@ const GATE_SCHEMA = {
       required: ['exitCode', 'status', 'failures'],
     },
   },
-  required: ['applied', 'notApplied', 'gate'],
+  required: ['applied', 'fragments', 'notApplied', 'gate'],
+}
+
+// Why a fragment cannot be written as it is, or null. The schema already asks for this shape; a
+// fragment that slips through is reported instead of written, since verify would refuse it.
+const isLine = value => typeof value === 'string' && value.trim() !== '' && !/[\r\n]/.test(value)
+function fragmentProblem(fragment) {
+  if (!fragment || typeof fragment !== 'object') return 'no fragment'
+  const unknown = Object.keys(fragment).filter(key => !Object.hasOwn(FRAGMENT_SCHEMA.properties, key))
+  if (unknown.length > 0) return `unknown properties: ${unknown.join(', ')}`
+  if (!FRAGMENT_KINDS.includes(fragment.kind)) return `kind must be one of ${FRAGMENT_KINDS.join(', ')}`
+  for (const name of ['changelog', 'finding', 'visible', 'contract', 'regressionTest', 'testsChanged']) {
+    if ((name === 'changelog' || name === 'finding' || name in fragment) && !isLine(fragment[name])) return `${name} must be one line of text`
+  }
+  const safe = path => isLine(path) && /^[A-Za-z0-9._-][^\\:*?"<>|]*$/.test(path) && !/(?:^|\/)\.\.(?:\/|$)/.test(path)
+  if (!Array.isArray(fragment.files) || fragment.files.length === 0 || !fragment.files.every(safe)) return 'files must list repository paths with forward slashes'
+  const preFix = fragment.preFix ?? {}
+  const keys = Object.keys(preFix).sort().join(',')
+  const evidence = ['failure,totals', 'condition,failure,totals'].includes(keys) && Object.values(preFix).every(isLine)
+  const reason = (keys === 'none' || keys === 'notReproduced') && isLine(Object.values(preFix)[0])
+  if (!evidence && !reason) return 'preFix needs the failure and the totals seen before the fix, or none or notReproduced with the reason'
+  if (evidence && !isLine(fragment.regressionTest)) return 'a pre-fix failure needs the regressionTest that showed it'
+  return null
 }
 
 // An agent call that reports its failure instead of dropping the item.
@@ -355,7 +417,8 @@ function fixPrompt(work) {
 
 - Never use a worktree and never run a Git command that writes.
 - You own these paths: ${work.area.paths}. Edit only files there. When a fix needs a change anywhere else (a help topic of another area, ${code('src/AdoToolkit.Core/Resources/Strings.resx')}, ${code('Strings.fr.resx')} or ${code('AdoMessage.cs')}, a test file of another area), do not make it: return it in deferred with the exact edit. A final step applies the deferred edits after every fixer has finished.
-- For a defect in code, follow the fix-bug skill with one change: skip its final full verify. The workflow runs one full verify after every fix.
+- For a defect in code, follow the fix-bug skill with two changes: skip its final full verify, and return the change fragment of its step 4 as ${code('fragment')} instead of writing the file. The workflow runs one full verify after every fix, and its gate step writes the fragments.
+- Every fixed item carries its ${code('fragment')}, in the format of ${code('docs/unreleased/README.md')}, and the ${code('id')} of exactly one finding below; a fix of several findings is one item per finding. Its ${code('kind')} is ${code('fixed')}, ${code('security')} for a vulnerability, or ${code('internal')} when the fix changes only tools, tests or agent files and nothing a user of the module sees. A fix made entirely by a deferred edit carries its fragment on that edit instead. Its ${code('preFix')} holds the failure message and the totals of the regression test's run before the fix, from fix-bug step 2. Where no test can show the defect, as for the wording of a document, give ${code('{ "none": "<reason>" }')}; where the failure was not observed, ${code('{ "notReproduced": "<reason>" }')}. Never claim evidence that was not observed.
 - ${LANE_RULES[work.area.lane]}
 - A finding that you judge not to be a defect after all, or cannot fix safely, goes in notFixed with the reason.
 
@@ -377,32 +440,69 @@ const lanes = await parallel([
 ])
 
 const deferred = []
+const fragments = []
+// One fragment per finding: a second one would repeat its changelog line and its Bug fixes row.
+const fragmentIds = new Set()
+report.fragmentProblems = []
 for (const { item, result } of lanes.filter(Boolean).flat().filter(Boolean)) {
   if (result.error) {
     for (const finding of item.findings) report.notFixed.push({ id: finding.id, reason: `the fixer of ${item.area.key} failed: ${result.error}` })
     continue
   }
-  for (const fixed of result.fixed) report.fixesApplied.push({ ...fixed, by: item.area.key })
+  // The id names the fragment file, so it must be one finding id of the area.
+  const known = id => typeof id === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) && item.findings.some(finding => finding.id === id)
+  for (const fixed of result.fixed) {
+    report.fixesApplied.push({ ...fixed, by: item.area.key })
+    const problem = !known(fixed.id) ? 'the id is not one finding id of the area'
+      : fragmentIds.has(fixed.id) ? 'not written: the finding has a fragment already' : fragmentProblem(fixed.fragment)
+    if (problem) report.fragmentProblems.push({ id: fixed.id, problem })
+    else { fragmentIds.add(fixed.id); fragments.push({ id: fixed.id, fragment: fixed.fragment }) }
+  }
   report.notFixed.push(...result.notFixed)
-  deferred.push(...result.deferred)
+  for (const edit of result.deferred) {
+    if (edit.fragment === undefined) { deferred.push(edit); continue }
+    const problem = !known(edit.id) ? 'the id is not one finding id of the area'
+      : fragmentIds.has(edit.id) ? 'not written: the finding has a fragment already' : fragmentProblem(edit.fragment)
+    if (problem) { report.fragmentProblems.push({ id: edit.id, problem }); const { fragment, ...rest } = edit; deferred.push(rest) }
+    else { fragmentIds.add(edit.id); deferred.push(edit) }
+  }
 }
 
-// Gate: the deferred edits, then one full verify. Nothing else builds by now.
+// Gate: the deferred edits and the fragments, then one full verify. Nothing else builds by now.
 phase('Gate')
 const gate = await attempt(
   `Finish a repo-review fix run of AdoToolkit in this working tree. Never use a worktree and never run a Git command that writes.
 1. Apply the deferred edits below: fixers could not make them because the files are not theirs. Follow the AGENTS.md rules of each path. Skip an edit that is already made or no longer applies, and say why.
-2. Run ${code('pwsh -NoProfile -File .\\tools\\dev.ps1 verify')} once from the repository root and wait for it to finish; it prints one JSON document.
-3. Do not fix what the gate reports. Return its exit code, its status, and each failing or incomplete stage with its named failures.
+2. Write each change fragment below, in the order given, then the ${code('fragment')} of each deferred edit that you applied and that carries one, to ${code('docs/unreleased/<yyyyMMdd-HHmmss>-review-<id>.json')} with the current time, never reusing a name: the ${code('fragment')} object exactly as given, as JSON indented by two spaces, ending with a newline. Change nothing in it.
+3. Run ${code('pwsh -NoProfile -File .\\tools\\dev.ps1 verify')} once from the repository root and wait for it to finish; it prints one JSON document.
+4. Do not fix what the gate reports. Return its exit code, its status, each failing or incomplete stage with its named failures, and the path of each fragment written.
 
 Deferred edits (JSON):
-${JSON.stringify(deferred, null, 2)}`,
+${JSON.stringify(deferred, null, 2)}
+
+Change fragments (JSON):
+${JSON.stringify(fragments, null, 2)}`,
   { label: 'gate', phase: 'Gate', schema: GATE_SCHEMA })
 if (gate.error) {
   report.gate = { ran: false, reason: `the gate step failed: ${gate.error}` }
   for (const edit of deferred) report.notFixed.push({ id: edit.id, reason: `deferred edit to ${edit.path} not applied: the gate step failed` })
+  for (const id of fragmentIds) report.fragmentProblems.push({ id, problem: `the gate step failed and may have written it or not: check docs/unreleased/*-review-${id}.json before writing it again` })
 } else {
   for (const applied of gate.applied) report.fixesApplied.push({ id: applied.id, files: [applied.path], change: 'deferred edit', by: 'gate' })
+  report.fragmentsWritten = gate.fragments
+  // Every fragment sent must be written, and a deferred edit that completed a fix with no fragment
+  // leaves that fix out of the release notes.
+  const written = new Set(gate.fragments.map(item => item.id))
+  const applied = new Set(gate.applied.map(item => item.id))
+  for (const item of fragments) {
+    if (!written.has(item.id)) report.fragmentProblems.push({ id: item.id, problem: 'sent to the gate and not written' })
+  }
+  for (const id of new Set(deferred.filter(edit => edit.fragment !== undefined).map(edit => edit.id))) {
+    if (applied.has(id) && !written.has(id)) report.fragmentProblems.push({ id, problem: 'its deferred edit was applied and its fragment not written' })
+  }
+  for (const id of applied) {
+    if (!fragmentIds.has(id) && !written.has(id)) report.fragmentProblems.push({ id, problem: 'a deferred edit was applied, and no change fragment describes its fix' })
+  }
   for (const skipped of gate.notApplied) report.notFixed.push({ id: skipped.id, reason: `deferred edit to ${skipped.path}: ${skipped.reason}` })
   report.gate = { ran: true, ...gate.gate }
 }

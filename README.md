@@ -2,7 +2,7 @@
 
 PowerShell toolkit for Azure DevOps Server 2020: compiled C# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 
-**Version 0.11.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.11.5** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
@@ -12,64 +12,11 @@ standalone HTML, Markdown or JSON reports when you need a document, and a CSV fi
 build's failed tests when you need a spreadsheet. All messages, report labels and help are
 available in English and French.
 
-Version 0.11.0 adds `Update-AdoToolkit`, which updates AdoToolkit from its own console. It
-reads the newest release on GitHub, checks the download against both SHA-256 checksums that
-GitHub gives for it, and installs it beside the running copy, which it never changes: a
-module installed with `Install-AdoToolkit.ps1` gets a new version folder, and a portable copy
-gets a new folder next to the old one. You then open a new PowerShell window, or start the
-new folder's launcher. When you already have the newest version, it says so and downloads
-nothing. It is the one command that contacts anything other than your Azure DevOps server,
-and you install 0.11.0 itself by hand, as before; see [Installation](#installation).
-Version 0.10.5 adds no feature: it corrects defects that a review of the whole repository
-found. The default tables in the console show a control character in text from the server
-as a space, so that a work item title can no longer send escape sequences to your terminal;
-the objects keep the text as it was sent. A response that is marked compressed but does not
-decompress now ends in an AdoToolkit error in your language instead of a .NET one, and in a
-failed-test export it costs that attachment only. A failed-test report in which a result and
-one of its sub-results list the same attachment is written instead of failing its own check,
-tab completion of `Get-AdoProfile -Name` finds a profile whose name holds `[` or `]`, and the
-installer keeps the backup that a failed rollback left as the only copy of a version.
-Version 0.10.0 adds `-Format Csv` to `Export-AdoBuildTestFailure`. Instead of the HTML
-report, it writes one flat CSV file per build, with a row per reported test: its error, its
-owner, its Test Case, its open bugs and whether it is new or keeps failing, for a spreadsheet
-or a script. The CSV export downloads nothing and needs no connection, and a text cell that a
-spreadsheet could read as a formula starts with an apostrophe; see
-[A CSV file for a spreadsheet](docs/guides/build-report.md#a-csv-file-for-a-spreadsheet).
-Version 0.9.15 answers the first question of triage in a failed-test report: has someone
-already filed this bug, and is anyone on it? A bug filed at or after the build went into the
-queue carries **✦** on its chip, in a paler red, wherever that chip appears, and the Open
-bugs view counts those bugs above its table. Each bug the report read whole now also shows
-the day it was filed and who it is assigned to, or **Unassigned**, both in the Open bugs
-view and on the test's card, so typing an owner's name in the report's search leaves the
-tests whose bugs that person has. `Get-AdoBuildTestFailure` returns the two new facts as
-`CreatedDate` and `AssignedTo` on each bug, read in the batch it already sent.
-Version 0.9.10 changed the tools that develop AdoToolkit, not what AdoToolkit does.
-Version 0.9.5 corrects defects found by reviewing the repository against its own rules. In a
-failed-test report, an error summary or a chart caption cut at its length limit kept a whole
-character where it used to leave half of an emoji behind, which showed as the replacement
-character `�`. A pipeline
-object that you build by hand without its numeric ID is now reported as an error on that
-object, so the rest of the pipeline still runs and the message is in your language. Four
-help examples and three guides say more precisely what they do. Version 0.9.0 also changed
-the development tools only. Version 0.8.5
-restyled the failed-test report so that a build's failures are easier to get into. The
-overview gives every part of a test a column of its own, marks a test that fails for the
-first time as **New** and one that keeps failing with the day it started, and ends with
-cards that say what is new, which errors dominate and which tests have no open bug. By error
-groups failures whose messages differ only in numbers, paths, GUIDs or IDs, and names their
-exception and the code they share; Open bugs says what each bug covers and what it leaves out.
-A test's card shows its run history by date, its bugs and its attachments before its
-attempts. Red marks failures and bugs alike, and a bug that could not be read is grey.
-Version 0.8.0 made the report faster to gather: `Get-AdoBuildTestFailure -SkipAttachments`
-leaves out the attachment lists, which are most of the requests when tests are rerun, every
-request accepts compressed responses, and with `-Verbose` both failed-test commands give the
-requests and the time of each stage. Version 0.7.0 reworked the failed-test report and the
-commands behind it: up to six requests at the same time, the attachments of every recent
-test run, and an Open bugs view. The [changelog](CHANGELOG.md) says what a script can
-notice. Profiles hold your default project, branch, build definition, test plan and test
-suite; see the [configuration file](docs/guides/configuration.md#profiles). The
-[release notes](docs/release-0.11.0.md) list every change, the validation evidence and the
-remaining work-PC checks.
+Profiles hold your default project, branch, build definition, test plan and test suite;
+see the [configuration file](docs/guides/configuration.md#profiles). The
+[changelog](CHANGELOG.md) says what changes for you and for your scripts in each version,
+and links the release notes of each version, the oldest through the archive. The notes list
+every change, the validation evidence and the remaining work-PC checks.
 
 > [!NOTE]
 > Live validation against Azure DevOps Server 2020 is in progress. Connections, projects,
@@ -174,8 +121,7 @@ Profiles, connections and the other options are described in
 | Full cmdlet help (also available with `Get-Help <cmdlet> -Full`) | [English](docs/commands/en-US/) · [French](docs/commands/fr-CA/) |
 | Test Case JSON report format | [testcase.v1.schema.json](docs/schemas/testcase.v1.schema.json) |
 | Developer CLI, validation and prerequisites | [Developer tooling](docs/tooling.md) |
-| What changes for users in each version | [Changelog](CHANGELOG.md) |
-| Release notes | [Version 0.11.0](docs/release-0.11.0.md), with links to the earlier notes |
+| What changes for users in each version, with links to the release notes of each | [Changelog](CHANGELOG.md) |
 | Original specification, delivery plans, design notes and earlier release notes | [Archive](docs/archive/README.md) |
 | Rules for coding agents | [AGENTS.md](AGENTS.md) |
 

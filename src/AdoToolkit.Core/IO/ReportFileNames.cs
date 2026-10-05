@@ -1,4 +1,5 @@
 using AdoToolkit.Core.Reporting;
+using AdoToolkit.Core.Reporting.TestFailures;
 using AdoToolkit.Core.TestManagement;
 
 namespace AdoToolkit.Core.IO;
@@ -24,10 +25,10 @@ public static class ReportFileNames
         return "TestSuite-" + suiteId.ToString(CultureInfo.InvariantCulture) + "-Steps." + Extension(format);
     }
 
-    public static string TestFailures(int buildId)
+    public static string TestFailures(int buildId, TestFailureReportFormat format = TestFailureReportFormat.Html)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(buildId);
-        return "Build-" + buildId.ToString(CultureInfo.InvariantCulture) + "-TestFailures.html";
+        return "Build-" + buildId.ToString(CultureInfo.InvariantCulture) + "-TestFailures." + Extension(format);
     }
 
     // §13.4 step 1: UTC, invariant culture, chosen once before rendering.
@@ -121,6 +122,13 @@ public static class ReportFileNames
         ReportFormat.Html => "html",
         ReportFormat.Markdown => "md",
         ReportFormat.Json => "json",
+        _ => throw new ArgumentOutOfRangeException(nameof(format)),
+    };
+
+    private static string Extension(TestFailureReportFormat format) => format switch
+    {
+        TestFailureReportFormat.Html => "html",
+        TestFailureReportFormat.Csv => "csv",
         _ => throw new ArgumentOutOfRangeException(nameof(format)),
     };
 }

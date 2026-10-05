@@ -9,12 +9,14 @@ namespace AdoToolkit.Core.Reporting.TestFailures;
 //
 // ExportAsync writes one Verbose line per step, in this order whatever is downloaded: the
 // attachment downloads with their files and requests, the rendered report with its bytes, its
-// check, and the move into place. A summary of the export ends them.
+// check, and the move into place. A summary of the export ends them. A CSV file writes the same
+// lines, with nothing downloaded.
 public sealed class TestFailureExporter
 {
     private readonly IDocumentLauncher launcher;
     private readonly Func<string>? downloads;
     private readonly GenerationFolderCommit commit;
+    private readonly AtomicFileWriter writer = new();
 
     public TestFailureExporter(IDocumentLauncher launcher, Func<string>? downloads = null)
         : this(launcher, downloads, new GenerationFolderCommit()) { }
@@ -38,6 +40,8 @@ public sealed class TestFailureExporter
             GeneratedAt = options.GeneratedAt, ToolkitVersion = options.ToolkitVersion,
             AttachmentWindowDays = options.AttachmentWindowDays, IncludeFlaky = options.IncludeFlaky,
         });
+        if (options.Format == TestFailureReportFormat.Csv) return PrepareCsv(set, model, options);
+        if (options.Format != TestFailureReportFormat.Html) throw new ArgumentOutOfRangeException(nameof(options));
         string name = ReportFileNames.TestFailures(set.Build.Id);
         string path = options.CreateDirectory && options.Path is not null && !Directory.Exists(options.Path)
             ? Path.GetFullPath(Path.Combine(options.Path, name))
@@ -58,7 +62,21 @@ public sealed class TestFailureExporter
         HashSet<int> small = options.SkipAttachments ? [] : [.. model.AttachmentRunIds];
         AttachmentSelection selection = new(full, small, options.MaximumInlineJsonBytes, latest);
         bool download = model.Failures.SelectMany(f => f.Attempts).SelectMany(a => a.Attachments).Any(selection.Selects);
-        return new TestFailureExportPlan(model, plan, options, download, selection);
+        return new TestFailureExportPlan(model, plan.ReportPath, plan, options, download, selection);
+    }
+
+    // A CSV file links no attachment, so it downloads nothing, needs no connection and has no
+    // generation folder. It goes into an existing directory, under the build's name, or into the
+    // .csv file that Path names.
+    private TestFailureExportPlan PrepareCsv(AdoBuildTestFailureSet set, TestFailureReportModel model, TestFailureExportOptions options)
+    {
+        CultureInfo culture = options.SessionCulture;
+        string path = ReportFileNames.Resolve(options.Path, ReportFileNames.TestFailures(set.Build.Id, TestFailureReportFormat.Csv), culture, downloads);
+        if (!path.EndsWith(".csv", StringComparison.OrdinalIgnoreCase) || Path.GetFileNameWithoutExtension(path).Length == 0)
+            throw new AdoFileOutputException(Messages.Get(AdoMessage.TestFailureCsvPathInvalid, culture, path));
+        if (options.NoClobber && Path.Exists(path)) throw new AdoFileOutputException(Messages.Get(AdoMessage.FileOutput, culture, path));
+        AttachmentSelection none = new(new HashSet<int>(), new HashSet<int>(), options.MaximumInlineJsonBytes, null);
+        return new TestFailureExportPlan(model, path, null, options, false, none);
     }
 
     public async Task<TestFailureExportResult> ExportAsync(TestFailureExportPlan plan, AttachmentDownloader? downloader,
@@ -72,26 +90,27 @@ public sealed class TestFailureExporter
         IReadOnlyList<AdoDiagnostic> diagnostics = [];
         StageTimer stage = new(output, culture);
         int files = 0, requests = 0;
+        if (plan.Commit is not { } folders) return ExportCsv(plan, output, stage, cancellationToken);
         if (plan.Options.CreateDirectory)
         {
-            try { Directory.CreateDirectory(plan.Commit.Directory); }
+            try { Directory.CreateDirectory(folders.Directory); }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException)
             {
-                throw new AdoFileOutputException(Messages.Get(AdoMessage.FileOutput, culture, plan.Commit.Directory), error);
+                throw new AdoFileOutputException(Messages.Get(AdoMessage.FileOutput, culture, folders.Directory), error);
             }
         }
         // Nothing to download: the line keeps its place, with nothing counted.
         if (!plan.DownloadsAttachments) stage.End(AdoMessage.ExportStageDownloads, files, requests);
-        GenerationCommitResult result = await commit.CommitAsync(plan.Commit, plan.Options.NoClobber, plan.DownloadsAttachments,
+        GenerationCommitResult result = await commit.CommitAsync(folders, plan.Options.NoClobber, plan.DownloadsAttachments,
             async (folder, token) =>
             {
                 AttachmentDownloadResult downloaded = await downloader!.DownloadAsync(plan.Model.Failures, plan.Model.Build.TeamProject,
-                    folder, plan.Commit.FolderName, culture, token, plan.Attachments).ConfigureAwait(false);
+                    folder, folders.FolderName, culture, token, plan.Attachments).ConfigureAwait(false);
                 diagnostics = downloaded.Diagnostics;
                 foreach (AdoDiagnostic diagnostic in diagnostics) output.Warning(diagnostic.Message);
                 TestFailureLocalAttachments? local = downloaded.Files.Count == 0 ? null : new()
                 {
-                    FolderName = plan.Commit.FolderName, SourceFolder = folder, Files = downloaded.Files,
+                    FolderName = folders.FolderName, SourceFolder = folder, Files = downloaded.Files,
                     MaximumInlineJsonBytes = downloader.MaximumInlineJsonBytes, MaximumInlineTotalBytes = downloader.MaximumInlineTotalBytes,
                 };
                 model = TestFailureReportModelBuilder.WithAttachments(plan.Model, downloaded.Failures, diagnostics, local);
@@ -113,6 +132,24 @@ public sealed class TestFailureExporter
         output.Verbose(Messages.Get(AdoMessage.ExportSummary, culture, plan.Model.Build.Id, files, requests, stage.Total));
         if (plan.Options.Open) DocumentOpener.Open(launcher, result.Report.FullName, culture, output.Warning);
         return new TestFailureExportResult { Report = result.Report, AttachmentDirectory = result.AttachmentDirectory, Diagnostics = diagnostics };
+    }
+
+    // Rendered into a temporary file beside the target, read back, then moved into place. Its
+    // Verbose lines are those of a report that downloads nothing.
+    private TestFailureExportResult ExportCsv(TestFailureExportPlan plan, IAdoLog output, StageTimer stage, CancellationToken cancellationToken)
+    {
+        CultureInfo culture = plan.Options.SessionCulture;
+        stage.End(AdoMessage.ExportStageDownloads, 0, 0);
+        FileInfo report = writer.Write(plan.ReportPath, csv => CsvTestFailureRenderer.Render(plan.Model, csv), temporary =>
+        {
+            stage.End(AdoMessage.ExportStageRender, new FileInfo(temporary).Length);
+            CsvTestFailureRenderer.Validate(temporary, plan.Model);
+            stage.End(AdoMessage.ExportStageValidation);
+        }, culture, plan.Options.NoClobber, cancellationToken);
+        stage.End(AdoMessage.ExportStageCommit);
+        output.Verbose(Messages.Get(AdoMessage.ExportSummary, culture, plan.Model.Build.Id, 0, 0, stage.Total));
+        if (plan.Options.Open) DocumentOpener.Open(launcher, report.FullName, culture, output.Warning);
+        return new TestFailureExportResult { Report = report };
     }
 
     // Times steps that follow one another: each line gives the milliseconds since the previous one,

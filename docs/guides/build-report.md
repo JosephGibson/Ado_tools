@@ -285,6 +285,67 @@ An existing report is replaced only after the new attachments are downloaded and
 new report is validated, so a failed export leaves the previous report and its folder
 intact. Older attachment folders of the same report are removed after the replacement.
 
+## A CSV file for a spreadsheet
+
+To sort, filter or count the failed tests in a spreadsheet or a script, export a flat CSV
+file instead of the report with the `-Format` parameter of
+[Export-AdoBuildTestFailure](../commands/en-US/Export-AdoBuildTestFailure.md):
+
+```powershell
+$set | Export-AdoBuildTestFailure -Format Csv -Path .\reports
+Import-Csv -LiteralPath .\reports\Build-12345-TestFailures.csv | Where-Object 'Open bugs' -eq 0
+```
+
+The file has one row per test of the report, in report order, so flaky tests are in it only
+with `-IncludeFlaky`. It links no attachment: the export downloads nothing and needs no
+connection, and `-SkipAttachments`, `-AllRunAttachments`, `-AttachmentWindowDays` and
+`-Culture` have no effect on it. `-Path` names an existing directory, which receives
+`Build-<id>-TestFailures.csv`, or a file in an existing directory whose name ends in `.csv`;
+any other path, a directory that does not exist included, fails before anything is written:
+with an `InvalidArgument` error when it does not end in `.csv`, and otherwise with an
+`AdoFileOutput` error. `-NoClobber`, `-Open` and `-WhatIf` work as they do for the report.
+
+The columns, in this order:
+
+| Column | Holds |
+| --- | --- |
+| `Build` | The build ID |
+| `Ordinal` | The test's number in the report |
+| `Test` | The full test name |
+| `Title` | The Test Case title that the test results carry |
+| `Classification` | `Failed`, or `Flaky` with `-IncludeFlaky` |
+| `Attempts` | How many attempts the test has |
+| `Latest error` | The whole message of the latest error, with its line breaks; the report's table shows its first line |
+| `Owner` | The owner's display name, then the unique name in angle brackets |
+| `Priority` | The test's priority |
+| `Test case ID` | The ID of the test's Test Case |
+| `Test case state` | The Test Case's state, when the Test Case was read |
+| `Open bugs` | How many open bugs the test has |
+| `Bug IDs` | Every bug of the test's bug list, in ID order, separated by a semicolon and a space |
+| `Bug states` | Their states, in the same order; a bug that could not be read has an empty state |
+| `New` | `True` when the build before this one ran the test and it did not fail, `False` when the test also failed or was flaky in the build before, empty when there is no comparison |
+| `Since` | When `New` is `False`, the day, as `yyyy-MM-dd`, that the first build of that run of failures finished, in your computer's time zone; that build's number when the day is not known |
+
+`New` and `Since` are the trend of the report, and `Open bugs` the count the report uses to
+tell tracked tests from the others.
+
+The file is made for machines. The header names are English whatever the culture; numbers,
+`True` and `False` use the invariant culture, and dates are `yyyy-MM-dd`. Azure DevOps text
+is written as the server sent it. The file is UTF-8 with a byte order mark, with a comma
+between fields and CRLF after every row. Fields follow RFC 4180: a field that holds a comma,
+a quote or a line break is enclosed in quotes, and its quotes are doubled.
+
+A text field that starts with `=`, `+`, `-`, `@`, a tab or a carriage return gets an
+apostrophe in front of it, so that the spreadsheet shows a test name or an error message as
+text instead of reading it as a formula. Numbers and dates are never changed. Remove the
+apostrophe only if you trust the text.
+
+French Excel reads a comma file as one column when you double-click it: Excel splits a CSV
+file at the list separator of the Windows regional settings, which is a semicolon in French.
+Import the file instead: in Excel, choose **Data** > **From Text/CSV** (**Données** >
+**À partir d'un fichier texte/CSV**), pick the file, check that the delimiter is **Comma**
+and the file origin is **65001: Unicode (UTF-8)**, then choose **Load**.
+
 ## Options worth knowing
 
 | Option | Effect |
@@ -294,7 +355,8 @@ intact. Older attachment folders of the same report are removed after the replac
 | `-AllRunAttachments` | Also downloads the larger JSON and text files from every run inside the window, not only from the most recent run. `-SkipAttachments` takes precedence if both switches are supplied |
 | `-AttachmentWindowDays` | Days, 1–365, in which a run must have started for its attachments to appear. Default 7 |
 | `-IncludeFlaky` | Includes flaky tests; by default they are left out and only counted in the header |
-| `-Path` | A directory, or an `.html` file path for a single build |
+| `-Path` | A directory, or an `.html` file path for a single build. With `-Format Csv`, an existing directory, or a `.csv` file path in one |
+| `-Format Csv` | Writes one flat CSV file per build instead of the report, and downloads nothing. See [A CSV file for a spreadsheet](#a-csv-file-for-a-spreadsheet) |
 | `-Culture fr-CA` | Report language. Defaults to the configured, then the session, culture |
 | `-NoClobber` | Refuses to replace an existing report, before any download |
 | `-WhatIf` | Names the report and folder without requests or writes |
@@ -324,6 +386,8 @@ failed". `Save-AdoBuildLog` needs an existing directory, unlike the export.
 | An `AdoNotFound` error for the build | The ID belongs to another project. Add `-Project`, or check the project segment of the build URL |
 | `AdoConnectionMismatch` | The set came from a different collection than the connection used for the export |
 | A path error naming the report | `-Path` has an extension other than `.html`, or names an existing file that is not an `.html` file |
+| An `InvalidArgument` path error with `-Format Csv` | `-Path` names neither an existing directory nor a file ending in `.csv`. A CSV export does not create a directory |
+| Excel shows each row of the CSV file in one column | The Windows list separator is a semicolon, as it is in French. Import the file with **Data** > **From Text/CSV** instead of opening it |
 | `Status` is `Partial` | Read `Diagnostics`. A common cause is more failing tests than `testResults.maximumReportedFailures` |
 | Gathering the failures takes long | Add `-Verbose` to `Get-AdoBuildTestFailure`: each stage, such as the result listings, the failure details or the attachment lists, writes its requests and milliseconds, and a last line gives the requests and the time of the whole command. The attachment lists cost one request per failed result and one more per sub-result, such as a rerun attempt; add `-SkipAttachments` if you do not need the attachments |
 | Writing the report takes long | Add `-Verbose` to `Export-AdoBuildTestFailure`: the attachment downloads, the rendering, the check of the report and its move into place each write their milliseconds, the downloads with their files and requests, and a last line gives the time of the whole export |

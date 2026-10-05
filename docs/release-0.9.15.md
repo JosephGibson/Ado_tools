@@ -23,7 +23,7 @@ lists as confirmed are still connections, projects, builds and test runs.
 0.9.15 adds no cmdlet, no parameter and no configuration setting, and sends no new request.
 It adds two properties to `AdoTestBug`, which is public output, and three keys to the string
 catalog. The configuration file format, the JSON report schema and the seven-file package
-layout are unchanged. The [0.9.10 notes](release-0.9.10.md) describe the last change
+layout are unchanged. The [0.9.10 notes](archive/release-0.9.10.md) describe the last change
 to the development tooling, and the [0.9.5 notes](archive/release-0.9.5.md) the last product
 fixes.
 
@@ -91,7 +91,7 @@ runs it.
 
 | Area | Change |
 | --- | --- |
-| `.agents/skills/release/SKILL.md` | The handoff takes the pull request as far as it can from one template: `gh pr create` where that works, and otherwise the compare page, printed and opened with the title and the body encoded. The commit message and the pull-request title are one variable, so neither can drift from the other, and the block runs only after the push succeeded, so a chain that stops earlier publishes nothing. A `gh pr create` refused for the token ends on the compare page instead of leaving the developer with nothing. The developer steps also give the next branch its commands, `git switch --create <next> --no-track origin/main` and a first push with `--set-upstream`: a branch created from `origin/main` tracks `main`, and a bare `git push` would then write to `main` |
+| `.agents/skills/release/SKILL.md` | The handoff takes the pull request as far as it can from one template: `gh pr create` where that works, and otherwise the compare page, printed and opened with the title and the body encoded. The commit message and the pull-request title are one variable, so neither can drift from the other, and the block runs only after the push succeeded, so a chain that stops earlier publishes nothing. A `gh pr create` refused for the token ends on the compare page instead of leaving the developer with nothing. The developer steps also give the next branch one line of its own, to run once the pull request has closed: it fetches the merge, creates the branch with `--no-track` and sets its upstream with `--set-upstream` in one go, because a branch created from `origin/main` tracks `main`, and a bare `git push` would then write to `main` |
 | `.agents/skills/critique-plan/SKILL.md`, `docs/tooling.md` | The critic's size gate is 50,000 characters instead of 10,000. A plan of this repository's size reaches the critic whole, which is what lets a finding weigh one phase against another |
 
 ### Tests
@@ -154,7 +154,7 @@ evidence and neither is claimed as a fixed defect of the product:
 | Defect | Correction |
 | --- | --- |
 | The 0.9.10 handoff ended at `gh pr create`. A fine-grained token that may read a repository, its checks and its runs still refuses `createPullRequest`, and `gh pr create --dry-run` exits `0` without exercising the permission, so the refusal could only appear after the tag had been pushed and the release published — leaving the developer with a published release and no pull request and nothing in the command to fall back on | `4388117`: one template takes the pull request as far as it can, `gh pr create` where that works and the printed and opened compare page otherwise, with the title and the body encoded. The fallback is in the command, not in a probe |
-| The developer steps told the developer to start the next branch from the updated `main` without saying how. A branch created from `origin/main` tracks `main`, and then a bare `git push` writes to `main` | The steps now give `git switch --create <next> --no-track origin/main` and a first push with `--set-upstream`, with the reason |
+| The developer steps told the developer to start the next branch from the updated `main` without saying how. A branch created from `origin/main` tracks `main`, and then a bare `git push` writes to `main` | The steps now carry one command line — fetch, `git switch --create <next> --no-track origin/main`, then the first push with `--set-upstream` — with the reason beside it |
 
 ### Findings not fixed
 
@@ -166,7 +166,7 @@ evidence and neither is claimed as a fixed defect of the product:
 | `CreatedDate` and `AssignedTo` are not in the default bug table | `AdoTestBug`'s table is five columns and `Title` takes what is left; an identity renders as `Name <unique.name>` and a date-time is about 20 characters, which would leave `Title` roughly 30. Both are one `Select-Object` away, `OUTPUTS` lists them and `docs/guides/pipeline-triage.md` shows the `Format-Table` |
 | `TestCaseDetailService` keeps its stricter identity rule, so two rules now read an identity | Sharing the strict rule would have produced a false **Unassigned**, and loosening it in place would change `Export-AdoTestCase -IncludeDetail`, which is not this change. The bug read's rule is a superset, so the two can disagree only by showing a name the Test Case detail omits — cosmetic, not a false claim |
 | A closed bug still carries no age or owner | Closed bugs are left out of `Bugs` entirely, as before. Nothing here changes which bugs the report lists |
-| The findings of 0.9.10, 0.9.5, 0.9.0, 0.8.5, 0.8.0, 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.9.10](release-0.9.10.md#findings-not-fixed), [0.9.5](archive/release-0.9.5.md#findings-not-fixed), [0.9.0](archive/release-0.9.0.md#findings-not-fixed), [0.8.5](archive/release-0.8.5.md#findings-not-fixed), [0.8.0](archive/release-0.8.0.md#findings-not-fixed), [0.7.10](archive/release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes. The one the 0.9.10 notes left open — tag a bug opened in this run as **New**, in a lighter red — is what this version implements |
+| The findings of 0.9.10, 0.9.5, 0.9.0, 0.8.5, 0.8.0, 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; see the [0.9.10](archive/release-0.9.10.md#findings-not-fixed), [0.9.5](archive/release-0.9.5.md#findings-not-fixed), [0.9.0](archive/release-0.9.0.md#findings-not-fixed), [0.8.5](archive/release-0.8.5.md#findings-not-fixed), [0.8.0](archive/release-0.8.0.md#findings-not-fixed), [0.7.10](archive/release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes. The one the 0.9.10 notes left open — tag a bug opened in this run as **New**, in a lighter red — is what this version implements |
 
 ### Known limitations
 
@@ -176,7 +176,7 @@ evidence and neither is claimed as a fixed defect of the product:
 | The marker has no upper bound | `✦` means the bug was filed at or after the build's queue time, not that it was filed for this build, and a report regenerated today for an older build can mark a bug filed for a later one. The day the bug was filed is on its line beside the marker, and `docs/guides/build-report.md` states the case |
 | The marker depends on the build's queue time | A build whose `QueueTime` the server did not give marks no bug and omits the Open bugs count. The dates and the assignees still show |
 | An identity carrying no name at all reads as unassigned | `AssignedTo` is null for an identity object with no `displayName`, `uniqueName` or `id`. Such a payload holds no name that could be shown, so the line says **Unassigned**; any payload that holds a name yields one |
-| Limits carried over | The [0.9.10](release-0.9.10.md#known-limitations), [0.9.5](archive/release-0.9.5.md#known-limitations), [0.9.0](archive/release-0.9.0.md#known-limitations), [0.8.5](archive/release-0.8.5.md#known-limitations), [0.8.0](archive/release-0.8.0.md#known-limitations), [0.7.10](archive/release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations) and [0.7.0](archive/release-0.7.0.md#known-limitations) known limitations still apply, with V-27, V-28, V-33 to V-36, V-31, V-32 and V-02 |
+| Limits carried over | The [0.9.10](archive/release-0.9.10.md#known-limitations), [0.9.5](archive/release-0.9.5.md#known-limitations), [0.9.0](archive/release-0.9.0.md#known-limitations), [0.8.5](archive/release-0.8.5.md#known-limitations), [0.8.0](archive/release-0.8.0.md#known-limitations), [0.7.10](archive/release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations) and [0.7.0](archive/release-0.7.0.md#known-limitations) known limitations still apply, with V-27, V-28, V-33 to V-36, V-31, V-32 and V-02 |
 
 ## Work-PC Live checks
 
@@ -191,7 +191,7 @@ still apply: variables stay on the work PC, raw responses are not sent back, and
 | 1 | `tests/Live/TestFailures.Live.ps1` with `ADOTOOLKIT_LIVE_TEST_BUILD_ID`, and `ADOTOOLKIT_LIVE_ASSIGNED_BUG_ID` set to a bug known to have an assignee | `PASS V-37 BUG_FIELDS_PRESENT_AND_SHAPED`: every returned bug carries `System.CreatedDate`, every present `System.AssignedTo` is `IDENTITY_OBJECT`, `STRING` or `EMPTY`, the module's non-null counts equal the raw presence counts, and the named assigned bug came back with the field. `FAIL V-37 ASSIGNED_TO_SHAPE_UNKNOWN=<n>` is the evidence that `WorkItemFieldValues.Identity` needs another shape; `FAIL V-37 CREATED_DATE_ABSENT` means the field is not in a projection and the marker can never appear. Without the assigned bug ID the assignee half is `INCONCLUSIVE`, not a pass |
 | 2 | Export a failed-test report for a build whose tests have open bugs, in English and in French, and read the Open bugs view | A bug filed after the build was queued carries `✦` in the lighter red on every chip, the summary line gives both counts, each bug read whole shows its filing day and its assignee or **Unassigned**, and typing an owner's name in the search leaves that owner's tests. Compare the filing days against the work items: a wrongly marked **New** corrects itself on sight |
 | 3 | Print the same report, or save it as PDF | `--fail-new` darkens with the rest of the palette and the `✦` chips stay legible beside the red of the open bugs |
-| 4 | Checks 1 and 2 of the [0.9.10 notes](release-0.9.10.md#work-pc-live-checks), with the 0.9.15 package | As listed there: the configuration file untouched by the installation, `Get-Module AdoToolkit -ListAvailable` showing 0.9.15 with seven files, then the earlier checks — the one `S0-9` verdict of `tests/Live/Connection.Live.ps1`, the Error column and the chart captions of a report whose text is cut, V-33, `-SkipAttachments`, the probes of V-28 and V-34 to V-36, and V-31, V-32, V-02, V-01 and V-03. All still pending |
+| 4 | Checks 1 and 2 of the [0.9.10 notes](archive/release-0.9.10.md#work-pc-live-checks), with the 0.9.15 package | As listed there: the configuration file untouched by the installation, `Get-Module AdoToolkit -ListAvailable` showing 0.9.15 with seven files, then the earlier checks — the one `S0-9` verdict of `tests/Live/Connection.Live.ps1`, the Error column and the chart captions of a report whose text is cut, V-33, `-SkipAttachments`, the probes of V-28 and V-34 to V-36, and V-31, V-32, V-02, V-01 and V-03. All still pending |
 
 ## Local validation and developer handoff
 
@@ -248,4 +248,6 @@ uncommitted. The developer owns publication:
    lists the recovery for each cause.
 5. Run the work-PC checks above with the published package, V-37 first, and record any
    inconclusive coverage.
-6. Start the next branch from the updated `main`, without tracking it.
+6. Once the pull request has closed, start the next branch from the updated `main` with the
+   command line the handoff gives: it fetches the merge, creates the branch without tracking
+   and sets its upstream.

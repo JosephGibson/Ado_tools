@@ -56,6 +56,15 @@ public static class HtmlTestFailureRenderer
         failure.Attempts.LastOrDefault(a => a.OutcomeClass == AdoTestOutcomeClass.Failure && FirstLine(a.ErrorMessage) is not null)
         ?? failure.Attempts.LastOrDefault(a => FirstLine(a.ErrorMessage) is not null);
 
+    // The day a build of the history finished, in the report's offset; null when it is not known.
+    // The trend's Since shows it, in the report and in the CSV file.
+    internal static DateTimeOffset? FinishedOn(TestFailureReportModel model, int buildId) =>
+        model.History.FirstOrDefault(build => build.BuildId == buildId)?.FinishTime is { } time
+            ? ReportTime.InOffset(time, model.GeneratedAt.Offset) : null;
+
+    internal static string? Identity(AdoIdentityRef? identity) => identity is null ? null : identity.DisplayName
+        + (identity.UniqueName is null ? "" : " <" + identity.UniqueName + ">");
+
     // The text of one metadata value in the report culture. A custom field keeps the JSON shape
     // the server sent (§15.11), so an array or object shows as compact JSON, never as a type name.
     internal static string? FieldText(object value, CultureInfo culture) => value switch
@@ -713,9 +722,7 @@ public static class HtmlTestFailureRenderer
             T(BuildDate(first.BuildId) is { } date ? F(AdoMessage.TestReportSince, date) : F(AdoMessage.TestReportSinceBuild, first.BuildNumber)); W("</a>");
         }
 
-        // The day a build of the history finished, in the report's offset; null when it is not known.
-        private string? BuildDate(int buildId) => model.History.FirstOrDefault(build => build.BuildId == buildId)?.FinishTime is { } time
-            ? ReportTime.InOffset(time, model.GeneratedAt.Offset).ToString("d", Culture) : null;
+        private string? BuildDate(int buildId) => FinishedOn(model, buildId)?.ToString("d", Culture);
 
         private void NewChip(string label) { W("<span class=\"trend trend-new\"><span aria-hidden=\"true\">✦</span> "); T(label); W("</span>"); }
 
@@ -1414,8 +1421,6 @@ public static class HtmlTestFailureRenderer
         { W("<a rel=\"noreferrer\" href=\""); T(uri.AbsoluteUri); W("\">"); T(text); W("</a>"); }
 
         private Uri Result(int run, int result) => AdoWebLinks.BuildTestResult(Collection, Project, model.Build.Id, run, result);
-        private static string? Identity(AdoIdentityRef? identity) => identity is null ? null : identity.DisplayName
-            + (identity.UniqueName is null ? "" : " <" + identity.UniqueName + ">");
 
         // The server's outcome shows only when it adds to the badge, such as Timeout or Aborted.
         private void Outcome(string outcome, AdoTestOutcomeClass outcomeClass)

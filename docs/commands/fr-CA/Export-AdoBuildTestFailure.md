@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-04-2026
+ms.date: 10-05-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -13,14 +13,14 @@ title: Export-AdoBuildTestFailure
 
 ## SYNOPSIS
 
-Écrit un rapport HTML compact des tests en échec par ensemble et télécharge ses pièces jointes JSON et texte : les petites de chaque série de tests récente et les plus volumineuses de la série la plus récente.
+Écrit un rapport HTML compact des tests en échec par ensemble et télécharge ses pièces jointes JSON et texte : les petites de chaque série de tests récente et les plus volumineuses de la série la plus récente. Avec -Format Csv, écrit plutôt un fichier CSV plat par ensemble.
 
 ## SYNTAX
 
 ### Input (Default)
 
 ```
-Export-AdoBuildTestFailure [-InputObject] <AdoBuildTestFailureSet> [-Culture <string>] [-Path <string>] [-SkipAttachments] [-AllRunAttachments] [-AttachmentWindowDays <int>] [-IncludeFlaky] [-NoClobber] [-Open] [-Connection <AdoConnection>] [-WhatIf] [-Confirm]
+Export-AdoBuildTestFailure [-InputObject] <AdoBuildTestFailureSet> [-Format <TestFailureReportFormat>] [-Culture <string>] [-Path <string>] [-SkipAttachments] [-AllRunAttachments] [-AttachmentWindowDays <int>] [-IncludeFlaky] [-NoClobber] [-Open] [-Connection <AdoConnection>] [-WhatIf] [-Confirm]
 ```
 
 ## ALIASES
@@ -163,6 +163,38 @@ dossier inchangés. Les anciens dossiers de génération du même rapport sont s
 après le remplacement; un échec du nettoyage produit un avertissement et le nouveau
 rapport reste enregistré. Les points d’analyse sont ignorés et ne sont jamais suivis.
 
+Avec `-Format Csv`, l’exportation écrit plutôt un fichier CSV plat par ensemble, pour un
+tableur ou un script. Ce fichier ne lie aucune pièce jointe; l’exportation ne télécharge donc
+rien et n’a besoin d’aucune connexion, et `-SkipAttachments`, `-AllRunAttachments`,
+`-AttachmentWindowDays` et `-Culture` sont sans effet. Le fichier contient une ligne
+d’en-tête, puis une ligne par test du rapport, dans l’ordre du rapport, les tests instables
+n’étant inclus qu’avec `-IncludeFlaky`. Les colonnes, dans cet ordre, sont Build, Ordinal,
+Test, Title, Classification, Attempts, Latest error, Owner, Priority, Test case ID,
+Test case state, Open bugs, Bug IDs, Bug states, New et Since. Build est l’ID du build et
+Ordinal, le numéro du test dans le rapport. Test est le nom complet du test. Classification
+vaut Failed ou Flaky. Attempts compte les tentatives du test. Latest error est le message
+entier de l’erreur dont le tableau du rapport affiche la première ligne, avec ses sauts de
+ligne. Owner est le nom d’affichage, suivi du nom unique entre chevrons. Test case state est
+rempli lorsque le cas de test a été lu. Open bugs compte les bogues ouverts du test. Bug IDs
+et Bug states énumèrent chaque bogue de la liste des bogues du test, dans l’ordre des ID,
+séparés par un point-virgule et une espace; un bogue qui n’a pas pu être lu a un état vide.
+New vaut True lorsque le build précédent a exécuté le test sans qu’il échoue, False lorsque le
+test a aussi échoué ou été instable dans le build précédent, et reste vide sans comparaison.
+Since est le jour, au format yyyy-MM-dd, où le premier build de cette suite d’échecs s’est
+terminé, dans le fuseau horaire de l’ordinateur qui exécute l’exportation, ou le numéro de ce
+build lorsque le jour n’est pas connu; il reste vide sauf si New vaut False.
+
+Les noms de l’en-tête sont en anglais dans toutes les cultures. Les nombres et True ou False
+suivent la culture invariante, et les dates sont au format yyyy-MM-dd; le texte d’Azure DevOps
+est écrit tel que le serveur l’a envoyé. Le fichier est en UTF-8 avec marque d’ordre des
+octets, avec une virgule entre les champs, CRLF après chaque ligne et les guillemets de la
+RFC 4180 : un champ qui contient une virgule, un guillemet ou un saut de ligne est placé entre
+guillemets, et ses guillemets sont doublés. Un champ de texte qui commence par =, +, -, @, une
+tabulation ou un retour chariot est précédé d’une apostrophe, pour qu’un tableur l’affiche
+comme du texte au lieu de le lire comme une formule; les nombres et les dates ne le sont
+jamais. Le fichier est écrit dans un fichier temporaire à côté de la cible, vérifié, puis mis
+en place.
+
 ## EXAMPLES
 
 ### Exemple 1
@@ -195,6 +227,17 @@ Get-AdoBuildTestFailure -BuildId 401 | Export-AdoBuildTestFailure -IncludeFlaky 
 Inclut les tests instables et télécharge les pièces jointes JSON et texte de toutes les
 séries de tests commencées au cours des 14 derniers jours.
 
+### Exemple 4
+
+```powershell
+Get-AdoBuildTestFailure -BuildId 401 | Export-AdoBuildTestFailure -Format Csv -Path .\triage
+Import-Csv -LiteralPath .\triage\Build-401-TestFailures.csv | Where-Object 'Open bugs' -eq 0 | Select-Object Test, 'Latest error'
+```
+
+Écrit `.\triage\Build-401-TestFailures.csv` dans le répertoire `triage` existant sans
+télécharger de pièce jointe, puis énumère les tests qu’aucun bogue ouvert ne suit encore, avec
+leur dernière erreur.
+
 ## PARAMETERS
 
 ### -InputObject
@@ -218,9 +261,30 @@ AcceptedValues: []
 HelpMessage: ''
 ```
 
+### -Format
+
+Html (par défaut) écrit le rapport et télécharge les pièces jointes; Csv écrit plutôt un fichier CSV plat par ensemble, avec une ligne par test du rapport, et ne télécharge rien.
+
+```yaml
+Type: AdoToolkit.Core.Reporting.TestFailures.TestFailureReportFormat
+DefaultValue: 'Html'
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
 ### -Culture
 
-Culture du rapport, par exemple en-US ou fr-CA. Par défaut, la culture de rapport configurée, puis celle de la session. Une culture non prise en charge revient à l’anglais avec un avertissement.
+Culture du rapport, par exemple en-US ou fr-CA. Par défaut, la culture de rapport configurée, puis celle de la session. Une culture non prise en charge revient à l’anglais avec un avertissement. Sans effet avec -Format Csv, dont l’en-tête et les valeurs sont les mêmes dans toutes les cultures.
 
 ```yaml
 Type: System.String
@@ -241,7 +305,7 @@ HelpMessage: ''
 
 ### -Path
 
-Répertoire FileSystem, ou fichier .html lorsqu’un seul ensemble est reçu; chaque ensemble suivant produit alors une erreur propre à cette entrée. Un répertoire qui n’existe pas encore est créé au moment d’écrire le rapport, jamais avec -WhatIf; un chemin avec une autre extension de fichier est refusé, et un séparateur final désigne toujours un répertoire. Le nom par défaut est Build-<id>-TestFailures.html et le répertoire par défaut est le dossier connu Téléchargements. Les caractères génériques ne sont pas développés.
+Répertoire FileSystem, ou fichier .html lorsqu’un seul ensemble est reçu; chaque ensemble suivant produit alors une erreur propre à cette entrée. Un répertoire qui n’existe pas encore est créé au moment d’écrire le rapport, jamais avec -WhatIf; un chemin avec une autre extension de fichier est refusé, et un séparateur final désigne toujours un répertoire. Le nom par défaut est Build-<id>-TestFailures.html et le répertoire par défaut est le dossier connu Téléchargements. Avec -Format Csv, un répertoire existant, qui reçoit Build-<id>-TestFailures.csv, ou un fichier .csv d’un répertoire existant lorsqu’un seul ensemble est reçu. Tout autre chemin, y compris un répertoire qui n’existe pas, est refusé avant toute écriture : avec une erreur InvalidArgument s’il ne se termine pas par .csv, et sinon avec une erreur AdoFileOutput. Les caractères génériques ne sont pas développés.
 
 ```yaml
 Type: System.String
@@ -262,7 +326,7 @@ HelpMessage: ''
 
 ### -SkipAttachments
 
-Ne télécharge rien et ne crée aucun dossier; les pièces jointes des séries de tests de la fenêtre sont répertoriées avec leur nom, leur taille et un lien de téléchargement. A priorité sur -AllRunAttachments.
+Ne télécharge rien et ne crée aucun dossier; les pièces jointes des séries de tests de la fenêtre sont répertoriées avec leur nom, leur taille et un lien de téléchargement. A priorité sur -AllRunAttachments. Sans effet avec -Format Csv, qui ne télécharge rien.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -283,7 +347,7 @@ HelpMessage: ''
 
 ### -AllRunAttachments
 
-Télécharge les pièces jointes JSON et texte de toute taille de chaque série de tests de la fenêtre. Sans ce paramètre, les séries autres que la plus récente ne fournissent que leurs fichiers d’au plus maximumInlineJsonBytes. Les pièces jointes PNG et HTML ne sont jamais téléchargées. Les limites de taille par fichier et au total continuent de s’appliquer. Sans effet avec -SkipAttachments.
+Télécharge les pièces jointes JSON et texte de toute taille de chaque série de tests de la fenêtre. Sans ce paramètre, les séries autres que la plus récente ne fournissent que leurs fichiers d’au plus maximumInlineJsonBytes. Les pièces jointes PNG et HTML ne sont jamais téléchargées. Les limites de taille par fichier et au total continuent de s’appliquer. Sans effet avec -SkipAttachments ou -Format Csv.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -304,7 +368,7 @@ HelpMessage: ''
 
 ### -AttachmentWindowDays
 
-Nombre de jours avant l’exportation, de 1 à 365, pendant lesquels une série de tests doit avoir commencé pour que ses pièces jointes apparaissent et soient téléchargées. Les séries plus anciennes conservent toutes leurs tentatives, mais perdent leurs pièces jointes; une série sans date de début est considérée hors de la fenêtre. Par défaut, 7.
+Nombre de jours avant l’exportation, de 1 à 365, pendant lesquels une série de tests doit avoir commencé pour que ses pièces jointes apparaissent et soient téléchargées. Les séries plus anciennes conservent toutes leurs tentatives, mais perdent leurs pièces jointes; une série sans date de début est considérée hors de la fenêtre. Par défaut, 7. Sans effet avec -Format Csv.
 
 ```yaml
 Type: System.Int32
@@ -325,7 +389,7 @@ HelpMessage: ''
 
 ### -IncludeFlaky
 
-Inclut les tests instables, qui ont échoué puis réussi dans chaque phase, travail ou série de tests nommée. Sans ce paramètre, ils sont omis du rapport et seulement comptés dans son en-tête.
+Inclut les tests instables, qui ont échoué puis réussi dans chaque phase, travail ou série de tests nommée. Sans ce paramètre, ils sont omis du rapport et seulement comptés dans son en-tête, et un fichier CSV n’a aucune ligne pour eux.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -346,7 +410,7 @@ HelpMessage: ''
 
 ### -NoClobber
 
-Refuse un rapport existant avant tout téléchargement et ne remplace jamais un rapport créé entre-temps.
+Refuse un rapport ou un fichier CSV existant avant tout téléchargement et n’en remplace jamais un créé entre-temps.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -367,7 +431,7 @@ HelpMessage: ''
 
 ### -Open
 
-Ouvre chaque rapport validé avec l’application par défaut. Un rapport qui ne peut pas être ouvert produit un avertissement et est quand même retourné.
+Ouvre chaque rapport ou fichier CSV validé avec l’application par défaut. Un fichier qui ne peut pas être ouvert produit un avertissement et est quand même retourné.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -388,7 +452,7 @@ HelpMessage: ''
 
 ### -Connection
 
-Connexion explicite utilisée pour télécharger les pièces jointes; remplace la connexion active de l’espace d’exécution. Lorsque des pièces jointes sont téléchargées, un ensemble d’une autre collection produit une erreur propre à cette entrée.
+Connexion explicite utilisée pour télécharger les pièces jointes; remplace la connexion active de l’espace d’exécution. Lorsque des pièces jointes sont téléchargées, un ensemble d’une autre collection produit une erreur propre à cette entrée. Non utilisée avec -Format Csv.
 
 ```yaml
 Type: AdoToolkit.Core.Connections.AdoConnection
@@ -409,7 +473,7 @@ HelpMessage: ''
 
 ### -WhatIf
 
-Nomme le rapport et le dossier de pièces jointes sans requête, téléchargement ni écriture.
+Nomme le rapport et le dossier de pièces jointes, ou le fichier CSV, sans requête, téléchargement ni écriture.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -431,7 +495,7 @@ HelpMessage: ''
 
 ### -Confirm
 
-Demande une confirmation par rapport avant de télécharger les pièces jointes et d’écrire.
+Demande une confirmation par rapport ou fichier CSV avant de télécharger les pièces jointes et d’écrire.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -463,7 +527,7 @@ Prend en charge les paramètres communs, notamment ErrorAction, ErrorVariable, W
 
 ### System.IO.FileInfo
 
-Le rapport validé et enregistré. Lorsque des pièces jointes ont été téléchargées, sa propriété de note AttachmentDirectory contient le chemin du dossier. Aucun objet avec WhatIf. L’adresse file:/// du rapport est aussi écrite dans le flux d’information avec la balise PSHOST, de sorte qu’elle s’affiche dans la console comme une sortie de Write-Host; -InformationAction Ignore la masque. Rien n’est écrit avec WhatIf ni lorsque l’exportation échoue.
+Le rapport ou le fichier CSV validé et enregistré. Lorsque des pièces jointes ont été téléchargées, sa propriété de note AttachmentDirectory contient le chemin du dossier. Aucun objet avec WhatIf. L’adresse file:/// du fichier est aussi écrite dans le flux d’information avec la balise PSHOST, de sorte qu’elle s’affiche dans la console comme une sortie de Write-Host; -InformationAction Ignore la masque. Rien n’est écrit avec WhatIf ni lorsque l’exportation échoue.
 
 ## NOTES
 

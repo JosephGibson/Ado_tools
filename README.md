@@ -2,14 +2,21 @@
 
 PowerShell toolkit for Azure DevOps Server 2020: compiled C# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 
-**Version 0.9.15** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.10.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
 DevOps. Its cmdlets return typed objects that you can use in pipelines, and it writes
-standalone HTML, Markdown or JSON reports when you need a document. All messages,
-report labels and help are available in English and French.
+standalone HTML, Markdown or JSON reports when you need a document, and a CSV file of a
+build's failed tests when you need a spreadsheet. All messages, report labels and help are
+available in English and French.
 
+Version 0.10.0 adds `-Format Csv` to `Export-AdoBuildTestFailure`. Instead of the HTML
+report, it writes one flat CSV file per build, with a row per reported test: its error, its
+owner, its Test Case, its open bugs and whether it is new or keeps failing, for a spreadsheet
+or a script. The CSV export downloads nothing and needs no connection, and a text cell that a
+spreadsheet could read as a formula starts with an apostrophe; see
+[A CSV file for a spreadsheet](docs/guides/build-report.md#a-csv-file-for-a-spreadsheet).
 Version 0.9.15 answers the first question of triage in a failed-test report: has someone
 already filed this bug, and is anyone on it? A bug filed at or after the build went into the
 queue carries **✦** on its chip, in a paler red, wherever that chip appears, and the Open
@@ -43,7 +50,7 @@ commands behind it: up to six requests at the same time, the attachments of ever
 test run, and an Open bugs view. The [changelog](CHANGELOG.md) says what a script can
 notice. Profiles hold your default project, branch, build definition, test plan and test
 suite; see the [configuration file](docs/guides/configuration.md#profiles). The
-[release notes](docs/release-0.9.15.md) list every change, the validation evidence and the
+[release notes](docs/release-0.10.0.md) list every change, the validation evidence and the
 remaining work-PC checks.
 
 > [!NOTE]
@@ -60,7 +67,7 @@ remaining work-PC checks.
 | Test Cases | Plans and suite trees; Test Cases with recursively expanded Shared Steps, parameters and diagnostics | `Get-AdoTestPlan`, `Get-AdoTestSuite`, `Get-AdoTestCase` |
 | Reports and bulk export | One HTML, Markdown or JSON document for a Test Case, a suite tree or a WIQL result | `Export-AdoTestCase` |
 | Pipeline triage | Build lookup by definition and branch, deepest timeline failures, byte-exact log downloads | `Get-AdoBuildDefinition`, `Get-AdoBuild`, `Get-AdoBuildTimeline`, `Get-AdoBuildFailure`, `Save-AdoBuildLog` |
-| Failed-test reports | Failed and flaky tests with every attempt, grouped by stage, job or test run, their open bugs, run history, and a searchable HTML report with JSON and text attachments | `Get-AdoTestRun`, `Get-AdoBuildTestFailure`, `Export-AdoBuildTestFailure` |
+| Failed-test reports | Failed and flaky tests with every attempt, grouped by stage, job or test run, their open bugs, run history, and a searchable HTML report with JSON and text attachments, or a flat CSV file for a spreadsheet | `Get-AdoTestRun`, `Get-AdoBuildTestFailure`, `Export-AdoBuildTestFailure` |
 
 ## Requirements
 
@@ -140,7 +147,7 @@ Profiles, connections and the other options are described in
 | Test Case JSON report format | [testcase.v1.schema.json](docs/schemas/testcase.v1.schema.json) |
 | Developer CLI, validation and prerequisites | [Developer tooling](docs/tooling.md) |
 | What changes for users in each version | [Changelog](CHANGELOG.md) |
-| Release notes | [Version 0.9.10](docs/release-0.9.10.md), with links to the earlier notes |
+| Release notes | [Version 0.10.0](docs/release-0.10.0.md), with links to the earlier notes |
 | Original specification, delivery plans, design notes and earlier release notes | [Archive](docs/archive/README.md) |
 | Rules for coding agents | [AGENTS.md](AGENTS.md) |
 

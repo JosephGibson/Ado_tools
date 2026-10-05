@@ -351,10 +351,11 @@ Describe 'Failed test console table' {
 }
 
 # The same two-run build, answered by route instead of by position, so requests may arrive in any
-# order. A small latency makes the requests of one stage overlap; no wall time is asserted.
+# order. A delay on the stages that send two requests makes them overlap; no wall time is asserted.
 Describe 'Concurrent failed test retrieval and download' {
     BeforeAll {
         function Get-TwoRunRoutes {
+            param([int] $Delay = 0)
             # The attachment window is measured from now, so the two runs start two hours ago.
             $start = [DateTimeOffset]::UtcNow.AddHours(-2)
             $format = 'yyyy-MM-ddTHH:mm:ssZ'
@@ -364,16 +365,16 @@ Describe 'Concurrent failed test retrieval and download' {
             @(
                 @{ Line = '/_apis/build/builds/401\?'; Response = @{ Body = Get-TestRunFixture 'build-401.json' } }
                 @{ Line = '/_apis/test/runs\?.*%24skip=0&'; Response = @{ Body = $runs } }
-                @{ Line = '/Runs/201/results\?.*%24skip=0&'; Response = @{ Body = Get-TestRunFixture 'results-run-201.json' } }
-                @{ Line = '/Runs/202/results\?.*%24skip=0&'; Response = @{ Body = Get-TestRunFixture 'results-run-202.json' } }
+                @{ Line = '/Runs/201/results\?.*%24skip=0&'; Response = @{ Body = Get-TestRunFixture 'results-run-201.json'; Delay = $Delay } }
+                @{ Line = '/Runs/202/results\?.*%24skip=0&'; Response = @{ Body = Get-TestRunFixture 'results-run-202.json'; Delay = $Delay } }
                 @{ Line = '/Runs/(\d+)/results/(\d+)\?'; Responses = @{
-                        '201/1' = @{ Body = Get-TestRunFixture 'result-detail-201-1.json' }
-                        '202/11' = @{ Body = Get-TestRunFixture 'result-detail-202-11.json' }
+                        '201/1' = @{ Body = Get-TestRunFixture 'result-detail-201-1.json'; Delay = $Delay }
+                        '202/11' = @{ Body = Get-TestRunFixture 'result-detail-202-11.json'; Delay = $Delay }
                     }
                 }
-                @{ Line = '/Runs/(201/Results/1|202/Results/11)/attachments\?'; Response = @{ Body = Get-TestRunFixture 'attachments-result.json' } }
+                @{ Line = '/Runs/(201/Results/1|202/Results/11)/attachments\?'; Response = @{ Body = Get-TestRunFixture 'attachments-result.json'; Delay = $Delay } }
                 @{ Line = '/attachments/5002\?'; Response = @{
-                        Bytes = [IO.File]::ReadAllBytes((Join-Path $PSScriptRoot '../Fixtures/Attachments/valid.json')); ContentType = 'application/octet-stream'
+                        Bytes = [IO.File]::ReadAllBytes((Join-Path $PSScriptRoot '../Fixtures/Attachments/valid.json')); ContentType = 'application/octet-stream'; Delay = $Delay
                     }
                 }
                 @{ Line = '/_apis/wit/workitemsbatch\?'; Body = '"\$expand":"relations"'; Response = @{ Body = Get-TestRunFixture 'workitems-testcases.json' } }
@@ -387,18 +388,24 @@ Describe 'Concurrent failed test retrieval and download' {
         Remove-Item -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Force -ErrorAction SilentlyContinue
     }
 
-    It 'sends the same requests with <Bound> at a time and never more (peak <Peak>)' -ForEach @(
-        @{ Bound = 6; Peak = 2 },
-        @{ Bound = 1; Peak = 1 }
+    # The server compresses its responses: every request accepts gzip, and every body is decoded
+    # before it is read, so the set and the files are those of a server that does not compress. Two
+    # requests of one stage sent together overlap within the delay: 100 ms leaves room for a busy
+    # machine to reach the peak of two, and a bound of one would be broken at any delay.
+    It 'sends the same requests with <Bound> at a time and never more (peak <Peak>), compressed' -ForEach @(
+        @{ Bound = 6; Peak = 2; Delay = 100 },
+        @{ Bound = 1; Peak = 1; Delay = 20 }
     ) {
         # Six is the default, so that case writes no configuration.
         if ($Bound -ne 6) { Set-Content -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Encoding utf8 -Value ('{"schemaVersion":1,"testResults":{"maximumConcurrentRequests":' + $Bound + '}}') }
-        $server = Start-FakeAdoServer -Routes (Get-TwoRunRoutes) -LatencyMilliseconds 100 -Workers 8
+        $server = Start-FakeAdoServer -Routes (Get-TwoRunRoutes -Delay $Delay) -Workers 4 -Compression
         try {
             Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
             $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
             $set.Failures.ShortName | Should -Be @('Totals', 'AddsItem')
             $set.Failures[1].Bugs.Id | Should -Be @(2001)
+            $set.Failures[1].TestCase.Title | Should -Be 'Vérifier le panier'
+            $set.Failures[1].Attempts[0].Attachments.Count | Should -Be 5
             $set.Diagnostics.Code | Should -Be @('UnresolvedTestCase')
             # The build, two run pages, two result pages, two details, two attachment lists, the Test
             # Cases, the bugs and one state list. Each stage of this build has two requests at most.
@@ -413,29 +420,9 @@ Describe 'Concurrent failed test retrieval and download' {
             $server.Requests.Count | Should -Be 14
             Get-FakeAdoServerPeak -Server $server | Should -Be $Peak
             @(Get-ChildItem -LiteralPath $file.AttachmentDirectory -File).Name | Sort-Object | Should -Be @('r201-1-a5002.json', 'r202-11-a5002.json')
-        }
-        finally { Stop-FakeAdoServer -Server $server }
-    }
-
-    # Every request accepts gzip, and every body is decoded before it is read: the set and the
-    # downloaded files are the same as from a server that does not compress.
-    It 'reads the same set and files from a server that compresses its responses' {
-        $server = Start-FakeAdoServer -Routes (Get-TwoRunRoutes) -LatencyMilliseconds 20 -Workers 8 -Compression
-        try {
-            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
-            $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
-            $set.Failures.ShortName | Should -Be @('Totals', 'AddsItem')
-            $set.Failures[1].Bugs.Id | Should -Be @(2001)
-            $set.Failures[1].TestCase.Title | Should -Be 'Vérifier le panier'
-            $set.Failures[1].Attempts[0].Attachments.Count | Should -Be 5
-            $set.Diagnostics.Code | Should -Be @('UnresolvedTestCase')
-            $file = $set | Export-AdoBuildTestFailure -Path (Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))) 6> $null
             $expected = (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot '../Fixtures/Attachments/valid.json')).Hash
-            $downloaded = @(Get-ChildItem -LiteralPath $file.AttachmentDirectory -File)
-            $downloaded.Count | Should -Be 2
-            foreach ($item in $downloaded) { (Get-FileHash -LiteralPath $item.FullName).Hash | Should -Be $expected }
+            foreach ($item in @(Get-ChildItem -LiteralPath $file.AttachmentDirectory -File)) { (Get-FileHash -LiteralPath $item.FullName).Hash | Should -Be $expected }
             $requests = $server.Requests.ToArray()
-            $requests.Count | Should -Be 14
             @($requests | Where-Object { $_.Headers['Accept-Encoding'] -notmatch '\bgzip\b' }).Count | Should -Be 0
             ($requests | Measure-Object -Property Bytes -Sum).Sum | Should -BeLessThan ($requests | Measure-Object -Property DecodedBytes -Sum).Sum
         }

@@ -15,12 +15,12 @@ certificate on every script, manifest and toolkit assembly.
 
 .EXAMPLE
 Unblock-File .\Install-AdoToolkit.ps1
-.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.10.0.zip
+.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.10.5.zip
 
-Uses AdoToolkit-0.10.0.zip.sha256 from the same folder as the zip.
+Uses AdoToolkit-0.10.5.zip.sha256 from the same folder as the zip.
 
 .EXAMPLE
-.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.10.0.zip -Sha256 <64 hexadecimal characters> -WhatIf
+.\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.10.5.zip -Sha256 <64 hexadecimal characters> -WhatIf
 #>
 [CmdletBinding(SupportsShouldProcess = $true, DefaultParameterSetName = 'ChecksumFile')]
 param(
@@ -162,9 +162,7 @@ try {
     # 3. Extract beside the target, validate, then replace atomically.
     [void] [System.IO.Directory]::CreateDirectory($root)
     foreach ($leftover in Get-ChildItem -LiteralPath $root -Directory -Force) {
-        if ($leftover.Name -cmatch '^(\.staging-[0-9a-f]{32}|\d+\.\d+\.\d+\.previous-[0-9a-f]{32})$') {
-            [void] (Remove-Leftover -LiteralPath $leftover.FullName)
-        }
+        if ($leftover.Name -cmatch '^\.staging-[0-9a-f]{32}$') { [void] (Remove-Leftover -LiteralPath $leftover.FullName) }
     }
     $staging = Join-Path $root ('.staging-' + [guid]::NewGuid().ToString('N'))
     $backup = $null
@@ -219,6 +217,14 @@ try {
             # Never discard the only old copy: when the rollback fails too, the backup stays.
             if ($backup) { $previous = $backup; $backup = $null; [System.IO.Directory]::Move($previous, $target) }
             throw
+        }
+        # Earlier leftovers go only once this install has committed, and only beside their own
+        # version: a backup whose version folder is missing may be the only copy of that version.
+        foreach ($leftover in Get-ChildItem -LiteralPath $root -Directory -Force) {
+            if ($leftover.Name -cmatch '^(\d+\.\d+\.\d+)\.previous-[0-9a-f]{32}$' -and $leftover.FullName -ne $backup -and
+                (Test-Path -LiteralPath (Join-Path $root $Matches[1]) -PathType Container)) {
+                [void] (Remove-Leftover -LiteralPath $leftover.FullName)
+            }
         }
     }
     finally {

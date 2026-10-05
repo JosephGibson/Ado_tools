@@ -147,8 +147,12 @@ public static class HtmlTestFailureRenderer
         private static string N(int value) => value.ToString(CultureInfo.InvariantCulture);
         private static string Anchor(AdoTestFailure failure) => "f-" + N(failure.Ordinal);
         private static string Anchor(AdoTestFailure failure, AdoTestAttempt attempt) => Anchor(failure) + "-a" + N(attempt.Number);
+        // An attempt can hold one attachment twice, from its result's list and from a sub-result's
+        // (V-36): the sub-result then tells the two anchors apart. Otherwise the anchor is unchanged.
         private static string Anchor(AdoTestFailure failure, AdoTestAttempt attempt, AdoTestAttachment attachment) =>
-            Anchor(failure, attempt) + "-att" + N(attachment.Id);
+            Anchor(failure, attempt)
+            + (attachment.SubResultId is int sub && attempt.Attachments.Count(other => other.Id == attachment.Id) > 1 ? "-s" + N(sub) : "")
+            + "-att" + N(attachment.Id);
         private string? Duration(TimeSpan? value) => value.HasValue ? F(AdoMessage.TestReportSeconds, value.Value.TotalSeconds) : null;
         // Server times are UTC; every time shows in the export's offset, like the generation time.
         private string? Date(DateTimeOffset? value) =>

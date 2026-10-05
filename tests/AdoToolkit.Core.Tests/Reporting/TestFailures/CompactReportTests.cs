@@ -8,7 +8,6 @@ namespace AdoToolkit.Core.Tests.Reporting.TestFailures;
 public sealed class CompactReportTests
 {
     private static readonly CultureInfo English = CultureInfo.GetCultureInfo("en-US");
-    private static readonly string[] AttachmentNames = ["screenshot.png", "page.html", "context.json", "console.txt"];
 
     [Fact]
     public void FlakyTestsAreLeftOutByDefaultAndIncludedOnRequest()
@@ -116,47 +115,6 @@ public sealed class CompactReportTests
         Assert.Contains("data-test-case=\"901\"", first, StringComparison.Ordinal);
         Assert.DoesNotContain("901", secondText, StringComparison.Ordinal);
         Assert.Contains("data-test-case=\"903\"", second, StringComparison.Ordinal);
-    }
-
-    // 100 failures with 7 English and 7 French attempts, a 40-frame stack trace and four attachments
-    // per attempt. The 0.2.0 renderer wrote about 46 MB for this input. Every attempt now repeats
-    // its message and trace, which takes this input from under 7 MB to 26,400,701 bytes.
-    [Fact]
-    public void AHundredFailuresWithFourteenAttemptsStayWithinTheSizeBudget()
-    {
-        AdoBuildTestFailureSet grouped = TestFailureReportFixture.Set("grouped");
-        DateTimeOffset clock = TestFailureReportFixture.Clock;
-        string frames = string.Join('\n', Enumerable.Range(1, 40).Select(i => "   at Synthetic.Ui.Framework.Layer" + i.ToString(CultureInfo.InvariantCulture)
-            + ".Helper.InvokeStep(String name, Int32 timeout) in C:\\agent\\_work\\1\\s\\src\\Layer" + i.ToString(CultureInfo.InvariantCulture) + "\\Helper.cs:line 42"));
-        AdoTestRun[] runs = [.. Enumerable.Range(1, 14).Select(i => new AdoTestRun
-        {
-            Id = 1000 + i, Name = "Synthetic run", BuildId = 401, State = "Completed", StartedDate = clock.AddMinutes(-60 + i), StageName = i <= 7 ? "Tests_EN" : "Tests_FR",
-            PipelineAttempt = 1 + ((i - 1) % 7), TeamProject = TestFailureReportFixture.Project, CollectionUri = TestFailureReportFixture.Collection,
-        })];
-        AdoTestFailure[] failures = [.. Enumerable.Range(1, 100).Select(f => new AdoTestFailure
-        {
-            Ordinal = f, Classification = AdoTestFailureClassification.Failed, ShortName = "Scenario" + f.ToString(CultureInfo.InvariantCulture),
-            TestName = "Synthetic.Ui.CheckoutTests.Scenario" + f.ToString(CultureInfo.InvariantCulture), Storage = "Synthetic.Ui.dll", CollectionUri = TestFailureReportFixture.Collection,
-            TestCase = new AdoTestCaseLink { Id = 12000 + f, Title = "Checkout scenario", State = "Ready", IsResolved = true, WebUrl = TestFailureReportFixture.Untrusted },
-            Attempts = [.. Enumerable.Range(1, 14).Select(n => new AdoTestAttempt
-            {
-                Number = n, Source = n == 1 ? AdoTestAttemptSource.Single : AdoTestAttemptSource.RunAttempt, RunId = 1000 + n, ResultId = 100000 + f * 20 + n,
-                Outcome = "Failed", OutcomeClass = AdoTestOutcomeClass.Failure, StartedDate = clock.AddMinutes(-50), CompletedDate = clock.AddMinutes(-49),
-                Duration = TimeSpan.FromSeconds(31.2), ComputerName = "SYNTHETIC-AGENT-07", FailureType = "Regression", ResolutionState = "Unresolved", FailingSinceBuildId = 399,
-                ErrorMessage = "OpenQA.Selenium.WebDriverTimeoutException : Timed out after 30 seconds waiting for element '#submit-" + f.ToString(CultureInfo.InvariantCulture) + "' to be clickable.",
-                StackTrace = "OpenQA.Selenium.WebDriverTimeoutException: Timed out after 30 seconds\n" + frames,
-                Attachments = [.. AttachmentNames.Select((name, k) => new AdoTestAttachment
-                {
-                    Id = n * 10 + k + 1, RunId = 1000 + n, ResultId = 100000 + f * 20 + n, FileName = name, Size = 20480, AttachmentType = "GeneralAttachment",
-                    Kind = AttachmentKinds.FromFileName(name),
-                })],
-            })],
-        })];
-        TestFailureReportModel model = Model(With(grouped, runs, failures));
-        string html = TestFailureReportFixture.Render(model);
-        long bytes = Encoding.UTF8.GetByteCount(html);
-        Assert.True(bytes < 27_000_000, "The report is " + bytes.ToString("N0", English) + " bytes.");
-        Assert.DoesNotMatch("<details[^>]*\\sopen[\\s>=]", html);
     }
 
     private static TestFailureReportOptions Options(bool includeFlaky = true) => new()

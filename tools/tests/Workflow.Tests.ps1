@@ -80,15 +80,6 @@ Describe 'Workflow contracts' {
         { Invoke-ProjectVerification -Root $root -Stage typo } | Should -Throw '*Unknown stage*'
     }
 
-    It 'does not mistake PowerShell fixtures for Pester test containers' {
-        $root = Join-Path $TestDrive 'test-discovery'
-        New-Fixture (Join-Path $root 'tests/fixtures/helper.ps1') 'Write-Output helper'
-        New-Fixture (Join-Path $root 'tools/tests/Check.Tests.ps1') 'Describe check {}'
-        $project = Get-ProjectProfile -Root $root
-        $project.TestFiles | Should -Be @('tools/tests/Check.Tests.ps1')
-        (Get-ProjectContext -Root $root).ProductTests | Should -Be 0
-    }
-
     It 'surfaces matching scoped instructions and nested Claude rules' {
         $root = Join-Path $TestDrive 'instructions'
         New-Fixture (Join-Path $root 'AGENTS.md') '# Root'
@@ -142,6 +133,7 @@ Describe 'Workflow contracts' {
         # ripgrep applies a file glob to a directory name too, and does not descend into a match.
         New-Fixture (Join-Path $root 'credentials/hidden.txt') 'unique-fixture'
         New-Fixture (Join-Path $root 'src/Run.LOG/hidden.txt') 'unique-fixture'
+        New-Fixture (Join-Path $root 'debug.log') 'unique-fixture'
         $native = @(Get-RepositoryFiles -Root $root | ForEach-Object Name)
         Mock Get-FirstCommand { $null } -ParameterFilter { $Names -contains 'rg' }
         $fallback = @(Get-RepositoryFiles -Root $root | ForEach-Object Name)
@@ -172,16 +164,6 @@ Describe 'Workflow contracts' {
         @(Get-RepositoryFiles -Root $root | ForEach-Object Name) | Should -Be @('visible.txt')
     }
 
-    It 'passes shell metacharacters as literal arguments to external stages' {
-        $root = Join-Path $TestDrive 'path [with spaces]'
-        $script = Join-Path $root 'echo.ps1'
-        New-Fixture $script 'param([string]$Value) Write-Output $Value'
-        $literal = 'literal $() ` ; & [text]'
-        $result = Invoke-BoundedProcess -Executable (Join-Path $PSHOME 'pwsh.exe') -Arguments @('-NoProfile', '-File', $script, $literal) -WorkingDirectory $root
-        $result.ExitCode | Should -Be 0
-        $result.Lines | Should -Be @($literal)
-    }
-
     It 'bounds noisy output while preserving a nonzero process exit code' {
         $script = Join-Path $TestDrive 'noise.ps1'
         New-Fixture $script '1..300 | ForEach-Object { Write-Output "line $_" }; exit 7'
@@ -191,24 +173,21 @@ Describe 'Workflow contracts' {
         $result.Lines[-1] | Should -Be 'line 300'
     }
 
-    It 'returns non-ASCII output and arguments of an external stage unchanged' {
-        # An accented letter, and a check mark that no single-byte code page holds.
+    It 'returns non-ASCII output and shell metacharacters of an external stage unchanged' {
+        # An accented letter, and a check mark that no single-byte code page holds. The argument also
+        # holds shell metacharacters, and the working directory a space and brackets: all are literal.
         $text = [string][char]0xE9 + [char]0x2713
-        $script = Join-Path $TestDrive 'accent.ps1'
+        $root = Join-Path $TestDrive 'path [with spaces]'
+        $script = Join-Path $root 'accent.ps1'
         New-Fixture $script 'param([string] $Value) Write-Output ([string][char]0xE9 + [char]0x2713); Write-Output $Value'
-        $result = Invoke-BoundedProcess -Executable (Join-Path $PSHOME 'pwsh.exe') -Arguments @('-NoProfile', '-File', $script, "argument $text") -WorkingDirectory $TestDrive
+        $argument = 'literal $() ` ; & [text] ' + $text
+        $result = Invoke-BoundedProcess -Executable (Join-Path $PSHOME 'pwsh.exe') -Arguments @('-NoProfile', '-File', $script, $argument) -WorkingDirectory $root
         $result.ExitCode | Should -Be 0
-        $result.Lines | Should -Be @($text, "argument $text")
+        $result.Lines | Should -Be @($text, $argument)
         # A stage that cannot start reports through the error stream of the child.
         $absent = Invoke-BoundedProcess -Executable (Join-Path $TestDrive "absent-$text.exe") -Arguments @() -WorkingDirectory $TestDrive
         $absent.ExitCode | Should -Be 1
         $absent.Lines -join ' ' | Should -BeLike "*absent-$text.exe*"
-    }
-
-    It 'terminates external checks that exceed their timeout' {
-        $script = Join-Path $TestDrive 'timeout.ps1'
-        New-Fixture $script 'Start-Sleep -Seconds 30'
-        { Invoke-BoundedProcess -Executable (Join-Path $PSHOME 'pwsh.exe') -Arguments @('-NoProfile', '-File', $script) -WorkingDirectory $TestDrive -TimeoutSeconds 1 } | Should -Throw '*timed out*'
     }
 
     It 'does not parse sensitive or out-of-scope edit targets' {

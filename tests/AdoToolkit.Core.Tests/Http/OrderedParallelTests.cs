@@ -11,7 +11,8 @@ public sealed class OrderedParallelTests
     [InlineData(16)]
     public async Task ResultsFollowInputOrderWhateverOrderTheItemsFinishIn(int degree)
     {
-        int[] items = [.. Enumerable.Range(0, 40)];
+        // At degree 1 the items run one after another, so four show what forty show, a tenth as slowly.
+        int[] items = [.. Enumerable.Range(0, degree == 1 ? 4 : 40)];
         int running = 0, peak = 0;
         Lock gate = new();
         IReadOnlyList<string> results = await OrderedParallel.RunAsync(items, degree, async (item, token) =>

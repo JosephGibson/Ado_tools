@@ -6,6 +6,24 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.10.5 - 2026-10-05
+
+### Fixed
+
+- A response that is marked compressed but does not decompress no longer ends the command with an untranslated .NET error. An error response keeps the error of its HTTP status, such as `ObjectNotFound`; a successful one is a response format error and is not retried. In a failed-test export it fails that attachment only, where it used to stop the whole export.
+- A response found malformed while its body is read is sent once, not retried three times.
+- A failed-test report in which a test result and one of its sub-results list the same attachment is written; it used to fail its own check.
+- Tab completion of `Get-AdoProfile -Name` escapes `[`, `]`, `*`, `?` and the backtick in the name it inserts, so that the completed name matches that profile only.
+- `Install-AdoToolkit.ps1` keeps a backup left by a rollback that failed, the only copy of its version, until that version is installed again. It used to delete it at the start of the next installation.
+- The help of `Export-AdoBuildTestFailure` says that **New** means that the build before ran the test and it passed, and the help of `Test-AdoConnection` how many requests its project URL check sends. The guides add `-Project` only to commands that have it, say that a `.csv` path takes one build, name each error by its ID and link every cmdlet they use.
+
+### Security
+
+- The default tables in the console show a control character in text from the server as a space, so that a title, a name or a state can no longer send escape sequences to your terminal. The objects keep the text as the server sent it.
+- A work item whose project the server names `.` or `..` is reported as a response format error instead of giving links that leave the collection.
+
+Details: [release notes](docs/release-0.10.5.md)
+
 ## 0.10.0 - 2026-10-05
 
 ### Added
@@ -21,7 +39,7 @@ Details: [release notes](docs/release-0.10.0.md)
 - The failed-test report says how old each open bug is and who has it. A bug filed at or after the build went into the queue carries **✦** on its chip, in a paler red, wherever the chip appears, and the Open bugs view counts those bugs above its table. Each bug the report read whole also shows the day it was filed and its assignee, or **Unassigned**, in the Open bugs view and on the test's card, where the report's search can find an owner by name.
 - `Get-AdoBuildTestFailure` returns `CreatedDate` and `AssignedTo` on each bug of a reported test, read in the work item batch it already sent. Neither joins the default bug table; select them explicitly.
 
-Details: [release notes](docs/release-0.9.15.md)
+Details: [release notes](docs/archive/release-0.9.15.md)
 
 ## 0.9.10 - 2026-10-04
 

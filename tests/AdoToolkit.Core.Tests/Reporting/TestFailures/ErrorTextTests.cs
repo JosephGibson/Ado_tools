@@ -50,26 +50,60 @@ public sealed class ErrorTextTests
         Assert.DoesNotContain("&#xFFFD;", html, StringComparison.Ordinal);
     }
 
-    // 200 failures with 14 attempts that all carry the same message and 40-frame trace: the largest
-    // report the guides describe, now that no attempt refers to an earlier one for its text.
+    // The largest report the guides describe: 200 failures, each with 7 English and 7 French attempts
+    // that repeat its message and a 40-frame stack trace, with four attachments, dates and failure
+    // fields per attempt. Now that no attempt refers to an earlier one for its text, it renders,
+    // validates, keeps every trace and every attempt closed, and stays within the size budget.
     [Fact]
-    public void TwoHundredFailuresWithFourteenIdenticalAttemptsRenderAndValidate()
+    public void TwoHundredFailuresWithFourteenAttemptsRenderValidateAndStayWithinTheSizeBudget()
     {
+        AdoBuildTestFailureSet grouped = TestFailureReportFixture.Set("grouped");
+        DateTimeOffset clock = TestFailureReportFixture.Clock;
         string trace = "OpenQA.Selenium.WebDriverTimeoutException: Timed out after 30 seconds\n" + string.Join('\n', Enumerable.Range(1, 40).Select(i =>
             "   at Synthetic.Ui.Framework.Layer" + i.ToString(CultureInfo.InvariantCulture) + ".Helper.InvokeStep(String name, Int32 timeout) in C:\\agent\\_work\\1\\s\\src\\Layer"
             + i.ToString(CultureInfo.InvariantCulture) + "\\Helper.cs:line 42"));
-        TestFailureReportModel model = Model([.. Enumerable.Range(1, 200).Select(ordinal => Failure(ordinal, 14, Message, trace))]);
-        using StringWriter writer = new(CultureInfo.InvariantCulture);
-        HtmlTestFailureRenderer.Render(model, writer);
-        string html = writer.ToString();
+        AdoTestRun[] runs = [.. Enumerable.Range(1, 14).Select(i => new AdoTestRun
+        {
+            Id = 1000 + i, Name = "Synthetic run", BuildId = 401, State = "Completed", StartedDate = clock.AddMinutes(-60 + i), StageName = i <= 7 ? "Tests_EN" : "Tests_FR",
+            PipelineAttempt = 1 + ((i - 1) % 7), TeamProject = TestFailureReportFixture.Project, CollectionUri = TestFailureReportFixture.Collection,
+        })];
+        AdoTestFailure[] failures = [.. Enumerable.Range(1, 200).Select(f => new AdoTestFailure
+        {
+            Ordinal = f, Classification = AdoTestFailureClassification.Failed, ShortName = "Scenario" + f.ToString(CultureInfo.InvariantCulture),
+            TestName = "Synthetic.Ui.CheckoutTests.Scenario" + f.ToString(CultureInfo.InvariantCulture), Storage = "Synthetic.Ui.dll", CollectionUri = TestFailureReportFixture.Collection,
+            TestCase = new AdoTestCaseLink { Id = 12000 + f, Title = "Checkout scenario", State = "Ready", IsResolved = true, WebUrl = TestFailureReportFixture.Untrusted },
+            Attempts = [.. Enumerable.Range(1, 14).Select(n => new AdoTestAttempt
+            {
+                Number = n, Source = n == 1 ? AdoTestAttemptSource.Single : AdoTestAttemptSource.RunAttempt, RunId = 1000 + n, ResultId = 100000 + f * 20 + n,
+                Outcome = "Failed", OutcomeClass = AdoTestOutcomeClass.Failure, StartedDate = clock.AddMinutes(-50), CompletedDate = clock.AddMinutes(-49),
+                Duration = TimeSpan.FromSeconds(31.2), ComputerName = "SYNTHETIC-AGENT-07", FailureType = "Regression", ResolutionState = "Unresolved", FailingSinceBuildId = 399,
+                ErrorMessage = "OpenQA.Selenium.WebDriverTimeoutException : Timed out after 30 seconds waiting for element '#submit-" + f.ToString(CultureInfo.InvariantCulture) + "' to be clickable.",
+                StackTrace = trace,
+                Attachments = [.. AttachmentNames.Select((name, k) => new AdoTestAttachment
+                {
+                    Id = n * 10 + k + 1, RunId = 1000 + n, ResultId = 100000 + f * 20 + n, FileName = name, Size = 20480, AttachmentType = "GeneralAttachment",
+                    Kind = AttachmentKinds.FromFileName(name),
+                })],
+            })],
+        })];
+        TestFailureReportModel model = TestFailureReportModelBuilder.Build(new AdoBuildTestFailureSet
+        {
+            Build = grouped.Build, Runs = runs, Summary = grouped.Summary, History = grouped.History, Failures = failures, FailedCount = failures.Length,
+            Status = grouped.Status, RetrievedAt = grouped.RetrievedAt, CollectionUri = grouped.CollectionUri,
+        }, TestFailureReportFixture.Options("en-US"));
+        string html = TestFailureReportFixture.Render(model);
         TestFailureReportValidator.Validate(new StringReader(html), model);
         Assert.Equal(200 * 14, Regex.Count(html, "<code class=\"lang-stacktrace\">"));
+        Assert.DoesNotMatch("<details[^>]*\\sopen[\\s>=]", html);
         long bytes = Encoding.UTF8.GetByteCount(html);
         Assert.True(bytes < SizeBudget, "The report is " + bytes.ToString("N0", English) + " bytes.");
     }
 
-    // Measured at 46,904,124 bytes when the cross-references between attempts were removed.
-    private const long SizeBudget = 48_000_000;
+    private static readonly string[] AttachmentNames = ["screenshot.png", "page.html", "context.json", "console.txt"];
+
+    // Measured at 52,911,987 bytes when the 100 × 14 size test with attachments joined this one, the
+    // headroom of the two budgets before it (2.3 %).
+    private const long SizeBudget = 54_100_000;
 
     private static AdoTestFailure Failure(int ordinal, int attempts, string message, string trace) => new()
     {

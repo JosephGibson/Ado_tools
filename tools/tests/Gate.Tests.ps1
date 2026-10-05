@@ -126,7 +126,10 @@ exit $failed
 
         $gate.ExitCode | Should -Be 1
         $gate.Results[1] | Should -Be 'check: Core tests (en-US): 2 passed, 0 failed, 2 executed, 3 discovered'
+        # The product Pester counts, then the failing test last.
         $gate.Results[-1] | Should -Be 'check: product Pester: 0 passed, 1 failed, 0 skipped, 1 discovered'
+        $gate.Output[-1] | Should -BeLike 'Sample.sees the staged manifest: Expected 2, but got 1.*'
+        $gate.Output | Should -Not -Match 'What if'
     }
 
     It 'is incomplete when a step is incomplete and none fails' {
@@ -138,17 +141,5 @@ exit $failed
         $gate.ExitCode | Should -Be 2
         $gate.Results.Count | Should -Be 5
         $gate.Results[2] | Should -Be 'check: Core tests (fr-CA): 1 passed, 0 failed, 1 executed, 2 discovered'
-    }
-
-    It 'fails with the product Pester counts and the failing test' {
-        $root = Join-Path $TestDrive 'gate-pester-failure'
-        New-GateFixture -Root $root
-
-        $gate = Invoke-Gate -Root $root -Scenario 'pester'
-
-        $gate.ExitCode | Should -Be 1
-        $gate.Results[-1] | Should -Be 'check: product Pester: 0 passed, 1 failed, 0 skipped, 1 discovered'
-        $gate.Output[-1] | Should -BeLike 'Sample.sees the staged manifest: Expected 2, but got 1.*'
-        $gate.Output | Should -Not -Match 'What if'
     }
 }

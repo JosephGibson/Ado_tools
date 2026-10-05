@@ -77,44 +77,6 @@ public sealed class RunHistoryChartTests
         Assert.Contains(DateTimeOffset.MinValue.ToString("g", culture), writer.ToString(), StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void HostileLabelsAreOnlyEncodedAndCannotSupplyLinks()
-    {
-        string html = Render([Summary(1, 2, 1, 0, 0)], CultureInfo.GetCultureInfo("en-US"));
-        Assert.Contains("&lt;script&gt;", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("<script>", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("href=\"javascript:", html, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task RetrievedHistoryCountsFlowUnchangedToSvgAndCells()
-    {
-        TestRunFixture fixture = RunHistoryTests.History();
-        using FakeHttpMessageHandler handler = fixture.Handler();
-        using HttpClient client = new(handler);
-        AdoBuildTestFailureSet set = await TestRunFixture.Service(client).GetAsync(TestRunFixture.Build(),
-            new TestFailureQuery { HistoryCount = 4 }, CultureInfo.GetCultureInfo("en-US"), TestContext.Current.CancellationToken);
-        string html = Render(set.History, CultureInfo.GetCultureInfo("en-US"));
-        foreach (AdoBuildTestSummary summary in set.History.Where(static item => item.IsAvailable))
-        {
-            string bar = Regex.Match(html, "data-build-id=\"" + summary.BuildId.ToString(CultureInfo.InvariantCulture) + "\"[\\s\\S]*?</a>").Value;
-            foreach ((string status, int count) in new[] { ("passed", summary.Passed), ("failed", summary.Failed), ("other", summary.Other) })
-            {
-                if (count > 0) Assert.Contains("data-outcome=\"" + status + "\" data-count=\"" + count.ToString(CultureInfo.InvariantCulture) + "\"", bar, StringComparison.Ordinal);
-                else Assert.DoesNotContain("data-outcome=\"" + status + "\"", bar, StringComparison.Ordinal);
-            }
-        }
-        // This fixture reports every identity; bars must agree with their rendered cells.
-        foreach (AdoBuildTestSummary summary in set.History.Where(static item => item.IsAvailable))
-        {
-            AdoTestHistoryOutcome[] cells = set.Failures.Select(failure => failure.History.Single(cell => cell.BuildId == summary.BuildId).Outcome).ToArray();
-            Assert.Equal(cells.Count(static cell => cell == AdoTestHistoryOutcome.Failed), summary.Failed);
-            Assert.Equal(cells.Count(static cell => cell == AdoTestHistoryOutcome.Flaky), summary.Flaky);
-            Assert.Equal(cells.Count(static cell => cell is AdoTestHistoryOutcome.Passed or AdoTestHistoryOutcome.Flaky), summary.Passed);
-            Assert.Equal(cells.Count(static cell => cell == AdoTestHistoryOutcome.Other), summary.Other);
-        }
-    }
-
     // A bar caption cut at its character limit must not split a surrogate pair: the lone half
     // reaches the sink, where the encoder replaces it with U+FFFD under a correct tooltip.
     [Fact]

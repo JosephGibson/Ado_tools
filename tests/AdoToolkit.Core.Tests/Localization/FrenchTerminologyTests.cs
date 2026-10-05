@@ -45,8 +45,48 @@ public sealed partial class FrenchTerminologyTests
     {
         foreach ((string location, string text) in Read(source))
             if (source != Catalog || !ColonsHeldByGoldens.Contains(location))
-                Assert.False(text.Contains(" :", StringComparison.Ordinal), location + ": " + text);
+                Assert.False(SpaceBeforeColon(text), location + ": " + text);
+        // A colon with no space at all, in prose only: the front matter, the fenced blocks and the
+        // code spans of a help topic hold English syntax.
+        foreach ((string location, string text) in source == Catalog ? Read(source) : Prose(source))
+            Assert.False(NoSpaceBeforeColon(text), location + ": " + text);
     }
+
+    // The rule on text a translator could write: an ordinary space and no space at all both break it.
+    [Theory]
+    [InlineData("Profil introuvable : {0}", true)]
+    [InlineData("Profil introuvable: {0}", true)]
+    [InlineData("« Phase »: {0}", true)]
+    [InlineData("Profil introuvable : {0}", false)]
+    [InlineData("{0:N0} tests", false)]
+    [InlineData("https://ado.example.test", false)]
+    public void TheColonRuleCatchesAnOrdinarySpaceAndNoSpace(string text, bool breaks) =>
+        Assert.Equal(breaks, SpaceBeforeColon(text) || NoSpaceBeforeColon(text));
+
+    private static bool SpaceBeforeColon(string text) => text.Contains(" :", StringComparison.Ordinal);
+
+    // A letter, a closing guillemet or a parenthesis directly before a colon that ends a phrase;
+    // a format such as {0:N0} or a URL scheme is left alone.
+    private static bool NoSpaceBeforeColon(string text) => BareColon().IsMatch(text);
+
+    // The prose lines of a help source, without their code spans.
+    private static IEnumerable<(string Location, string Text)> Prose(string source)
+    {
+        bool frontMatter = false, fence = false;
+        foreach ((string location, string line) in Read(source))
+        {
+            if (location.EndsWith(":1", StringComparison.Ordinal) && line == "---") { frontMatter = true; continue; }
+            if (frontMatter) { frontMatter = line != "---"; continue; }
+            if (line.TrimStart().StartsWith("```", StringComparison.Ordinal)) { fence = !fence; continue; }
+            if (!fence) yield return (location, CodeSpan().Replace(line, ""));
+        }
+    }
+
+    [GeneratedRegex(@"[\p{L}»)]:(?=\s|$)", RegexOptions.CultureInvariant)]
+    private static partial Regex BareColon();
+
+    [GeneratedRegex("`[^`]*`", RegexOptions.CultureInvariant)]
+    private static partial Regex CodeSpan();
 
     [Fact]
     public void TestRunStringsUseTheGlossaryTerm()

@@ -36,12 +36,13 @@ own: its status and number, its Test Case number linked to the work item, its na
 its trend, its lowest-numbered open bug as a red chip with the number of the others, in a paler
 red on screen with ✦ when that bug was opened after the build was queued, the status of each
 group of attempts that ran it, and the first line of its latest error. In the trend, New says
-that the build before this one ran the test and it did not fail, and Since and a date that the
+that the build before this one ran the test and it passed, and Since and a date that the
 test also failed or was flaky in the build before; the date is the day the first build of that
 run of failures finished, the chip links to that build's test results, and its title says how
-many builds in a row. Nothing is said when the build before this one could not be read or did
-not run the test. Under the table, cards sum up the build: new and recurring tests, the most
-common errors, the tests without an open bug and, when attempts are grouped, each group. Runs
+many builds in a row. Nothing is said when the build before this one could not be read, did
+not run the test or ended it with another outcome. Under the table, cards sum up the build:
+new and recurring tests, the most common errors, the tests without an open bug and, when
+attempts are grouped, each group. Runs
 and history shows the run history as a chart and as a table of builds, then lists the build's
 test runs with their ID, the attempt numbers that they have, of the stage, the job or the job
 instance, their duration, test counts, reported tests and listed and downloaded attachments,
@@ -156,11 +157,11 @@ breaks. Owner is the display name, followed by the unique name in angle brackets
 state is filled when the Test Case was read. Open bugs counts the test's open bugs. Bug IDs
 and Bug states list every bug of the test's bug list, in ID order, separated by a semicolon
 and a space; a bug that could not be read has an empty state. New is True when the build
-before this one ran the test and it did not fail, False when the test also failed or was
-flaky in the build before, and empty when there is no comparison. Since is the day, as
-yyyy-MM-dd, that the first build of that run of failures finished, in the time zone of the
-computer that runs the export, or that build's number when the day is not known; it is
-empty unless New is False.
+before this one ran the test and it passed, False when the test also failed or was flaky in
+the build before, and empty otherwise: when that build could not be read, did not run the
+test or ended it with another outcome. Since is the day, as yyyy-MM-dd, that the first build
+of that run of failures finished, in the time zone of the computer that runs the export, or
+that build's number when the day is not known; it is empty unless New is False.
 
 The header names are English in every culture. Numbers and True or False use the invariant
 culture, and dates are yyyy-MM-dd; Azure DevOps text is written as the server sent it. The

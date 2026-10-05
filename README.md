@@ -2,7 +2,7 @@
 
 PowerShell toolkit for Azure DevOps Server 2020: compiled C# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 
-**Version 0.10.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.10.5** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
@@ -11,6 +11,15 @@ standalone HTML, Markdown or JSON reports when you need a document, and a CSV fi
 build's failed tests when you need a spreadsheet. All messages, report labels and help are
 available in English and French.
 
+Version 0.10.5 adds no feature: it corrects defects that a review of the whole repository
+found. The default tables in the console show a control character in text from the server
+as a space, so that a work item title can no longer send escape sequences to your terminal;
+the objects keep the text as it was sent. A response that is marked compressed but does not
+decompress now ends in an AdoToolkit error in your language instead of a .NET one, and in a
+failed-test export it costs that attachment only. A failed-test report in which a result and
+one of its sub-results list the same attachment is written instead of failing its own check,
+tab completion of `Get-AdoProfile -Name` finds a profile whose name holds `[` or `]`, and the
+installer keeps the backup that a failed rollback left as the only copy of a version.
 Version 0.10.0 adds `-Format Csv` to `Export-AdoBuildTestFailure`. Instead of the HTML
 report, it writes one flat CSV file per build, with a row per reported test: its error, its
 owner, its Test Case, its open bugs and whether it is new or keeps failing, for a spreadsheet
@@ -50,7 +59,7 @@ commands behind it: up to six requests at the same time, the attachments of ever
 test run, and an Open bugs view. The [changelog](CHANGELOG.md) says what a script can
 notice. Profiles hold your default project, branch, build definition, test plan and test
 suite; see the [configuration file](docs/guides/configuration.md#profiles). The
-[release notes](docs/release-0.10.0.md) list every change, the validation evidence and the
+[release notes](docs/release-0.10.5.md) list every change, the validation evidence and the
 remaining work-PC checks.
 
 > [!NOTE]
@@ -147,7 +156,7 @@ Profiles, connections and the other options are described in
 | Test Case JSON report format | [testcase.v1.schema.json](docs/schemas/testcase.v1.schema.json) |
 | Developer CLI, validation and prerequisites | [Developer tooling](docs/tooling.md) |
 | What changes for users in each version | [Changelog](CHANGELOG.md) |
-| Release notes | [Version 0.10.0](docs/release-0.10.0.md), with links to the earlier notes |
+| Release notes | [Version 0.10.5](docs/release-0.10.5.md), with links to the earlier notes |
 | Original specification, delivery plans, design notes and earlier release notes | [Archive](docs/archive/README.md) |
 | Rules for coding agents | [AGENTS.md](AGENTS.md) |
 

@@ -27,9 +27,10 @@ public sealed partial class RetrievalConcurrencyTests
     [InlineData(3)]
     public async Task SetAndRenderedReportAreIdenticalAtABoundOfOneAndOfEightUnderRandomDelays(int seed)
     {
-        // At a bound of one the requests, the set and the report do not depend on the delays, so one
-        // seed proves the bound-one side under delays and the others read it without them.
-        using Server sequential = new(seed == 1 ? seed : 0);
+        // At a bound of one the requests, the set and the report do not depend on the delays, so that
+        // side reads without them. AuthorizationFailureInHistorySurfacesAfterTheMainPath(1) shows
+        // that a bound of one holds under delays.
+        using Server sequential = new(0);
         using Server parallel = new(seed * 31);
         AdoBuildTestFailureSet first = await sequential.GetAsync(new TestFailureQuery { HistoryCount = 4, MaximumConcurrentRequests = 1 });
         AdoBuildTestFailureSet second = await parallel.GetAsync(new TestFailureQuery { HistoryCount = 4, MaximumConcurrentRequests = 8 });
@@ -111,7 +112,6 @@ public sealed partial class RetrievalConcurrencyTests
 
     [Theory]
     [InlineData(2)]
-    [InlineData(3)]
     [InlineData(16)]
     public async Task RequestsInFlightNeverExceedTheBoundAndDoOverlap(int bound)
     {
@@ -167,6 +167,7 @@ public sealed partial class RetrievalConcurrencyTests
     }
 
     // Without a main path error, an authorization failure in history still fails the retrieval.
+    // Under random delays, a bound of one still sends one request at a time.
     [Theory]
     [InlineData(1)]
     [InlineData(8)]
@@ -176,6 +177,7 @@ public sealed partial class RetrievalConcurrencyTests
         await Assert.ThrowsAsync<AdoAuthorizationException>(() => server.GetAsync(new TestFailureQuery { HistoryCount = 4, MaximumConcurrentRequests = bound }));
         // The main path ran to its end first.
         Assert.Contains(server.Handler.Requests, static request => Stage(request) == 7);
+        if (bound == 1) Assert.Equal(1, server.Handler.PeakInFlight);
     }
 
     // Piped builds share one cache, as one cmdlet invocation does: a later build asks neither for
@@ -219,25 +221,34 @@ public sealed partial class RetrievalConcurrencyTests
     // newest first (400 to 396); history requests.
     [InlineData(5, "00000", "0 0 0 0 0", 3)]
     [InlineData(6, "00001", "3 0 0 0 0", 6)]
-    [InlineData(11, "00001", "3 0 0 0 0", 8)]
     [InlineData(12, "00001", "3 4 0 0 0", 12)]
-    [InlineData(14, "00001", "3 4 0 0 0", 14)]
     [InlineData(15, "00001", "3 4 1 0 0", 15)]
     [InlineData(16, "00001", "3 4 2 0 0", 16)]
     [InlineData(17, "00101", "3 4 3 0 0", 17)]
-    [InlineData(20, "00101", "3 4 3 1 0", 20)]
     [InlineData(24, "01101", "3 4 3 2 0", 23)]
     [InlineData(25, "11101", "3 4 3 2 2", 25)]
     public async Task NearTheHistoryBudgetTheBuildsKeptAndTheRequestsSentDependOnNeitherTheBoundNorTheResponseOrder(int budget, string kept, string pages, int requests)
     {
         string? firstRequests = null, firstSet = null;
-        foreach ((int bound, int seed) in new[] { (1, 0), (8, 1), (8, 2), (8, 3) })
+        // The four retrievals share nothing, so they run at once: each one's delays are timer ticks
+        // spent waiting, which the others need not wait for in turn.
+        (int Bound, int Seed)[] runs = [(1, 0), (8, 1), (8, 2), (8, 3)];
+        HistoryServer[] servers = [.. runs.Select(static run => new HistoryServer(run.Seed))];
+        try
         {
-            using HistoryServer server = new(seed);
-            AdoBuildTestFailureSet set = await server.GetAsync(new TestFailureQuery
+            AdoBuildTestFailureSet[] sets = await Task.WhenAll(runs.Select((run, index) => servers[index].GetAsync(new TestFailureQuery
             {
-                HistoryCount = 6, MaximumHistoryRequests = budget, MaximumConcurrentRequests = bound, SkipAttachments = true,
-            });
+                HistoryCount = 6, MaximumHistoryRequests = budget, MaximumConcurrentRequests = run.Bound, SkipAttachments = true,
+            })));
+            for (int index = 0; index < runs.Length; index++) Check(servers[index], sets[index]);
+        }
+        finally
+        {
+            foreach (HistoryServer server in servers) server.Dispose();
+        }
+
+        void Check(HistoryServer server, AdoBuildTestFailureSet set)
+        {
             Assert.Equal([396, 397, 398, 399, 400, 401], set.History.Select(static summary => summary.BuildId));
             Assert.Equal(kept + "1", string.Concat(set.History.Select(static summary => summary.IsAvailable ? '1' : '0')));
             Assert.Equal(budget < 25 ? 1 : 0, set.Diagnostics.Count(static item => item.Code == DiagnosticCodes.HistoryLimitExceeded));

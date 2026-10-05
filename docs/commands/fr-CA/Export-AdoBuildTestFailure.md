@@ -37,15 +37,16 @@ cas de test lié à l’élément de travail, son nom et sa classe, sa tendance,
 plus petit numéro sous forme de pastille rouge avec le nombre des autres, dans un rouge plus
 pâle à l’écran avec ✦ lorsque ce bogue a été ouvert après la mise en file du build, l’état de
 chaque groupe de tentatives qui l’a exécuté et la première ligne de sa dernière erreur. Dans la
-tendance, Nouveau indique que le build précédent a exécuté le test sans échec, et Depuis le
-suivi d’une date que le test a aussi échoué ou été instable dans le build précédent; la date
-est le jour où le premier build de cette suite d’échecs s’est terminé, la pastille mène aux
-résultats de tests de ce build et son titre indique le nombre de builds consécutifs. Rien n’est
-indiqué lorsque le build précédent n’a pas pu être lu ou n’a pas exécuté le test. Sous le
-tableau, des encadrés résument le build, soit les tests nouveaux et récurrents, les erreurs les
-plus fréquentes, les tests sans bogue ouvert et, lorsque les tentatives sont regroupées, chaque
-groupe. Séries et historique présente l’historique des exécutions sous forme de graphique et de
-tableau des builds, puis liste les séries de tests du build avec leur ID, les numéros de
+tendance, Nouveau indique que le build précédent a exécuté le test et que celui-ci a réussi,
+et Depuis le suivi d’une date que le test a aussi échoué ou été instable dans le build
+précédent; la date est le jour où le premier build de cette suite d’échecs s’est terminé, la
+pastille mène aux résultats de tests de ce build et son titre indique le nombre de builds
+consécutifs. Rien n’est indiqué lorsque le build précédent n’a pas pu être lu, n’a pas exécuté
+le test ou l’a terminé avec un autre résultat. Sous le tableau, des encadrés résument le
+build, soit les tests nouveaux et récurrents, les erreurs les plus fréquentes, les tests sans
+bogue ouvert et, lorsque les tentatives sont regroupées, chaque groupe. Séries et historique
+présente l’historique des exécutions sous forme de graphique et de tableau des builds, puis
+liste les séries de tests du build avec leur ID, les numéros de
 tentative qu’elles ont, de la phase, du travail ou de l’instance du travail, leur durée, leurs
 décomptes de tests, les tests signalés et les pièces jointes répertoriées et téléchargées, et
 signale la dernière série de tests; un tableau des tests signalés la termine, avec leur
@@ -178,8 +179,10 @@ ligne. Owner est le nom d’affichage, suivi du nom unique entre chevrons. Test 
 rempli lorsque le cas de test a été lu. Open bugs compte les bogues ouverts du test. Bug IDs
 et Bug states énumèrent chaque bogue de la liste des bogues du test, dans l’ordre des ID,
 séparés par un point-virgule et une espace; un bogue qui n’a pas pu être lu a un état vide.
-New vaut True lorsque le build précédent a exécuté le test sans qu’il échoue, False lorsque le
-test a aussi échoué ou été instable dans le build précédent, et reste vide sans comparaison.
+New vaut True lorsque le build précédent a exécuté le test et que celui-ci a réussi, False
+lorsque le test a aussi échoué ou été instable dans le build précédent, et reste vide dans les
+autres cas, soit lorsque ce build n’a pas pu être lu, n’a pas exécuté le test ou l’a terminé avec
+un autre résultat.
 Since est le jour, au format yyyy-MM-dd, où le premier build de cette suite d’échecs s’est
 terminé, dans le fuseau horaire de l’ordinateur qui exécute l’exportation, ou le numéro de ce
 build lorsque le jour n’est pas connu; il reste vide sauf si New vaut False.

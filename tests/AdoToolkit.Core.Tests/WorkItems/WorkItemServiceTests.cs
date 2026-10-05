@@ -54,6 +54,24 @@ public sealed class WorkItemServiceTests
         Assert.Single(handler.Requests);
     }
 
+    // A URL path collapses "." and "..", so such a System.TeamProject would build a link outside the
+    // collection: the item is a format error, as a Test Case or a bug with that project is.
+    [Theory]
+    [InlineData("..")]
+    [InlineData(".")]
+    public async Task DotSegmentProjectIsAFormatErrorAndBuildsNoLink(string project)
+    {
+        using FakeHttpMessageHandler handler = new();
+        handler.Enqueue(FakeHttpMessageHandler.Response("{\"value\":[{\"id\":1,\"rev\":1,\"fields\":{\"System.WorkItemType\":\"Bug\",\"System.Title\":\"Sample\","
+            + "\"System.State\":\"Active\",\"System.TeamProject\":\"" + project + "\",\"System.AreaPath\":\"Area\",\"System.IterationPath\":\"Iteration\","
+            + "\"System.ChangedDate\":\"2026-09-15T10:00:00Z\"}}]}"));
+        using HttpClient client = new(handler);
+        AdoResponseFormatException error = await Assert.ThrowsAsync<AdoResponseFormatException>(() => new WorkItemService(client, Connection)
+            .GetWorkItemsAsync(OneId, CultureInfo.CurrentCulture, TestContext.Current.CancellationToken));
+        Assert.Equal("WorkItemsBatch", error.Operation);
+        Assert.Single(handler.Requests);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -143,23 +161,6 @@ public sealed class WorkItemServiceTests
         Assert.Equal(2, values.Count);
         Assert.Equal("2026-01-01", Assert.IsType<string>(values["Name"]));
         Assert.Equal("Sample <sample@example.test>", Assert.IsType<string>(values["name"]));
-    }
-
-    [Fact]
-    public async Task SafeBatchPostRetriesWithFreshRequestsAndTheSameBody()
-    {
-        using FakeHttpMessageHandler handler = new();
-        HttpResponseMessage unavailable = FakeHttpMessageHandler.Response("{}", 503);
-        unavailable.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.Zero);
-        handler.Enqueue(unavailable);
-        handler.Enqueue(FakeHttpMessageHandler.Fixture("workitem-fields.json"));
-        using HttpClient client = new(handler);
-        Assert.Single(await new WorkItemService(client, Connection).GetWorkItemsAsync(OneId,
-            CultureInfo.CurrentCulture, TestContext.Current.CancellationToken));
-        Assert.Equal(2, handler.Requests.Count);
-        Assert.NotSame(handler.Requests[0].Request, handler.Requests[1].Request);
-        Assert.Equal(handler.Requests[0].Body, handler.Requests[1].Body);
-        Assert.All(handler.Requests, request => Assert.Equal("POST", request.Method));
     }
 
     [Fact]

@@ -12,6 +12,10 @@ internal sealed class RetryPolicy(ISystemClock clock)
     {
         HttpRequestException request => request.HttpRequestError is HttpRequestError.ConnectionError or HttpRequestError.NameResolutionError
             || (request.HttpRequestError == HttpRequestError.Unknown && request.InnerException is SocketException),
+        // An error found while reading a body carries its kind too: a malformed response is not
+        // worth another attempt (§6.5); a connection that ended or failed mid-body is.
+        HttpIOException body => body.HttpRequestError is HttpRequestError.ResponseEnded or HttpRequestError.ConnectionError
+            or HttpRequestError.NameResolutionError or HttpRequestError.Unknown,
         IOException => true,
         _ => false,
     };

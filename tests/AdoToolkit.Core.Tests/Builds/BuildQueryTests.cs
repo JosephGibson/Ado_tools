@@ -109,6 +109,8 @@ public sealed class BuildQueryTests
         Assert.Equal(3, handler.Requests.Count);
         Assert.Contains("continuationToken=page%202%2B%2F%3D", handler.Requests[1].Uri.Query, StringComparison.Ordinal);
         Assert.All(handler.Requests, request => Assert.Contains("definitions=42", Parameters(request.Uri)));
+        // Top still follows short and empty pages: every page asks for it.
+        Assert.All(handler.Requests, request => Assert.Contains("$top=2", Parameters(request.Uri)));
         using FakeHttpMessageHandler definitions = Pages("build-definitions-first.json", "build-definitions-last.json");
         using HttpClient definitionClient = new(definitions);
         IReadOnlyList<AdoBuildDefinition> result = await new BuildDefinitionService(definitionClient, Connection)
@@ -118,22 +120,6 @@ public sealed class BuildQueryTests
         Assert.Equal(3, result[0].Revision);
         Assert.Equal("enabled", result[0].QueueStatus);
         Assert.Equal("https://ado.example.test/Collection/%C3%89quipe%20Web/_build?definitionId=42", result[0].WebUrl.AbsoluteUri);
-    }
-
-    [Fact]
-    public async Task RepeatedBuildTokenFails()
-    {
-        using FakeHttpMessageHandler handler = new();
-        for (int i = 0; i < 2; i++)
-        {
-            HttpResponseMessage response = FakeHttpMessageHandler.Fixture("builds-empty.json");
-            response.Headers.Add("x-ms-continuationtoken", "same");
-            handler.Enqueue(response);
-        }
-        using HttpClient client = new(handler);
-        await Assert.ThrowsAsync<AdoResponseFormatException>(() => new BuildService(client, Connection).GetBuildsAsync(Project,
-            new BuildQuery { DefinitionId = 42 }, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
-        Assert.Equal(2, handler.Requests.Count);
     }
 
     [Fact]
@@ -187,19 +173,6 @@ public sealed class BuildQueryTests
             CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
         Assert.Single(handler.Requests);
         Assert.Contains("$top=1", Parameters(handler.Requests[0].Uri));
-    }
-
-    [Fact]
-    public async Task TopStillFollowsShortAndEmptyPagesWithContinuationTokens()
-    {
-        using FakeHttpMessageHandler handler = Pages("builds-first.json", "builds-last.json");
-        using HttpClient client = new(handler);
-        IReadOnlyList<AdoBuild> builds = await new BuildService(client, Connection).GetBuildsAsync(Project,
-            new BuildQuery { Top = 2 }, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
-        Assert.Equal(BuildIds, builds.Select(build => build.Id));
-        Assert.Equal(3, handler.Requests.Count);
-        Assert.All(handler.Requests, request => Assert.Contains("$top=2", Parameters(request.Uri)));
-        Assert.Contains("continuationToken=page 2+/=", Parameters(handler.Requests[1].Uri));
     }
 
     [Fact]

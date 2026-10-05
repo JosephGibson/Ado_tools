@@ -1,4 +1,6 @@
+using System.IO.Compression;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using AdoToolkit.Core.Http;
 
 namespace AdoToolkit.Core.Tests.Http;
@@ -7,15 +9,13 @@ public sealed class ErrorTranslationTests
 {
     [Theory]
     [InlineData(403, typeof(AdoAuthorizationException))]
-    [InlineData(404, typeof(AdoNotFoundException))]
-    [InlineData(400, typeof(AdoRequestException))]
     public async Task StalledErrorBodyPreservesTheKnownHttpStatus(int status, Type expected)
     {
         using FakeHttpMessageHandler handler = new();
         using DripStream stream = new(1, Timeout.InfiniteTimeSpan);
         handler.Enqueue(new HttpResponseMessage((System.Net.HttpStatusCode)status) { Content = new StreamContent(stream) });
         using HttpClient client = new(handler);
-        AdoHttpPipeline pipeline = new(client, new Uri("https://ado.example.test/Collection"), TimeSpan.FromMilliseconds(100));
+        AdoHttpPipeline pipeline = new(client, new Uri("https://ado.example.test/Collection"), TimeSpan.FromMilliseconds(20));
         Exception? caught = await Record.ExceptionAsync(() => pipeline.GetPagesAsync(EndpointRegistry.ProjectsList,
             AdoJsonContext.Default.ProjectPageDto, static page => page.Value, static item => item.Id ?? "",
             CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
@@ -24,6 +24,33 @@ public sealed class ErrorTranslationTests
         Assert.Equal(status, error.StatusCode);
         Assert.Single(handler.Requests);
         Assert.True(stream.Disposed);
+    }
+
+    // A proxy that labels a plain body gzip makes the handler's decompressing stream throw
+    // InvalidDataException while the error body is read. The status is known by then and decides.
+    [Theory]
+    [InlineData(403, typeof(AdoAuthorizationException))]
+    [InlineData(404, typeof(AdoNotFoundException))]
+    public async Task ErrorBodyThatCannotBeDecompressedKeepsTheKnownHttpStatus(int status, Type expected)
+    {
+        using FakeHttpMessageHandler handler = new();
+        handler.Enqueue(new HttpResponseMessage((System.Net.HttpStatusCode)status) { Content = Undecompressable("""{"message":"denied"}""") });
+        using HttpClient client = new(handler);
+        AdoHttpPipeline pipeline = new(client, new Uri("https://ado.example.test/Collection"), TimeSpan.FromSeconds(5));
+        Exception? caught = await Record.ExceptionAsync(() => RetryPolicyTests.Fetch(pipeline));
+        AdoException error = Assert.IsAssignableFrom<AdoException>(caught);
+        Assert.Equal(expected, error.GetType());
+        Assert.Equal(status, error.StatusCode);
+        Assert.Single(handler.Requests);
+    }
+
+    // The stream the handler builds for a body labelled gzip; reading plain bytes through it throws
+    // InvalidDataException, as decompression does at the first byte.
+    internal static StreamContent Undecompressable(string body)
+    {
+        StreamContent content = new(new GZipStream(new MemoryStream(Encoding.UTF8.GetBytes(body)), CompressionMode.Decompress));
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        return content;
     }
 
     [Fact]

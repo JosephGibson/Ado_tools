@@ -61,10 +61,11 @@ public sealed class ParallelDownloadTests
         Assert.Equal([1, 2, 4, 5, 5, 5, 6, 7, 8, 9, 10, 11, 12], sequential.Requested);
     }
 
-    // Three files show one body at a time; a bound of three or six needs twenty to be reached.
+    // Three files show one body at a time. The first bound requests start together, so a bound is
+    // reached in the first round: twice as many files reach it and then keep it busy.
     [Theory]
     [InlineData(1, 1, 3)]
-    [InlineData(3, 3, 20)]
+    [InlineData(3, 3, 6)]
     [InlineData(6, 6, 20)]
     public async Task BodiesBeingReadNeverExceedTheBoundAndReachIt(int bound, int peak, int count)
     {
@@ -86,7 +87,8 @@ public sealed class ParallelDownloadTests
     public async Task TotalBudgetStopsTheSameFilesAndSendsTheSameRequestsWhenSizesAreTruthful(int bound)
     {
         AdoTestAttachment[] files = [Remote(1, "a.txt", 100), Remote(2, "b.txt", 100), Remote(3, "c.txt", 100), Remote(4, "d.txt", 150), Remote(5, "e.txt", 50)];
-        AttachmentFixture fixture = new() { Delay = static id => TimeSpan.FromMilliseconds((6 - id) * 10) };
+        // At a bound of one nothing is read ahead, so the reference row needs no delays.
+        AttachmentFixture fixture = new() { Delay = bound == 1 ? null : static id => TimeSpan.FromMilliseconds((6 - id) * 10) };
         foreach (AdoTestAttachment file in files) fixture.Serve(file.Id, Text((int)file.Size!.Value));
         Outcome outcome = await DownloadAsync(fixture, files, Limits(bound, total: 400));
         Assert.Equal(["1:Downloaded:r201-11-a1.txt", "2:Downloaded:r201-11-a2.txt", "3:Downloaded:r201-11-a3.txt", "4:BudgetExceeded:", "5:BudgetExceeded:"], outcome.Statuses);
@@ -104,7 +106,7 @@ public sealed class ParallelDownloadTests
     public async Task FilesReadAheadAreDroppedWhenAnEarlierFileWasLargerThanDeclared(int bound, int[] requested)
     {
         AdoTestAttachment[] files = [Remote(1, "a.txt", 100), Remote(2, "b.txt", 100), Remote(3, "c.txt", 50)];
-        AttachmentFixture fixture = new AttachmentFixture { Delay = static id => TimeSpan.FromMilliseconds(id == 1 ? 60 : 0) }
+        AttachmentFixture fixture = new AttachmentFixture { Delay = bound == 1 ? null : static id => TimeSpan.FromMilliseconds(id == 1 ? 60 : 0) }
             .Serve(1, Text(250)).Serve(2, Text(100)).Serve(3, Text(50));
         Outcome outcome = await DownloadAsync(fixture, files, Limits(bound, total: 300));
         Assert.Equal(["1:Downloaded:r201-11-a1.txt", "2:BudgetExceeded:", "3:BudgetExceeded:"], outcome.Statuses);
@@ -124,7 +126,7 @@ public sealed class ParallelDownloadTests
     public async Task BodyReadAheadThatNoLongerFitsTheTotalIsDroppedAsOverTheTotal(int bound)
     {
         AdoTestAttachment[] files = [Remote(1, "a.txt", 100), Remote(2, "unsized.txt", null), Remote(3, "c.txt", 20)];
-        AttachmentFixture fixture = new AttachmentFixture { Delay = static id => TimeSpan.FromMilliseconds(id == 1 ? 60 : 0) }
+        AttachmentFixture fixture = new AttachmentFixture { Delay = bound == 1 ? null : static id => TimeSpan.FromMilliseconds(id == 1 ? 60 : 0) }
             .Serve(1, Text(250)).Serve(2, Text(120)).Serve(3, Text(20));
         // 250 for each file and 360 in all. The first file takes 250, which leaves 110 for a body of 120.
         Outcome outcome = await DownloadAsync(fixture, files, Limits(bound, perFile: 250, total: 360));
@@ -142,7 +144,7 @@ public sealed class ParallelDownloadTests
     public async Task UnsizedFileOverThePerFileLimitIsTooLargeAndLaterFilesStillDownload(int bound)
     {
         AdoTestAttachment[] files = [Remote(1, "a.txt", 100), Remote(2, "unsized.txt", null), Remote(3, "c.txt", 20)];
-        AttachmentFixture fixture = new AttachmentFixture { Delay = static id => TimeSpan.FromMilliseconds(id == 1 ? 60 : 0) }
+        AttachmentFixture fixture = new AttachmentFixture { Delay = bound == 1 ? null : static id => TimeSpan.FromMilliseconds(id == 1 ? 60 : 0) }
             .Serve(1, Text(100)).Serve(2, Text(180)).Serve(3, Text(20));
         Outcome outcome = await DownloadAsync(fixture, files, Limits(bound, perFile: 150, total: 250));
         Assert.Equal(["1:Downloaded:r201-11-a1.txt", "2:TooLarge:", "3:Downloaded:r201-11-a3.txt"], outcome.Statuses);
@@ -152,7 +154,6 @@ public sealed class ParallelDownloadTests
 
     [Theory]
     [InlineData(401)]
-    [InlineData(403)]
     public async Task TerminatingErrorStopsEveryBodyAndLeavesNoPartialFile(int status)
     {
         using TestDirectory directory = new();

@@ -190,7 +190,7 @@ See [Configuration](configuration.md#settings) for the limits.
 | `-AttachmentWindowDays` | Days, 1–365, in which a run must have started for its attachments to appear. Default 7 |
 | `-IncludeFlaky` | Includes flaky tests; by default they are only counted in the header |
 | `-Path` | Directory, or an `.html` file path when one build is exported. A missing directory is created when the report is written |
-| `-Format Csv` | Writes one flat CSV file per build instead of the report and downloads nothing. `-Path` must then name an existing directory or a `.csv` file in one. See [A CSV file for a spreadsheet](build-report.md#a-csv-file-for-a-spreadsheet) |
+| `-Format Csv` | Writes one flat CSV file per build instead of the report and downloads nothing. `-Path` must then name an existing directory or, for a single build, a `.csv` file in one. See [A CSV file for a spreadsheet](build-report.md#a-csv-file-for-a-spreadsheet) |
 | `-Culture` | Report language, for example `fr-CA` |
 | `-NoClobber` | Refuses to replace an existing report |
 | `-Open` | Opens the report when it is written. A report that cannot be opened produces a warning and is still returned |

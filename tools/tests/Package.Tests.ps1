@@ -63,29 +63,6 @@ Describe 'Package validation and deployment boundaries' {
         { Assert-AdoPackage -PackagePath $package } | Should -Throw '*assembly identity*'
     }
 
-    It 'F09 restores the existing release when its checksum cannot be replaced' {
-        $output = Join-Path $TestDrive 'release with spaces'
-        $release = New-AdoReleaseArchive -PackagePath $package -OutputRoot $output
-        $before = (Get-FileHash -LiteralPath $release.Archive).Hash
-        $checksum = [IO.File]::ReadAllText($release.Checksum)
-        [IO.File]::AppendAllText((Join-Path $package 'AdoToolkit.Core.dll'), 'changed synthetic assembly overlay')
-        $lock = [IO.File]::Open($release.Checksum, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
-        try { { New-AdoReleaseArchive -PackagePath $package -OutputRoot $output } | Should -Throw }
-        finally { $lock.Dispose() }
-        (Get-FileHash -LiteralPath $release.Archive).Hash | Should -Be $before
-        [IO.File]::ReadAllText($release.Checksum) | Should -Be $checksum
-        @(Get-ChildItem -LiteralPath $output -Force).Count | Should -Be 2
-    }
-
-    It 'F10 resolves relative package paths from the PowerShell location' {
-        Push-Location -LiteralPath $TestDrive
-        try {
-            $relative = Split-Path -Leaf $package
-            Resolve-AdoPackagePath -Path $relative -Root $TestDrive | Should -Be $package
-        }
-        finally { Pop-Location }
-    }
-
     It 'F10 builds all release assets using relative paths after Set-Location' {
         $repository = Join-Path $TestDrive 'synthetic repository'
         $scripts = Join-Path $repository 'tools/package'
@@ -136,12 +113,6 @@ Describe 'Package validation and deployment boundaries' {
         $signable = @(Get-AdoSignableFile -PackagePath $package)
         $signable.Count | Should -Be 5
         @($signable | Where-Object Name -like '*.resources.dll').Name | Should -Be @('AdoToolkit.Core.resources.dll')
-    }
-
-    # Core holds the only string catalog, so the PowerShell assembly has no satellite to ship.
-    It 'rejects a package that still carries the PowerShell satellite assembly' {
-        [IO.File]::Copy((Join-Path $package 'fr/AdoToolkit.Core.resources.dll'), (Join-Path $package 'fr/AdoToolkit.PowerShell.resources.dll'))
-        { Assert-AdoPackage -PackagePath $package } | Should -Throw '*required layout*'
     }
 
     It 'rejects extra host or runtime assets' {
@@ -355,8 +326,9 @@ Describe 'Release archive and standalone installer' {
         $result.Path | Should -Be $installed
         Assert-AdoPackage -PackagePath $installed | Should -Be '0.1.0'
         Set-Content -LiteralPath (Join-Path $installed 'stale.txt') -Value 'old fixture'
-        # Leftovers of an earlier install whose old copy was still loaded are swept; other folders stay.
-        $leftover = Join-Path (Join-Path $modules 'AdoToolkit') ('0.0.9.previous-' + [guid]::NewGuid().ToString('N'))
+        # The leftover of an earlier install whose old copy was still loaded, beside the version it
+        # replaced, is swept; other folders stay.
+        $leftover = Join-Path (Join-Path $modules 'AdoToolkit') ('0.1.0.previous-' + [guid]::NewGuid().ToString('N'))
         [void] [IO.Directory]::CreateDirectory((Join-Path $leftover 'fr'))
         $unrelated = Join-Path (Join-Path $modules 'AdoToolkit') 'notes.previous'
         [void] [IO.Directory]::CreateDirectory($unrelated)
@@ -365,6 +337,25 @@ Describe 'Release archive and standalone installer' {
         Remove-Item -LiteralPath $unrelated
         Assert-AdoPackage -PackagePath $installed | Should -Be '0.1.0'
         @(Get-ChildItem -LiteralPath (Join-Path $modules 'AdoToolkit') -Force).Name | Should -Be @('0.1.0')
+    }
+
+    # A failed rollback keeps <version>.previous-<guid> as the only copy of that version
+    # (tools/package/AGENTS.md). No later install removes it while its version folder is missing,
+    # whether that install fails or installs another version.
+    It 'keeps a backup that is the only copy of its version through a failed and a successful install' {
+        $release = New-AdoReleaseArchive -PackagePath $package -OutputRoot (Join-Path $work 'release')
+        $root = Join-Path $modules 'AdoToolkit'
+        $kept = Join-Path $root ('0.1.0.previous-' + [guid]::NewGuid().ToString('N'))
+        $other = Join-Path $root ('0.0.9.previous-' + [guid]::NewGuid().ToString('N'))
+        foreach ($folder in @($kept, $other)) { [void] [IO.Directory]::CreateDirectory((Join-Path $folder 'fr')) }
+        { & $installer -Path $release.Archive -Destination $modules -ExpectedThumbprint ('A' * 40) -WarningAction SilentlyContinue } |
+            Should -Throw '*expected certificate*'
+        Test-Path -LiteralPath $kept | Should -BeTrue
+        Test-Path -LiteralPath $other | Should -BeTrue
+        & $installer -Path $release.Archive -Destination $modules -WarningAction SilentlyContinue | Out-Null
+        Test-Path -LiteralPath $other | Should -BeTrue
+        Test-Path -LiteralPath $kept | Should -BeFalse
+        @(Get-ChildItem -LiteralPath $root -Force).Name | Sort-Object | Should -Be @((Split-Path -Leaf $other), '0.1.0')
     }
 
     It 'reports the installation when PSModulePath holds a blank entry' {

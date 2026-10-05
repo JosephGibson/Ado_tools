@@ -5,7 +5,8 @@ function Start-FakeAdoServer {
         # Tried in order before the queue; the first match answers. Each route is a hashtable: Line, a regex
         # on the request line; optionally Body, a regex on the request body; and either Response, one
         # response, or Responses, responses keyed by the captures of Line then Body joined with '/'. A key
-        # that is not in Responses leaves the request to the next route.
+        # that is not in Responses leaves the request to the next route. A response may carry Delay, the
+        # milliseconds to wait before it is sent, in place of LatencyMilliseconds.
         [object[]] $Routes = @(),
         # Waits before each response, so that concurrent requests overlap.
         [ValidateRange(0, 60000)][int] $LatencyMilliseconds = 0,
@@ -117,7 +118,9 @@ function Start-FakeAdoServer {
                                 if ($route.Responses.ContainsKey($key)) { $response = $route.Responses[$key]; break }
                             }
                             if ($null -eq $response -and -not $taskPlans.TryDequeue([ref] $response)) { $response = @{ Status = 200; Body = '{"value":[]}' } }
-                            $wait = if ($response.ContainsKey('Block') -and $response.Block) { -1 } else { $taskLatency }
+                            $wait = if ($response.ContainsKey('Block') -and $response.Block) { -1 }
+                            elseif ($response.ContainsKey('Delay')) { [int] $response.Delay }
+                            else { $taskLatency }
                             if ($wait -ne 0) {
                                 # The client sends nothing after its request, so a read completes only when it
                                 # closes the connection: the request is then abandoned and gets no response.

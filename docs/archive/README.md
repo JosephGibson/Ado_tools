@@ -8,7 +8,7 @@ documentation starts at the [README](../../README.md).
 | Document | Contents |
 | --- | --- |
 | [ado-toolkit-spec.md](ado-toolkit-spec.md) | Technical specification v1.0: architecture, behavior, security, testing, packaging, design decisions, open questions and the verification ledger |
-| [plans/](plans/README.md) | Slice plans, session evidence, the Server 2020 audit fixes and the 0.8.0 and 0.8.5 plans |
+| [plans/](plans/README.md) | Slice plans, session evidence, the Server 2020 audit fixes and the 0.8.0, 0.8.5, 0.9.15 and 0.10.5 plans |
 | [design.md](design.md) | Design rationale for the first version of the developer tooling in `tools/` |
 | [release-0.2.0.md](release-0.2.0.md) | 0.2.0 release audit: findings, Server 2020 REST contracts and the rules for work-PC live checks |
 | [release-0.3.0.md](release-0.3.0.md) | 0.3.0 release notes: failed-test report changes and the portable release |
@@ -24,6 +24,7 @@ documentation starts at the [README](../../README.md).
 | [release-0.9.0.md](release-0.9.0.md) | 0.9.0 release notes: the agent worktrees, the three subagents, the review workflow, and the gate and the test runs side by side; no product change |
 | [release-0.9.5.md](release-0.9.5.md) | 0.9.5 release notes: surrogate-safe report cuts, the pipeline identifier guard, and the gate, package and live-check fixes |
 | [release-0.9.10.md](release-0.9.10.md) | 0.9.10 release notes: the plan critique skill and its hooks, `rev-parse` in the Git boundary and the `gh` release handoff; no product change |
+| [release-0.9.15.md](release-0.9.15.md) | 0.9.15 release notes: the age and the owner of each open bug in the failed-test report, the New marker and V-37 |
 
 Release notes for the current and the previous version are in `docs/`.
 
@@ -41,6 +42,6 @@ Comments in `src/`, `tests/` and `tools/`, test tags and cmdlet help notes cite 
 | `V-31`, `V-32` | The requests of `Export-AdoTestCase -IncludeDetail`, under [Known limitations](release-0.6.0.md#known-limitations) in the 0.6.0 notes |
 | `V-33` | Concurrent requests of `Get-AdoBuildTestFailure` and `Export-AdoBuildTestFailure` on Server 2020, under [Known limitations](release-0.7.0.md#known-limitations) in the 0.7.0 notes |
 | `V-34` to `V-36` | Server 2020 behavior that `tests/Live/Probes.Live.ps1` probes for the next version: result lists with details, compressed responses and the attachments of sub-results, under [Known limitations](release-0.8.0.md#known-limitations) in the 0.8.0 notes |
-| `V-37` | `System.CreatedDate` and `System.AssignedTo` in a work item batch field projection, and the shape of the identity, under [Known limitations](../release-0.9.15.md#known-limitations) in the 0.9.15 notes |
+| `V-37` | `System.CreatedDate` and `System.AssignedTo` in a work item batch field projection, and the shape of the identity, under [Known limitations](release-0.9.15.md#known-limitations) in the 0.9.15 notes |
 | `S0-n` to `S5-n` | An [acceptance criterion](ado-toolkit-spec.md#22-delivery-slices-and-acceptance-criteria), §22; also a test tag |
 | `F01` to `F16` | A finding in [plans/server-2020-audit-fixes.md](plans/server-2020-audit-fixes.md) |

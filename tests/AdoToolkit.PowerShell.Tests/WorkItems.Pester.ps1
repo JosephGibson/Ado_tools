@@ -88,3 +88,35 @@ Describe 'Work item command' -Tag 'S1-1' {
         finally { Stop-FakeAdoServer -Server $server }
     }
 }
+
+Describe 'Default console views' {
+    AfterEach { Disconnect-Ado }
+
+    # The default views write server text to a terminal, which acts on ESC and C1 control sequences:
+    # there every control character but tab and line feed becomes a space, while the object keeps
+    # the text as the server sent it.
+    It 'shows a title holding terminal control characters as plain text and keeps them on the object' {
+        $title = "Synthetic$([char]27)[2Jtitle$([char]7)bell$([char]0x9B)31m"
+        $body = '{"count":1,"value":[{"id":5,"rev":1,"fields":{"System.Title":' + (ConvertTo-Json -InputObject $title -Compress) +
+            ',"System.WorkItemType":"Bug","System.State":"Active","System.TeamProject":"Équipe Web","System.AreaPath":"Équipe Web",' +
+            '"System.IterationPath":"Équipe Web","System.ChangedDate":"2026-09-15T10:00:00Z"},"url":"https://ado.example.test/Collection/_apis/wit/workItems/5"}]}'
+        $server = Start-FakeAdoServer -Responses @(@{ Body = $body })
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -WarningAction SilentlyContinue | Out-Null
+            $item = Get-AdoWorkItem -Id 5
+            $item.Title | Should -BeExactly $title
+            $rendering = $PSStyle.OutputRendering
+            try {
+                $PSStyle.OutputRendering = 'Ansi'
+                $shown = $item | Out-String -Width 300
+            }
+            finally { $PSStyle.OutputRendering = $rendering }
+            # The header carries PowerShell's own styling under Ansi rendering; the row holds the title.
+            $row = @(($shown -split "`r?`n") | Where-Object { $_.Contains('Synthetic') })
+            $row.Count | Should -Be 1
+            $row[0] | Should -Match 'Synthetic \[2Jtitle bell 31m'
+            foreach ($code in 27, 7, 0x9B) { $row[0].Contains([char] $code) | Should -BeFalse -Because "U+$($code.ToString('X4'))" }
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+}

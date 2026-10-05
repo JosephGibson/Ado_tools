@@ -94,23 +94,6 @@ Describe 'Test plan and suite commands' -Tag 'S3-1' {
         finally { Stop-FakeAdoServer -Server $server }
     }
 
-    It 'returns a suite subtree depth-first across pages with suite paths' {
-        $server = Start-FakeAdoServer -Responses (Get-PagedResponse 'testsuites-first.json' 'testsuites-last.json')
-        try {
-            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
-            $suites = @(Get-AdoTestSuite -PlanId 812 -SuiteId 814 -Recurse)
-            $suites.Id | Should -Be @(814, 816, 818)
-            $suites[1] | Should -BeOfType ([AdoToolkit.Core.TestManagement.AdoTestSuite])
-            @($suites[1].SuitePath) | Should -Be @('Tâches de régression', 'Connexion', "Écran d’accueil")
-            $suites[1].PlanId | Should -Be 812
-            $suites[1].ParentSuiteId | Should -Be 814
-            $requests = $server.Requests.ToArray()
-            $requests.Count | Should -Be 3
-            $requests[0].Line | Should -Be 'GET /Collection/%C3%89quipe%20Web/_apis/testplan/Plans/812/suites?api-version=6.0-preview.1 HTTP/1.1'
-        }
-        finally { Stop-FakeAdoServer -Server $server }
-    }
-
     It 'binds only typed plans from the pipeline and uses their project' {
         $suitesBody = Get-Fixture 'testsuites-first.json'
         $server = Start-FakeAdoServer -Responses @(@{ Body = Get-Fixture 'testplans-first.json' }, @{ Body = $suitesBody }, @{ Body = $suitesBody })

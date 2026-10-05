@@ -78,6 +78,8 @@ public sealed class PagingTests
         Assert.Contains("%24top=100", handler.Requests[0].Uri.Query, StringComparison.Ordinal);
     }
 
+    // A listing that never ends fails at the ceiling instead of returning what it read. The ceiling
+    // is lowered to three pages here: the 10,000 of the product cost 10,000 round trips.
     [Fact]
     [Trait("Acceptance", "S0-3")]
     public async Task PageCeilingFailsInsteadOfReportingPartialSuccess()
@@ -86,14 +88,18 @@ public sealed class PagingTests
         int pages = 0;
         handler.Fallback = (_, _) =>
         {
-            HttpResponseMessage response = FakeHttpMessageHandler.Response("{\"value\":[]}");
+            HttpResponseMessage response = FakeHttpMessageHandler.Response("{\"value\":[{\"id\":\"" + Guid.NewGuid().ToString("D") + "\",\"name\":\"sample\"}]}");
             response.Headers.TryAddWithoutValidation("x-ms-continuationtoken", (++pages).ToString(CultureInfo.InvariantCulture));
             return Task.FromResult(response);
         };
         using HttpClient client = new(handler);
         AdoHttpPipeline pipeline = new(client, new Uri("https://ado.example.test/Collection"), TimeSpan.FromSeconds(5));
-        await Assert.ThrowsAsync<AdoResponseFormatException>(() => RetryPolicyTests.Fetch(pipeline,
-            EndpointRegistry.ProjectsList with { Paging = PagingStrategy.ContinuationHeader }));
-        Assert.Equal(10000, pages);
+        AdoResponseFormatException error = await Assert.ThrowsAsync<AdoResponseFormatException>(() => pipeline.GetPagesAsync(
+            EndpointRegistry.ProjectsList with { Paging = PagingStrategy.ContinuationHeader }, AdoJsonContext.Default.ProjectPageDto,
+            static page => page.Value, static item => item.Id ?? "", CultureInfo.InvariantCulture, TestContext.Current.CancellationToken,
+            maximumPages: 3));
+        Assert.Equal(EndpointRegistry.ProjectsList.Name, error.Operation);
+        Assert.Equal(3, pages);
+        Assert.Equal(10000, AdoHttpPipeline.MaximumPages); // §6.4
     }
 }

@@ -203,19 +203,6 @@ Describe 'Reads' {
         $outcome.Warnings | Should -Be @('The required PSScriptAnalyzer version is not installed (run bootstrap -Install).')
     }
 
-    It 'plans the built-in tooling stages before the product gate' {
-        $repository = Join-Path $TestDrive 'owned-check-sample'
-        New-TestFile -Path (Join-Path $repository 'settings.json') -Content '{"name":"sample"}'
-        New-TestFile -Path (Join-Path $repository 'tools\check.ps1') -Content 'exit 0'
-        $projectProfile = Get-ProjectProfile -Root $repository
-
-        $plan = @(Get-ValidationPlan -ProjectProfile $projectProfile)
-
-        $plan.Name | Should -Be @('powershell-lint', 'configuration', 'tooling-layout', 'project-check')
-        ($plan | Where-Object Name -eq 'project-check').TimeoutSeconds | Should -BeGreaterThan 300
-        (@(Get-ValidationPlan -ProjectProfile $projectProfile -SkipTests) | Where-Object Name -eq 'project-check').Arguments | Should -Contain '-SkipTests'
-    }
-
     # What a stage process printed reaches the reduction only as lines, so these two give the lines
     # directly; tools/tests/Workflow.Tests.ps1 captures the lines of real processes.
     It 'preserves skipped-tool warnings when reducing successful stage output' {

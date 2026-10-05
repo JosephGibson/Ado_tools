@@ -300,7 +300,7 @@ Describe 'Approved live-check audit regressions with synthetic data only' {
         $lines -join "`n" | Should -Not -Match 'CustomerEpsilon'
     }
 
-    It 'F17 reports the V-30 bug lookup as <Verdict> with counts only' -TestCases @(
+    It 'V-30 reports the bug lookup as <Verdict> with counts only' -TestCases @(
         @{ Categories = @('InProgress', 'Completed'); Bugs = 2; Codes = @(); Verdict = 'PASS V-30 BUG_ROUTES_AND_LOOKUP_AGREE' },
         @{ Categories = @('InProgress', 'CustomerKappa'); Bugs = 2; Codes = @(); Verdict = 'FAIL V-30 STATE_CATEGORIES_DIFFER' },
         @{ Categories = @('Completed'); Bugs = 1; Codes = @('BugMetadataUnavailable'); Verdict = 'FAIL V-30 MODULE_LOOKUP_DEGRADED' },
@@ -416,6 +416,43 @@ Describe 'Approved live-check audit regressions with synthetic data only' {
         $text | Should -Not -Match '2026-09'
         # One verdict for the ID, after its note at most.
         @($lines | Where-Object { $_ -match '^(PASS|FAIL|INCONCLUSIVE) V-37 ' }).Count | Should -Be 1
+    }
+
+    # The module reads bugs in batches of 200 IDs; one larger request would be refused by the server
+    # and read as a V-37 failure that says nothing about the two fields.
+    It 'V-37 reads more than 200 bugs in batches of at most 200 IDs' {
+        $connection = [pscustomobject]@{ CollectionUri = [uri] 'https://ado.example.test/Collection'; RequestTimeoutSeconds = 30 }
+        $assignedBugId = 0
+        $hasAssignedBug = $false
+        $reportedBugs = @(foreach ($id in 3001..3201) {
+                [pscustomobject]@{
+                    Id = $id; IsResolved = $true; CreatedDate = [datetimeoffset] '2026-09-15T22:05:00Z'
+                    AssignedTo = [pscustomobject]@{ DisplayName = 'CustomerAlpha' }
+                }
+            })
+        Mock Invoke-AdoTestBatch {
+            $ids = @(($Body | ConvertFrom-Json).ids)
+            [pscustomobject]@{ Content = '{"value":[' + ((@($ids | ForEach-Object {
+                                '{"id":' + $_ + ',"fields":{"System.CreatedDate":"2026-09-15T22:05:00Z","System.AssignedTo":{"displayName":"CustomerAlpha"}}}'
+                            })) -join ',') + ']}' }
+        }
+        $lines = @(. (Get-LiveSection 'TestFailures' 'BUG_FIELDS_PRESENT_AND_SHAPED'))
+        Should -Invoke Invoke-AdoTestBatch -Times 2 -Exactly
+        Should -Invoke Invoke-AdoTestBatch -Times 1 -Exactly -ParameterFilter { @(($Body | ConvertFrom-Json).ids).Count -eq 200 }
+        Should -Invoke Invoke-AdoTestBatch -Times 1 -Exactly -ParameterFilter { @(($Body | ConvertFrom-Json).ids).Count -eq 1 }
+        ($lines -join "`n") | Should -Match 'REQUESTED=201 COUNTED=201'
+        ($lines -join "`n") | Should -Match '(?m)^PASS V-37 BUG_FIELDS_PRESENT_AND_SHAPED$'
+    }
+
+    # A profile without a default project is a missing input, as in every other live script.
+    It 'SMOKE-2 reports a missing input as INCONCLUSIVE and anything else as FAIL' {
+        $checkStates = [System.Collections.Generic.List[string]]::new()
+        . (Get-LiveDefinitions 'Smoke')
+        @(Invoke-AdoLiveStep 'SMOKE-2' { throw 'PROFILE_DEFAULT_PROJECT_REQUIRED' }) | Should -Be @('INCONCLUSIVE SMOKE-2 PROFILE_DEFAULT_PROJECT_REQUIRED')
+        $script:stepPassed | Should -BeFalse
+        @(Invoke-AdoLiveStep 'SMOKE-2' { throw 'CONNECTION_FAILED' }) | Should -Be @('FAIL SMOKE-2 CONNECTION_FAILED')
+        @(Invoke-AdoLiveStep 'SMOKE-2' { 'CONNECT_TEST_PROJECTS' }) | Should -Be @('PASS SMOKE-2 CONNECT_TEST_PROJECTS')
+        @($checkStates) | Should -Be @('INCONCLUSIVE', 'FAIL', 'PASS')
     }
 
     It 'F16 omits dynamic keys from smoke exception paths too' {

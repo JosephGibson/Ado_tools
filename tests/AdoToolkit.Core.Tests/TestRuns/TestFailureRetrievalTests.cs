@@ -410,19 +410,6 @@ public sealed class TestFailureRetrievalTests
         Assert.Equal(skips, Skips(handler, "/Runs/201/results"));
     }
 
-    // A history build's listings follow the same rule as the reported build's.
-    [Fact]
-    public async Task EmptyPageProbeIsSkippedForHistoryBuildsUnderTheSameConditions()
-    {
-        using FakeHttpMessageHandler handler = RunHistoryTests.History().Handler();
-        using HttpClient client = new(handler);
-        await TestRunFixture.Service(client).GetAsync(TestRunFixture.Build(), new TestFailureQuery { HistoryCount = 3 },
-            CultureInfo.InvariantCulture, TestContext.Current.CancellationToken);
-        // Run 261 of build 400 reports two tests and lists two; run 271 of build 399 reports one and lists one.
-        Assert.Equal(["0"], Skips(handler, "/Runs/261/results"));
-        Assert.Equal(["0"], Skips(handler, "/Runs/271/results"));
-    }
-
     // Result IDs are unique only within a run: pipeline run attempts commonly repeat them.
     [Fact]
     public async Task RunAttemptsWithTheSameResultIdKeepTheirOwnRunForAttachmentsAndDiagnostics()

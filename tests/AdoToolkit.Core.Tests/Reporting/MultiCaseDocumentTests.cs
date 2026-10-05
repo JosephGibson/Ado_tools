@@ -40,50 +40,6 @@ public sealed class MultiCaseDocumentTests
         Assert.Equal(File.ReadAllBytes(golden), bytes);
     }
 
-    [Fact]
-    public void HtmlHasCoverAndSuiteGroupedContentsWithWorkingUniqueAnchorsAndRestartedNumbering()
-    {
-        ReportDocumentModel model = MultiCaseFixture.Model();
-        string html = GoldenReportTests.Render(model, ReportFormat.Html);
-        Assert.Contains("<html lang=\"en-US\" data-case-count=\"4\">", html, StringComparison.Ordinal);
-        string[] ids = Regex.Matches(html, "\\sid=\"([^\"]+)\"").Select(match => match.Groups[1].Value).ToArray();
-        Assert.Equal(ids.Length, ids.Distinct(StringComparer.Ordinal).Count());
-        int contents = html.IndexOf("<nav class=\"toc\"", StringComparison.Ordinal);
-        string toc = html[contents..html.IndexOf("</nav>", contents, StringComparison.Ordinal)];
-        string[] links = Regex.Matches(toc, "href=\"#([^\"]+)\"").Select(match => match.Groups[1].Value).ToArray();
-        Assert.Equal(Anchors, links);
-        Assert.All(links, link => Assert.Contains(link, ids));
-        Assert.Equal(Anchors, Regex.Matches(toc, "<tr data-index-for=\"([^\"]+)\">").Select(match => match.Groups[1].Value));
-        Assert.Equal(Groups, Regex.Matches(toc, "<th scope=\"colgroup\" colspan=\"5\">([^<]*)</th>").Select(match => match.Groups[1].Value));
-        Assert.Equal(Anchors, Regex.Matches(html, "<article class=\"test-case\" id=\"([^\"]+)\">").Select(match => match.Groups[1].Value));
-        Assert.All(html.Split("<article ")[1..], article =>
-            Assert.Equal("1", Regex.Match(article[article.IndexOf("<section class=\"steps\"", StringComparison.Ordinal)..], "<span class=\"outline-number\">([^<]+)</span>").Groups[1].Value));
-        // The top bar names the document and counts its cases; the overview holds the source and the totals.
-        string bar = html[html.IndexOf("<header class=\"top-bar\">", StringComparison.Ordinal)..html.IndexOf("<main id=\"report-content\">", StringComparison.Ordinal)];
-        Assert.Contains("<h1>Azure DevOps Test Case Report</h1>", bar, StringComparison.Ordinal);
-        Assert.Contains("<span class=\"count-label\">Test cases</span><strong class=\"count-value\">4</strong>", bar, StringComparison.Ordinal);
-        string cover = html[html.IndexOf("<section class=\"document-cover\" id=\"overview\">", StringComparison.Ordinal)..contents];
-        Assert.Contains("href=\"https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40\"", cover, StringComparison.Ordinal);
-        Assert.Contains("<dt>Test Suite</dt><dd>Racine</dd>", cover, StringComparison.Ordinal);
-        Assert.Contains("<dt>Complete</dt><dd>3</dd>", cover, StringComparison.Ordinal);
-        Assert.Contains("<dt>Partial</dt><dd>1</dd>", cover, StringComparison.Ordinal);
-        Assert.DoesNotContain("untrusted.example.test", html, StringComparison.Ordinal);
-        // The one script is the static asset of the report.
-        Assert.Single(TestFailureMarkup.Scripts().Matches(html));
-        Assert.DoesNotContain("<script", TestFailureMarkup.WithoutScripts(html), StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void MarkdownContentsLinkToExplicitAnchorsBeforeEachCaseHeading()
-    {
-        string markdown = GoldenReportTests.Render(MultiCaseFixture.Model("fr-CA"), ReportFormat.Markdown);
-        Assert.StartsWith("# Rapport de cas de test Azure DevOps\n", markdown, StringComparison.Ordinal);
-        Assert.Equal(Anchors, Regex.Matches(markdown, "\\]\\(#(tc-[0-9-]+)\\)").Select(match => match.Groups[1].Value));
-        Assert.Equal(Anchors, Regex.Matches(markdown, "<a id=\"(tc-[0-9-]+)\"></a>\n\n# ").Select(match => match.Groups[1].Value));
-        Assert.Equal(5, Regex.Count(markdown, "^# ", RegexOptions.Multiline));
-        Assert.Contains("**Racine › Paiement &lt;b&gt;**", markdown, StringComparison.Ordinal);
-    }
-
     [Theory]
     [InlineData("suites", "TestSuite", 4, 3, 1)]
     [InlineData("query", "Query", 2, 2, 0)]

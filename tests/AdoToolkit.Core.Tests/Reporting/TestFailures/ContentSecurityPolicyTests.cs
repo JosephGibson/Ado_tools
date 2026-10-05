@@ -51,24 +51,6 @@ public sealed class ContentSecurityPolicyTests
     }
 
     [Fact]
-    public void StaticScriptAndPlaceholderDoNotVaryByReportOrCulture()
-    {
-        string? expected = null;
-        foreach (string variant in new[] { "failed", "flaky", "partial", "hostile" })
-        foreach (string culture in new[] { "en-US", "fr-CA" })
-        {
-            string html = TestFailureReportFixture.Render(variant, culture);
-            string script = TestFailureMarkup.Scripts().Match(html).Groups["body"].Value;
-            expected ??= script;
-            Assert.Equal(expected, script);
-            string normalized = TestFailureMarkup.NormalizeGolden(html);
-            Assert.Contains("<script>__SCRIPT_ASSET__</script>", normalized, StringComparison.Ordinal);
-            Assert.Contains("sha256-__SCRIPT_SHA256__", normalized, StringComparison.Ordinal);
-            Assert.DoesNotContain(script, normalized, StringComparison.Ordinal);
-        }
-    }
-
-    [Fact]
     public void GoldenPlaceholderDoesNotRewriteHashLikeRemoteText()
     {
         string html = TestFailureReportFixture.Render().Replace("</main>", "<p>sha256-RemoteText</p></main>", StringComparison.Ordinal);

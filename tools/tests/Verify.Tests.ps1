@@ -24,6 +24,7 @@ Write-Output 'check: build succeeded (Release)'
 Write-Output 'Passed!  - Failed: 0, Passed: 3'
 Write-Output 'check: Core tests (en-US): 3 passed, 0 failed, 3 executed, 3 discovered'
 Write-Output 'Package ready'
+Write-Output 'note: 1 missing peer dependency'
 exit 0
 '@
         # The lint stage is not the subject, and it is unavailable where no analyzer is installed.
@@ -34,7 +35,8 @@ exit 0
         $result.Status | Should -Be 'pass'
         ($result.Stages | Where-Object Name -eq 'project-check').Summary |
             Should -Be @('build succeeded (Release)', 'Core tests (en-US): 3 passed, 0 failed, 3 executed, 3 discovered')
-        $result.Warnings | Should -BeNullOrEmpty
+        # Scraped advisory output warns without failing the run.
+        $result.Warnings | Should -Be @('project-check: note: 1 missing peer dependency')
     }
 
     # project-check runs in a runspace of its own while the in-process stages run in this one.
@@ -44,15 +46,17 @@ exit 0
         $gateReleased = Join-Path $TestDrive 'concurrent-failure-released.txt'
         New-TestFile -Path (Join-Path $repository 'settings.json') -Content '{}'
         New-TestFile -Path (Join-Path $repository 'tools\check.ps1') -Content @"
-Set-Content -LiteralPath '$gateStarted' -Value started
+Set-Content -LiteralPath '$gateStarted.tmp' -Value ("`$PID " + (Get-Process -Id `$PID).Parent.Id)
+Move-Item -LiteralPath '$gateStarted.tmp' -Destination '$gateStarted'
 `$deadline = [DateTime]::UtcNow.AddSeconds(30)
 while (-not (Test-Path -LiteralPath '$gateReleased') -and [DateTime]::UtcNow -lt `$deadline) { Start-Sleep -Milliseconds 50 }
 Write-Output 'check: synthetic failure'
 exit 1
 "@
         Mock Get-PowerShellLintOutcome { [pscustomobject]@{ Failures = @(); Summary = @(); Warnings = @() } }
-        # The configuration stage waits for the gate to start, releases it, and is still running
-        # when the gate fails. Run one after the other, it would wait in vain.
+        # The configuration stage waits for the gate to start, releases it, and returns only once the
+        # gate's processes have ended: it is still running when the gate fails. Run one after the
+        # other, it would wait in vain.
         Mock Get-ConfigurationOutcome {
             $deadline = [DateTime]::UtcNow.AddSeconds(30)
             while (-not (Test-Path -LiteralPath $gateStarted) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 50 }
@@ -60,7 +64,8 @@ exit 1
                 return [pscustomobject]@{ Failures = @('the product gate did not start beside this stage'); Summary = @(); Warnings = @() }
             }
             Set-Content -LiteralPath $gateReleased -Value released
-            Start-Sleep -Seconds 2
+            $ids = @((Get-Content -LiteralPath $gateStarted -Raw).Trim() -split ' ' | ForEach-Object { [int] $_ })
+            while (@($ids | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue }).Count -gt 0 -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 50 }
             [pscustomobject]@{ Failures = @(); Summary = @('ran beside the product gate'); Warnings = @() }
         }
 
@@ -143,20 +148,5 @@ exit 2
 
         ($result.Stages | Where-Object Name -eq project-check).Status | Should -Be 'unavailable'
         $result.Status | Should -Be 'incomplete'
-    }
-
-    It 'reports scraped output from a passing stage without failing the run' {
-        $repository = Join-Path $TestDrive 'advisory-warning-sample'
-        New-TestFile -Path (Join-Path $repository 'tools\check.ps1') -Content @'
-Write-Output 'note: 1 missing peer dependency'
-exit 0
-'@
-        # The lint stage is not the subject, and it is unavailable where no analyzer is installed.
-        Mock Get-PowerShellLintOutcome { [pscustomobject]@{ Failures = @(); Summary = @(); Warnings = @() } }
-
-        $result = Invoke-ProjectVerification -Root $repository
-
-        $result.Status | Should -Be 'pass'
-        $result.Warnings | Should -Be @('project-check: note: 1 missing peer dependency')
     }
 }

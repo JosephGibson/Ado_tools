@@ -11,7 +11,7 @@
         <TableColumnHeader><Label>Status</Label></TableColumnHeader>
       </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
         <TableColumnItem><PropertyName>Id</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Title</PropertyName></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Title -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
         <TableColumnItem><PropertyName>StepCount</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>Status</PropertyName></TableColumnItem>
       </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
@@ -29,9 +29,9 @@
       </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
         <TableColumnItem><PropertyName>Number</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>Kind</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Action</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>ExpectedResult</PropertyName></TableColumnItem>
-        <TableColumnItem><ScriptBlock>$_.SharedStep.Title</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Action -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.ExpectedResult -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>($_.SharedStep.Title) -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
         <TableColumnItem><PropertyName>DiagnosticCode</PropertyName></TableColumnItem>
       </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
     </View>
@@ -45,7 +45,7 @@
         <TableColumnHeader><Label>TeamProject</Label></TableColumnHeader>
       </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
         <TableColumnItem><PropertyName>Id</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Name</PropertyName></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Name -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
         <TableColumnItem><PropertyName>RootSuiteId</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>TeamProject</PropertyName></TableColumnItem>
       </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
@@ -62,7 +62,7 @@
         <TableColumnItem><PropertyName>Id</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>PlanId</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>ParentSuiteId</PropertyName></TableColumnItem>
-        <TableColumnItem><ScriptBlock>$_.SuitePath -join ' > '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>($_.SuitePath -join ' > ') -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
       </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
     </View>
     <View>
@@ -79,7 +79,7 @@
         <TableColumnItem><PropertyName>LimitApplied</PropertyName></TableColumnItem>
         <TableColumnItem><ScriptBlock>$_.AsOf.ToLocalTime()</ScriptBlock></TableColumnItem>
         <TableColumnItem><PropertyName>TeamProject</PropertyName></TableColumnItem>
-        <TableColumnItem><ScriptBlock>$_.Columns -join ', '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>($_.Columns -join ', ') -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
       </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
     </View>
     <View>
@@ -96,10 +96,10 @@
         </TableHeaders>
         <TableRowEntries><TableRowEntry><TableColumnItems>
           <TableColumnItem><PropertyName>Id</PropertyName></TableColumnItem>
-          <TableColumnItem><PropertyName>WorkItemType</PropertyName></TableColumnItem>
-          <TableColumnItem><PropertyName>Title</PropertyName></TableColumnItem>
-          <TableColumnItem><PropertyName>State</PropertyName></TableColumnItem>
-          <TableColumnItem><PropertyName>TeamProject</PropertyName></TableColumnItem>
+          <TableColumnItem><ScriptBlock>$_.WorkItemType -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+          <TableColumnItem><ScriptBlock>$_.Title -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+          <TableColumnItem><ScriptBlock>$_.State -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+          <TableColumnItem><ScriptBlock>$_.TeamProject -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
           <TableColumnItem><ScriptBlock>$_.ChangedDate.ToLocalTime()</ScriptBlock></TableColumnItem>
         </TableColumnItems></TableRowEntry></TableRowEntries>
       </TableControl>
@@ -147,9 +147,9 @@
           <TableColumnHeader><Label>State</Label></TableColumnHeader>
         </TableHeaders>
         <TableRowEntries><TableRowEntry><TableColumnItems>
-          <TableColumnItem><PropertyName>Name</PropertyName></TableColumnItem>
+          <TableColumnItem><ScriptBlock>$_.Name -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
           <TableColumnItem><PropertyName>Id</PropertyName></TableColumnItem>
-          <TableColumnItem><PropertyName>State</PropertyName></TableColumnItem>
+          <TableColumnItem><ScriptBlock>$_.State -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
         </TableColumnItems></TableRowEntry></TableRowEntries>
       </TableControl>
     </View>
@@ -167,7 +167,7 @@
           <TableColumnItem><PropertyName>Success</PropertyName></TableColumnItem>
           <TableColumnItem><PropertyName>Elapsed</PropertyName></TableColumnItem>
           <TableColumnItem><PropertyName>ApiVersion</PropertyName></TableColumnItem>
-          <TableColumnItem><PropertyName>Hint</PropertyName></TableColumnItem>
+          <TableColumnItem><ScriptBlock>$_.Hint -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
         </TableColumnItems></TableRowEntry></TableRowEntries>
       </TableControl>
     </View>
@@ -181,8 +181,8 @@
         <TableColumnHeader><Label>TeamProject</Label></TableColumnHeader>
       </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
         <TableColumnItem><PropertyName>Id</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Name</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Path</PropertyName></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Name -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Path -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
         <TableColumnItem><PropertyName>TeamProject</PropertyName></TableColumnItem>
       </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
     </View>
@@ -198,10 +198,10 @@
         <TableColumnHeader><Label>FinishTime</Label></TableColumnHeader>
       </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
         <TableColumnItem><PropertyName>Id</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>BuildNumber</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>SourceBranch</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Status</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Result</PropertyName></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.BuildNumber -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.SourceBranch -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Status -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Result -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
         <TableColumnItem><ScriptBlock>if ($null -ne $_.FinishTime) { $_.FinishTime.ToLocalTime() }</ScriptBlock></TableColumnItem>
       </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
     </View>
@@ -216,9 +216,9 @@
         <TableColumnHeader><Label>LogId</Label></TableColumnHeader>
         <TableColumnHeader><Label>StartTime</Label></TableColumnHeader>
       </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
-        <TableColumnItem><PropertyName>Name</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Type</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Result</PropertyName></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Name -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Type -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Result -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
         <TableColumnItem><PropertyName>Attempt</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>LogId</PropertyName></TableColumnItem>
         <TableColumnItem><ScriptBlock>if ($null -ne $_.StartTime) { $_.StartTime.ToLocalTime() }</ScriptBlock></TableColumnItem>
@@ -236,8 +236,8 @@
         <TableColumnHeader><Label>LogLineCount</Label></TableColumnHeader>
       </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
         <TableColumnItem><PropertyName>BuildId</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Path</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Result</PropertyName></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Path -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Result -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
         <TableColumnItem><PropertyName>Attempt</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>LogId</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>LogLineCount</PropertyName></TableColumnItem>
@@ -254,8 +254,8 @@
         <TableColumnHeader><Label>StartedDate</Label></TableColumnHeader>
       </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
         <TableColumnItem><PropertyName>Id</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Name</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>State</PropertyName></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Name -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.State -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
         <TableColumnItem><PropertyName>TotalTests</PropertyName></TableColumnItem>
         <TableColumnItem><ScriptBlock>if ($null -ne $_.StartedDate) { $_.StartedDate.ToLocalTime() }</ScriptBlock></TableColumnItem>
       </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
@@ -272,7 +272,7 @@
         <TableColumnHeader><Label>Status</Label></TableColumnHeader>
       </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
         <TableColumnItem><ScriptBlock>$_.Build.Id</ScriptBlock></TableColumnItem>
-        <TableColumnItem><ScriptBlock>$_.Build.BuildNumber</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>($_.Build.BuildNumber) -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
         <TableColumnItem><PropertyName>FailedCount</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>FlakyCount</PropertyName></TableColumnItem>
         <TableColumnItem><ScriptBlock>$_.Runs.Count</ScriptBlock></TableColumnItem>
@@ -292,10 +292,10 @@
       </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
         <TableColumnItem><PropertyName>Ordinal</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>Classification</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>ShortName</PropertyName></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.ShortName -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
         <TableColumnItem><ScriptBlock>$_.Attempts.Count</ScriptBlock></TableColumnItem>
         <TableColumnItem><PropertyName>HasOpenBug</PropertyName></TableColumnItem>
-        <TableColumnItem><ScriptBlock>[AdoToolkit.Core.Reporting.TestFailures.HtmlTestFailureRenderer]::LatestError($_)</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>([AdoToolkit.Core.Reporting.TestFailures.HtmlTestFailureRenderer]::LatestError($_)) -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
       </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
     </View>
     <View>
@@ -310,9 +310,9 @@
       </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
         <TableColumnItem><PropertyName>Id</PropertyName></TableColumnItem>
         <TableColumnItem><PropertyName>IsOpen</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>State</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>WorkItemType</PropertyName></TableColumnItem>
-        <TableColumnItem><PropertyName>Title</PropertyName></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.State -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.WorkItemType -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
+        <TableColumnItem><ScriptBlock>$_.Title -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
       </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
     </View>
   </ViewDefinitions>

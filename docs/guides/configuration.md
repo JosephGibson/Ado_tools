@@ -118,7 +118,9 @@ changing them. A connection made with `Connect-Ado -CollectionUrl` has no defaul
 Every request accepts gzip and deflate, so a server that compresses its responses sends fewer
 bytes; the attachment limits above count the decoded bytes. A JSON response may hold at most
 256 MB once decoded, a fixed limit: a larger one fails with an `AdoResponseFormat` error that
-names the operation.
+names the operation. So does a response marked compressed whose body does not decompress, which
+is not retried; when the server answered with an error status, that status decides the error
+instead, as it does for any error body that cannot be read.
 
 ### Reporting
 

@@ -86,6 +86,21 @@ Describe 'Local profiles' -Tag 'S0-5' {
             Where-Object { $_ -is [System.Management.Automation.SupportsWildcardsAttribute] }).Count | Should -Be 1
     }
 
+    # Get-AdoProfile -Name takes a pattern, so a completed name is escaped to match only the profile
+    # it came from; the parameters that take a literal name complete it unescaped.
+    It 'completes a profile name for the -Name pattern of Get-AdoProfile so that it matches only that profile' {
+        Set-AdoProfile -Name 'Lab [1]' -CollectionUrl 'https://ado.example.test/Collection' | Out-Null
+        Set-AdoProfile -Name 'Lab 1' -CollectionUrl 'https://ado.example.test/Collection' | Out-Null
+        $line = 'Get-AdoProfile -Name Lab'
+        $completion = @([System.Management.Automation.CommandCompletion]::CompleteInput($line, $line.Length, $null).CompletionMatches |
+                Where-Object ListItemText -EQ 'Lab [1]')
+        $completion.Count | Should -Be 1
+        @(& ([scriptblock]::Create('Get-AdoProfile -Name ' + $completion[0].CompletionText))).Name | Should -Be @('Lab [1]')
+        $line = 'Connect-Ado -Profile Lab'
+        @([System.Management.Automation.CommandCompletion]::CompleteInput($line, $line.Length, $null).CompletionMatches |
+                Where-Object ListItemText -EQ 'Lab [1]').CompletionText | Should -Be "'Lab [1]'"
+    }
+
     It 'removes the default project with a blank value, like the other text defaults' {
         Set-AdoProfile -Name sample -CollectionUrl 'https://ado.example.test/Collection' -DefaultProject 'Équipe Web' -DefaultProfile | Out-Null
         $cleared = Set-AdoProfile -Name sample -DefaultProject ' '

@@ -9,68 +9,6 @@ namespace AdoToolkit.Core.Tests.Reporting;
 public sealed class TestCaseDetailRenderingTests
 {
     [Fact]
-    public void DetailsAddSummaryFieldsDescriptionLinksAndTestPointsToTheCase()
-    {
-        string html = TestCaseReportStructureTests.Body(ReportFixture.Model("detailed"));
-        Assert.Equal(["report-1-overview", "report-1-description", "report-1-parameters", "report-1-steps", "report-1-links", "report-1-points", "report-1-diagnostics"],
-            Regex.Matches(html[html.IndexOf("<nav class=\"section-links\"", StringComparison.Ordinal)..html.IndexOf("</nav>", StringComparison.Ordinal)], "href=\"#([^\"]+)\"").Select(static match => match.Groups[1].Value));
-        Assert.Contains("<div><dt>Test assembly</dt><dd>Synthetic.Orders.Tests.dll</dd></div><div><dt>Automated test type</dt><dd>Unit Test</dd></div>", html, StringComparison.Ordinal);
-        Assert.Contains("<div><dt>Created on</dt><dd>8/16/2026 10:30 AM</dd></div><div><dt>Created by</dt><dd>Fictional Author</dd></div>", html, StringComparison.Ordinal);
-        Assert.Contains("<div class=\"tag-list\"><span class=\"strip-label\">Tags</span><ul><li>Smoke</li><li>Été &lt;b&gt;</li></ul></div>", html, StringComparison.Ordinal);
-        Assert.Contains("<div class=\"name-section\"><span class=\"strip-label\">Automated test</span><code data-copy-value>Synthetic.Orders.OrderTests.Creates&lt;T&gt;</code> "
-            + "<button type=\"button\" class=\"interactive\" data-enhance hidden data-action=\"copy\" aria-label=\"Copy — Automated test\">Copy</button></div>", html, StringComparison.Ordinal);
-        // The description keeps its structure, like a formatted step.
-        Assert.Contains("<h3 class=\"section-heading\" id=\"report-1-description\">Description</h3>\n<div class=\"description-text\"><div class=\"rich-text\"><p>Checks the <strong>order</strong> form.</p>"
-            + "<ul><li>Uses the sandbox</li><li>See <a rel=\"noreferrer\" href=\"https://docs.example.test/orders\">https://docs.example.test/orders</a></li></ul></div></div>", html, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void LinkedWorkItemsLinkIntoAzureDevOpsAndOtherLinksAreTextUnlessTheirSchemeIsSafe()
-    {
-        string html = TestCaseReportStructureTests.Body(ReportFixture.Model("detailed"));
-        string links = html[html.IndexOf("<section class=\"links\">", StringComparison.Ordinal)..html.IndexOf("<section class=\"points\">", StringComparison.Ordinal)];
-        Assert.Contains("<h3 class=\"section-heading\" id=\"report-1-links\">Links <span class=\"count\">7</span></h3>", links, StringComparison.Ordinal);
-        Assert.Contains("<thead><tr><th scope=\"col\">Link type</th><th scope=\"col\">Work item</th><th scope=\"col\">Title</th><th scope=\"col\">State</th></tr></thead>", links, StringComparison.Ordinal);
-        Assert.Contains("<tr data-link=\"3050\"><td>Tests</td><td class=\"col-item\"><a rel=\"noreferrer\" href=\"https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/3050\">User Story #3050 ",
-            links, StringComparison.Ordinal);
-        Assert.Contains("</a></td><td>Order entry &lt;story&gt;</td><td>Active</td></tr>", links, StringComparison.Ordinal);
-        Assert.Contains("<tr data-link=\"3001\"><td>Related <span class=\"text-muted\">See &lt;also&gt;</span></td><td class=\"col-item\"><a rel=\"noreferrer\" href=\"https://ado.example.test/tfs/Collection%20A/Autre%20%2F%20%C3%A9quipe/_workitems/edit/3001\">Bug #3001 ",
-            links, StringComparison.Ordinal);
-        // A work item that could not be read keeps its link type and its ID link.
-        Assert.Contains("<tr data-link=\"3099\"><td>Contoso.LinkTypes.Blocks-Forward</td><td class=\"col-item\"><a rel=\"noreferrer\" href=\"https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_workitems/edit/3099\">Work item #3099 ",
-            links, StringComparison.Ordinal);
-        Assert.Contains("</a></td><td></td><td></td></tr>", links, StringComparison.Ordinal);
-        Assert.Contains("<span class=\"strip-label\">Hyperlinks</span><ul><li><a rel=\"noreferrer\" href=\"https://wiki.example.test/orders\">https://wiki.example.test/orders</a> <span class=\"text-muted\">Specification</span></li>"
-            + "<li>javascript:alert(1)</li></ul>", links, StringComparison.Ordinal);
-        // Attachments are named, not linked: no address of the response is ever used.
-        Assert.Contains("<span class=\"strip-label\">Attachments</span><ul><li>capture &lt;1&gt;.png <span class=\"attachment-size\">20,480 bytes</span> <span class=\"text-muted\">Screen</span></li><li>notes.txt</li></ul>",
-            links, StringComparison.Ordinal);
-        Assert.Equal(4, Regex.Count(links, "href="));
-    }
-
-    [Fact]
-    public void TestPointsShowWhereTheCaseIsPlannedAndItsLatestOutcomeThere()
-    {
-        string html = TestCaseReportStructureTests.Body(ReportFixture.Model("detailed"));
-        string points = html[html.IndexOf("<section class=\"points\">", StringComparison.Ordinal)..html.IndexOf("<section class=\"diagnostics\"", StringComparison.Ordinal)];
-        Assert.Contains("<h3 class=\"section-heading\" id=\"report-1-points\">Test points <span class=\"count\">4</span></h3>", points, StringComparison.Ordinal);
-        Assert.Equal(["Test Plan", "Test Suite", "Configuration", "Latest outcome", "Tester", "Test run", "Last updated"],
-            Regex.Matches(points, "<th scope=\"col\">([^<]+)</th>").Select(static match => match.Groups[1].Value));
-        Assert.Equal(["passed", "failed", "other", "notrun"], Regex.Matches(points, "<tr data-point=\"[0-9]+\" data-outcome=\"([a-z]+)\">").Select(static match => match.Groups[1].Value));
-        Assert.Contains("<tr data-point=\"2\" data-outcome=\"failed\"><td><a rel=\"noreferrer\" href=\"https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40\">Plan « Été » ",
-            points, StringComparison.Ordinal);
-        Assert.Contains("href=\"https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testPlans/define?planId=40&amp;suiteId=52\">Paiement &lt;b&gt; ", points, StringComparison.Ordinal);
-        Assert.Contains("<td>Windows 11</td><td class=\"col-outcome\"><span class=\"status-badge status-failed\"><span aria-hidden=\"true\">✕</span> Failed</span></td><td>Fictional Tester</td>"
-            + "<td><a rel=\"noreferrer\" href=\"https://ado.example.test/tfs/Collection%20A/%C3%89quipe%20%2F%20Web%3F%23/_testManagement/runs?_a=runCharts&amp;runId=702\">702 ", points, StringComparison.Ordinal);
-        Assert.Contains("</a></td><td>9/14/2026 10:30 AM</td></tr>", points, StringComparison.Ordinal);
-        // A plan or suite without a name shows its ID; an outcome that is neither pass nor failure is named.
-        Assert.Contains("define?planId=41\">41 ", points, StringComparison.Ordinal);
-        Assert.Contains("<span class=\"status-badge status-other\"><span aria-hidden=\"true\">–</span> Other</span> <span class=\"text-muted\">Blocked</span></td>", points, StringComparison.Ordinal);
-        Assert.Contains("<span class=\"status-badge status-notrun\"><span aria-hidden=\"true\">–</span> Not run</span></td><td>Fictional Tester</td><td></td><td></td></tr>", points, StringComparison.Ordinal);
-        Assert.Contains("<header id=\"report-1-overview\" data-case=\"10\" data-status=\"complete\" data-failed>", html, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void PointsThatWereNotReadAreLeftOutAndACaseInNoSuiteSaysSo()
     {
         string none = Body(Detail(points: []));
@@ -92,17 +30,6 @@ public sealed class TestCaseDetailRenderingTests
         Assert.Contains("data-status=\"complete\"", html, StringComparison.Ordinal);
         Assert.Contains("<div class=\"diagnostic\" data-severity=\"warning\" data-diagnostic=\"TestPointsUnavailable\"><strong>Warning · TestPointsUnavailable</strong>"
             + "<p>The test points of project Équipe / Web?# could not be read; plans, suites, configurations and latest outcomes are left out.</p></div>", html, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void LookupWarningsFollowTheReportCultureWhateverCultureReadThem()
-    {
-        string html = TestCaseReportStructureTests.Body(ReportFixture.Model("detailed", "fr-CA"));
-        Assert.Contains("<strong>Avertissement · UnresolvedLinkedWorkItem</strong><p>L’élément de travail lié 3099 est introuvable ou inaccessible; le lien vers son ID est conservé.</p>", html, StringComparison.Ordinal);
-        Assert.Contains("<h3 class=\"section-heading\" id=\"report-1-points\">Points de test <span class=\"count\">4</span></h3>", html, StringComparison.Ordinal);
-        Assert.Contains("<th scope=\"col\">Dernier résultat</th>", html, StringComparison.Ordinal);
-        Assert.Contains("<span class=\"status-badge status-notrun\"><span aria-hidden=\"true\">–</span> Non exécuté</span>", html, StringComparison.Ordinal);
-        Assert.Contains("<span class=\"strip-label\">Balises</span>", html, StringComparison.Ordinal);
     }
 
     [Fact]

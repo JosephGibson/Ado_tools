@@ -136,6 +136,28 @@ public sealed class AttachmentRenderingTests
         Assert.Throws<InvalidDataException>(() => TestFailureReportValidator.Validate(new StringReader(html), model, folder));
     }
 
+    // A result's own list may repeat an attachment of one of its sub-results (V-36 asks whether Server
+    // 2020 does). The attempt then lists both entries, and each keeps an anchor of its own, so the
+    // report still validates; an attempt without a repeat keeps the anchors it always had.
+    [Fact]
+    public void AnAttachmentListedByTheResultAndByItsSubResultKeepsTwoAnchors()
+    {
+        TestFailureReportModel model = TestFailureReportFixture.Model("failed", "en-US");
+        AdoTestFailure[] failures = [.. model.Failures.Select(failure => failure.WithAttempts([.. failure.Attempts.Select(attempt =>
+            attempt.Attachments.FirstOrDefault(attachment => attachment.SubResultId is not null) is { } sub
+                ? attempt.WithAttachments([.. attempt.Attachments, new AdoTestAttachment
+                {
+                    Id = sub.Id, RunId = sub.RunId, ResultId = sub.ResultId, FileName = sub.FileName, Size = sub.Size, Kind = sub.Kind,
+                }])
+                : attempt)]))];
+        TestFailureReportModel updated = TestFailureReportModelBuilder.WithAttachments(model, failures, [], null);
+        string html = TestFailureReportFixture.Render(updated);
+        TestFailureReportValidator.Validate(new StringReader(html), updated);
+        Assert.Contains("<li id=\"f-1-a1-att51\"", html, StringComparison.Ordinal);
+        Assert.Contains("<li id=\"f-1-a1-att52\"", html, StringComparison.Ordinal);
+        Assert.Contains("<li id=\"f-1-a1-s301-att52\"", html, StringComparison.Ordinal);
+    }
+
     private sealed record Rendered(TestFailureReportModel Model, string Html, string Folder);
 
     private static Rendered Render(TestDirectory directory, (AdoTestAttachmentStatus Status, string? Name, byte[]? Bytes) first,

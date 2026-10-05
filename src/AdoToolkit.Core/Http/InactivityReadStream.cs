@@ -1,7 +1,8 @@
 namespace AdoToolkit.Core.Http;
 
-// Non-owning adapter; the response consumer disposes the underlying stream.
-internal sealed class InactivityReadStream(Stream source, TimeSpan timeout, string operation, CultureInfo culture) : Stream
+// Non-owning adapter; the response consumer disposes the underlying stream. Each read starts its
+// own inactivity timer, on the given time provider (a test's manual clock) or the system's.
+internal sealed class InactivityReadStream(Stream source, TimeSpan timeout, string operation, CultureInfo culture, TimeProvider? time = null) : Stream
 {
     public override bool CanRead => true;
     public override bool CanSeek => false;
@@ -16,8 +17,8 @@ internal sealed class InactivityReadStream(Stream source, TimeSpan timeout, stri
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        using CancellationTokenSource inactivity = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        inactivity.CancelAfter(timeout);
+        using CancellationTokenSource timer = new(timeout, time ?? TimeProvider.System);
+        using CancellationTokenSource inactivity = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timer.Token);
         try { return await source.ReadAsync(buffer, inactivity.Token).ConfigureAwait(false); }
         catch (OperationCanceledException error) when (!cancellationToken.IsCancellationRequested)
         {

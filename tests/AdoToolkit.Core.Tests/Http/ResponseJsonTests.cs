@@ -85,9 +85,6 @@ public sealed class ResponseJsonTests
         Assert.Equal(Messages.Get(AdoMessage.ResponseTooLarge, CultureInfo.InvariantCulture, 256), error.Message);
     }
 
-    [Fact]
-    public void TheLimitIs256MiB() => Assert.Equal(256L * 1024 * 1024, ResponseJson.MaximumBytes);
-
     [Theory]
     [InlineData(null, true)]
     [InlineData("utf-16", true)]

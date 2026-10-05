@@ -40,7 +40,7 @@ it before extraction, run this in Windows PowerShell or PowerShell 7 and compare
 the result with the published checksum:
 
 ```powershell
-(Get-FileHash .\AdoToolkit-0.10.0-win-x64.zip -Algorithm SHA256).Hash
+(Get-FileHash .\AdoToolkit-0.10.5-win-x64.zip -Algorithm SHA256).Hash
 ```
 
 The launcher uses `RemoteSigned` for its process only. It does not change your
@@ -59,7 +59,7 @@ script is blocked, unblock the original ZIP in Properties and extract it again.
 
    ```powershell
    Unblock-File .\Install-AdoToolkit.ps1
-   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.10.0.zip
+   .\Install-AdoToolkit.ps1 -Path .\AdoToolkit-0.10.5.zip
    ```
 
    The script checks the ZIP against the `.sha256` file and checks that it contains
@@ -87,9 +87,9 @@ To install without the script, check the hash yourself, then unblock the ZIP bef
 extracting it so that no extracted file carries the download mark:
 
 ```powershell
-(Get-FileHash .\AdoToolkit-0.10.0.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
-Unblock-File .\AdoToolkit-0.10.0.zip
-Expand-Archive .\AdoToolkit-0.10.0.zip `
+(Get-FileHash .\AdoToolkit-0.10.5.zip -Algorithm SHA256).Hash   # compare with the .sha256 file
+Unblock-File .\AdoToolkit-0.10.5.zip
+Expand-Archive .\AdoToolkit-0.10.5.zip `
     -DestinationPath (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell\Modules')
 ```
 
@@ -103,7 +103,7 @@ PowerShell 7:
 ```powershell
 & .\tools\package\Publish-AdoToolkitPackage.ps1    # restores, builds and stages the package
 & .\tools\package\New-AdoToolkitRelease.ps1        # writes artifacts\release
-& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.10.0.zip
+& .\artifacts\release\Install-AdoToolkit.ps1 -Path .\artifacts\release\AdoToolkit-0.10.5.zip
 ```
 
 The package script lists every missing prerequisite before it starts. Restore uses
@@ -163,7 +163,9 @@ Get-AdoProject -Name 'W*'
 Project names complete from the runspace cache after `Get-AdoProject` has listed them;
 profile names complete from the local configuration. You can start either kind of name
 with single or double quotes. Completion inserts a quoted, pasteable argument and sends
-no server request.
+no server request. `Get-AdoProfile -Name` takes a wildcard pattern, so there the inserted
+name has its `[`, `]`, `*`, `?` and backtick characters escaped and matches that profile
+only.
 
 When the check fails, the error or the result's `Hint` points to likely causes, such
 as the Windows identity in use, the collection URL or the proxy. For example, after
@@ -199,5 +201,6 @@ Full help: [Connect-Ado](../commands/en-US/Connect-Ado.md),
 [Test-AdoConnection](../commands/en-US/Test-AdoConnection.md),
 [Get-AdoProject](../commands/en-US/Get-AdoProject.md),
 [Get-AdoConnection](../commands/en-US/Get-AdoConnection.md),
-[Disconnect-Ado](../commands/en-US/Disconnect-Ado.md), or
+[Disconnect-Ado](../commands/en-US/Disconnect-Ado.md),
+[Remove-AdoProfile](../commands/en-US/Remove-AdoProfile.md), or
 `Get-Help <cmdlet> -Full`.

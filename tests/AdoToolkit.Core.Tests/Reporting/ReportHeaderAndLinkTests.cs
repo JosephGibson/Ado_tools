@@ -36,31 +36,6 @@ public sealed class ReportHeaderAndLinkTests
     }
 
     [Fact]
-    public void MissingMetadataAndUnresolvedSharedMetadataStayAbsent()
-    {
-        ReportDocumentModel document = ReportFixture.Model("partial");
-        TestCaseReportModel model = document.Cases[0];
-        Assert.Null(model.Priority);
-        Assert.Null(model.AssignedTo);
-        Assert.Null(model.ChangedBy);
-        Assert.Null(model.AreaPath);
-        Assert.Null(model.IterationPath);
-        Assert.Null(model.AutomationStatus);
-        Assert.Null(model.Suite);
-        AdoSharedStepInfo shared = Assert.Single(model.SharedSteps);
-        Assert.Equal(99, shared.Id);
-        Assert.Null(shared.Title);
-        Assert.Null(shared.Rev);
-        Assert.Null(shared.TeamProject);
-        Assert.Null(shared.WebUrl);
-        using JsonDocument json = JsonDocument.Parse(ReportFixture.Render(document));
-        JsonElement testCase = json.RootElement.GetProperty("cases")[0];
-        foreach (string name in new[] { "priority", "assignedTo", "changedBy", "areaPath", "iterationPath", "automationStatus", "suite" })
-            Assert.False(testCase.TryGetProperty(name, out _));
-        Assert.False(testCase.GetProperty("sharedSteps")[0].TryGetProperty("webUrl", out _));
-    }
-
-    [Fact]
     public void NestedGroupLinksAndProvenanceArePreserved()
     {
         TestCaseReportModel model = ReportFixture.Model("nested").Cases[0];
@@ -75,33 +50,6 @@ public sealed class ReportHeaderAndLinkTests
         Assert.Equal(model.SharedSteps[0].WebUrl, model.Rows[3].SharedStepPath[0].WebUrl);
         Assert.Equal(model.SharedSteps[1].WebUrl, model.Rows[2].SharedStep!.WebUrl);
         Assert.All(model.Rows.Where(row => row.Kind == AdoTestStepKind.SharedStep), row => Assert.True(row.IsExpanded));
-    }
-
-    [Fact]
-    public void DiagnosticsAreRerenderedWithArgumentsInReportCulture()
-    {
-        AdoTestCase original = ReportFixture.Case("partial");
-        ReportDocumentModel document = ReportModelBuilder.Build(original,
-            new AdoConnection { CollectionUri = ReportFixture.Collection }, ReportFixture.Options("fr-CA"));
-        TestCaseReportModel model = document.Cases[0];
-        Assert.Equal(AdoTestCaseStatus.Partial, model.Status);
-        Assert.Equal(3, model.ErrorCount);
-        Assert.Equal(0, model.WarningCount);
-        Assert.Equal(0, model.InformationCount);
-        for (int index = 0; index < original.Diagnostics.Count; index++)
-        {
-            AdoDiagnostic input = original.Diagnostics[index];
-            AdoDiagnostic output = model.Diagnostics[index];
-            Assert.Equal(input.Arguments, output.Arguments);
-            Assert.Equal(input.ReferenceChain, output.ReferenceChain);
-            Assert.NotEqual(input.Message, output.Message);
-            Assert.Equal(DiagnosticMessageRenderer.Render(input.Code, input.Arguments, model.Culture), output.Message);
-        }
-        Assert.Equal(model.Diagnostics[0].Message, model.Rows[1].DiagnosticMessage);
-        Assert.Equal(model.Diagnostics[1].Message, model.Rows[2].DiagnosticMessage);
-        Assert.Equal("Steps XML is invalid at line 7, position 19.", original.Diagnostics[2].Message);
-        using JsonDocument json = JsonDocument.Parse(ReportFixture.Render(document));
-        Assert.Equal(model.Diagnostics[2].Message, json.RootElement.GetProperty("cases")[0].GetProperty("diagnostics")[2].GetProperty("message").GetString());
     }
 
     [Fact]

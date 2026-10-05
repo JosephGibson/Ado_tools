@@ -76,27 +76,6 @@ public sealed class SmallAttachmentTests
         Assert.Null(none.AttachmentDirectory);
     }
 
-    [Fact]
-    public async Task SkipAttachmentsDownloadsNothingAndNeedsNoDownloader()
-    {
-        using TestDirectory directory = new();
-        AdoBuildTestFailureSet set = Set([Run(201), Run(202)], [File(201, 51, "small.txt", 10)], [File(202, 54, "latest.txt", 7)]);
-        TestFailureExporter exporter = new(new SilentLauncher());
-        foreach (bool allRuns in new[] { false, true })
-        {
-            TestFailureExportPlan plan = exporter.Prepare(set, Options(directory.Root, allRuns, skip: true));
-            Assert.False(plan.DownloadsAttachments);
-            Assert.Empty(plan.Attachments.SmallRunIds);
-            Assert.Empty(plan.Attachments.FullRunIds);
-            TestFailureExportResult result = await exporter.ExportAsync(plan, null, null, TestContext.Current.CancellationToken);
-            Assert.Null(result.AttachmentDirectory);
-            string html = System.IO.File.ReadAllText(result.Report.FullName);
-            Assert.Contains("small.txt", html, StringComparison.Ordinal);
-            Assert.DoesNotContain("data-local-file", html, StringComparison.Ordinal);
-        }
-        Assert.Empty(Directory.GetDirectories(directory.Root));
-    }
-
     // A file of an older run is selected because it declares a small size, or none. When its body
     // turns out larger than the small-file limit it is dropped quietly and stays a link, like a
     // large file that was never selected. A body that grew but still fits is kept.

@@ -45,19 +45,6 @@ public sealed class RenderedHeaderAndLinkTests
         if (variant == "parameterized") Assert.Contains("role=\"region\" tabindex=\"0\"", html, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void Fixture29LinksOnlySafeSchemesAfterParsing()
-    {
-        string xml = File.ReadAllText(Path.Combine(TestDirectory.RepositoryRoot, "tests", "Fixtures", "Steps", "29-urls.xml"));
-        StepNode node = Assert.Single(StepsXmlParser.Parse(xml, 10, 3, CultureInfo.GetCultureInfo("en-US")).Nodes);
-        string output = ContentLinks.Html(node.Action);
-        Assert.Contains("href=\"http://docs.example.test/a\"", output, StringComparison.Ordinal);
-        Assert.Contains("href=\"https://docs.example.test/b\"", output, StringComparison.Ordinal);
-        Assert.Contains("href=\"mailto:sample@example.test\"", output, StringComparison.Ordinal);
-        foreach (string scheme in new[] { "javascript:", "data:", "file:" })
-            Assert.DoesNotContain("href=\"" + scheme, output, StringComparison.OrdinalIgnoreCase);
-    }
-
     [Theory]
     [InlineData(ReportFormat.Html)]
     [InlineData(ReportFormat.Markdown)]

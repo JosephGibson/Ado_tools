@@ -83,20 +83,44 @@ public sealed class CancellationTests
         Assert.Single(handler.Requests);
     }
 
-    // Twelve reads of 100 ms take longer than one inactivity window of a second, and none comes near it,
-    // with room for a busy machine.
+    // Twelve reads that each take nine tenths of the inactivity window on a manual clock: together they
+    // last more than ten windows, and none of them reaches one. No real time passes.
     [Fact]
     [Trait("Acceptance", "S0-3")]
     public async Task DownloadInactivityBudgetResetsAfterEachRead()
     {
+        ManualTimeProvider time = new();
         using FakeHttpMessageHandler handler = new();
-        using DripStream stream = new(12, TimeSpan.FromMilliseconds(100));
+        using ClockedStream stream = new(12, time, TimeSpan.FromMilliseconds(900));
         handler.Enqueue(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StreamContent(stream) });
         using HttpClient client = new(handler);
         AdoHttpPipeline pipeline = new(client, new Uri("https://ado.example.test/Collection"), TimeSpan.FromSeconds(5),
-            downloadTimeout: TimeSpan.FromSeconds(5), inactivityTimeout: TimeSpan.FromSeconds(1));
+            downloadTimeout: TimeSpan.FromSeconds(5), inactivityTimeout: TimeSpan.FromSeconds(1), timeProvider: time);
         Assert.Equal(new string('x', 12), Encoding.UTF8.GetString(await Download(pipeline)));
         Assert.True(stream.Disposed);
+    }
+
+    // Each read moves the manual clock on by its duration, then honours a cancellation that the
+    // move caused, as a stream still waiting for its bytes would.
+    private sealed class ClockedStream(int chunks, ManualTimeProvider time, TimeSpan duration) : MemoryStream
+    {
+        private int remaining = chunks;
+        internal bool Disposed { get; private set; }
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (remaining-- <= 0) return ValueTask.FromResult(0);
+            time.Advance(duration);
+            cancellationToken.ThrowIfCancellationRequested();
+            buffer.Span[0] = (byte)'x';
+            return ValueTask.FromResult(1);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            Disposed = true;
+            base.Dispose(disposing);
+        }
     }
 
     // The whole body, read through the stream that the pipeline hands to a download.

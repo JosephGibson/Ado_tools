@@ -20,13 +20,16 @@ internal sealed class AdoHttpPipeline
     private readonly RetryPolicy retry;
     private readonly RequestCounter? counter;
     private readonly RequestGate? gate;
+    private readonly TimeProvider? time;
 
     // Without a gate every operation starts at once. With one, an operation waits for a free slot,
-    // and the log may be called from several threads.
+    // and the log may be called from several threads. The time provider runs the inactivity timer
+    // of downloads; a test passes a manual clock.
     internal AdoHttpPipeline(HttpClient client, Uri collection, TimeSpan requestTimeout,
         IAdoLog? log = null, ISystemClock? clock = null, TimeSpan? downloadTimeout = null, TimeSpan? inactivityTimeout = null,
-        RequestCounter? counter = null, RequestGate? gate = null)
+        RequestCounter? counter = null, RequestGate? gate = null, TimeProvider? timeProvider = null)
     {
+        time = timeProvider;
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(collection);
         if (requestTimeout <= TimeSpan.Zero
@@ -48,22 +51,24 @@ internal sealed class AdoHttpPipeline
     // isComplete, for TopSkip only, receives the number of items read so far and the size of the
     // page just read. When it returns true the listing ends there, without the request for the
     // empty page that otherwise ends it (§6.4): the caller knows from other data that nothing
-    // follows.
+    // follows. maximumPages is the ceiling of a listing that never ends; a test lowers it.
     internal async Task<IReadOnlyList<TItem>> GetPagesAsync<TPage, TItem>(
         EndpointDefinition endpoint, JsonTypeInfo<TPage> jsonType, Func<TPage, IReadOnlyList<TItem>?> selectItems,
         Func<TItem, string> identity, CultureInfo culture, CancellationToken cancellationToken,
         IReadOnlyDictionary<string, string>? routes = null, int? top = null, int pageSize = 100,
-        IReadOnlyDictionary<string, string>? parameters = null, Func<int, int, bool>? isComplete = null) where TPage : class
+        IReadOnlyDictionary<string, string>? parameters = null, Func<int, int, bool>? isComplete = null,
+        int maximumPages = MaximumPages) where TPage : class
     {
         if (top < 0) throw new ArgumentOutOfRangeException(nameof(top));
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumPages);
         if (endpoint.Paging == PagingStrategy.IdChunks) throw new NotSupportedException(nameof(PagingStrategy.IdChunks));
         List<TItem> result = [];
         HashSet<string> seen = new(StringComparer.Ordinal);
         string? continuation = null;
         int offset = 0;
         if (top == 0) return result;
-        for (int page = 1; page <= MaximumPages; page++)
+        for (int page = 1; page <= maximumPages; page++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             Dictionary<string, string> query = parameters is null ? [] : new(parameters);
@@ -133,7 +138,7 @@ internal sealed class AdoHttpPipeline
         ExecuteAsync(endpoint, routes, query, null, culture, async (response, token) =>
         {
             using Stream source = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
-            using InactivityReadStream timed = new(source, inactivityTimeout, endpoint.Name, culture);
+            using InactivityReadStream timed = new(source, inactivityTimeout, endpoint.Name, culture, time);
             // ExecuteAsync invokes this consumer anew for every attempt. WriteAsync owns and
             // removes each attempt's temporary before a body failure reaches the retry policy.
             return await writer.WriteAsync(destination, timed, validate, culture, cancellationToken: token).ConfigureAwait(false);
@@ -146,7 +151,7 @@ internal sealed class AdoHttpPipeline
         ExecuteAsync(endpoint, routes, query, null, culture, async (response, token) =>
         {
             using Stream source = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
-            using InactivityReadStream timed = new(source, inactivityTimeout, endpoint.Name, culture);
+            using InactivityReadStream timed = new(source, inactivityTimeout, endpoint.Name, culture, time);
             return await consume(response, timed, token).ConfigureAwait(false);
         }, cancellationToken);
 
@@ -180,7 +185,15 @@ internal sealed class AdoHttpPipeline
                         attempt.ToString(CultureInfo.InvariantCulture)));
                     if (response.IsSuccessStatusCode)
                     {
-                        T result = await consume(response, token).ConfigureAwait(false);
+                        T result;
+                        // A body labelled gzip or deflate that does not decompress is unreadable, now
+                        // and on any retry: a format error (§6.7), not a transport failure.
+                        try { result = await consume(response, token).ConfigureAwait(false); }
+                        catch (InvalidDataException error)
+                        {
+                            callerToken.ThrowIfCancellationRequested();
+                            throw new AdoResponseFormatException(Messages.Get(AdoMessage.ResponseFormat, culture), error) { Operation = endpoint.Name };
+                        }
                         callerToken.ThrowIfCancellationRequested();
                         return result;
                     }

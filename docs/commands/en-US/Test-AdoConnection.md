@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-01-2026
+ms.date: 10-05-2026
 PlatyPS schema version: 2024-05-01
 title: Test-AdoConnection
 ---
@@ -29,7 +29,7 @@ No aliases.
 
 ## DESCRIPTION
 
-Calls the projects API with version 6.0 and returns success, elapsed time, the requested API version, and guidance. Connection overrides the active runspace connection and accepts pipeline input. Authentication, authorization, and configuration failures terminate. Other failures emit an error and a failed result; ErrorAction Stop terminates instead. A failed collection request may suggest a project URL without claiming that it is the cause. When the request is not found and the URL ends with the name of a project in the parent collection, the result names the exact Connect-Ado command to use instead; that check sends one more projects request to the parent URL.
+Calls the projects API with version 6.0 and returns success, elapsed time, the requested API version, and guidance. Connection overrides the active runspace connection and accepts pipeline input. Authentication, authorization, and configuration failures terminate. Other failures emit an error and a failed result; ErrorAction Stop terminates instead. A failed collection request may suggest a project URL without claiming that it is the cause. When the request is not found and the URL ends with the name of a project in the parent collection, the result names the exact Connect-Ado command to use instead; that check lists the projects of the parent URL, one request per 100 projects and a last one that finds no more.
 
 ## EXAMPLES
 

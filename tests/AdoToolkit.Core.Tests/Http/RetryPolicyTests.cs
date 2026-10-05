@@ -129,6 +129,35 @@ public sealed class RetryPolicyTests
         Assert.Equal(attempts, handler.Requests.Count);
     }
 
+    // An error found while the body is read is an HttpIOException that carries its kind, like the
+    // HttpRequestException of a failed send: only a lost connection is worth another attempt.
+    [Theory]
+    [InlineData(HttpRequestError.ResponseEnded, 2)]
+    [InlineData(HttpRequestError.ConnectionError, 2)]
+    [InlineData(HttpRequestError.InvalidResponse, 1)]
+    public async Task BodyReadErrorsAreRetriedOnlyWhenTheConnectionWasLost(HttpRequestError kind, int attempts)
+    {
+        using FakeHttpMessageHandler handler = new();
+        handler.Enqueue(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new FailingStream(new HttpIOException(kind, "synthetic failure"))) });
+        handler.Enqueue(FakeHttpMessageHandler.Fixture("projects-empty.json"));
+        using HttpClient client = new(handler);
+        AdoHttpPipeline pipeline = new(client, new Uri("https://ado.example.test/Collection"), TimeSpan.FromSeconds(5), clock: new FakeClock());
+        if (attempts == 2) Assert.Empty(await Fetch(pipeline));
+        else
+        {
+            AdoRequestException error = await Assert.ThrowsAsync<AdoRequestException>(() => Fetch(pipeline));
+            Assert.False(error.IsRetryable);
+        }
+        Assert.Equal(attempts, handler.Requests.Count);
+    }
+
+    private sealed class FailingStream(Exception error) : MemoryStream
+    {
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => ValueTask.FromException<int>(error);
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) => Task.FromException<int>(error);
+        public override int Read(byte[] buffer, int offset, int count) => throw error;
+    }
+
     internal static Task<IReadOnlyList<ProjectDto>> Fetch(AdoHttpPipeline pipeline, EndpointDefinition? endpoint = null, CancellationToken? token = null) =>
         pipeline.GetPagesAsync(endpoint ?? EndpointRegistry.ProjectsList, AdoJsonContext.Default.ProjectPageDto,
             static page => page.Value, static item => item.Id ?? "", CultureInfo.InvariantCulture, token ?? TestContext.Current.CancellationToken);

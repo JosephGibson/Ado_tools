@@ -167,16 +167,30 @@ function Invoke-RepositoryRipgrep {
         [Parameter(Mandatory = $true)][string[]] $Arguments
     )
 
-    Push-Location -LiteralPath $Root
+    # ripgrep prints paths in UTF-8. Its output is read as UTF-8, not with the console code page,
+    # which would garble a non-ASCII name; standard error is drained and discarded.
+    $info = [System.Diagnostics.ProcessStartInfo]::new($Executable)
+    foreach ($argument in $Arguments) { $info.ArgumentList.Add($argument) }
+    $info.WorkingDirectory = $Root
+    $info.UseShellExecute = $false
+    $info.CreateNoWindow = $true
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+    $info.StandardOutputEncoding = [System.Text.UTF8Encoding]::new($false)
+    $process = [System.Diagnostics.Process]::Start($info)
     try {
-        $lines = @(& $Executable @Arguments 2>$null)
+        $discarded = $process.StandardError.ReadToEndAsync()
+        $lines = [System.Collections.Generic.List[string]]::new()
+        while ($null -ne ($line = $process.StandardOutput.ReadLine())) { $lines.Add($line) }
+        $process.WaitForExit()
+        [void] $discarded.GetAwaiter().GetResult()
         return [pscustomobject]@{
-            ExitCode = $LASTEXITCODE
-            Paths = @($lines | Where-Object { -not [string]::IsNullOrWhiteSpace([string] $_) } |
-                    ForEach-Object { Join-Path $Root (([string] $_) -replace '^\.[\\/]', '') })
+            ExitCode = $process.ExitCode
+            Paths = @($lines | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                    ForEach-Object { Join-Path $Root ($_ -replace '^\.[\\/]', '') })
         }
     }
-    finally { Pop-Location }
+    finally { $process.Dispose() }
 }
 
 function Get-RepositoryFiles {

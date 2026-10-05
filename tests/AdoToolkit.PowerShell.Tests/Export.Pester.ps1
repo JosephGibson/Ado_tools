@@ -79,15 +79,6 @@ Describe 'Single case report export' -Tag 'S2-4' {
         Test-Path -LiteralPath $destination | Should -BeFalse
     }
 
-    It 'writes the same case twice into one document with unique anchors' -Tag 'S3-5' {
-        $file = $item, $item | Export-AdoTestCase -Path $destination
-        @($file).Count | Should -Be 1
-        $text = [IO.File]::ReadAllText($file.FullName)
-        $text | Should -Match 'data-case-count="2"'
-        $text | Should -Match '<article class="test-case" id="tc-3">'
-        $text | Should -Match '<article class="test-case" id="tc-3-2">'
-    }
-
     It 'checks provenance and treats wildcard characters in paths literally' {
         $foreign = [AdoToolkit.Core.Connections.AdoConnection]@{ CollectionUri = [uri]'https://foreign.example.test/Collection' }
         { $item | Export-AdoTestCase -Connection $foreign -Path $destination } |

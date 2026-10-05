@@ -11,7 +11,10 @@ definition and a branch, see [Pipeline failure triage](pipeline-triage.md).
 - The module is installed and a profile is saved. See
   [Getting started](getting-started.md).
 - You know which project the build belongs to. If it is not the default project of
-  your profile, add `-Project '<name>'` to every command below.
+  your profile, add `-Project '<name>'` to the commands below that read from the
+  server, such as `Get-AdoBuildTestFailure`, or connect with
+  `Connect-Ado -Project '<name>'` once. `Export-AdoBuildTestFailure` and
+  `Get-AdoConnection` take no `-Project`: the export takes the project from the set.
 - AdoToolkit only reads from Azure DevOps. Nothing in this guide changes a build.
 
 ## The short version
@@ -155,13 +158,13 @@ report read whole: a bug marked **Not read** says nothing more, and a build with
 marks no bug at all. Whether Server 2020 sends the creation date and the assignee at all awaits
 confirmation at work (V-37); without them the line simply shows neither.
 
-The Trend column says **✦ New** when the build before this one ran the test and it did not
-fail, and **Since** a date when the test also failed or was flaky in the build before: the
+The Trend column says **✦ New** when the build before this one ran the test and it passed,
+and **Since** a date when the test also failed or was flaky in the build before: the
 date is the day the first build of that run of failures finished, and the chip opens that
 build's test results. Rest the pointer on it to read how many builds in a row, for example
 "3 in a row since 20260914.2". A build that is not in the history is named by its number,
 such as **Since build 20260901.4**. Nothing is said when the build before this one could not
-be read or did not run the test.
+be read, did not run the test or ended it with another outcome, such as not executed.
 
 A card says the same after its run history: one chip per build, oldest first, with the day the
 build finished. The chips are told apart by glyph and shape as well as colour: filled for
@@ -303,7 +306,10 @@ connection, and `-SkipAttachments`, `-AllRunAttachments`, `-AttachmentWindowDays
 `Build-<id>-TestFailures.csv`, or a file in an existing directory whose name ends in `.csv`;
 any other path, a directory that does not exist included, fails before anything is written:
 with an `InvalidArgument` error when it does not end in `.csv`, and otherwise with an
-`AdoFileOutput` error. `-NoClobber`, `-Open` and `-WhatIf` work as they do for the report.
+`AdoFileOutput` error. A `.csv` file takes one build, as an `.html` file does: each set
+after the first gets the `TestFailureReportSingleFile` error and is not written, so send
+several builds to a directory. `-NoClobber`, `-Open` and `-WhatIf` work as they do for the
+report.
 
 The columns, in this order:
 
@@ -323,7 +329,7 @@ The columns, in this order:
 | `Open bugs` | How many open bugs the test has |
 | `Bug IDs` | Every bug of the test's bug list, in ID order, separated by a semicolon and a space |
 | `Bug states` | Their states, in the same order; a bug that could not be read has an empty state |
-| `New` | `True` when the build before this one ran the test and it did not fail, `False` when the test also failed or was flaky in the build before, empty when there is no comparison |
+| `New` | `True` when the build before this one ran the test and it passed, `False` when the test also failed or was flaky in the build before, empty otherwise: when that build could not be read, did not run the test or ended it with another outcome |
 | `Since` | When `New` is `False`, the day, as `yyyy-MM-dd`, that the first build of that run of failures finished, in your computer's time zone; that build's number when the day is not known |
 
 `New` and `Since` are the trend of the report, and `Open bugs` the count the report uses to
@@ -355,7 +361,7 @@ and the file origin is **65001: Unicode (UTF-8)**, then choose **Load**.
 | `-AllRunAttachments` | Also downloads the larger JSON and text files from every run inside the window, not only from the most recent run. `-SkipAttachments` takes precedence if both switches are supplied |
 | `-AttachmentWindowDays` | Days, 1–365, in which a run must have started for its attachments to appear. Default 7 |
 | `-IncludeFlaky` | Includes flaky tests; by default they are left out and only counted in the header |
-| `-Path` | A directory, or an `.html` file path for a single build. With `-Format Csv`, an existing directory, or a `.csv` file path in one |
+| `-Path` | A directory, or an `.html` file path for a single build. With `-Format Csv`, an existing directory, or a `.csv` file path in one for a single build |
 | `-Format Csv` | Writes one flat CSV file per build instead of the report, and downloads nothing. See [A CSV file for a spreadsheet](#a-csv-file-for-a-spreadsheet) |
 | `-Culture fr-CA` | Report language. Defaults to the configured, then the session, culture |
 | `-NoClobber` | Refuses to replace an existing report, before any download |
@@ -385,8 +391,9 @@ failed". `Save-AdoBuildLog` needs an existing directory, unlike the export.
 | --- | --- |
 | An `AdoNotFound` error for the build | The ID belongs to another project. Add `-Project`, or check the project segment of the build URL |
 | `AdoConnectionMismatch` | The set came from a different collection than the connection used for the export |
-| A path error naming the report | `-Path` has an extension other than `.html`, or names an existing file that is not an `.html` file |
-| An `InvalidArgument` path error with `-Format Csv` | `-Path` names neither an existing directory nor a file ending in `.csv`. A CSV export does not create a directory |
+| A `TestFailureReportPathInvalid` error (`InvalidArgument`) | `-Path` has an extension other than `.html`, or names an existing file that is not an `.html` file |
+| A `TestFailureReportSingleFile` error for each build after the first | `-Path` names one `.html` or `.csv` file and several sets arrived. Name a directory instead |
+| A `TestFailureCsvPathInvalid` error (`InvalidArgument`) with `-Format Csv` | `-Path` names neither an existing directory nor a file ending in `.csv`. A CSV export does not create a directory |
 | Excel shows each row of the CSV file in one column | The Windows list separator is a semicolon, as it is in French. Import the file with **Data** > **From Text/CSV** instead of opening it |
 | `Status` is `Partial` | Read `Diagnostics`. A common cause is more failing tests than `testResults.maximumReportedFailures` |
 | Gathering the failures takes long | Add `-Verbose` to `Get-AdoBuildTestFailure`: each stage, such as the result listings, the failure details or the attachment lists, writes its requests and milliseconds, and a last line gives the requests and the time of the whole command. The attachment lists cost one request per failed result and one more per sub-result, such as a rerun attempt; add `-SkipAttachments` if you do not need the attachments |
@@ -408,4 +415,6 @@ Full help: [Get-AdoBuildTestFailure](../commands/en-US/Get-AdoBuildTestFailure.m
 [Get-AdoBuildFailure](../commands/en-US/Get-AdoBuildFailure.md),
 [Save-AdoBuildLog](../commands/en-US/Save-AdoBuildLog.md),
 [Get-AdoBuildTimeline](../commands/en-US/Get-AdoBuildTimeline.md),
-[Get-AdoTestRun](../commands/en-US/Get-AdoTestRun.md).
+[Get-AdoTestRun](../commands/en-US/Get-AdoTestRun.md),
+[Connect-Ado](../commands/en-US/Connect-Ado.md),
+[Get-AdoConnection](../commands/en-US/Get-AdoConnection.md).

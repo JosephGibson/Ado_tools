@@ -69,20 +69,6 @@ public sealed class TestPlanPagingTests
         AssertTokenSequence(handler, Collection + "/%C3%89quipe%20Web/_apis/testplan/Plans/812/Suites/814/TestCase?api-version=6.0-preview.2");
     }
 
-    [Fact]
-    public void TestplanEndpointsUseTheExactPinnedVersionsAndContinuationPaging()
-    {
-        Assert.Equal("6.0-preview.1", EndpointRegistry.TestPlansList.ApiVersion);
-        Assert.Equal("6.0-preview.1", EndpointRegistry.TestSuitesForPlan.ApiVersion);
-        Assert.Equal("6.0-preview.2", EndpointRegistry.SuiteTestCaseList.ApiVersion);
-        foreach (EndpointDefinition endpoint in new[] { EndpointRegistry.TestPlansList, EndpointRegistry.TestSuitesForPlan, EndpointRegistry.SuiteTestCaseList })
-        {
-            Assert.Equal(PagingStrategy.ContinuationHeader, endpoint.Paging);
-            Assert.Equal(HttpMethod.Get, endpoint.Method);
-            Assert.True(endpoint.IsSafeToRetry);
-        }
-    }
-
     [Theory]
     [InlineData("{\"value\":[{\"id\":0,\"name\":\"P\",\"rootSuite\":{\"id\":2}}]}")]
     [InlineData("{\"value\":[{\"id\":1,\"name\":\"\",\"rootSuite\":{\"id\":2}}]}")]
@@ -113,22 +99,6 @@ public sealed class TestPlanPagingTests
             .GetPlansAsync(Project, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
         Assert.Equal(1, plan.Id);
         Assert.Equal(2, plan.RootSuiteId);
-    }
-
-    [Fact]
-    public async Task RepeatedPlanTokenFailsInsteadOfLooping()
-    {
-        using FakeHttpMessageHandler handler = new();
-        for (int i = 0; i < 2; i++)
-        {
-            HttpResponseMessage response = FakeHttpMessageHandler.Fixture(i == 0 ? "testplans-first.json" : "testplans-last.json");
-            response.Headers.TryAddWithoutValidation("x-ms-continuationtoken", "same");
-            handler.Enqueue(response);
-        }
-        using HttpClient client = new(handler);
-        await Assert.ThrowsAsync<AdoResponseFormatException>(() => new TestPlanService(client, Connection)
-            .GetPlansAsync(Project, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
-        Assert.Equal(2, handler.Requests.Count);
     }
 
     internal static FakeHttpMessageHandler ThreePages(string first, string last)

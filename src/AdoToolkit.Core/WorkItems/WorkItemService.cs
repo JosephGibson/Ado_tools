@@ -55,6 +55,8 @@ public sealed class WorkItemService
         IReadOnlyDictionary<string, object?> fields = FieldValueMapper.MapFields(item.Fields);
         string Required(string name) => fields.TryGetValue(name, out object? value) && value is string text ? text : throw new JsonException();
         string project = Required("System.TeamProject");
+        // A URL path collapses "." and "..": the link would leave the collection, as for a Test Case.
+        if (!RequestBuilder.IsPathSegment(project)) throw new JsonException();
         if (!fields.TryGetValue("System.ChangedDate", out object? date) || date is not DateTimeOffset changed) throw new JsonException();
         List<AdoWorkItemRelation>? relations = includeRelations ? [] : null;
         if (includeRelations && item.Relations is not null)

@@ -160,12 +160,13 @@ Describe 'Synthetic server' {
     # A paced response ends with its last byte: the client already has it and may send its next request.
     It 'stops counting a paced response once its last byte is sent' {
         # About 3,000 bytes with the head, in chunks of 1,024: the last chunk is nearly full, so it takes
-        # most of a tenth of a second to send, which is how long the server could count it too late.
+        # most of a twentieth of a second to send, which is how long the server could count it too late.
+        # The next request follows at once, so two requests show it.
         $text = '"' + ('x' * 2898) + '"'
-        $server = Start-FakeAdoServer -Routes @(@{ Line = '/paced\?'; Response = @{ Body = $text } }) -BytesPerSecond 10240 -Workers 2
+        $server = Start-FakeAdoServer -Routes @(@{ Line = '/paced\?'; Response = @{ Body = $text } }) -BytesPerSecond 20480 -Workers 2
         $client = [System.Net.Http.HttpClient]::new()
         try {
-            foreach ($index in 1..3) { Get-Text -Client $client -Uri ($server.Uri + "/paced?i=$index") | Should -Be $text }
+            foreach ($index in 1..2) { Get-Text -Client $client -Uri ($server.Uri + "/paced?i=$index") | Should -Be $text }
             Get-FakeAdoServerPeak -Server $server | Should -Be 1
         }
         finally { $client.Dispose(); Stop-FakeAdoServer -Server $server }

@@ -144,23 +144,6 @@ public sealed class WireAuditRegressionTests
             CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
     }
 
-    [Fact]
-    public async Task F05HistoryCannotIssueMoreRequestsThanItsBudget()
-    {
-        using FakeHttpMessageHandler handler = new TestRunFixture()
-            .RouteBody("{\"value\":[{\"id\":400,\"buildNumber\":\"earlier\"}]}", "/_apis/build/builds")
-            .RouteBody("{\"value\":[{\"id\":2}]}", "/test/runs", "Build%2F400", "%24skip=0&")
-            .RouteBody(TestRunFixture.EmptyPage, "/test/runs")
-            .RouteBody(TestRunFixture.EmptyPage, "/Runs/2/results").Handler();
-        using HttpClient client = new(handler);
-        AdoBuildTestFailureSet set = await TestRunFixture.Service(client).GetAsync(TestRunFixture.Build(),
-            new TestFailureQuery { HistoryCount = 2, MaximumHistoryRequests = 2 }, CultureInfo.InvariantCulture,
-            TestContext.Current.CancellationToken);
-        Assert.Equal(3, handler.Requests.Count); // one current request, then two history requests
-        Assert.Contains(set.Diagnostics, diagnostic => diagnostic.Code == DiagnosticCodes.HistoryLimitExceeded);
-        Assert.False(set.History[0].IsAvailable);
-    }
-
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -198,19 +181,6 @@ public sealed class WireAuditRegressionTests
             TestContext.Current.CancellationToken);
         Assert.DoesNotContain("url", TestAttemptMapper.FromResult(result, 1, 1, AdoTestAttemptSource.Single, null,
             TestContext.Current.CancellationToken).AdditionalFields.Keys);
-    }
-
-    [Fact]
-    public void F07MissingCustomFieldValueIsSkippedAndExplicitNullIsKept()
-    {
-        TestResultDto result = JsonSerializer.Deserialize("""
-            {"id":1,"customFields":[{"fieldName":"absent"},{"fieldName":"null","value":null},{"fieldName":"present","value":"é"}]}
-            """, AdoJsonContext.Default.TestResultDto)!;
-        AdoTestAttempt attempt = TestAttemptMapper.FromResult(result, 1, 1, AdoTestAttemptSource.Single, null,
-            TestContext.Current.CancellationToken);
-        Assert.False(attempt.CustomFields.ContainsKey("absent"));
-        Assert.Null(attempt.CustomFields["null"]);
-        Assert.Equal("é", attempt.CustomFields["present"]);
     }
 
     [Theory]

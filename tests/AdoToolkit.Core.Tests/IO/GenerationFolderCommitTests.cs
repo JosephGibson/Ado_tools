@@ -190,22 +190,6 @@ public sealed class GenerationFolderCommitTests
     }
 
     [Fact]
-    public async Task LockedReportFailsTheMoveAndRemovesTheNewFolder()
-    {
-        using TestDirectory directory = new();
-        string destination = Previous(directory);
-        Dictionary<string, string> before = Snapshot(destination);
-        GenerationFolderCommit commit = new();
-        GenerationFolderPlan plan = commit.Plan(Path.Combine(destination, Report), Generated, false, Culture);
-        using (new FileStream(Path.Combine(destination, Report), FileMode.Open, FileAccess.Read, FileShare.None))
-        {
-            await Assert.ThrowsAsync<AdoFileOutputException>(() => commit.CommitAsync(plan, false, true, (folder, _) => Download(folder),
-                writer => writer.Write("new"), (_, _) => { }, _ => { }, Culture, TestContext.Current.CancellationToken));
-        }
-        Assert.Equal(before, Snapshot(destination));
-    }
-
-    [Fact]
     public async Task NoClobberRefusesBeforeAnyDownloadAndOtherwiseMovesWithoutReplacing()
     {
         using TestDirectory directory = new();

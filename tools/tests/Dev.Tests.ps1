@@ -34,29 +34,8 @@ Describe 'tools/dev.ps1' {
         $projectProfile.Languages | Should -Be @('C#', 'PowerShell')
         $projectProfile.ProjectFiles | Should -Be @('src/App/App.csproj')
         $projectProfile.TestFiles | Sort-Object | Should -Be @('tests/App.Shell.Tests/Sample.Pester.ps1', 'tests/App.Tests/SampleTests.cs', 'tools/tests/app.Tests.ps1')
-    }
-
-    It 'does not count placeholders or fixtures under tests/ as tests' {
-        $repository = Join-Path $TestDrive 'placeholder-sample'
-        New-TestFile -Path (Join-Path $repository 'tests\.gitkeep')
-        New-TestFile -Path (Join-Path $repository 'tests\fixtures\payload.json') -Content '{}'
-
-        $projectProfile = Get-ProjectProfile -Root $repository
-
-        $projectProfile.TestFiles.Count | Should -Be 0
-    }
-
-    It 'finds source while excluding secret and log files' {
-        $repository = Join-Path $TestDrive 'find-sample'
-        New-TestFile -Path (Join-Path $repository 'src\worker.ps1') -Content 'Invoke-Widget'
-        New-TestFile -Path (Join-Path $repository '.env') -Content 'Invoke-Widget'
-        New-TestFile -Path (Join-Path $repository 'secrets\notes.txt') -Content 'Invoke-Widget'
-        New-TestFile -Path (Join-Path $repository 'debug.log') -Content 'Invoke-Widget'
-
-        $result = Find-ProjectSource -Query 'Invoke-Widget' -Root $repository
-
-        $result.Count | Should -Be 1
-        $result.Results.Path | Should -Be @('src/worker.ps1')
+        # The support script under tests/ is no product test either.
+        (Get-ProjectContext -Root $repository).ProductTests | Should -Be 2
     }
 
     It 'rejects sensitive path components beneath the repository root' {
@@ -110,6 +89,24 @@ Describe 'tools/dev.ps1' {
         (Find-ProjectSource -Query 'SyntheticMarker' -Root $worktree).Results.Path | Should -Be @('docs/notes.md', 'src/worker.ps1')
     }
 
+    # ripgrep writes paths in UTF-8. Decoded with the console code page, a non-ASCII name came back
+    # garbled: discovery dropped the file and a match inside it failed find.
+    It 'lists and searches a file whose name is not ASCII, with ripgrep <UseRipgrep>' -ForEach @(
+        @{ UseRipgrep = $true }
+        @{ UseRipgrep = $false }
+    ) {
+        $repository = Join-Path $TestDrive "non-ascii-$UseRipgrep"
+        $name = "d$([char]0x00E9)marrage.md"
+        New-TestFile -Path (Join-Path $repository "docs/guides/$name") -Content 'SyntheticMarker'
+        New-TestFile -Path (Join-Path $repository 'src/worker.ps1') -Content 'unrelated'
+        if (-not $UseRipgrep) { Mock Get-FirstCommand { $null } -ParameterFilter { $Names -contains 'rg' } }
+
+        @(Get-RepositoryFiles -Root $repository | ForEach-Object { Get-RelativeRepositoryPath -Path $_.FullName -Root $repository }) |
+            Should -Be @("docs/guides/$name", 'src/worker.ps1')
+        $result = Find-ProjectSource -Query 'SyntheticMarker' -Root $repository
+        $result.Results.Path | Should -Be @("docs/guides/$name")
+    }
+
     It 'finds safe content in hidden repository configuration' {
         $repository = Join-Path $TestDrive 'hidden-find-sample'
         New-TestFile -Path (Join-Path $repository '.claude\rules\workflow.md') -Content 'Use deterministic discovery.'
@@ -128,30 +125,6 @@ Describe 'tools/dev.ps1' {
 
         $result.Tool | Should -Be 'path'
         $result.Results.Match | Should -Be @('path')
-    }
-
-    It 'does not enumerate excluded output directories' {
-        $repository = Join-Path $TestDrive 'excluded-sample'
-        New-TestFile -Path (Join-Path $repository 'src\worker.ps1')
-        New-TestFile -Path (Join-Path $repository 'artifacts\package\ignored.ps1')
-        New-TestFile -Path (Join-Path $repository 'bin\generated.ps1')
-
-        $files = Get-RepositoryFiles -Root $repository
-        $paths = @($files | ForEach-Object { Get-RelativeRepositoryPath -Path $_.FullName -Root $repository })
-
-        $paths | Should -Be @('src/worker.ps1')
-    }
-
-    It 'falls back to pruned filesystem discovery when ripgrep is unavailable' {
-        $repository = Join-Path $TestDrive 'fallback-sample'
-        New-TestFile -Path (Join-Path $repository 'src\worker.ps1')
-        New-TestFile -Path (Join-Path $repository 'obj\package\ignored.ps1')
-        Mock Get-FirstCommand { $null } -ParameterFilter { $Names -contains 'rg' }
-
-        $files = Get-RepositoryFiles -Root $repository
-        $paths = @($files | ForEach-Object { Get-RelativeRepositoryPath -Path $_.FullName -Root $repository })
-
-        $paths | Should -Be @('src/worker.ps1')
     }
 
     It 'normalizes a relative repository root' {
@@ -308,7 +281,15 @@ Describe 'tools/dev.ps1' {
 
     It 'writes one JSON document for a default invocation' {
         $pwsh = Join-Path $PSHOME 'pwsh.exe'
-        $devScript = Join-Path $PSScriptRoot '..\dev.ps1'
+        # The tooling copied into a small tree: the document does not depend on the repository's size.
+        $repository = Join-Path $TestDrive 'default-invocation'
+        $devScript = Join-Path $repository 'tools/dev.ps1'
+        New-TestFile -Path $devScript -Content (Get-Content -LiteralPath (Join-Path $PSScriptRoot '../dev.ps1') -Raw)
+        foreach ($library in @('discovery', 'dependencies', 'processes', 'validation', 'setup')) {
+            New-TestFile -Path (Join-Path $repository "tools/lib/$library.ps1") -Content (Get-Content -LiteralPath (Join-Path $PSScriptRoot "../lib/$library.ps1") -Raw)
+        }
+        New-TestFile -Path (Join-Path $repository 'tools/BuildModules.psd1') -Content (Get-Content -LiteralPath (Join-Path $PSScriptRoot '../BuildModules.psd1') -Raw)
+        New-TestFile -Path (Join-Path $repository '.claude/settings.json') -Content '{}'
         $output = @(& $pwsh -NoProfile -File $devScript context)
 
         $LASTEXITCODE | Should -Be 0

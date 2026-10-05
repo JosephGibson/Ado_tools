@@ -36,7 +36,8 @@ internal static class ErrorTranslator
                     catch (Exception error) when (error is JsonException or InvalidOperationException or RegexMatchTimeoutException) { }
             }
         }
-        catch (Exception error) when (error is IOException or HttpRequestException or OperationCanceledException)
+        // InvalidDataException is a body labelled gzip or deflate that does not decompress.
+        catch (Exception error) when (error is IOException or HttpRequestException or OperationCanceledException or InvalidDataException)
         {
             // Once a status is known, an unreadable error body must not replace it or alter retries.
             // The pipeline checks caller cancellation before throwing the translated error.

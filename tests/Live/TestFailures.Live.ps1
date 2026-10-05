@@ -452,9 +452,14 @@ try {
         else {
             $projection = @('System.Id', 'System.Title', 'System.State', 'System.WorkItemType', 'System.TeamProject',
                 'System.CreatedDate', 'System.AssignedTo')
-            $body = '{"ids":[' + ((@($requested | ForEach-Object { $_.ToString([cultureinfo]::InvariantCulture) })) -join ',') +
-                '],"fields":[' + ((@($projection | ForEach-Object { '"' + $_ + '"' })) -join ',') + '],"errorPolicy":"omit"}'
-            $returned = @(((Invoke-AdoTestBatch -Body $body).Content | ConvertFrom-Json).value | Where-Object { $null -ne $_ })
+            # In batches of at most 200 IDs, as the module reads bugs: the server refuses a larger one.
+            $fieldList = ((@($projection | ForEach-Object { '"' + $_ + '"' })) -join ',')
+            $returned = @(for ($offset = 0; $offset -lt $requested.Count; $offset += 200) {
+                    $chunk = @($requested[$offset..([Math]::Min($offset + 200, $requested.Count) - 1)])
+                    $body = '{"ids":[' + ((@($chunk | ForEach-Object { $_.ToString([cultureinfo]::InvariantCulture) })) -join ',') +
+                        '],"fields":[' + $fieldList + '],"errorPolicy":"omit"}'
+                    @(((Invoke-AdoTestBatch -Body $body).Content | ConvertFrom-Json).value | Where-Object { $null -ne $_ })
+                })
             $evidence = Get-AdoLiveBugFieldEvidence -Item $returned -CountedId $moduleIds -AssignedId $(if ($hasAssignedBug) { $assignedBugId } else { 0 })
             $module = @($reportedBugs | Where-Object { $moduleIds -contains [int] $_.Id } | Sort-Object -Property Id -Unique)
             $moduleCreated = @($module | Where-Object { $null -ne $_.CreatedDate }).Count

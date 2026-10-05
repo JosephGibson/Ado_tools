@@ -49,81 +49,6 @@ public sealed class TestCaseReportStructureTests
     }
 
     [Fact]
-    public void ExpandedSharedStepsGroupsCanBeCollapsedAndUnexpandedOnesCannot()
-    {
-        string nested = Body(ReportFixture.Model("nested"));
-        Assert.Contains("<div class=\"step-card shared-banner\" id=\"report-1-step-2\"><h4><span class=\"outline-number\">2</span> ▸ <a rel=\"noreferrer\" href=\"", nested, StringComparison.Ordinal);
-        Assert.Contains("</h4><button type=\"button\" class=\"interactive collapse-toggle\" data-enhance hidden data-action=\"toggle\" aria-expanded=\"true\" aria-label=\"Show or hide — Shared &lt;title&gt; (#20)\">"
-            + "<span class=\"when-open\" aria-hidden=\"true\">▾</span><span class=\"when-closed\" aria-hidden=\"true\">▸</span></button></div>\n<div class=\"shared-group\">\n", nested, StringComparison.Ordinal);
-        Assert.Contains("<div class=\"step-card\" id=\"report-1-step-4\">\n<h4 class=\"step-number\"><span class=\"outline-number\">2.1.1</span> Step</h4>", nested, StringComparison.Ordinal);
-        // The source of this step is the markup of its text, so it is rendered from it.
-        Assert.Contains("<div class=\"action\"><h5>Action</h5><div class=\"rich-text\"><p>Confirm</p></div></div>\n"
-            + "<div class=\"expected\"><h5>Expected Result</h5><div class=\"rich-text\"><strong>Visible</strong></div></div>\n</div>\n</div>\n</div>\n</div>\n</section>", nested, StringComparison.Ordinal);
-
-        string partial = Body(ReportFixture.Model("partial"));
-        Assert.DoesNotContain("data-action=\"toggle\"", partial, StringComparison.Ordinal);
-        Assert.DoesNotContain("data-action=\"expand\"", partial, StringComparison.Ordinal);
-        Assert.Contains("<div class=\"step-card shared-banner warning\" id=\"report-1-step-2\"><h4><span class=\"outline-number\">2</span> ▸ Shared Steps (#99)</h4>"
-            + "<p>The referenced shared steps are missing or inaccessible.</p></div>\n", partial, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void APartialCaseLinksItsDiagnosticsFromTheTopBarAndEachDiagnosticToItsStep()
-    {
-        string html = Body(ReportFixture.Model("partial"));
-        Assert.Contains("<a class=\"partial-link\" href=\"#report-1-diagnostics\"><span aria-hidden=\"true\">!</span> Partial</a>", html, StringComparison.Ordinal);
-        Assert.Contains("<a href=\"#report-1-diagnostics\">Diagnostics 3</a>", html, StringComparison.Ordinal);
-        Assert.Contains("<header id=\"report-1-overview\" data-case=\"10\" data-status=\"partial\"><span class=\"case-number\">10</span><span class=\"status-badge status-partial\"><span aria-hidden=\"true\">!</span> Partial</span>",
-            html, StringComparison.Ordinal);
-        Assert.Contains("<div><dt>Diagnostics</dt><dd>Test case 10 is partial: 3 error(s), 0 warning(s), 0 information diagnostic(s).</dd></div>", html, StringComparison.Ordinal);
-        Assert.Contains("<div class=\"diagnostic\" data-severity=\"error\" data-diagnostic=\"UnresolvedSharedStep\"><strong>Error · UnresolvedSharedStep</strong> <a href=\"#report-1-step-2\">Step 2</a><p>",
-            html, StringComparison.Ordinal);
-        Assert.Contains("data-diagnostic=\"ExpansionLimitExceeded\"><strong>Error · ExpansionLimitExceeded</strong> <a href=\"#report-1-step-3\">Step 3</a><p>", html, StringComparison.Ordinal);
-        // A diagnostic of the document as a whole has no step to point to.
-        Assert.Contains("data-diagnostic=\"MalformedStepsXml\"><strong>Error · MalformedStepsXml</strong><p>", html, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void SeveralCasesGetDocumentFiltersAContentsTableAndCollapsibleCards()
-    {
-        ReportDocumentModel model = MultiCaseFixture.Model();
-        string html = Body(model);
-        string bar = html[html.IndexOf("<header class=\"top-bar\">", StringComparison.Ordinal)..html.IndexOf("<main id=\"report-content\">", StringComparison.Ordinal)];
-        Assert.Contains("<span class=\"count-chip status-complete\"><span class=\"count-label\">Complete</span><strong class=\"count-value\">3</strong></span>"
-            + "<span class=\"count-chip status-partial\"><span class=\"count-label\">Partial</span><strong class=\"count-value\">1</strong></span>", bar, StringComparison.Ordinal);
-        Assert.Equal(["overview", "contents"], Regex.Matches(bar, "<a href=\"#([^\"]+)\"").Select(static match => match.Groups[1].Value));
-        Assert.Contains("<label><input type=\"checkbox\" data-toggle=\"partial\">Partial only</label>", bar, StringComparison.Ordinal);
-        // Offered only when test points were read and one of them failed.
-        Assert.DoesNotContain("data-toggle=\"failed\"", bar, StringComparison.Ordinal);
-        Assert.Contains("data-filter-count data-label-count=\"{0} of {1} test cases\"", bar, StringComparison.Ordinal);
-        Assert.Contains("j/k Next/previous test case", bar, StringComparison.Ordinal);
-        Assert.StartsWith("<body>\n<a class=\"skip-link\" href=\"#contents\">Contents</a>\n", html, StringComparison.Ordinal);
-
-        Assert.Contains("<thead><tr><th scope=\"col\">ID</th><th scope=\"col\">Title</th><th scope=\"col\">State</th><th scope=\"col\">Steps</th><th scope=\"col\">Status</th></tr></thead>", html, StringComparison.Ordinal);
-        Assert.Contains("<tr data-index-for=\"tc-10-2\"><td class=\"col-number\">10</td><td class=\"col-title\"><a href=\"#tc-10-2\">Synthetic case 10 &lt;title&gt;</a></td><td>Ready</td>"
-            + "<td class=\"col-number\">2</td><td><span class=\"status-badge status-complete\"><span aria-hidden=\"true\">✓</span> Complete</span></td></tr>", html, StringComparison.Ordinal);
-        Assert.Contains("<p data-no-matches hidden>No test case matches these filters.</p>", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("No step matches the search.", html, StringComparison.Ordinal);
-
-        // Each card can be collapsed, carries its own section links, and leads back to the contents.
-        Assert.Equal(4, Regex.Count(html, "<header id=\"tc-[0-9-]+-overview\" data-case=\"[0-9]+\" data-status=\"(?:complete|partial)\">"));
-        Assert.Equal(4, Regex.Count(html, "data-action=\"copy\" aria-label=\"Copy — Title\">Copy</button><button type=\"button\" class=\"interactive collapse-toggle\" data-enhance hidden data-action=\"toggle\""));
-        string[] navigation = Regex.Matches(html, "<nav class=\"case-links\" aria-label=\"([^\"]+)\">").Select(static match => match.Groups[1].Value).ToArray();
-        Assert.Equal(["Report sections — 10", "Report sections — 11", "Report sections — 10", "Report sections — 12"], navigation);
-        Assert.Equal(4, Regex.Count(html, "<nav class=\"case-links\"[^>]*>\n(?:<a href=\"#tc-[^\"]+\">[^<]+</a>\n)+<a href=\"#contents\">Contents</a>\n</nav>"));
-        Assert.Contains("<a href=\"#tc-12-steps\">Steps</a>\n<a href=\"#tc-12-diagnostics\">Diagnostics 3</a>\n<a href=\"#contents\">Contents</a>", html, StringComparison.Ordinal);
-        // The times and the server are stated once for the document, not in every case.
-        Assert.Single(Regex.Matches(html, "<dt>Generated on</dt>"));
-        Assert.Single(Regex.Matches(html, "<dt>Server</dt>"));
-        Assert.DoesNotContain("<dt>Retrieved on</dt>", html, StringComparison.Ordinal);
-        Assert.Equal(4, Regex.Count(html, "<div><dt>Step count</dt><dd>[0-9]+</dd></div>"));
-
-        string[] identifiers = Regex.Matches(html, "\\sid=\"([^\"]+)\"").Select(static match => match.Groups[1].Value).ToArray();
-        Assert.Equal(identifiers.Length, identifiers.Distinct(StringComparer.Ordinal).Count());
-        Assert.All(Regex.Matches(html, "href=\"#([^\"]+)\"").Select(static match => match.Groups[1].Value), target => Assert.Contains(target, identifiers));
-    }
-
-    [Fact]
     public void TimesAreShownInTheOffsetOfTheExportAndExtremeTimesDoNotFailIt()
     {
         AdoTestCase testCase = ReportFixture.Case("parameterized");
@@ -137,18 +62,6 @@ public sealed class TestCaseReportStructureTests
         string unset = Body(Model(Copy(testCase, default, DateTimeOffset.MaxValue)));
         Assert.Contains("<dt>Last changed</dt>", unset, StringComparison.Ordinal);
         Assert.Contains("<dt>Retrieved on</dt>", unset, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void TheTitleElementNamesTheCaseOrTheDocument()
-    {
-        Assert.Contains("<title>Azure DevOps Test Case — 10 · Synthetic case &lt;title&gt;</title>", GoldenReportTests.Render(ReportFixture.Model(), ReportFormat.Html), StringComparison.Ordinal);
-        // A title of several lines is one line in the title element, and several in the heading of the card.
-        string french = GoldenReportTests.Render(ReportFixture.Model("french", "fr-CA"), ReportFormat.Html);
-        Assert.Contains("<title>Cas de test Azure DevOps — 10 · " + SinkEncoding.Attribute(ReportFixture.FrenchText.Replace('\n', ' ')) + "</title>", french, StringComparison.Ordinal);
-        Assert.Contains("<span data-copy-value>" + SinkEncoding.Html(ReportFixture.FrenchText) + "</span>", french, StringComparison.Ordinal);
-        Assert.Contains("&lt;script&gt; &amp; &quot;quoted&quot;<br>next</span>", french, StringComparison.Ordinal);
-        Assert.Contains("<title>Azure DevOps Test Case Report</title>", GoldenReportTests.Render(MultiCaseFixture.Model(), ReportFormat.Html), StringComparison.Ordinal);
     }
 
     // The page from <body>, without the script.

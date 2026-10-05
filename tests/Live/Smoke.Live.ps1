@@ -43,6 +43,7 @@ function Get-AdoLiveFailureNote {
 }
 
 # Writes the step's result line; $script:stepPassed tells the caller whether later steps can run.
+# A code ending in _REQUIRED names a missing input, which is INCONCLUSIVE, not a failure.
 function Invoke-AdoLiveStep {
     param([Parameter(Mandatory = $true)][string] $Id, [Parameter(Mandatory = $true)][scriptblock] $Action)
     $script:stepPassed = $false
@@ -53,7 +54,8 @@ function Invoke-AdoLiveStep {
     }
     catch {
         $note = if ($_.Exception.Message -match '^[A-Z_]+$') { $_.Exception.Message } else { Get-AdoLiveFailureNote -Record $_ }
-        Write-AdoLiveResult "FAIL $Id $note"
+        $verdict = if ($note -cmatch '^[A-Z_]+_REQUIRED$') { 'INCONCLUSIVE' } else { 'FAIL' }
+        Write-AdoLiveResult "$verdict $Id $note"
     }
 }
 
@@ -81,7 +83,7 @@ try {
         $null = Get-AdoProject -ErrorAction Stop
         'CONNECT_TEST_PROJECTS'
     }
-    if (-not $script:stepPassed) { exit 1 }
+    if (-not $script:stepPassed) { if ($checkStates.Contains('FAIL')) { exit 1 } else { exit 2 } }
 
     $script:build = $null
     if (-not $hasBuild -and -not $hasDefinition) {

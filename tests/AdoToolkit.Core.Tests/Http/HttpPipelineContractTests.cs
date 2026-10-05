@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using AdoToolkit.Core.Http;
+using AdoToolkit.Core.IO;
 
 namespace AdoToolkit.Core.Tests.Http;
 
@@ -20,16 +21,10 @@ public sealed class HttpPipelineContractTests
         Assert.False(handler.UseCookies);
         Assert.Equal(TimeSpan.FromMinutes(15), handler.PooledConnectionLifetime);
         Assert.Null(handler.SslOptions.RemoteCertificateValidationCallback);
+        // Every request accepts compressed bodies; a server that does not compress answers as before.
+        Assert.Equal(DecompressionMethods.GZip | DecompressionMethods.Deflate, handler.AutomaticDecompression);
         using HttpClient client = AdoHttpHandlerFactory.CreateClient();
         Assert.Equal(Timeout.InfiniteTimeSpan, client.Timeout);
-    }
-
-    // Every request accepts compressed bodies; a server that does not compress answers as before.
-    [Fact]
-    public void HandlerDecodesGzipAndDeflate()
-    {
-        using SocketsHttpHandler handler = AdoHttpHandlerFactory.CreateHandler();
-        Assert.Equal(DecompressionMethods.GZip | DecompressionMethods.Deflate, handler.AutomaticDecompression);
     }
 
     [Theory]
@@ -169,6 +164,29 @@ public sealed class HttpPipelineContractTests
         ProjectService service = new(client, new AdoConnection { CollectionUri = new Uri("https://ado.example.test/Collection") });
         await Assert.ThrowsAsync<AdoResponseFormatException>(() => service.GetProjectsAsync(CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
         Assert.Single(handler.Requests);
+    }
+
+    // A success body labelled gzip that is not gzip cannot be read, now or on a retry: a format
+    // error after one request, for a JSON list and for a file download alike, and no file is left.
+    [Fact]
+    public async Task SuccessBodyThatCannotBeDecompressedIsAResponseFormatErrorWithoutRetry()
+    {
+        using FakeHttpMessageHandler handler = new();
+        handler.Enqueue(new HttpResponseMessage(HttpStatusCode.OK) { Content = ErrorTranslationTests.Undecompressable("""{"count":0,"value":[]}""") });
+        handler.Enqueue(new HttpResponseMessage(HttpStatusCode.OK) { Content = ErrorTranslationTests.Undecompressable("plain log text") });
+        using HttpClient client = new(handler);
+        using TestDirectory directory = new();
+        string destination = Path.Combine(directory.Root, "body.txt");
+        AdoHttpPipeline pipeline = new(client, new Uri("https://ado.example.test/Collection"), TimeSpan.FromSeconds(5), clock: new FakeClock());
+        AdoResponseFormatException list = await Assert.ThrowsAsync<AdoResponseFormatException>(() => RetryPolicyTests.Fetch(pipeline));
+        Assert.Equal(EndpointRegistry.ProjectsList.Name, list.Operation);
+        Assert.Single(handler.Requests);
+        AdoResponseFormatException download = await Assert.ThrowsAsync<AdoResponseFormatException>(() => pipeline.DownloadFileAsync(
+            EndpointRegistry.ProjectsList with { Timeout = TimeoutClass.Download }, new Dictionary<string, string>(), null, destination,
+            new AtomicFileWriter(), static _ => { }, CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
+        Assert.Equal(EndpointRegistry.ProjectsList.Name, download.Operation);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(directory.Root));
     }
 
     [Theory]

@@ -9,7 +9,8 @@
 ## Data
 
 - Fixtures are hand-written; never copy work data (DD-010, DD-022).
-- Hosts end in `.test`, for example `ado.example.test`.
+- Hosts end in `.test`, for example `ado.example.test`. The updater's tests also use GitHub
+  hosts: the three that its code names as constants, and others that it must refuse.
 - Every fixture file has one entry in `tests/Fixtures/README.md`; `FixtureCatalogTests`
   enforces it. Delete a fixture that no test reads.
 - Names (DD-024): no directory named `bin`, `obj`, `artifacts`, `build`, `dist`,
@@ -22,7 +23,9 @@
 ## Isolation
 
 - Core HTTP tests use `FakeHttpMessageHandler`; Pester tests use
-  `tests/AdoToolkit.PowerShell.Tests/Support/FakeAdoServer.ps1`, bound to `127.0.0.1`.
+  `tests/AdoToolkit.PowerShell.Tests/Support/FakeAdoServer.ps1`, bound to `127.0.0.1`. The
+  update tests use `tests/AdoToolkit.PowerShell.Tests/Support/FakeGitHub.ps1`: a handler that
+  the cmdlet's test seam puts in place of the network, so no test reaches GitHub.
 - No test reads the developer's configuration: the Core test assembly and the gate both
   point `ADOTOOLKIT_CONFIG_PATH` at a file that does not exist. A test that writes
   configuration uses `TestDirectory` (Core) or a path under `$TestDrive` (Pester).

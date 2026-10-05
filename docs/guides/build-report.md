@@ -15,7 +15,7 @@ definition and a branch, see [Pipeline failure triage](pipeline-triage.md).
   server, such as `Get-AdoBuildTestFailure`, or connect with
   `Connect-Ado -Project '<name>'` once. `Export-AdoBuildTestFailure` and
   `Get-AdoConnection` take no `-Project`: the export takes the project from the set.
-- AdoToolkit only reads from Azure DevOps. Nothing in this guide changes a build.
+- AdoToolkit never changes anything in Azure DevOps. Nothing in this guide changes a build.
 
 ## The short version
 

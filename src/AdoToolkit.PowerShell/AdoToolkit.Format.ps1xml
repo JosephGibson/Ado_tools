@@ -315,5 +315,20 @@
         <TableColumnItem><ScriptBlock>$_.Title -replace '[\p{Cc}-[\t\n]]', ' '</ScriptBlock></TableColumnItem>
       </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
     </View>
+    <View>
+      <Name>AdoToolkit.Core.Update.AdoToolkitUpdate</Name>
+      <ViewSelectedBy><TypeName>AdoToolkit.Core.Update.AdoToolkitUpdate</TypeName></ViewSelectedBy>
+      <TableControl><TableHeaders>
+        <TableColumnHeader><Label>Status</Label></TableColumnHeader>
+        <TableColumnHeader><Label>CurrentVersion</Label></TableColumnHeader>
+        <TableColumnHeader><Label>LatestVersion</Label></TableColumnHeader>
+        <TableColumnHeader><Label>Path</Label></TableColumnHeader>
+      </TableHeaders><TableRowEntries><TableRowEntry><TableColumnItems>
+        <TableColumnItem><PropertyName>Status</PropertyName></TableColumnItem>
+        <TableColumnItem><PropertyName>CurrentVersion</PropertyName></TableColumnItem>
+        <TableColumnItem><PropertyName>LatestVersion</PropertyName></TableColumnItem>
+        <TableColumnItem><PropertyName>Path</PropertyName></TableColumnItem>
+      </TableColumnItems></TableRowEntry></TableRowEntries></TableControl>
+    </View>
   </ViewDefinitions>
 </Configuration>

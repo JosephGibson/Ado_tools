@@ -775,3 +775,68 @@ Describe 'Live connection check with synthetic data only' {
         $lines[0] | Should -Be $Note
     }
 }
+
+# V-38: the update check runs only on an install that has Update-AdoToolkit, prints the status or a
+# toolkit error ID and no URL, and gives one verdict.
+Describe 'Live update check with synthetic data only' {
+    It 'runs only on an install of 0.11.0 or later' {
+        Get-AdoLiveUpdateGate -Installed $null | Should -Be 'INCONCLUSIVE V-38 INSTALLED_MODULE_REQUIRED'
+        Get-AdoLiveUpdateGate -Installed '0.10.5' | Should -Be 'INCONCLUSIVE V-38 UPDATE_CMDLET_REQUIRED'
+        Get-AdoLiveUpdateGate -Installed '0.11.0' | Should -BeNullOrEmpty
+        Get-AdoLiveUpdateGate -Installed '1.0.0' | Should -BeNullOrEmpty
+    }
+
+    It 'relabels the manifest version and nothing else' {
+        $text = "@{`n    RootModule = 'AdoToolkit.PowerShell.dll'`n    ModuleVersion = '0.11.0'`n    PowerShellVersion = '7.6'`n}`n"
+        ConvertTo-AdoLiveRelabeledManifest -Text $text -Version '0.0.1' | Should -BeExactly $text.Replace("'0.11.0'", "'0.0.1'")
+        { ConvertTo-AdoLiveRelabeledManifest -Text "@{ RootModule = 'x' }" -Version '0.0.1' } | Should -Throw 'MANIFEST_VERSION_REQUIRED'
+    }
+
+    It 'gives <Expected> for <Case>' -TestCases @(
+        @{ Case = 'seven files installed'; Lines = @('STATUS Installed', 'FILES 7'); Expected = 'PASS V-38 RELEASE_INSTALLED' }
+        @{ Case = 'six files installed'; Lines = @('STATUS Installed', 'FILES 6'); Expected = 'FAIL V-38 INSTALL_INCOMPLETE' }
+        @{ Case = 'nothing newer'; Lines = @('STATUS UpToDate', 'FILES 7'); Expected = 'INCONCLUSIVE V-38 UpToDate' }
+        @{ Case = 'already installed'; Lines = @('STATUS AlreadyInstalled', 'FILES 7'); Expected = 'INCONCLUSIVE V-38 AlreadyInstalled' }
+        @{ Case = 'a rate limit'; Lines = @('ERROR AdoThrottled'); Expected = 'INCONCLUSIVE V-38 AdoThrottled' }
+        @{ Case = 'no release'; Lines = @('ERROR AdoNotFound'); Expected = 'INCONCLUSIVE V-38 AdoNotFound' }
+        @{ Case = 'a release that needs a newer PowerShell, refused after its download'; Lines = @('ERROR AdoConfiguration'); Expected = 'INCONCLUSIVE V-38 AdoConfiguration' }
+        @{ Case = 'a full disk'; Lines = @('ERROR AdoFileOutput'); Expected = 'INCONCLUSIVE V-38 AdoFileOutput' }
+        @{ Case = 'a proxy sign-in refused'; Lines = @('ERROR AdoAuthentication'); Expected = 'FAIL V-38 AdoAuthentication' }
+        @{ Case = 'a host blocked by the proxy'; Lines = @('ERROR AdoRequest'); Expected = 'FAIL V-38 AdoRequest' }
+        @{ Case = 'a redirect to another host'; Lines = @('ERROR AdoRedirect'); Expected = 'FAIL V-38 AdoRedirect' }
+        @{ Case = 'an error that is not the toolkit''s'; Lines = @('ERROR CommandNotFoundException'); Expected = 'FAIL V-38 CHECK_FAILED' }
+        @{ Case = 'text that would leak'; Lines = @('ERROR https://customer.example.test/secret'); Expected = 'FAIL V-38 CHECK_FAILED' }
+        @{ Case = 'no output'; Lines = @(); Expected = 'FAIL V-38 CHECK_FAILED' }
+        @{ Case = 'unexpected output'; Lines = @('Customer text', 'STATUS Installed extra'); Expected = 'FAIL V-38 CHECK_FAILED' }
+    ) {
+        param($Case, $Lines, $Expected)
+        $outcome = Read-AdoLiveUpdateOutput -Line $Lines
+        Get-AdoLiveUpdateVerdict -Status $outcome.Status -Files $outcome.Files -ErrorId $outcome.ErrorId | Should -BeExactly $Expected
+    }
+
+    It 'says whether each host goes through the proxy, never which proxy' {
+        Get-AdoLiveProxyNote -Proxy $null -Destination 'https://api.github.com/' | Should -Be 'DIRECT'
+        Get-AdoLiveProxyNote -Proxy 'https://api.github.com/' -Destination 'https://api.github.com/' | Should -Be 'DIRECT'
+        Get-AdoLiveProxyNote -Proxy 'http://proxy.example.test:8080/' -Destination 'https://api.github.com/' | Should -Be 'PROXIED'
+    }
+
+    It 'keeps only the proxy notes that the child prints in the expected form' {
+        $outcome = Read-AdoLiveUpdateOutput -Line @('PROXY API PROXIED', 'PROXY SITE http://proxy.example.test:8080/', 'PROXY DOWNLOAD DIRECT',
+            'PROXY OTHER DIRECT', 'NOTE PROXY API DIRECT')
+        @($outcome.Proxy.Keys) | Should -Be @('API', 'DOWNLOAD')
+        $outcome.Proxy['API'] | Should -Be 'PROXIED'
+        $outcome.Proxy['DOWNLOAD'] | Should -Be 'DIRECT'
+    }
+
+    It 'prints the proxy notes of the child and one verdict, and no URL' {
+        $source = (Read-LiveAst 'Update').Extent.Text
+        $start = $source.IndexOf('$outcome = Read-AdoLiveUpdateOutput', [StringComparison]::Ordinal)
+        $end = $source.IndexOf('$settled = $true', $start, [StringComparison]::Ordinal)
+        $childLines = @('PROXY API PROXIED', 'PROXY SITE DIRECT', 'PROXY DOWNLOAD DIRECT', 'Customer text from a profile', 'STATUS Installed', 'FILES 7')
+
+        $lines = @(. ([scriptblock]::Create($source.Substring($start, $end - $start))))
+
+        $lines | Should -Be @('NOTE V-38 PROXY_API PROXIED', 'NOTE V-38 PROXY_SITE DIRECT', 'NOTE V-38 PROXY_DOWNLOAD DIRECT', 'PASS V-38 RELEASE_INSTALLED')
+        $lines -join "`n" | Should -Not -Match 'https?://|Customer'
+    }
+}

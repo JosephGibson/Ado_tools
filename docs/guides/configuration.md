@@ -115,7 +115,7 @@ changing them. A connection made with `Connect-Ado -CollectionUrl` has no defaul
 | `testResults.maximumInlineTotalBytes` | `8388608` (8 MiB) | Total JSON and text shown inline per failed-test report; attachments that no longer fit are linked only, those of older runs first | none |
 | `testResults.maximumConcurrentRequests` | `6` | Requests that `Get-AdoBuildTestFailure` has in progress at the same time, and attachments that `Export-AdoBuildTestFailure` downloads at the same time, 1–16. With `1`, every request waits for the previous one. Results are combined in input order, and the history builds that fit `testResults.maximumHistoryRequests` do not depend on this value, apart from the retries and extra pages that row names. Lower the value if the server handles concurrent requests poorly; Server 2020 concurrency is not confirmed at work (V-33) | none |
 
-Every request accepts gzip and deflate, so a server that compresses its responses sends fewer
+Every request to Azure DevOps accepts gzip and deflate, so a server that compresses its responses sends fewer
 bytes; the attachment limits above count the decoded bytes. A JSON response may hold at most
 256 MB once decoded, a fixed limit: a larger one fails with an `AdoResponseFormat` error that
 names the operation. So does a response marked compressed whose body does not decompress, which

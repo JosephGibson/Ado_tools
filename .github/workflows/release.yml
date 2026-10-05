@@ -138,7 +138,7 @@ jobs:
             '3. Extract the entire ZIP to a folder you can write to.'
             '4. Double-click `Start-AdoToolkit.cmd`. A console opens with AdoToolkit already loaded.'
             ''
-            'To update, extract a new portable release into a new folder and use its launcher. Saved profiles are retained. The bundled PowerShell does not update itself.'
+            'To update from AdoToolkit 0.11.0 on, run `Update-AdoToolkit` in the console: it installs the newest release into a new folder next to the old one, after checking it against both of its SHA-256 checksums. From older versions, extract the new release into a new folder once and use its launcher. Saved profiles are retained. The bundled PowerShell does not update itself.'
             ''
             "SHA-256 of ``$portable``: ``$portableHash`` (also available in ``$portable.sha256``)."
             ''
@@ -156,6 +156,8 @@ jobs:
             "   $fence"
             ''
             '4. Open a new PowerShell window and run `Import-Module AdoToolkit`.'
+            ''
+            'To update from AdoToolkit 0.11.0 on, run `Update-AdoToolkit`: it installs the newest release beside the running version, then you open a new PowerShell window. From older versions, install the new release with these steps once.'
             ''
             "SHA-256 of ``$zip``: ``$hash``"
             ''

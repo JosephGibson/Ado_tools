@@ -150,7 +150,7 @@ Describe 'Portable console startup' {
     It 'loads the adjacent module globally and reports the host without contacting a server' {
         $launcherRoot = Join-Path $packageTools 'portable'
         Mock Import-Module {
-            [pscustomobject]@{ Version = [version] '0.1.0'; ExportedCmdlets = @(1..22); ModuleBase = Join-Path $launcherRoot 'module' }
+            [pscustomobject]@{ Version = [version] '0.1.0'; ExportedCmdlets = @(1..23); ModuleBase = Join-Path $launcherRoot 'module' }
         }
         Mock Set-Location { }
         $probe = & (Join-Path $launcherRoot 'Start-AdoToolkit.ps1') -SmokeTest | ConvertFrom-Json
@@ -167,7 +167,7 @@ Describe 'Portable console startup' {
         param($Culture, $Text)
         $launcherRoot = Join-Path $packageTools 'portable'
         Mock Import-Module {
-            [pscustomobject]@{ Version = [version] '0.4.0'; ExportedCmdlets = @(1..22); ModuleBase = Join-Path $launcherRoot 'module' }
+            [pscustomobject]@{ Version = [version] '0.4.0'; ExportedCmdlets = @(1..23); ModuleBase = Join-Path $launcherRoot 'module' }
         }
         Mock Set-Location { }
         Mock Write-Host { }

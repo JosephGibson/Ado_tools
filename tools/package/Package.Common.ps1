@@ -84,14 +84,14 @@ function Assert-AdoPackage {
     if (@(Compare-Object -ReferenceObject $required -DifferenceObject $names -CaseSensitive).Count -ne 0) { throw 'Package files differ from the required layout.' }
     foreach ($file in $files | Where-Object { $_.Extension -in @('.xml', '.ps1xml') }) {
         $xml = Read-AdoPackageXml -Path $file.FullName
-        if ($file.Name -like '*-Help.xml' -and $xml.SelectNodes("//*[local-name()='command']").Count -ne 22) {
-            throw 'Package help must describe all twenty-two implemented commands.'
+        if ($file.Name -like '*-Help.xml' -and $xml.SelectNodes("//*[local-name()='command']").Count -ne 23) {
+            throw 'Package help must describe all twenty-three implemented commands.'
         }
     }
     $manifest = Import-PowerShellDataFile -LiteralPath (Join-Path $PackagePath 'AdoToolkit.psd1')
     if ($manifest.ModuleVersion -notmatch '^\d+\.\d+\.\d+$' -or
         $manifest.RootModule -ne 'AdoToolkit.PowerShell.dll' -or
-        @($manifest.CmdletsToExport).Count -ne 22) { throw 'Invalid package manifest.' }
+        @($manifest.CmdletsToExport).Count -ne 23) { throw 'Invalid package manifest.' }
     $expectedVersion = [version] ([string] $manifest.ModuleVersion + '.0')
     foreach ($file in $files | Where-Object Extension -eq '.dll') {
         # Read PE metadata without loading package code into this process. In particular,

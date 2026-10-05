@@ -8,6 +8,11 @@ internal sealed class ManualTimeProvider : TimeProvider
     private readonly List<ManualTimer> timers = [];
     private DateTimeOffset now = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
+    // The system's zone unless a test sets one, so that a local time it formats is known.
+    internal TimeZoneInfo Zone { get; set; } = TimeZoneInfo.Local;
+
+    public override TimeZoneInfo LocalTimeZone => Zone;
+
     public override DateTimeOffset GetUtcNow()
     {
         lock (gate) return now;

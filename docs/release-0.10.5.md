@@ -19,7 +19,7 @@ builds and test runs.
 
 0.10.5 sends no new request and adds no cmdlet, parameter, output type, configuration setting
 or string. No report golden changed, and the HTML report, the CSV file, the JSON report schema
-and the seven-file package layout are those of 0.10.0. The [0.10.0 notes](release-0.10.0.md)
+and the seven-file package layout are those of 0.10.0. The [0.10.0 notes](archive/release-0.10.0.md)
 describe the last feature.
 
 ### The module
@@ -247,7 +247,7 @@ each test first; section 10.1 of the plan holds them.
 | Golden-pinned failed-test markup tests (D28–D55 and eight more), T1, T9 and four theory rows | Not removed: each needs a mutation run of its own, or its run did not fail it. Section 5.4 of the plan lists them as proposals |
 | `ErrorTextTests` 200 × 14 is still the slowest Core test, about 9 s en-US and 6 s fr-CA in the suite | Rendering and validating at the documented scale is its purpose; only a faster renderer or validator would halve it. A pipe between the two would give at best 1.5× |
 | `Verify.Tests.ps1`, the timed-out stage, still takes about 8 s | Halving the stage limit would leave its idle margin at 2.5 s while every tooling file runs at once: a faster but flaky gate |
-| The findings of 0.10.0, 0.9.15, 0.9.10, 0.9.5, 0.9.0, 0.8.5, 0.8.0, 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; the quality pass found each one documented or decided. See the [0.10.0](release-0.10.0.md#findings-not-fixed), [0.9.15](archive/release-0.9.15.md#findings-not-fixed), [0.9.10](archive/release-0.9.10.md#findings-not-fixed), [0.9.5](archive/release-0.9.5.md#findings-not-fixed), [0.9.0](archive/release-0.9.0.md#findings-not-fixed), [0.8.5](archive/release-0.8.5.md#findings-not-fixed), [0.8.0](archive/release-0.8.0.md#findings-not-fixed), [0.7.10](archive/release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
+| The findings of 0.10.0, 0.9.15, 0.9.10, 0.9.5, 0.9.0, 0.8.5, 0.8.0, 0.7.10, 0.7.5, 0.7.0, 0.6.5 and 0.6.0 | Unchanged; the quality pass found each one documented or decided. See the [0.10.0](archive/release-0.10.0.md#findings-not-fixed), [0.9.15](archive/release-0.9.15.md#findings-not-fixed), [0.9.10](archive/release-0.9.10.md#findings-not-fixed), [0.9.5](archive/release-0.9.5.md#findings-not-fixed), [0.9.0](archive/release-0.9.0.md#findings-not-fixed), [0.8.5](archive/release-0.8.5.md#findings-not-fixed), [0.8.0](archive/release-0.8.0.md#findings-not-fixed), [0.7.10](archive/release-0.7.10.md#findings-not-fixed), [0.7.5](archive/release-0.7.5.md#findings-not-fixed), [0.7.0](archive/release-0.7.0.md#findings-not-fixed), [0.6.5](archive/release-0.6.5.md#findings-not-fixed) and [0.6.0](archive/release-0.6.0.md#findings-not-fixed) notes |
 
 ### Known limitations
 
@@ -256,7 +256,7 @@ each test first; section 10.1 of the plan holds them.
 | Only the default table views clean control characters | `Format-List`, `Select-Object`, `Out-String` of a property and string interpolation show server text as it was sent: the user asked for the value. The server text that an error message quotes was already cleaned by `ErrorTranslator`. A view that a user defines is the user's |
 | R-5 may never occur | Whether Server 2020 lists a sub-result's attachment in its result's list too is V-36, still owed. The fix needs no server: an attempt without a repeat renders as in 0.10.0 |
 | V-37 and the Excel check | Owed since 0.9.15 and 0.10.0 and unchanged by this version, apart from R-9, which makes the V-37 check sound on a build with more than 200 bugs |
-| Limits carried over | The [0.10.0](release-0.10.0.md#known-limitations), [0.9.15](archive/release-0.9.15.md#known-limitations), [0.9.10](archive/release-0.9.10.md#known-limitations), [0.9.5](archive/release-0.9.5.md#known-limitations), [0.9.0](archive/release-0.9.0.md#known-limitations), [0.8.5](archive/release-0.8.5.md#known-limitations), [0.8.0](archive/release-0.8.0.md#known-limitations), [0.7.10](archive/release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations) and [0.7.0](archive/release-0.7.0.md#known-limitations) known limitations still apply, with V-01, V-02, V-03, V-27, V-28 and V-31 to V-37 |
+| Limits carried over | The [0.10.0](archive/release-0.10.0.md#known-limitations), [0.9.15](archive/release-0.9.15.md#known-limitations), [0.9.10](archive/release-0.9.10.md#known-limitations), [0.9.5](archive/release-0.9.5.md#known-limitations), [0.9.0](archive/release-0.9.0.md#known-limitations), [0.8.5](archive/release-0.8.5.md#known-limitations), [0.8.0](archive/release-0.8.0.md#known-limitations), [0.7.10](archive/release-0.7.10.md#known-limitations), [0.7.5](archive/release-0.7.5.md#known-limitations) and [0.7.0](archive/release-0.7.0.md#known-limitations) known limitations still apply, with V-01, V-02, V-03, V-27, V-28 and V-31 to V-37 |
 
 ## Work-PC Live checks
 
@@ -268,10 +268,10 @@ still apply: variables stay on the work PC, raw responses are not sent back, and
 
 | Rank | Check | Evidence to seek |
 | --- | --- | --- |
-| 1 | `tests/Live/TestFailures.Live.ps1` with `ADOTOOLKIT_LIVE_TEST_BUILD_ID`, and `ADOTOOLKIT_LIVE_ASSIGNED_BUG_ID` set to a bug known to have an assignee | V-37, as in check 1 of the [0.10.0 notes](release-0.10.0.md#work-pc-live-checks): `PASS V-37 BUG_FIELDS_PRESENT_AND_SHAPED`. The check now reads the bugs in batches of 200, so a build with more bugs gives a verdict too |
+| 1 | `tests/Live/TestFailures.Live.ps1` with `ADOTOOLKIT_LIVE_TEST_BUILD_ID`, and `ADOTOOLKIT_LIVE_ASSIGNED_BUG_ID` set to a bug known to have an assignee | V-37, as in check 1 of the [0.10.0 notes](archive/release-0.10.0.md#work-pc-live-checks): `PASS V-37 BUG_FIELDS_PRESENT_AND_SHAPED`. The check now reads the bugs in batches of 200, so a build with more bugs gives a verdict too |
 | 2 | `tests/Live/Smoke.Live.ps1` with the usual inputs, and `tests/Live/Probes.Live.ps1` | Smoke passes as before; a profile without a default project now gives `INCONCLUSIVE SMOKE-2 PROFILE_DEFAULT_PROJECT_REQUIRED` and exit 2. The V-36 probe says whether a result's list repeats a sub-result's attachment, the case of R-5; if it does, a failed-test report of that build is written and lists both entries |
 | 3 | In Windows Terminal, `Get-AdoWorkItem`, `Get-AdoBuild` and `Get-AdoBuildTestFailure` with their default tables | The tables look as in 0.10.0: the same columns, widths and alignment, with the text of the server. Only a control character would show as a space |
-| 4 | Checks 2 and 3 of the [0.10.0 notes](release-0.10.0.md#work-pc-live-checks), with the 0.10.5 package, and the Excel check described there | The report and the CSV file of a build with open bugs, the installation, and the earlier checks: the `S0-9` verdict of `tests/Live/Connection.Live.ps1`, V-33, `-SkipAttachments`, the probes of V-28, V-34 and V-35, and V-31, V-32, V-02, V-01 and V-03. All still pending |
+| 4 | Checks 2 and 3 of the [0.10.0 notes](archive/release-0.10.0.md#work-pc-live-checks), with the 0.10.5 package, and the Excel check described there | The report and the CSV file of a build with open bugs, the installation, and the earlier checks: the `S0-9` verdict of `tests/Live/Connection.Live.ps1`, V-33, `-SkipAttachments`, the probes of V-28, V-34 and V-35, and V-31, V-32, V-02, V-01 and V-03. All still pending |
 
 ## Local validation and developer handoff
 

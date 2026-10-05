@@ -2,15 +2,24 @@
 
 PowerShell toolkit for Azure DevOps Server 2020: compiled C# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 
-**Version 0.10.5** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.11.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure
-DevOps. Its cmdlets return typed objects that you can use in pipelines, and it writes
+DevOps; one command, `Update-AdoToolkit`, also contacts GitHub to install AdoToolkit's
+newest release. Its cmdlets return typed objects that you can use in pipelines, and it writes
 standalone HTML, Markdown or JSON reports when you need a document, and a CSV file of a
 build's failed tests when you need a spreadsheet. All messages, report labels and help are
 available in English and French.
 
+Version 0.11.0 adds `Update-AdoToolkit`, which updates AdoToolkit from its own console. It
+reads the newest release on GitHub, checks the download against both SHA-256 checksums that
+GitHub gives for it, and installs it beside the running copy, which it never changes: a
+module installed with `Install-AdoToolkit.ps1` gets a new version folder, and a portable copy
+gets a new folder next to the old one. You then open a new PowerShell window, or start the
+new folder's launcher. When you already have the newest version, it says so and downloads
+nothing. It is the one command that contacts anything other than your Azure DevOps server,
+and you install 0.11.0 itself by hand, as before; see [Installation](#installation).
 Version 0.10.5 adds no feature: it corrects defects that a review of the whole repository
 found. The default tables in the console show a control character in text from the server
 as a space, so that a work item title can no longer send escape sequences to your terminal;
@@ -59,7 +68,7 @@ commands behind it: up to six requests at the same time, the attachments of ever
 test run, and an Open bugs view. The [changelog](CHANGELOG.md) says what a script can
 notice. Profiles hold your default project, branch, build definition, test plan and test
 suite; see the [configuration file](docs/guides/configuration.md#profiles). The
-[release notes](docs/release-0.10.5.md) list every change, the validation evidence and the
+[release notes](docs/release-0.11.0.md) list every change, the validation evidence and the
 remaining work-PC checks.
 
 > [!NOTE]
@@ -77,6 +86,7 @@ remaining work-PC checks.
 | Reports and bulk export | One HTML, Markdown or JSON document for a Test Case, a suite tree or a WIQL result | `Export-AdoTestCase` |
 | Pipeline triage | Build lookup by definition and branch, deepest timeline failures, byte-exact log downloads | `Get-AdoBuildDefinition`, `Get-AdoBuild`, `Get-AdoBuildTimeline`, `Get-AdoBuildFailure`, `Save-AdoBuildLog` |
 | Failed-test reports | Failed and flaky tests with every attempt, grouped by stage, job or test run, their open bugs, run history, and a searchable HTML report with JSON and text attachments, or a flat CSV file for a spreadsheet | `Get-AdoTestRun`, `Get-AdoBuildTestFailure`, `Export-AdoBuildTestFailure` |
+| Updates | The newest GitHub release, checked against both of its SHA-256 checksums and installed beside the running copy, module-only or portable | `Update-AdoToolkit` |
 
 ## Requirements
 
@@ -110,9 +120,18 @@ To use the portable bundle:
 4. Double-click **`Start-AdoToolkit.cmd`**. A console opens with AdoToolkit already loaded.
 
 Use that launcher each time. The bundle needs no runtime download on first launch.
-To update, extract a new portable release into a new folder and use its launcher;
-saved connection profiles are retained. PowerShell is pinned to the version tested
-with the release and is refreshed through new AdoToolkit releases.
+PowerShell is pinned to the version tested with the release and is refreshed through
+new AdoToolkit releases.
+
+To update from AdoToolkit 0.11.0 on, run `Update-AdoToolkit`. It reads the newest
+release on GitHub, checks it against both of its SHA-256 checksums and installs it
+beside the running copy: a portable copy gets a new folder next to the old one, and a
+module installed with `Install-AdoToolkit.ps1` in a folder of `PSModulePath` gets a new
+version folder. Then open a new PowerShell window, or start the new folder's launcher.
+From 0.10.5 or older, install the new release by hand once. Whether the proxy at work
+lets the command reach GitHub is not confirmed (V-38); when it cannot, install the new
+release by hand as above. Saved connection profiles are retained either way. See
+[Update-AdoToolkit](docs/commands/en-US/Update-AdoToolkit.md).
 
 AdoToolkit scripts and modules are not code-signed; workplace policies requiring
 signed code still apply. For checksum verification, module-only installation and
@@ -156,7 +175,7 @@ Profiles, connections and the other options are described in
 | Test Case JSON report format | [testcase.v1.schema.json](docs/schemas/testcase.v1.schema.json) |
 | Developer CLI, validation and prerequisites | [Developer tooling](docs/tooling.md) |
 | What changes for users in each version | [Changelog](CHANGELOG.md) |
-| Release notes | [Version 0.10.5](docs/release-0.10.5.md), with links to the earlier notes |
+| Release notes | [Version 0.11.0](docs/release-0.11.0.md), with links to the earlier notes |
 | Original specification, delivery plans, design notes and earlier release notes | [Archive](docs/archive/README.md) |
 | Rules for coding agents | [AGENTS.md](AGENTS.md) |
 

@@ -23,7 +23,7 @@ BeforeAll {
 @{
 ModuleVersion = '0.1.0'
 RootModule = 'AdoToolkit.PowerShell.dll'
-CmdletsToExport = @('Connect-Ado','Disconnect-Ado','Get-AdoConnection','Test-AdoConnection','Get-AdoProfile','Set-AdoProfile','Remove-AdoProfile','Get-AdoProject','Get-AdoWorkItem','Get-AdoTestCase','Export-AdoTestCase','Get-AdoTestPlan','Get-AdoTestSuite','Invoke-AdoWiql','Get-AdoBuildDefinition','Get-AdoBuild','Get-AdoBuildTimeline','Get-AdoBuildFailure','Save-AdoBuildLog','Get-AdoTestRun','Get-AdoBuildTestFailure','Export-AdoBuildTestFailure')
+CmdletsToExport = @('Connect-Ado','Disconnect-Ado','Get-AdoConnection','Test-AdoConnection','Get-AdoProfile','Set-AdoProfile','Remove-AdoProfile','Get-AdoProject','Get-AdoWorkItem','Get-AdoTestCase','Export-AdoTestCase','Get-AdoTestPlan','Get-AdoTestSuite','Invoke-AdoWiql','Get-AdoBuildDefinition','Get-AdoBuild','Get-AdoBuildTimeline','Get-AdoBuildFailure','Save-AdoBuildLog','Get-AdoTestRun','Get-AdoBuildTestFailure','Export-AdoBuildTestFailure','Update-AdoToolkit')
 }
 "@
         Set-Content -LiteralPath (Join-Path $Path 'AdoToolkit.psd1') -Value $manifest
@@ -36,7 +36,7 @@ CmdletsToExport = @('Connect-Ado','Disconnect-Ado','Get-AdoConnection','Test-Ado
         foreach ($culture in @('en-US', 'fr')) {
             $folder = Join-Path $Path $culture
             [void] [System.IO.Directory]::CreateDirectory($folder)
-            Set-Content -LiteralPath (Join-Path $folder 'AdoToolkit.PowerShell.dll-Help.xml') -Value ('<helpItems>' + ('<command />' * 22) + '</helpItems>')
+            Set-Content -LiteralPath (Join-Path $folder 'AdoToolkit.PowerShell.dll-Help.xml') -Value ('<helpItems>' + ('<command />' * 23) + '</helpItems>')
         }
         return $Path
     }

@@ -23,13 +23,14 @@ Describe 'Staged binary module' -Tag 'S0-1' {
 
     It 'exports exactly the implemented cmdlets with output type metadata' {
         $commands = @(Get-Command -Module AdoToolkit)
-        $commands.Count | Should -Be 22
-        $commands.Name | Sort-Object | Should -Be @('Connect-Ado','Disconnect-Ado','Export-AdoBuildTestFailure','Export-AdoTestCase','Get-AdoBuild','Get-AdoBuildDefinition','Get-AdoBuildFailure','Get-AdoBuildTestFailure','Get-AdoBuildTimeline','Get-AdoConnection','Get-AdoProfile','Get-AdoProject','Get-AdoTestCase','Get-AdoTestPlan','Get-AdoTestRun','Get-AdoTestSuite','Get-AdoWorkItem','Invoke-AdoWiql','Remove-AdoProfile','Save-AdoBuildLog','Set-AdoProfile','Test-AdoConnection')
+        $commands.Count | Should -Be 23
+        $commands.Name | Sort-Object | Should -Be @('Connect-Ado','Disconnect-Ado','Export-AdoBuildTestFailure','Export-AdoTestCase','Get-AdoBuild','Get-AdoBuildDefinition','Get-AdoBuildFailure','Get-AdoBuildTestFailure','Get-AdoBuildTimeline','Get-AdoConnection','Get-AdoProfile','Get-AdoProject','Get-AdoTestCase','Get-AdoTestPlan','Get-AdoTestRun','Get-AdoTestSuite','Get-AdoWorkItem','Invoke-AdoWiql','Remove-AdoProfile','Save-AdoBuildLog','Set-AdoProfile','Test-AdoConnection','Update-AdoToolkit')
         foreach ($command in $commands) { $command.OutputType.Count | Should -BeGreaterThan 0 }
         (Get-Command Connect-Ado).ParameterSets.Name | Should -Contain 'ByUrl'
         (Get-Command Connect-Ado).ParameterSets.Name | Should -Contain 'ByProfile'
         (Get-Command Set-AdoProfile).Parameters.Keys | Should -Contain 'WhatIf'
         (Get-Command Remove-AdoProfile).Parameters.Keys | Should -Contain 'WhatIf'
         (Get-Command Export-AdoBuildTestFailure).Parameters.Keys | Should -Contain 'WhatIf'
+        (Get-Command Update-AdoToolkit).Parameters.Keys | Should -Contain 'WhatIf'
     }
 }

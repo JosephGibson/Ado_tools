@@ -1,7 +1,7 @@
 # AdoToolkit
 
 PowerShell 7.6 binary module (C# 14, .NET 10) for Azure DevOps Server 2020: work items,
-Test Case reports, bulk test export and pipeline failure triage. 22 cmdlets, English and French.
+Test Case reports, bulk test export and pipeline failure triage. 23 cmdlets, English and French.
 
 ## Commands
 

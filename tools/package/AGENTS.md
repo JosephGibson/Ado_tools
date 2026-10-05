@@ -11,8 +11,13 @@ Read it before changing one, and correct it in the same change.
 - A package is exactly seven files, listed in `Assert-AdoPackage` in
   `tools/package/Package.Common.ps1`; the gate and every packaging script call it. `$layout`
   in `tools/package/Install-AdoToolkit.ps1` repeats the list, and a tooling test keeps the
-  two equal.
-- The cmdlet count, 22, is asserted in `Assert-AdoPackage`,
+  two equal. For `Update-AdoToolkit`, `ModuleArchive.Layout` and `PortableArchive.RuntimeFiles`
+  in `src/AdoToolkit.Core/Update/` repeat the seven files and the ten runtime files of
+  `tools/package/Portable.Common.ps1`. `tests/AdoToolkit.PowerShell.Tests/Update.Pester.ps1`
+  runs one table of zips through the installer and the cmdlet, and it and
+  `tests/AdoToolkit.PowerShell.Tests/UpdatePortable.Pester.ps1` install what
+  `New-AdoReleaseArchive` builds.
+- The cmdlet count, 23, is asserted in `Assert-AdoPackage`,
   `tools/package/Publish-AdoToolkitPackage.ps1` and
   `tools/package/portable/Start-AdoToolkit.ps1`.
 - `tools/package/Install-AdoToolkit.ps1` is self-contained: it dot-sources nothing.

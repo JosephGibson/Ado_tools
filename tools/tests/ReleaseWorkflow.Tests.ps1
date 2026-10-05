@@ -273,6 +273,8 @@ Describe 'Release workflow external contracts without network calls' {
         $notes | Should -Match 'PowerShell 7\.6\.6'
         $notes | Should -Match 'Unblock'
         $notes | Should -Match '## Module-only installation'
+        # Both installations name the command that updates them.
+        ([regex]::Matches($notes, 'run `Update-AdoToolkit`')).Count | Should -Be 2
         Should -Invoke Invoke-WebRequest -Exactly -Times 0
     }
 

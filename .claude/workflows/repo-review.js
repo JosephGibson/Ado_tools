@@ -31,9 +31,9 @@ const AREAS = [
   {
     key: 'core-infra', title: 'Core infrastructure', lane: 'dotnet',
     rules: ['src/AGENTS.md', 'tests/AGENTS.md'],
-    paths: 'src/AdoToolkit.Core/ folders Configuration, Connections, Diagnostics, Http, IO and Resources and its root files, and the same folders of tests/AdoToolkit.Core.Tests/',
-    owns: [/^src\/AdoToolkit\.Core\/(?:Configuration|Connections|Diagnostics|Http|IO|Resources)\//, /^src\/AdoToolkit\.Core\/[^/]+$/,
-      /^tests\/AdoToolkit\.Core\.Tests\/(?:Configuration|Connections|Diagnostics|Http|IO)\//],
+    paths: 'src/AdoToolkit.Core/ folders Configuration, Connections, Diagnostics, Http, IO, Resources and Update and its root files, and the same folders of tests/AdoToolkit.Core.Tests/',
+    owns: [/^src\/AdoToolkit\.Core\/(?:Configuration|Connections|Diagnostics|Http|IO|Resources|Update)\//, /^src\/AdoToolkit\.Core\/[^/]+$/,
+      /^tests\/AdoToolkit\.Core\.Tests\/(?:Configuration|Connections|Diagnostics|Http|IO|Update)\//],
   },
   {
     key: 'core-domain', title: 'Core test domain', lane: 'dotnet',

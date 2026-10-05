@@ -6,6 +6,19 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.11.0 - 2026-10-05
+
+### Added
+
+- `Update-AdoToolkit` installs the newest AdoToolkit release from GitHub beside the running copy, after matching the download against both SHA-256 checksums that GitHub gives for it. A module installed with `Install-AdoToolkit.ps1` in a folder of `PSModulePath` gets a new version folder; a portable copy gets a new folder next to the old one, which stays as it was. Then open a new PowerShell window, or start the launcher in the new folder. When you already have the newest version, it says so and downloads nothing, and `-WhatIf` names the folder it would install into without downloading anything. The command works from 0.11.0 on: install 0.11.0 itself by hand.
+
+### Changed
+
+- AdoToolkit no longer contacts only your Azure DevOps server. `Update-AdoToolkit`, and no other command, connects to `api.github.com`, `github.com` and `release-assets.githubusercontent.com` over HTTPS through the system proxy, and sends them no Windows credentials. The releases are still unsigned: the checksums catch a damaged or altered download, not who published it.
+- The update steps in the README, the getting-started guide, the `README.txt` of the portable bundle and the text of each GitHub release name `Update-AdoToolkit` for 0.11.0 and later.
+
+Details: [release notes](docs/release-0.11.0.md)
+
 ## 0.10.5 - 2026-10-05
 
 ### Fixed
@@ -30,7 +43,7 @@ Details: [release notes](docs/release-0.10.5.md)
 
 - `Export-AdoBuildTestFailure -Format Csv` writes one flat CSV file per build instead of the HTML report: a row per reported test with its error, owner, Test Case, open bugs and whether it is new or keeps failing, under fixed English column names, for a spreadsheet or a script. It downloads nothing and needs no connection, and a text cell that a spreadsheet could read as a formula starts with an apostrophe. Without `-Format`, the export writes the HTML report as before.
 
-Details: [release notes](docs/release-0.10.0.md)
+Details: [release notes](docs/archive/release-0.10.0.md)
 
 ## 0.9.15 - 2026-10-04
 

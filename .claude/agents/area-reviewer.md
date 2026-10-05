@@ -32,7 +32,7 @@ and the nested file of any other path you judge.
 
 | Area | Paths | Read |
 | --- | --- | --- |
-| Core infrastructure | `src/AdoToolkit.Core/` folders Configuration, Connections, Diagnostics, Http, IO and Resources, and its root files; the same folders of `tests/AdoToolkit.Core.Tests/` | `src/AGENTS.md`, `tests/AGENTS.md` |
+| Core infrastructure | `src/AdoToolkit.Core/` folders Configuration, Connections, Diagnostics, Http, IO, Resources and Update, and its root files; the same folders of `tests/AdoToolkit.Core.Tests/` | `src/AGENTS.md`, `tests/AGENTS.md` |
 | Core test domain | `src/AdoToolkit.Core/` folders Builds, RichText, TestManagement, TestRuns and WorkItems; the same folders of `tests/AdoToolkit.Core.Tests/` | `src/AGENTS.md`, `tests/AGENTS.md` |
 | Core reporting | `src/AdoToolkit.Core/Reporting/`, its tests, `tests/Fixtures/Reports/`, `docs/schemas/` | `src/AGENTS.md`, `tests/AGENTS.md`, `docs/AGENTS.md` |
 | PowerShell module and Pester tests | `src/AdoToolkit.PowerShell/`, `tests/AdoToolkit.PowerShell.Tests/` | `src/AGENTS.md`, `tests/AGENTS.md`, `docs/commands/AGENTS.md` |

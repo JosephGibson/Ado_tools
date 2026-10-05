@@ -367,4 +367,54 @@
   <data name="LinkedWorkItemsUnavailable" xml:space="preserve"><value>The work items linked to the test cases could not be read; they are listed with their IDs only.</value></data>
   <data name="UnresolvedLinkedWorkItem" xml:space="preserve"><value>Linked work item {0} is missing or inaccessible; its ID link is kept.</value></data>
   <data name="TestPointsUnavailable" xml:space="preserve"><value>The test points of project {0} could not be read; plans, suites, configurations and latest outcomes are left out.</value></data>
+  <data name="UpdateUpToDate" xml:space="preserve"><value>You already have the latest version of AdoToolkit, {0}. Nothing was downloaded.</value></data>
+  <data name="UpdateNewerThanRelease" xml:space="preserve"><value>You have AdoToolkit {0}, which is newer than the latest release, {1}. Nothing was downloaded.</value></data>
+  <data name="UpdateInstalledModule" xml:space="preserve"><value>AdoToolkit {0} is installed in {1}. You had {2}. Close this PowerShell window and open a new one to use it.</value></data>
+  <data name="UpdateInstalledPortable" xml:space="preserve"><value>AdoToolkit {0} is installed in {1}. You had {2}. Close this window, then start Start-AdoToolkit.cmd in {1}. You can delete {3} once its window is closed and you have moved out any reports saved in it.</value></data>
+  <data name="UpdateAlreadyInstalledModule" xml:space="preserve"><value>AdoToolkit {0} is already installed in {1}. Close this PowerShell window and open a new one to use it.</value></data>
+  <data name="UpdateAction" xml:space="preserve"><value>Install AdoToolkit {0}</value></data>
+  <data name="UpdateProgressActivity" xml:space="preserve"><value>Updating AdoToolkit to {0}</value></data>
+  <data name="UpdateProgressDownload" xml:space="preserve"><value>Downloading {0}: {1:N0} of {2:N0} KB</value></data>
+  <data name="UpdateRequestLog" xml:space="preserve"><value>GET {0}: HTTP {1}, {2} ms.</value></data>
+  <data name="UpdateRedirectLog" xml:space="preserve"><value>Redirected to {0}.</value></data>
+  <data name="UpdateVerifiedLog" xml:space="preserve"><value>{0} matches the SHA-256 digest that GitHub reports and the checksum file {1}.</value></data>
+  <data name="UpdatePreviousInUse" xml:space="preserve"><value>The previous copy is still in use by another PowerShell window and was left at {0}. The next update removes it.</value></data>
+  <data name="UpdateUnsupportedLayout" xml:space="preserve"><value>Update-AdoToolkit updates a release installed in a PSModulePath folder or a portable folder, and this copy runs from {0}. Install the latest release by hand, as described at {1}.</value></data>
+  <data name="UpdateLinkedPath" xml:space="preserve"><value>The install path passes through a link: {0}. Update-AdoToolkit does not write through links.</value></data>
+  <data name="UpdatePowerShellTooOld" xml:space="preserve"><value>AdoToolkit {0} requires PowerShell {1} or later, and this window runs PowerShell {2}. Update PowerShell, then run Update-AdoToolkit again.</value></data>
+  <data name="UpdateProxyAuthentication" xml:space="preserve"><value>The proxy did not accept your Windows sign-in for {0}. Ask your IT team whether the proxy allows {0}.</value></data>
+  <data name="UpdateForbidden" xml:space="preserve"><value>GitHub refused the request for {0} (HTTP 403).</value></data>
+  <data name="UpdateRateLimited" xml:space="preserve"><value>GitHub's hourly limit for requests without sign-in is used up for this network. Try again after {0:t}.</value></data>
+  <data name="UpdateRateLimitedLater" xml:space="preserve"><value>GitHub's hourly limit for requests without sign-in is used up for this network. Try again later.</value></data>
+  <data name="UpdateNoRelease" xml:space="preserve"><value>GitHub has no published AdoToolkit release.</value></data>
+  <data name="UpdateAssetMissing" xml:space="preserve"><value>Release {0} on GitHub has no file {1}.</value></data>
+  <data name="UpdateServer" xml:space="preserve"><value>GitHub could not complete the request for {0} (HTTP {1}). Try again later.</value></data>
+  <data name="UpdateProxyRefused" xml:space="preserve"><value>The proxy refused the connection to {0} (HTTP {1}). Ask your IT team whether {0} may be reached.</value></data>
+  <data name="UpdateUnreachable" xml:space="preserve"><value>{0} could not be reached ({1}). Check the network and the proxy, then run Update-AdoToolkit again.</value></data>
+  <data name="UpdateConnectionLost" xml:space="preserve"><value>The connection was lost while downloading {0}. Run Update-AdoToolkit again.</value></data>
+  <data name="UpdateRequest" xml:space="preserve"><value>GitHub answered HTTP {1} for {0}.</value></data>
+  <data name="UpdateRedirectBlocked" xml:space="preserve"><value>The request for {0} was redirected to {1}, which is not allowed. Update-AdoToolkit connects only to api.github.com, github.com and release-assets.githubusercontent.com, over HTTPS.</value></data>
+  <data name="UpdateRedirectLimit" xml:space="preserve"><value>The request for {0} was redirected too many times, or without a target.</value></data>
+  <data name="UpdateTimeoutSeconds" xml:space="preserve"><value>The request for {0} did not finish within {1} seconds. Run Update-AdoToolkit again.</value></data>
+  <data name="UpdateTimeoutMinutes" xml:space="preserve"><value>The download of {0} did not finish within {1} minutes. Run Update-AdoToolkit again.</value></data>
+  <data name="UpdateStalled" xml:space="preserve"><value>No data arrived from {0} for {1} seconds. Run Update-AdoToolkit again.</value></data>
+  <data name="UpdateReleaseFormat" xml:space="preserve"><value>GitHub's description of the latest AdoToolkit release has an unexpected format.</value></data>
+  <data name="UpdateTagInvalid" xml:space="preserve"><value>The latest release has the tag {0}, which is not a version tag such as v1.2.3.</value></data>
+  <data name="UpdateDigestMissing" xml:space="preserve"><value>GitHub reports no SHA-256 digest for {0}, so the download cannot be verified.</value></data>
+  <data name="UpdateAssetTooLarge" xml:space="preserve"><value>{0} is {1:N0} bytes, more than its limit of {2:N0} bytes.</value></data>
+  <data name="UpdateSizeMismatch" xml:space="preserve"><value>The download of {0} has {1:N0} bytes, but GitHub reports {2:N0}. Run Update-AdoToolkit again.</value></data>
+  <data name="UpdateDigestMismatch" xml:space="preserve"><value>{0} does not match the SHA-256 digest that GitHub reports. Run Update-AdoToolkit again.</value></data>
+  <data name="UpdateChecksumMismatch" xml:space="preserve"><value>{0} does not match its checksum file {1}. Run Update-AdoToolkit again.</value></data>
+  <data name="UpdateChecksumFileInvalid" xml:space="preserve"><value>The checksum file {0} has no SHA-256 hash for {1}.</value></data>
+  <data name="UpdateArchiveEntry" xml:space="preserve"><value>The release archive {0} has an unsafe or unexpected entry: {1}</value></data>
+  <data name="UpdateArchiveLayout" xml:space="preserve"><value>The release archive {0} does not contain the AdoToolkit layout.</value></data>
+  <data name="UpdateArchiveEntryTooLarge" xml:space="preserve"><value>The release archive {0} has an entry that is too large: {1}</value></data>
+  <data name="UpdateArchiveIncomplete" xml:space="preserve"><value>The release archive {0} has an incomplete entry: {1}</value></data>
+  <data name="UpdateArchiveAssembly" xml:space="preserve"><value>The release archive {0} has an assembly that does not match version {1}: {2}</value></data>
+  <data name="UpdateManifestMismatch" xml:space="preserve"><value>The module in {0} does not match release version {1}.</value></data>
+  <data name="UpdateTargetExists" xml:space="preserve"><value>The folder {0} already exists. Move or delete it, then run Update-AdoToolkit again.</value></data>
+  <data name="UpdateBusy" xml:space="preserve"><value>Another Update-AdoToolkit is installing into {0}. Let it finish, then run Update-AdoToolkit again.</value></data>
+  <data name="UpdateInUse" xml:space="preserve"><value>AdoToolkit {0} is in use. Close every PowerShell window that loaded it, then run Update-AdoToolkit again.</value></data>
+  <data name="UpdateDiskFull" xml:space="preserve"><value>There is not enough free space in {0} to install AdoToolkit {1}.</value></data>
+  <data name="UpdateFolderUnreadable" xml:space="preserve"><value>Cannot read the folder {0}. Check that you can open it, then run Update-AdoToolkit again.</value></data>
 </root>

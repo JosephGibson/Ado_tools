@@ -23,6 +23,7 @@ documentation starts at the [README](../../README.md).
 | [release-0.8.5.md](release-0.8.5.md) | 0.8.5 release notes: the failed-test report restyle, with the Overview cards, the error clusters and the bug coverage; no cmdlet or schema change |
 | [release-0.9.0.md](release-0.9.0.md) | 0.9.0 release notes: the agent worktrees, the three subagents, the review workflow, and the gate and the test runs side by side; no product change |
 | [release-0.9.5.md](release-0.9.5.md) | 0.9.5 release notes: surrogate-safe report cuts, the pipeline identifier guard, and the gate, package and live-check fixes |
+| [release-0.9.10.md](release-0.9.10.md) | 0.9.10 release notes: the plan critique skill and its hooks, `rev-parse` in the Git boundary and the `gh` release handoff; no product change |
 
 Release notes for the current and the previous version are in `docs/`.
 

@@ -176,6 +176,24 @@ public sealed class TestCaseExporterTests
         if (!opened) Assert.Throws<ArgumentException>(() => new ShellDocumentLauncher().Open(Path.Combine(directory.Root, "absent-" + name)));
     }
 
+    // A spreadsheet reads a cell that starts like a formula as one, and Test Case text is not
+    // written formula-safe: a Test Case document named .csv is written, never opened.
+    [Fact]
+    public void OpenLeavesATestCaseDocumentNamedCsvClosed()
+    {
+        using TestDirectory directory = new();
+        RecordingLauncher launcher = new();
+        List<string> warnings = [];
+        string path = Path.Combine(directory.Root, "cases.csv");
+        FileInfo? file = new TestCaseExporter(launcher).Export([ReportFixture.Case("nested")], Connection(), Options(path, ReportFormat.Markdown),
+            _ => true, warnings.Add, TestContext.Current.CancellationToken);
+        Assert.NotNull(file);
+        Assert.True(File.Exists(path));
+        Assert.Empty(launcher.Paths);
+        Assert.Contains(path, Assert.Single(warnings), StringComparison.Ordinal);
+        Assert.False(ShellDocumentLauncher.CanOpen(path));
+    }
+
     // The report is already committed when the shell cannot open it (no application for the file
     // type, a blocked launch). That is a warning; the written file is still returned.
     [Theory]

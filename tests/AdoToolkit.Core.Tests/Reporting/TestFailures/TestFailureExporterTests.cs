@@ -152,6 +152,80 @@ public sealed class TestFailureExporterTests
         }
     }
 
+    // A CSV file links no attachment: one file under the build's name, no folder and no request, even
+    // with every run's attachments asked for. Its Verbose lines are those of an export that downloads
+    // nothing, and -Open hands the file to the shell.
+    [Fact]
+    public async Task CsvExportWritesOneFileAndDownloadsNothing()
+    {
+        using TestDirectory directory = new();
+        (AdoBuildTestFailureSet set, FakeHttpMessageHandler handler, HttpClient client) = await Retrieve();
+        using (handler)
+        using (client)
+        {
+            int requests = handler.Requests.Count;
+            RecordingLauncher launcher = new();
+            TestFailureExporter exporter = new(launcher);
+            CapturingLog log = new();
+            // The culture changes nothing in the file, so an unsupported one is not worth a warning.
+            Assert.NotEmpty(exporter.Prepare(set, Options(directory.Root, culture: "de-DE")).Warnings);
+            TestFailureExportPlan plan = exporter.Prepare(set, Options(directory.Root, open: true, culture: "de-DE", allRuns: true,
+                format: TestFailureReportFormat.Csv));
+            Assert.Empty(plan.Warnings);
+            Assert.Equal(Path.Combine(directory.Root, "Build-401-TestFailures.csv"), plan.ReportPath);
+            Assert.False(plan.DownloadsAttachments);
+            Assert.Null(plan.AttachmentDirectory);
+            TestFailureExportResult result = await exporter.ExportAsync(plan, null, log, TestContext.Current.CancellationToken);
+            Assert.Equal(plan.ReportPath, result.Report.FullName);
+            Assert.Null(result.AttachmentDirectory);
+            Assert.Equal([result.Report.FullName], Directory.GetFileSystemEntries(directory.Root));
+            Assert.Equal(requests, handler.Requests.Count);
+            Assert.Equal([result.Report.FullName], launcher.Opened);
+            byte[] bytes = File.ReadAllBytes(result.Report.FullName);
+            Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF }, bytes[..3]);
+            Assert.StartsWith(string.Join(",", CsvTestFailureRenderer.Columns) + "\r\n401,1,", Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3), StringComparison.Ordinal);
+            CsvTestFailureRenderer.Validate(result.Report.FullName, Model(set));
+            List<(AdoMessage Step, long[] Values)> lines = ExportLines(log);
+            Assert.Equal(ExportSteps.Select(static step => step.Step), lines.Select(static line => line.Step));
+            Assert.Equal([0L, 0L], lines[0].Values[..2]);
+            Assert.Equal(result.Report.Length, lines[1].Values[0]);
+            Assert.Equal([401L, 0L, 0L], lines[^1].Values[..3]);
+        }
+    }
+
+    // A CSV file goes into an existing directory or the .csv file that Path names; any other path is
+    // refused before anything is written. NoClobber refuses an existing file when the export is
+    // planned and again when it is written.
+    [Fact]
+    public async Task CsvPathNamesACsvFileOrAnExistingDirectory()
+    {
+        using TestDirectory directory = new();
+        (AdoBuildTestFailureSet set, FakeHttpMessageHandler handler, HttpClient client) = await Retrieve();
+        using (handler)
+        using (client)
+        {
+            const TestFailureReportFormat csv = TestFailureReportFormat.Csv;
+            TestFailureExporter exporter = new(new RecordingLauncher(), () => directory.Root);
+            Assert.Equal(Path.Combine(directory.Root, "Build-401-TestFailures.csv"), exporter.Prepare(set, Options(null, format: csv)).ReportPath);
+            string named = Path.Combine(directory.Root, "nightly.CSV");
+            Assert.Equal(named, exporter.Prepare(set, Options(named, format: csv)).ReportPath);
+            foreach (string name in new[] { "report.html", "report.txt", "missing", ".csv" })
+                Assert.Throws<AdoFileOutputException>(() => exporter.Prepare(set, Options(Path.Combine(directory.Root, name), createDirectory: true, format: csv)));
+            Assert.Empty(Directory.GetFileSystemEntries(directory.Root));
+
+            TestFailureExportPlan plan = exporter.Prepare(set, Options(directory.Root, noClobber: true, format: csv));
+            File.WriteAllText(plan.ReportPath, "existing");
+            Assert.Throws<AdoFileOutputException>(() => exporter.Prepare(set, Options(directory.Root, noClobber: true, format: csv)));
+            await Assert.ThrowsAsync<AdoFileOutputException>(() => exporter.ExportAsync(plan, null, null, TestContext.Current.CancellationToken));
+            Assert.Equal("existing", File.ReadAllText(plan.ReportPath));
+            Assert.Equal([plan.ReportPath], Directory.GetFileSystemEntries(directory.Root));
+            TestFailureExportResult replaced = await exporter.ExportAsync(exporter.Prepare(set, Options(directory.Root, format: csv)), null, null,
+                TestContext.Current.CancellationToken);
+            Assert.Equal(plan.ReportPath, replaced.Report.FullName);
+            CsvTestFailureRenderer.Validate(replaced.Report.FullName, Model(set));
+        }
+    }
+
     // A missing destination directory is planned without touching disk, then created by the export.
     [Fact]
     public async Task MissingDirectoryIsCreatedOnlyWhenTheExportRuns()
@@ -242,11 +316,12 @@ public sealed class TestFailureExporterTests
         [.. Enumerable.Repeat<object?>("\u0001", placeholders)])).Replace("\u0001", "([0-9]+)", StringComparison.Ordinal) + "$", RegexOptions.CultureInvariant);
 
     private static TestFailureExportOptions Options(string? path, bool skip = false, bool noClobber = false, bool open = false,
-        string culture = "en-US", DateTimeOffset? generated = null, bool createDirectory = false, bool allRuns = false) => new()
+        string culture = "en-US", DateTimeOffset? generated = null, bool createDirectory = false, bool allRuns = false,
+        TestFailureReportFormat format = TestFailureReportFormat.Html) => new()
         {
             Culture = culture, SessionCulture = Session, Path = path, SkipAttachments = skip, NoClobber = noClobber, Open = open,
             GeneratedAt = generated ?? Generated, ToolkitVersion = "5.4.0-test", CreateDirectory = createDirectory,
-            AllRunAttachments = allRuns,
+            AllRunAttachments = allRuns, Format = format,
         };
 
     private static TestFailureReportModel Model(AdoBuildTestFailureSet set) => TestFailureReportModelBuilder.Build(set,

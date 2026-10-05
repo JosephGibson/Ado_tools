@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-04-2026
+ms.date: 10-05-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -13,14 +13,14 @@ title: Export-AdoBuildTestFailure
 
 ## SYNOPSIS
 
-Writes one compact HTML failed-test report per failure set and downloads its JSON and text attachments: the small ones of every recent test run and the larger ones of the most recent run.
+Writes one compact HTML failed-test report per failure set and downloads its JSON and text attachments: the small ones of every recent test run and the larger ones of the most recent run. With -Format Csv, writes one flat CSV file per set instead.
 
 ## SYNTAX
 
 ### Input (Default)
 
 ```
-Export-AdoBuildTestFailure [-InputObject] <AdoBuildTestFailureSet> [-Culture <string>] [-Path <string>] [-SkipAttachments] [-AllRunAttachments] [-AttachmentWindowDays <int>] [-IncludeFlaky] [-NoClobber] [-Open] [-Connection <AdoConnection>] [-WhatIf] [-Confirm]
+Export-AdoBuildTestFailure [-InputObject] <AdoBuildTestFailureSet> [-Format <TestFailureReportFormat>] [-Culture <string>] [-Path <string>] [-SkipAttachments] [-AllRunAttachments] [-AttachmentWindowDays <int>] [-IncludeFlaky] [-NoClobber] [-Open] [-Connection <AdoConnection>] [-WhatIf] [-Confirm]
 ```
 
 ## ALIASES
@@ -142,6 +142,35 @@ Old generation folders of the same report are removed after replacement; cleanup
 failures produce warnings and the new report stays committed. Reparse points are
 skipped and never followed.
 
+With `-Format Csv`, the export writes one flat CSV file per set instead, for a spreadsheet
+or a script. It links no attachment, so it downloads nothing and needs no connection;
+`-SkipAttachments`, `-AllRunAttachments`, `-AttachmentWindowDays` and `-Culture` have no
+effect on it. The file holds one header row, then one row per test of the report, in report
+order, flaky tests included only with `-IncludeFlaky`. The columns, in this order, are
+Build, Ordinal, Test, Title, Classification, Attempts, Latest error, Owner, Priority,
+Test case ID, Test case state, Open bugs, Bug IDs, Bug states, New and Since. Build is the
+build ID and Ordinal the test's number in the report. Test is the full test name.
+Classification is Failed or Flaky. Attempts counts the test's attempts. Latest error is the
+whole message of the error that the report's table shows the first line of, with its line
+breaks. Owner is the display name, followed by the unique name in angle brackets. Test case
+state is filled when the Test Case was read. Open bugs counts the test's open bugs. Bug IDs
+and Bug states list every bug of the test's bug list, in ID order, separated by a semicolon
+and a space; a bug that could not be read has an empty state. New is True when the build
+before this one ran the test and it did not fail, False when the test also failed or was
+flaky in the build before, and empty when there is no comparison. Since is the day, as
+yyyy-MM-dd, that the first build of that run of failures finished, in the time zone of the
+computer that runs the export, or that build's number when the day is not known; it is
+empty unless New is False.
+
+The header names are English in every culture. Numbers and True or False use the invariant
+culture, and dates are yyyy-MM-dd; Azure DevOps text is written as the server sent it. The
+file is UTF-8 with a byte order mark, with a comma between fields, CRLF after every row and
+RFC 4180 quoting: a field that holds a comma, a quote or a line break is enclosed in
+quotes, and its quotes are doubled. A text field that starts with =, +, -, @, a tab or a
+carriage return gets an apostrophe in front of it, so that a spreadsheet shows it as text
+instead of reading it as a formula; numbers and dates never do. The file is written to a
+temporary file beside the target, checked, then moved into place.
+
 ## EXAMPLES
 
 ### Example 1
@@ -174,6 +203,17 @@ Get-AdoBuildTestFailure -BuildId 401 | Export-AdoBuildTestFailure -IncludeFlaky 
 Includes flaky tests and downloads JSON and text attachments from every test run that
 started in the last 14 days.
 
+### Example 4
+
+```powershell
+Get-AdoBuildTestFailure -BuildId 401 | Export-AdoBuildTestFailure -Format Csv -Path .\triage
+Import-Csv -LiteralPath .\triage\Build-401-TestFailures.csv | Where-Object 'Open bugs' -eq 0 | Select-Object Test, 'Latest error'
+```
+
+Writes `.\triage\Build-401-TestFailures.csv` into the existing `triage` directory without
+downloading any attachment, then lists the tests that no open bug tracks yet, with their
+latest error.
+
 ## PARAMETERS
 
 ### -InputObject
@@ -197,9 +237,30 @@ AcceptedValues: []
 HelpMessage: ''
 ```
 
+### -Format
+
+Html (default) writes the report and downloads attachments; Csv writes one flat CSV file per set instead, with one row per test of the report, and downloads nothing.
+
+```yaml
+Type: AdoToolkit.Core.Reporting.TestFailures.TestFailureReportFormat
+DefaultValue: 'Html'
+SupportsWildcards: false
+Aliases: []
+ParameterSets:
+- Name: (All)
+  Position: Named
+  IsRequired: false
+  ValueFromPipeline: false
+  ValueFromPipelineByPropertyName: false
+  ValueFromRemainingArguments: false
+DontShow: false
+AcceptedValues: []
+HelpMessage: ''
+```
+
 ### -Culture
 
-Report culture, for example en-US or fr-CA. Defaults to the configured report culture, then the session culture. An unsupported culture falls back to English with a warning.
+Report culture, for example en-US or fr-CA. Defaults to the configured report culture, then the session culture. An unsupported culture falls back to English with a warning. Has no effect with -Format Csv, whose header and values are the same in every culture.
 
 ```yaml
 Type: System.String
@@ -220,7 +281,7 @@ HelpMessage: ''
 
 ### -Path
 
-FileSystem directory, or an .html file when exactly one set arrives; each later set then gets a per-input error. A directory that does not exist yet is created when the report is written, never with -WhatIf; a path with another file extension is rejected, and a trailing separator always means a directory. The default name is Build-<id>-TestFailures.html and the default directory is the Downloads known folder. Wildcards are not expanded.
+FileSystem directory, or an .html file when exactly one set arrives; each later set then gets a per-input error. A directory that does not exist yet is created when the report is written, never with -WhatIf; a path with another file extension is rejected, and a trailing separator always means a directory. The default name is Build-<id>-TestFailures.html and the default directory is the Downloads known folder. With -Format Csv, an existing directory, which receives Build-<id>-TestFailures.csv, or a .csv file in an existing directory when exactly one set arrives. Any other path, a directory that does not exist included, is rejected before anything is written: with an InvalidArgument error when it does not end in .csv, and otherwise with an AdoFileOutput error. Wildcards are not expanded.
 
 ```yaml
 Type: System.String
@@ -241,7 +302,7 @@ HelpMessage: ''
 
 ### -SkipAttachments
 
-Downloads nothing and creates no folder; attachments of runs inside the window are listed with their Azure DevOps names, sizes and download links. Takes precedence over -AllRunAttachments.
+Downloads nothing and creates no folder; attachments of runs inside the window are listed with their Azure DevOps names, sizes and download links. Takes precedence over -AllRunAttachments. Has no effect with -Format Csv, which downloads nothing.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -262,7 +323,7 @@ HelpMessage: ''
 
 ### -AllRunAttachments
 
-Downloads JSON and text attachments of any size from every run inside the attachment window. Without it, runs other than the most recent give only their files of at most maximumInlineJsonBytes. PNG and HTML attachments are never downloaded. Existing per-file and total size limits still apply. Has no effect with -SkipAttachments.
+Downloads JSON and text attachments of any size from every run inside the attachment window. Without it, runs other than the most recent give only their files of at most maximumInlineJsonBytes. PNG and HTML attachments are never downloaded. Existing per-file and total size limits still apply. Has no effect with -SkipAttachments or -Format Csv.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -283,7 +344,7 @@ HelpMessage: ''
 
 ### -AttachmentWindowDays
 
-Days before the export, from 1 to 365, in which a test run must have started for its attachments to appear and be downloaded. Older runs keep every attempt but lose their attachments; a run without a start date counts as outside. Defaults to 7.
+Days before the export, from 1 to 365, in which a test run must have started for its attachments to appear and be downloaded. Older runs keep every attempt but lose their attachments; a run without a start date counts as outside. Defaults to 7. Has no effect with -Format Csv.
 
 ```yaml
 Type: System.Int32
@@ -304,7 +365,7 @@ HelpMessage: ''
 
 ### -IncludeFlaky
 
-Includes flaky tests, which failed and then passed in every stage, job or named test run. Without it they are left out of the report and only counted in its header.
+Includes flaky tests, which failed and then passed in every stage, job or named test run. Without it they are left out of the report and only counted in its header, and a CSV file has no row for them.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -325,7 +386,7 @@ HelpMessage: ''
 
 ### -NoClobber
 
-Refuses an existing report before any download and never replaces a report created meanwhile.
+Refuses an existing report or CSV file before any download and never replaces one created meanwhile.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -346,7 +407,7 @@ HelpMessage: ''
 
 ### -Open
 
-Opens each committed report with the default handler. A report that cannot be opened produces a warning and is still returned.
+Opens each committed report or CSV file with the default handler. A file that cannot be opened produces a warning and is still returned.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -367,7 +428,7 @@ HelpMessage: ''
 
 ### -Connection
 
-Explicit connection used for attachment downloads; overrides the active runspace connection. When attachments are downloaded, a set from another collection produces a per-input error.
+Explicit connection used for attachment downloads; overrides the active runspace connection. When attachments are downloaded, a set from another collection produces a per-input error. Not used with -Format Csv.
 
 ```yaml
 Type: AdoToolkit.Core.Connections.AdoConnection
@@ -388,7 +449,7 @@ HelpMessage: ''
 
 ### -WhatIf
 
-Names the report and the attachment folder without requests, downloads or writes.
+Names the report and the attachment folder, or the CSV file, without requests, downloads or writes.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -410,7 +471,7 @@ HelpMessage: ''
 
 ### -Confirm
 
-Asks once per report before downloading attachments and writing.
+Asks once per report or CSV file before downloading attachments and writing.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -442,7 +503,7 @@ Supports ErrorAction, ErrorVariable, WarningVariable, Verbose, and Debug.
 
 ### System.IO.FileInfo
 
-The committed report. When attachments were downloaded, its AttachmentDirectory note property holds the folder path. No object with WhatIf. The report's file:/// address is also written to the information stream with the PSHOST tag, so it shows in the console like Write-Host output; -InformationAction Ignore hides it. Nothing is written with WhatIf or when the export fails.
+The committed report or CSV file. When attachments were downloaded, its AttachmentDirectory note property holds the folder path. No object with WhatIf. The file's file:/// address is also written to the information stream with the PSHOST tag, so it shows in the console like Write-Host output; -InformationAction Ignore hides it. Nothing is written with WhatIf or when the export fails.
 
 ## NOTES
 

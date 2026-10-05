@@ -424,4 +424,84 @@ Describe 'Failed-test report export' {
         }
         finally { Stop-FakeAdoServer -Server $server }
     }
+
+    # -Format Csv links no attachment, so it requests nothing and needs no connection, whatever the
+    # attachment switches say. Without -Format, and with -Format Html, the export is the HTML report.
+    It 'keeps HTML as the default and writes one CSV file with -Format Csv' {
+        $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses -LatestAttachments))
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
+            Disconnect-Ado
+            @($set | Export-AdoBuildTestFailure -Path $outputDirectory -Format Csv -WhatIf).Count | Should -Be 0
+            Get-OutputEntry -Path $outputDirectory | Should -BeNullOrEmpty
+            $csv = $set | Export-AdoBuildTestFailure -Path $outputDirectory -Format Csv -AllRunAttachments -InformationVariable reportInformation 6> $null
+            $csv | Should -BeOfType ([IO.FileInfo])
+            $csv.FullName | Should -Be (Join-Path $outputDirectory 'Build-401-TestFailures.csv')
+            $csv.PSObject.Properties['AttachmentDirectory'] | Should -BeNullOrEmpty
+            [Uri]::new($reportInformation[0].MessageData.Message).LocalPath | Should -Be $csv.FullName
+            $server.Requests.Count | Should -Be 12
+            $bytes = [IO.File]::ReadAllBytes($csv.FullName)
+            $bytes[0..2] | Should -Be @(0xEF, 0xBB, 0xBF)
+            $text = [Text.Encoding]::UTF8.GetString($bytes, 3, $bytes.Length - 3)
+            $text | Should -Match '\A\S[^\r\n]*\r\n'
+            $text | Should -Match '\r\n\z'
+            $rows = @(Import-Csv -LiteralPath $csv.FullName -Encoding utf8)
+            $rows.Count | Should -Be @($set.Failures | Where-Object { $_.Classification -eq 'Failed' }).Count
+            $rows[0].PSObject.Properties.Name | Should -Be @('Build', 'Ordinal', 'Test', 'Title', 'Classification', 'Attempts', 'Latest error',
+                'Owner', 'Priority', 'Test case ID', 'Test case state', 'Open bugs', 'Bug IDs', 'Bug states', 'New', 'Since')
+            $rows[0].Build | Should -Be '401'
+            $rows[0].Ordinal | Should -Be '1'
+            $rows[0].Classification | Should -Be 'Failed'
+
+            $default = $set | Export-AdoBuildTestFailure -Path $outputDirectory -SkipAttachments 6> $null
+            $default.FullName | Should -Be (Join-Path $outputDirectory 'Build-401-TestFailures.html')
+            $explicit = $set | Export-AdoBuildTestFailure -Path (Join-Path $outputDirectory 'explicit.html') -Format Html -SkipAttachments 6> $null
+            [IO.File]::ReadAllText($explicit.FullName) | Should -Match '^<!doctype html>'
+            Get-OutputEntry -Path $outputDirectory | Should -Be @('Build-401-TestFailures.csv', 'Build-401-TestFailures.html', 'explicit.html')
+            $server.Requests.Count | Should -Be 12
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
+    It 'rejects a CSV path that does not end in .csv, and an unknown format, before writing' {
+        $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses))
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
+            foreach ($name in @('report.html', 'report.txt', 'missing', 'missing\')) {
+                $failure = { $set | Export-AdoBuildTestFailure -Path (Join-Path $outputDirectory $name) -Format Csv } | Should -Throw -PassThru
+                $failure.CategoryInfo.Category | Should -Be 'InvalidArgument'
+                $failure.FullyQualifiedErrorId | Should -Match '^TestFailureCsvPathInvalid,'
+            }
+            $unknown = { $set | Export-AdoBuildTestFailure -Path $outputDirectory -Format Json } | Should -Throw -PassThru
+            $unknown.CategoryInfo.Category | Should -Be 'InvalidArgument'
+            $unknown.FullyQualifiedErrorId | Should -Match ',AdoToolkit\.ExportAdoBuildTestFailureCommand$'
+            $server.Requests.Count | Should -Be 12
+            Get-OutputEntry -Path $outputDirectory | Should -BeNullOrEmpty
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
+
+    It 'NoClobber refuses an existing CSV file' {
+        $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses))
+        try {
+            Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
+            $set = Get-AdoBuildTestFailure -BuildId 401 -HistoryCount 1 -WarningAction SilentlyContinue
+            $existing = Join-Path $outputDirectory 'Build-401-TestFailures.csv'
+            [IO.File]::WriteAllText($existing, 'original')
+            foreach ($path in @($outputDirectory, $existing)) {
+                $failure = $null
+                try { $set | Export-AdoBuildTestFailure -Path $path -Format Csv -NoClobber -InformationVariable reportInformation -ErrorAction Stop | Out-Null }
+                catch { $failure = $_ }
+                $failure | Should -Not -BeNullOrEmpty
+                $failure.FullyQualifiedErrorId | Should -Match '^AdoFileOutput'
+                ($reportInformation | Out-String) | Should -Not -Match 'file:///'
+            }
+            [IO.File]::ReadAllText($existing) | Should -Be 'original'
+            Get-OutputEntry -Path $outputDirectory | Should -Be @('Build-401-TestFailures.csv')
+            $server.Requests.Count | Should -Be 12
+        }
+        finally { Stop-FakeAdoServer -Server $server }
+    }
 }

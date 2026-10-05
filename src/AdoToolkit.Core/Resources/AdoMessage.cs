@@ -273,6 +273,7 @@ public enum AdoMessage
     ExportTestFailureReportWithAttachments,
     ProgressAttachmentDownload,
     TestFailureReportPathInvalid,
+    TestFailureCsvPathInvalid,
     TestFailureReportSingleFile,
     AttachmentFolderSkipped,
     AttachmentFolderNotDeleted,

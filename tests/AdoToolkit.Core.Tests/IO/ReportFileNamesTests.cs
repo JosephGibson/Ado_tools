@@ -1,5 +1,6 @@
 using AdoToolkit.Core.IO;
 using AdoToolkit.Core.Reporting;
+using AdoToolkit.Core.Reporting.TestFailures;
 
 namespace AdoToolkit.Core.Tests.IO;
 
@@ -74,6 +75,7 @@ public sealed class ReportFileNamesTests
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(cultureName);
             DateTimeOffset local = new(2026, 12, 31, 21, 5, 9, 7, TimeSpan.FromHours(-5));
             Assert.Equal("Build-1234567-TestFailures.html", ReportFileNames.TestFailures(1234567));
+            Assert.Equal("Build-1234567-TestFailures.csv", ReportFileNames.TestFailures(1234567, TestFailureReportFormat.Csv));
             string stamp = ReportFileNames.GenerationStamp(local);
             Assert.Equal("20270101T020509007Z", stamp);
             Assert.Equal("Build-1234567-TestFailures.files-20270101T020509007Z", ReportFileNames.AttachmentFolder("Build-1234567-TestFailures", stamp));

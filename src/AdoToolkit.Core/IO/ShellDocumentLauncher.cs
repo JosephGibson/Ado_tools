@@ -14,9 +14,13 @@ public sealed class ShellDocumentLauncher : IDocumentLauncher
         return DocumentExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
     }
 
+    // A spreadsheet reads a cell that starts like a formula as one. The failed-test export writes
+    // every text cell of its CSV file formula-safe and opens it without asking CanOpen; an export
+    // that asks CanOpen, such as a Test Case document named .csv, is never opened.
     public void Open(string path)
     {
-        if (!CanOpen(path)) throw new ArgumentException(null, nameof(path));
+        if (!CanOpen(path) && !string.Equals(Path.GetExtension(path), ".csv", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException(null, nameof(path));
         using Process? process = Process.Start(new ProcessStartInfo(Path.GetFullPath(path)) { UseShellExecute = true });
     }
 }

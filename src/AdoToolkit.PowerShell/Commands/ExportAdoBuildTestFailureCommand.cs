@@ -29,6 +29,7 @@ public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposabl
     [ValidateNotNull]
     public AdoBuildTestFailureSet? InputObject { get; set; }
 
+    [Parameter] public TestFailureReportFormat Format { get; set; } = TestFailureReportFormat.Html;
     [Parameter] [ValidateNotNullOrEmpty] public string? Culture { get; set; }
     [Parameter] [ValidateNotNullOrEmpty] public string? Path { get; set; }
     [Parameter] public SwitchParameter SkipAttachments { get; set; }
@@ -47,9 +48,19 @@ public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposabl
         if (!string.Equals(provider.Name, "FileSystem", StringComparison.OrdinalIgnoreCase))
             ThrowTerminatingError(new ErrorRecord(new ArgumentException(Messages.Get(AdoMessage.FileSystemPathRequired, MessageCulture)),
                 "FileSystemPathRequired", ErrorCategory.InvalidArgument, Path));
+        bool isDirectory = Directory.Exists(resolvedPath);
+        // A CSV file goes into an existing directory under the build's name, or into the .csv file
+        // that the path names; no directory is created for it.
+        if (Format == TestFailureReportFormat.Csv)
+        {
+            pathIsFile = !isDirectory;
+            if (pathIsFile && !resolvedPath.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+                ThrowTerminatingError(new ErrorRecord(new ArgumentException(Messages.Get(AdoMessage.TestFailureCsvPathInvalid, MessageCulture, resolvedPath)),
+                    "TestFailureCsvPathInvalid", ErrorCategory.InvalidArgument, Path));
+            return;
+        }
         // An existing directory or an .html name keeps its meaning. Any other path without an
         // extension is a directory created at export time; a trailing separator forces that.
-        bool isDirectory = Directory.Exists(resolvedPath);
         pathIsFile = !isDirectory && resolvedPath.EndsWith(".html", StringComparison.OrdinalIgnoreCase);
         createDirectory = !isDirectory && !pathIsFile;
         if (createDirectory && (File.Exists(resolvedPath) || System.IO.Path.HasExtension(resolvedPath)))
@@ -78,7 +89,7 @@ public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposabl
         TestFailureExportPlan plan = exporter.Prepare(set, new TestFailureExportOptions
         {
             Culture = Culture, ConfiguredCulture = configuration.Reporting.Culture, SessionCulture = MessageCulture,
-            Path = resolvedPath, CreateDirectory = createDirectory, NoClobber = NoClobber, SkipAttachments = SkipAttachments, Open = Open,
+            Format = Format, Path = resolvedPath, CreateDirectory = createDirectory, NoClobber = NoClobber, SkipAttachments = SkipAttachments, Open = Open,
             AllRunAttachments = AllRunAttachments, AttachmentWindowDays = AttachmentWindowDays, IncludeFlaky = IncludeFlaky,
             MaximumInlineJsonBytes = configuration.TestResults.MaximumInlineJsonBytes,
             GeneratedAt = DateTimeOffset.Now,

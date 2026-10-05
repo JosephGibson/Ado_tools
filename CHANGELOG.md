@@ -6,6 +6,14 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.10.0 - 2026-10-05
+
+### Added
+
+- `Export-AdoBuildTestFailure -Format Csv` writes one flat CSV file per build instead of the HTML report: a row per reported test with its error, owner, Test Case, open bugs and whether it is new or keeps failing, under fixed English column names, for a spreadsheet or a script. It downloads nothing and needs no connection, and a text cell that a spreadsheet could read as a formula starts with an apostrophe. Without `-Format`, the export writes the HTML report as before.
+
+Details: [release notes](docs/release-0.10.0.md)
+
 ## 0.9.15 - 2026-10-04
 
 ### Added
@@ -21,7 +29,7 @@ Details: [release notes](docs/release-0.9.15.md)
 
 - The module itself is unchanged apart from its version number: the cmdlets, the reports, the help and the configuration file are those of 0.9.5. This version changes the tools and the procedures that develop AdoToolkit.
 
-Details: [release notes](docs/release-0.9.10.md)
+Details: [release notes](docs/archive/release-0.9.10.md)
 
 ## 0.9.5 - 2026-10-04
 

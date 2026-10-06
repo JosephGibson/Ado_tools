@@ -7,7 +7,13 @@ Read it before changing one, and correct it in the same change.
 ## Rules
 
 - The version is declared once: `VersionPrefix` in `Directory.Build.props`. The manifest
-  holds `@VERSION@` until staging. The `release` skill lists the documents that repeat it.
+  holds `@VERSION@` until staging. `AdoReleaseVersionFields` in
+  `tools/package/Release.Common.ps1` lists the documents that repeat it, with the pattern of
+  each, and the release preparation bumps them.
+- The release scripts, `tools/package/Start-AdoToolkitRelease.ps1`,
+  `tools/package/Test-AdoToolkitRelease.ps1` and `tools/package/Complete-AdoToolkitRelease.ps1`,
+  read Git only, through the commands `AGENTS.md` allows, and never commit, tag or push. Each
+  prints one compact JSON document.
 - A package is exactly seven files, listed in `Assert-AdoPackage` in
   `tools/package/Package.Common.ps1`; the gate and every packaging script call it. `$layout`
   in `tools/package/Install-AdoToolkit.ps1` repeats the list, and a tooling test keeps the
@@ -38,7 +44,9 @@ Read it before changing one, and correct it in the same change.
 - Tests: `tools/tests/Package.Tests.ps1`, `tools/tests/Portable.Tests.ps1`,
   `tools/tests/ReleaseWorkflow.Tests.ps1` and `tools/tests/VerifyWorkflow.Tests.ps1`. They
   run the steps of the workflows and of the setup action with mocked `gh`, `dotnet`,
-  `pwsh` and `Invoke-WebRequest`.
+  `pwsh` and `Invoke-WebRequest`. `tools/tests/Release.Tests.ps1` runs the functions behind
+  the release scripts on synthetic repositories with mocked `git`, `gh` and child processes,
+  and each script itself up to its first refusal.
 
 ## Boundaries
 

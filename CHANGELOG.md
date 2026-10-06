@@ -6,6 +6,14 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.11.5 - 2026-10-05
+
+### Changed
+
+- The module itself is unchanged apart from its version number: the cmdlets, the reports, the help and the configuration file are those of 0.11.0. This version changes the tools and the procedures that develop and release AdoToolkit.
+
+Details: [release notes](docs/release-0.11.5.md)
+
 ## 0.11.0 - 2026-10-05
 
 ### Added
@@ -35,7 +43,7 @@ Details: [release notes](docs/release-0.11.0.md)
 - The default tables in the console show a control character in text from the server as a space, so that a title, a name or a state can no longer send escape sequences to your terminal. The objects keep the text as the server sent it.
 - A work item whose project the server names `.` or `..` is reported as a response format error instead of giving links that leave the collection.
 
-Details: [release notes](docs/release-0.10.5.md)
+Details: [release notes](docs/archive/release-0.10.5.md)
 
 ## 0.10.0 - 2026-10-05
 

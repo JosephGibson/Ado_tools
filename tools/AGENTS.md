@@ -7,7 +7,7 @@
 | `tools/lib/dependencies.ps1` | `deps`, `diagnose`, required tools, build-module selection |
 | `tools/lib/validation.ps1` | The `verify` plan, the built-in stages, stage execution |
 | `tools/lib/setup.ps1` | `bootstrap` |
-| `tools/lib/processes.ps1` | PowerShell child processes run side by side: the Pester runs of `powershell-test` and of the product gate |
+| `tools/lib/processes.ps1` | PowerShell child processes: the analyzer of `powershell-lint`, and the Pester runs, side by side, of `powershell-test` and of the product gate |
 | `tools/lib/test-results.ps1` | Helpers of the product gate: TRX counters, the processes of its steps |
 | `tools/check.ps1` | The product gate, stage `project-check` |
 | `tools/guard-git.ps1`, `tools/validate-edit.ps1` | Claude hooks of every session |

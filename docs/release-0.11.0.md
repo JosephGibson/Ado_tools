@@ -26,7 +26,7 @@ cmdlet uses, a table view, one progress phase and 50 keys in the string catalog.
 error ID: its failures reuse the existing exception types. It sends no new request to Azure
 DevOps; its own requests go to GitHub. No other cmdlet, parameter, report, report golden,
 configuration setting, CSV column or schema changed, and the package still holds the same
-seven files. The [0.10.5 notes](release-0.10.5.md) describe the last fixes, and the
+seven files. The [0.10.5 notes](archive/release-0.10.5.md) describe the last fixes, and the
 [0.10.0 notes](archive/release-0.10.0.md) the last feature.
 
 ### Update-AdoToolkit
@@ -203,7 +203,7 @@ were true of 0.10.5 and are listed under [Documentation](#documentation).
 | Old versions accumulate | A decision: no pruning. A module root keeps every version folder, as with the installer, and a portable update leaves the old folder, whose `runtime\pwsh.exe` may still be running |
 | `Update-AdoToolkit` and `Install-AdoToolkit.ps1` started at once | As racy as two installers today, apart from one difference: the updater never deletes the installer's `.staging-*` folders, so it cannot break an install in progress. Each takes the target with a move that never replaces |
 | The updater is stricter than the installer in six cases | A version folder with a leading zero or a Unicode digit, a checksum file whose zip name differs only in case, a DLL that is not an assembly or carries another version, and more than 64 entries are refused by the updater and accepted by the installer. Only a malformed release has them; the Pester table lists them apart, so that the two can drift only on purpose |
-| The findings of 0.10.5 and earlier | Unchanged; see the [0.10.5 notes](release-0.10.5.md#findings-not-fixed), which link those of every earlier version |
+| The findings of 0.10.5 and earlier | Unchanged; see the [0.10.5 notes](archive/release-0.10.5.md#findings-not-fixed), which link those of every earlier version |
 
 ### Known limitations
 
@@ -216,7 +216,7 @@ were true of 0.10.5 and are listed under [Documentation](#documentation).
 | GitHub's limit | 60 requests an hour without sign-in for each network address, which a company's users share behind one proxy address. Each run uses one API request; the downloads go to `github.com`. The limit gives `AdoThrottled` with the time it resets |
 | No retry | A failure asks the user to run the command again. At 30 minutes, the 110 MB portable zip needs about 61 KB/s on average |
 | 0.10.5 and older | They have no `Update-AdoToolkit`: install 0.11.0 by hand once |
-| Limits carried over | The [0.10.5](release-0.10.5.md#known-limitations) known limitations, which link the earlier ones, still apply, with V-01, V-02, V-03, V-27, V-28 and V-31 to V-37 |
+| Limits carried over | The [0.10.5](archive/release-0.10.5.md#known-limitations) known limitations, which link the earlier ones, still apply, with V-01, V-02, V-03, V-27, V-28 and V-31 to V-37 |
 
 ## Work-PC Live checks
 
@@ -230,7 +230,7 @@ still apply: variables stay on the work PC, raw responses are not sent back, and
 | --- | --- | --- |
 | 1 | `tests/Live/Update.Live.ps1`, with no input variable, once 0.11.0 is the newest version installed in the user's module folder | V-38: `PASS V-38`. It copies the install into a temporary folder as 0.0.1 and updates that copy in a child process, a real download of the 0.9 MB module zip through the system proxy. The `NOTE V-38 PROXY_API`, `PROXY_SITE` and `PROXY_DOWNLOAD` lines say `DIRECT` or `PROXIED` for each host. `INCONCLUSIVE` comes from a rate limit, a missing release, nothing to install, a configuration refusal, a local file error, or an install that is missing, older than 0.11.0 or invalid. `FAIL V-38 <error ID>`, such as `AdoAuthentication` or `AdoRequest`, means the proxy refused: keep the manual installation and report the ID |
 | 2 | In a new window, `Update-AdoToolkit -Verbose` with the installed 0.11.0, then the same in the portable 0.11.0 console | `Status` `UpToDate` with its message and one request to `api.github.com` in each layout. A Documents folder that OneDrive or folder redirection moves should be accepted; `AdoConfiguration` there is a finding to report with its message key, not its path |
-| 3 | The checks of the [0.10.5 notes](release-0.10.5.md#work-pc-live-checks), with the 0.11.0 package | V-37 first, then the smoke and probe checks, the console tables, the Excel check and the earlier checks they list. All still pending |
+| 3 | The checks of the [0.10.5 notes](archive/release-0.10.5.md#work-pc-live-checks), with the 0.11.0 package | V-37 first, then the smoke and probe checks, the console tables, the Excel check and the earlier checks they list. All still pending |
 
 ## Local validation and developer handoff
 

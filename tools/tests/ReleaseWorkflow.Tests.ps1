@@ -42,9 +42,9 @@ BeforeAll {
         elseif (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path }
         return $output
     }
-    # What verify requires of CHANGELOG.md for a version: the heading that the release skill
-    # prescribes, an entry under it, a section that the publish step accepts, and the link to
-    # the notes in the text that step writes.
+    # What verify requires of CHANGELOG.md for a version: the heading that
+    # tools/package/Start-AdoToolkitRelease.ps1 writes, an entry under it, a section that the
+    # publish step accepts, and the link to the notes in the text that step writes.
     function Assert-ChangelogSection {
         param([string[]] $Changelog, [string] $Version)
         $heading = '^## ' + [regex]::Escape($Version) + ' - \d{4}-\d{2}-\d{2}$'

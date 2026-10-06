@@ -37,7 +37,7 @@ command prints one compact JSON document.
 | `tools/` | `dev.ps1`, product gate `check.ps1`, Claude hooks, tooling tests | `tools/AGENTS.md` |
 | `tools/package/`, `.github/` | Packaging, installer, release and pull request workflows | `tools/package/AGENTS.md` |
 | `docs/commands/<culture>/` | Cmdlet help sources, shipped as compiled help | `docs/commands/AGENTS.md` |
-| `docs/guides/`, `README.md`, `CHANGELOG.md`, `docs/release-<version>.md` | End-user documentation | `docs/AGENTS.md` |
+| `docs/guides/`, `README.md`, `CHANGELOG.md`, `docs/release-<version>.md`, `docs/unreleased/` | End-user documentation, and the change fragments of the next release | `docs/AGENTS.md` |
 | `docs/archive/` | Specification and superseded documents; never edited | `docs/AGENTS.md` |
 | `docs/tooling.md` | Reference for `tools/` and the agent setup; read it only to change them | |
 

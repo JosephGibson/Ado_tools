@@ -16,20 +16,17 @@ function Get-PowerShellLintOutcome {
     $unavailable = $false
     $analyzer = @(Get-BuildModule -Name PSScriptAnalyzer)
     if ($analyzer.Count -gt 0) {
-        Import-Module -Name $analyzer[0].Path
         $settingsFile = Join-Path $ProjectProfile.Root 'PSScriptAnalyzerSettings.psd1'
-        $analyzerArgs = @{}
-        if (Test-Path -LiteralPath $settingsFile -PathType Leaf) { $analyzerArgs['Settings'] = $settingsFile }
-        else { $analyzerArgs['Severity'] = @('Error', 'Warning') }
-
+        $settings = if (Test-Path -LiteralPath $settingsFile -PathType Leaf) { $settingsFile } else { $null }
         # Analyze the enumerated list rather than recursing from the root, so the analyzer
         # cannot reach into secrets/ or the sensitive files the walker already dropped.
-        foreach ($file in $scripts) {
-            $relativePath = Get-RelativeRepositoryPath -Path $file.FullName -Root $ProjectProfile.Root
-            foreach ($finding in @(Invoke-ScriptAnalyzer -Path $file.FullName @analyzerArgs)) {
+        try {
+            foreach ($finding in @(Invoke-ScriptAnalyzerProcess -Path @($scripts | ForEach-Object FullName) -Analyzer $analyzer[0].Path -Settings $settings)) {
+                $relativePath = Get-RelativeRepositoryPath -Path $finding.Path -Root $ProjectProfile.Root
                 [void] $failures.Add("${relativePath}:$($finding.Line) $($finding.RuleName)")
             }
         }
+        catch { [void] $failures.Add($_.Exception.Message) }
     }
     else {
         $unavailable = $true
@@ -882,10 +879,11 @@ function Invoke-ProjectVerification {
         return [pscustomobject]@{ Status = 'unavailable'; Stages = @(); Warnings = @('Nothing to validate: no PowerShell, configuration or product files were found.') }
     }
 
-    # Load the supported Pester before any stage runs. Linting a test file makes
-    # PSScriptAnalyzer resolve Describe/It/Should, which auto-loads the *highest* installed
-    # Pester; if that is a 6.x, importing 5.x afterwards fails with "assembly with same name
-    # is already loaded". The test stage hands this Pester to the processes that run the files.
+    # Load the supported Pester before any stage runs. A lookup of Describe/It/Should in this
+    # runspace would auto-load the *highest* installed Pester; if that is a 6.x, importing 5.x
+    # afterwards fails with "assembly with same name is already loaded". The lint stage resolves
+    # commands in a process of its own. The test stage hands this Pester to the processes that run
+    # the files.
     if (@($plan | Where-Object { $_.Name -eq 'powershell-test' }).Count -gt 0) {
         $pesterModule = @(Get-BuildModule -Name Pester)
         $loadedPester = @(Get-BuildModule -Name Pester -Loaded)

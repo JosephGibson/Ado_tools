@@ -1,5 +1,6 @@
-# PowerShell work that runs in child processes, side by side: the Pester runs of the powershell-test
-# stage and of the product gate. Callers enable strict mode and terminating errors.
+# PowerShell work that runs in child processes: the analyzer of the powershell-lint stage, and the
+# Pester runs, side by side, of the powershell-test stage and of the product gate. Callers enable
+# strict mode and terminating errors.
 
 # Runs each program in a pwsh process of its own, at most ThrottleLimit at once, started in the
 # order given, and returns one result per program in that order: ExitCode, TimedOut and the text of
@@ -85,6 +86,49 @@ function ConvertTo-PowerShellLiteral {
     param([Parameter(Mandatory = $true)][AllowEmptyString()][string] $Text)
 
     return "'" + [System.Management.Automation.Language.CodeGeneration]::EscapeSingleQuotedStringContent($Text) + "'"
+}
+
+# Runs PSScriptAnalyzer, imported from the given manifest, on the given files in a pwsh process
+# whose module path holds only $PSHOME\Modules. The analyzer resolves every command it checks in
+# runspaces of its own, and a name it cannot resolve, such as a script's own function, makes
+# PowerShell search each module folder on the path. PowerShell puts the user's and the shared
+# PowerShell 7 folders back in each runspace it opens, ahead of the rest, so a command resolves
+# from those three folders only, the highest version first: the Windows PowerShell folders and
+# every other folder on the path of verify, a runner's preinstalled modules among them, are left
+# out and can neither slow a lookup nor shadow a command. The findings come back whole through a
+# file: Path, Line and RuleName each, in the order of the files.
+function Invoke-ScriptAnalyzerProcess {
+    param(
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]] $Path,
+        [Parameter(Mandatory = $true)][string] $Analyzer,
+        [string] $Settings,
+        [ValidateRange(1, 3600)][int] $TimeoutSeconds = 600
+    )
+
+    $folder = Join-Path ([System.IO.Path]::GetTempPath()) ('AdoToolkit-lint-' + [guid]::NewGuid().ToString('N'))
+    [void] [System.IO.Directory]::CreateDirectory($folder)
+    try {
+        $files = Join-Path $folder 'files.json'
+        $report = Join-Path $folder 'findings.json'
+        [System.IO.File]::WriteAllText($files, (ConvertTo-Json -InputObject @($Path) -Compress), [System.Text.UTF8Encoding]::new($false))
+        $analyzerArguments = if ($Settings) { "@{ Settings = $(ConvertTo-PowerShellLiteral $Settings) }" } else { "@{ Severity = @('Error', 'Warning') }" }
+        $program = @"
+Set-StrictMode -Version 2.0
+`$ErrorActionPreference = 'Stop'
+`$ProgressPreference = 'SilentlyContinue'
+`$env:PSModulePath = Join-Path `$PSHOME 'Modules'
+Import-Module -Name $(ConvertTo-PowerShellLiteral $Analyzer)
+`$arguments = $analyzerArguments
+`$findings = foreach (`$file in @([System.IO.File]::ReadAllText($(ConvertTo-PowerShellLiteral $files)) | ConvertFrom-Json)) {
+    foreach (`$finding in @(Invoke-ScriptAnalyzer -Path `$file @arguments)) { [ordered]@{ Path = `$file; Line = `$finding.Line; RuleName = `$finding.RuleName } }
+}
+[System.IO.File]::WriteAllText($(ConvertTo-PowerShellLiteral $report), (ConvertTo-Json -InputObject @(`$findings) -Depth 3 -Compress), [System.Text.UTF8Encoding]::new(`$false))
+"@
+        $result = (Invoke-PowerShellProcess -Program @($program) -ThrottleLimit 1 -TimeoutSeconds $TimeoutSeconds)[0]
+        if ($result.TimedOut -or -not (Test-Path -LiteralPath $report -PathType Leaf)) { throw (Get-PowerShellProcessFailure -Result $result -Activity 'lint') }
+        return @([System.IO.File]::ReadAllText($report) | ConvertFrom-Json)
+    }
+    finally { if (Test-Path -LiteralPath $folder) { Remove-Item -LiteralPath $folder -Recurse -Force } }
 }
 
 # Runs each test file in a process of its own and merges the results in the order of the files. A

@@ -2,10 +2,11 @@
 
 | Path | Reader | Rule |
 | --- | --- | --- |
-| `README.md`, `docs/guides/` | End users | Keep the explanation. Fix facts, links and examples; do not trim for agents |
+| `README.md`, `docs/guides/` | End users | Keep the explanation. Fix facts, links and examples; do not trim for agents. `README.md` carries the current version and no per-version history; `CHANGELOG.md` says what changed. `tools/tests/Release.Tests.ps1` requires one `**Version X.Y.Z**` line, naming `VersionPrefix`, and no link to release notes |
 | `docs/commands/` | End users, as `Get-Help` | Shipped content; see `docs/commands/AGENTS.md` |
 | `docs/release-<version>.md` | End users and the developer | Only the current and the previous version; the `release` skill writes them |
 | `CHANGELOG.md` | End users, also as the opening of each GitHub release | One short section per version that links its release notes. The `release` skill writes it, and `verify` requires it for the current version |
+| `docs/unreleased/` | The `release` skill | One JSON change fragment per change, written with the change in the format of `docs/unreleased/README.md`. The release consumes the fragments and deletes them |
 | `docs/schemas/testcase.v1.schema.json` | Consumers of the JSON report | Public contract; `JsonSchemaValidationTests` validates reports against it |
 | `docs/tooling.md` | Developers and agents | Reference for `tools/` and the agent setup: terse, tables, exact commands |
 | `docs/plans/` | The developer and agents | Each phase of a plan lists the files it touches and the phases it depends on, so phases with disjoint files can run as parallel worktree sessions. A plan carries the `## Critique` section that `critique-plan` writes |

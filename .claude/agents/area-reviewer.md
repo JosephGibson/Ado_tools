@@ -37,7 +37,7 @@ and the nested file of any other path you judge.
 | Core reporting | `src/AdoToolkit.Core/Reporting/`, its tests, `tests/Fixtures/Reports/`, `docs/schemas/` | `src/AGENTS.md`, `tests/AGENTS.md`, `docs/AGENTS.md` |
 | PowerShell module and Pester tests | `src/AdoToolkit.PowerShell/`, `tests/AdoToolkit.PowerShell.Tests/` | `src/AGENTS.md`, `tests/AGENTS.md`, `docs/commands/AGENTS.md` |
 | Cmdlet help | `docs/commands/`, judged against `src/AdoToolkit.PowerShell/Commands/` | `docs/commands/AGENTS.md`, `src/AGENTS.md` |
-| README, guides and release notes | `README.md`, `CHANGELOG.md`, `docs/guides/`, the release notes, `docs/plans/`, the two archive indexes | `docs/AGENTS.md` |
+| README, guides and release notes | `README.md`, `CHANGELOG.md`, `docs/guides/`, the release notes, the change fragments in `docs/unreleased/`, `docs/plans/`, the two archive indexes | `docs/AGENTS.md` |
 | Dev tooling and live checks | `tools/` apart from packaging, `tests/Live/`, `.claude/`, `.agents/`, `docs/tooling.md`, the instruction files | `tools/AGENTS.md`, `tests/Live/AGENTS.md`, `docs/AGENTS.md` |
 | Packaging and workflows | `tools/package/`, `tools/BuildModules.psd1`, `.github/`, the build and package configuration at the root | `tools/package/AGENTS.md`, `tools/AGENTS.md` |
 | Core test suite quality | All of `tests/AdoToolkit.Core.Tests/` and `tests/Fixtures/` | `tests/AGENTS.md` |

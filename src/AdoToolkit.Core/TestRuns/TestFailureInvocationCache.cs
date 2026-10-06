@@ -1,7 +1,8 @@
 namespace AdoToolkit.Core.TestRuns;
 
 // Invocation-scoped caches (§17). Piped builds of one definition reuse each earlier build's derived
-// classification, the Test Case links, and the Bug category and state categories of each project.
+// classification with the starts of its listed error messages (HistoryBuildData), the Test Case
+// links, and the Bug category and state categories of each project.
 // A build window listing is keyed by its current build, so it is reused only when the same build
 // arrives again. Public and opaque so the shell can hold one cache for a whole invocation while
 // creating a service per pipeline record.

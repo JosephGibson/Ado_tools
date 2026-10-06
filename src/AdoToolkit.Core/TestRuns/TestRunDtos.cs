@@ -56,8 +56,11 @@ internal sealed class RunStatisticDto
 
 internal sealed class TestResultListingPageDto { public List<TestResultListingDto>? Value { get; init; } }
 
-// A result as pass 1 and history list it: the fields of §15.9 step 3 and nothing else. Every other
-// field of a listed result is skipped unread, so a large listing costs no more than these fields.
+// A result as pass 1 and history list it: the fields of §15.9 step 3, and the error message, which
+// §15.9 step 3 leaves to the detail read: history compares a test's error with that of its previous
+// failed build from it (D-8), without a request more. Every other field of a listed result is
+// skipped unread, so a large listing costs no more than these fields. Whether Server 2020 lists the
+// message is V-39.
 internal sealed class TestResultListingDto
 {
     public int Id { get; init; }
@@ -68,6 +71,10 @@ internal sealed class TestResultListingDto
     public string? ResultGroupType { get; init; }
     public DateTimeOffset? StartedDate { get; init; }
     public TestCaseReferenceDto? TestCase { get; init; }
+    // Read leniently: a value that is not a string must not fail the listing, and so pass 1 or a
+    // history build.
+    [JsonConverter(typeof(LenientStringConverter))]
+    public string? ErrorMessage { get; init; }
 }
 
 internal sealed class TestResultDto

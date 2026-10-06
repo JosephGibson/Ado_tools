@@ -1,4 +1,5 @@
 using AdoToolkit.Core.Builds;
+using AdoToolkit.Core.Reporting.Errors;
 using AdoToolkit.Core.TestRuns;
 
 namespace AdoToolkit.Core.Reporting.TestFailures;
@@ -35,4 +36,7 @@ public sealed class TestFailureReportModel
     // True when flaky tests were left out of Failures; FlakyCount still counts them.
     public bool FlakyExcluded { get; init; }
     internal PipelineGrouping Grouping { get; init; } = PipelineGrouping.None;
+    // Every failure of the set classified, flaky tests included: profile n is the test of ordinal
+    // n + 1, and the flaky tests that are not shown follow the shown ones.
+    internal ErrorClassification Errors { get; init; } = ErrorClassification.Empty;
 }

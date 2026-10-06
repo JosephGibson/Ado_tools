@@ -11,7 +11,8 @@
       "id": 302,
       "outcome": "Failed",
       "automatedTestName": "Contoso.Orders.Tests.OrderTests.Totals",
-      "automatedTestStorage": "Contoso.Orders.Tests.dll"
+      "automatedTestStorage": "Contoso.Orders.Tests.dll",
+      "errorMessage": "Expected 19,99."
     }
   ]
 }

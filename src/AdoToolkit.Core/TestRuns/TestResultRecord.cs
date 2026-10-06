@@ -13,6 +13,8 @@ internal sealed class TestResultRecord
     internal string? AutomatedTestStorage { get; init; }
     internal string? TestCaseTitle { get; init; }
     internal string? ResultGroupType { get; init; }
+    // The start of a failed result's listed message (ErrorMessageStart); null otherwise.
+    internal string? ErrorMessage { get; init; }
     internal AdoTestOutcomeClass OutcomeClass => OutcomeClassifier.Classify(Outcome);
     internal bool IsRerunGroup => OutcomeClassifier.IsRerunGroup(ResultGroupType);
 }

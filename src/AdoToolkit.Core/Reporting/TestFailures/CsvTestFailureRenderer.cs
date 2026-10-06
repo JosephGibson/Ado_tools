@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Text;
+using AdoToolkit.Core.Reporting.Errors;
 using AdoToolkit.Core.TestRuns;
 
 namespace AdoToolkit.Core.Reporting.TestFailures;
@@ -7,18 +8,19 @@ namespace AdoToolkit.Core.Reporting.TestFailures;
 // One flat file per build for spreadsheets and scripts: a header, then one record per reported
 // test in report order. Header names are English and numbers, booleans and dates invariant, so
 // the file reads the same whatever the culture. The values are those of the HTML report: its
-// classification, its trend signal and its open bug count. UTF-8 with a byte order mark, comma
-// delimiter, CRLF after every record and RFC 4180 quoting.
+// classification, its trend signal, its open bug count and the test's primary error. UTF-8 with a
+// byte order mark, comma delimiter, CRLF after every record and RFC 4180 quoting.
 public static class CsvTestFailureRenderer
 {
     private const string BugSeparator = "; ";
     private static readonly SearchValues<char> Quoted = SearchValues.Create(",\"\r\n");
 
-    // Fixed for machine use: never translated, never reordered.
+    // Fixed for machine use: never translated, never reordered; new columns go at the end.
     public static IReadOnlyList<string> Columns { get; } = Array.AsReadOnly(new[]
     {
         "Build", "Ordinal", "Test", "Title", "Classification", "Attempts", "Latest error", "Owner", "Priority",
         "Test case ID", "Test case state", "Open bugs", "Bug IDs", "Bug states", "New", "Since",
+        "Primary error", "Error kind", "Error rule", "Distinct errors",
     });
 
     public static void Render(TestFailureReportModel model, TextWriter writer)
@@ -27,7 +29,9 @@ public static class CsvTestFailureRenderer
         ArgumentNullException.ThrowIfNull(writer);
         writer.Write('﻿');
         Record(writer, Columns);
-        foreach (AdoTestFailure failure in model.Failures) Record(writer, Row(model, failure));
+        // The shown tests are the first ones the classifier read, in the same order.
+        for (int index = 0; index < model.Failures.Count; index++)
+            Record(writer, Row(model, model.Failures[index], index < model.Errors.Profiles.Count ? model.Errors.Profiles[index] : null));
     }
 
     // Reads the written file back: the byte order mark, valid UTF-8, the header, then one record of
@@ -47,13 +51,14 @@ public static class CsvTestFailureRenderer
             if (records[index].Length != Columns.Count || records[index][1] != Integer(model.Failures[index - 1].Ordinal)) Invalid(model);
     }
 
-    private static string[] Row(TestFailureReportModel model, AdoTestFailure failure)
+    private static string[] Row(TestFailureReportModel model, AdoTestFailure failure, ErrorProfile? profile)
     {
         TestFailureSignal? signal = TestFailureSignal.Of(failure.History);
         AdoTestCaseLink? testCase = failure.TestCase is { Id: > 0 } link ? link : null;
         // The bug list of the card: every bug with an ID, in its order; a bug that could not be read
         // keeps its place with an empty state.
         AdoTestBug[] bugs = [.. failure.Bugs.Where(static bug => bug.Id > 0)];
+        ErrorProfileEntry? primary = profile?.Primary;
         return
         [
             Integer(model.Build.Id),
@@ -72,6 +77,13 @@ public static class CsvTestFailureRenderer
             Text(string.Join(BugSeparator, bugs.Select(static bug => bug.State ?? string.Empty))),
             signal is null ? string.Empty : signal.IsNew.ToString(CultureInfo.InvariantCulture),
             Since(model, failure, signal),
+            // The whole message of the latest attempt that had the primary error; the rule that named
+            // that error, a configured one by its name and a built-in one by its ID; and the errors of
+            // the failed attempts.
+            Text(primary is null ? null : failure.Attempts.FirstOrDefault(attempt => attempt.Number == primary.Latest.AttemptNumber)?.ErrorMessage),
+            primary is null ? string.Empty : primary.Class.IsGeneric ? "Generic" : "Specific",
+            Text(primary?.Class.Rule is { } rule ? rule.BuiltInId ?? rule.Name : null),
+            Integer(profile?.Entries.Count(static entry => entry.Latest.Failed) ?? 0),
         ];
     }
 

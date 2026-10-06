@@ -82,7 +82,7 @@ public sealed class ConfigurationStore
             JsonObject reporting = Object(root, "reporting");
             WarnUnknown(cases, ["maximumSharedStepDepth", "maximumExpandedSteps", "maximumResolvedWorkItems"], "testCases.", culture, warnings);
             WarnUnknown(results, ["historyCount", "historyScope", "maximumReportedFailures", "maximumHistoryRequests", "maximumAttachmentBytes", "maximumTotalAttachmentBytes", "maximumInlineJsonBytes", "maximumInlineTotalBytes", "maximumConcurrentRequests"], "testResults.", culture, warnings);
-            WarnUnknown(reporting, ["culture"], "reporting.", culture, warnings);
+            WarnUnknown(reporting, ["culture", "errorRules"], "reporting.", culture, warnings);
             return new AdoConfiguration
             {
                 SchemaVersion = Math.Max(1, schema),
@@ -107,7 +107,11 @@ public sealed class ConfigurationStore
                     MaximumConcurrentRequests = checked((int)Positive(results, "maximumConcurrentRequests",
                         TestResultOptions.DefaultMaximumConcurrentRequests, TestResultOptions.MaximumConcurrentRequestsLimit)),
                 },
-                Reporting = new ReportingOptions { Culture = reporting["culture"]?.GetValue<string>() },
+                Reporting = new ReportingOptions
+                {
+                    Culture = reporting["culture"]?.GetValue<string>(),
+                    ErrorRules = ErrorRules(reporting, culture, warnings),
+                },
                 Warnings = warnings.AsReadOnly(),
                 Preserved = root.DeepClone().AsObject(),
             };
@@ -206,8 +210,29 @@ public sealed class ConfigurationStore
         root["testResults"] = results.DeepClone();
         JsonObject reporting = Object(root, "reporting");
         reporting["culture"] = configuration.Reporting.Culture;
+        // The key stays as it was, or out, when there is no rule to write and the file had none.
+        if (configuration.Reporting.ErrorRules.Count > 0 || reporting["errorRules"] is JsonArray { Count: > 0 })
+            reporting["errorRules"] = ErrorRules(reporting["errorRules"] as JsonArray, configuration.Reporting.ErrorRules);
         root["reporting"] = reporting.DeepClone();
         return Encoding.UTF8.GetBytes(root.ToJsonString(JsonOptions));
+    }
+
+    // Each rule starts from the node of the same name as read, so its unknown keys survive, as a
+    // profile's do. Generic is written when false, or when the node had it.
+    private static JsonArray ErrorRules(JsonArray? original, IReadOnlyList<ErrorRuleOptions> rules)
+    {
+        JsonArray written = [];
+        foreach (ErrorRuleOptions rule in rules)
+        {
+            JsonObject node = original?.OfType<JsonObject>()
+                .FirstOrDefault(candidate => string.Equals(Text(candidate["name"])?.Trim(), rule.Name.Trim(), StringComparison.OrdinalIgnoreCase))?
+                .DeepClone().AsObject() ?? [];
+            node["name"] = rule.Name;
+            node["patterns"] = new JsonArray([.. rule.Patterns.Select(static pattern => JsonValue.Create(pattern))]);
+            if (!rule.Generic || node.ContainsKey("generic")) node["generic"] = rule.Generic;
+            written.Add(node);
+        }
+        return written;
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
@@ -248,6 +273,47 @@ public sealed class ConfigurationStore
         JsonValueKind.String => BuildDefinitionSelector.FromName(OptionalText(node, name)!),
         _ => throw new JsonException(name),
     };
+
+    // reporting.errorRules. An error names its place, such as reporting.errorRules[2].patterns[0],
+    // because the limits apply to each property.
+    private static List<ErrorRuleOptions> ErrorRules(JsonObject reporting, CultureInfo culture, List<string> warnings)
+    {
+        List<ErrorRuleOptions> rules = [];
+        JsonNode? node = reporting["errorRules"];
+        if (node is null) return rules;
+        if (node is not JsonArray { Count: <= ErrorRuleOptions.MaximumRules } array) throw Invalid("reporting.errorRules", culture);
+        HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
+        for (int index = 0; index < array.Count; index++)
+        {
+            string at = "reporting.errorRules[" + index.ToString(CultureInfo.InvariantCulture) + "]";
+            if (array[index] is not JsonObject rule) throw Invalid(at, culture);
+            WarnUnknown(rule, ["name", "patterns", "generic"], at + ".", culture, warnings);
+            string? name = Text(rule["name"])?.Trim();
+            if (name is not { Length: > 0 and <= ErrorRuleOptions.MaximumNameLength } || !names.Add(name)) throw Invalid(at + ".name", culture);
+            if (rule["patterns"] is not JsonArray { Count: > 0 and <= ErrorRuleOptions.MaximumPatterns } patterns) throw Invalid(at + ".patterns", culture);
+            List<string> texts = [];
+            for (int item = 0; item < patterns.Count; item++)
+            {
+                string? pattern = Text(patterns[item]);
+                if (string.IsNullOrWhiteSpace(pattern) || pattern.Length > ErrorRuleOptions.MaximumPatternLength)
+                    throw Invalid(at + ".patterns[" + item.ToString(CultureInfo.InvariantCulture) + "]", culture);
+                texts.Add(pattern);
+            }
+            bool generic = rule["generic"]?.GetValueKind() switch
+            {
+                null or JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                _ => throw Invalid(at + ".generic", culture),
+            };
+            rules.Add(new ErrorRuleOptions { Name = name, Patterns = texts.AsReadOnly(), Generic = generic });
+        }
+        return rules;
+    }
+
+    private static string? Text(JsonNode? node) => node?.GetValueKind() == JsonValueKind.String ? node.GetValue<string>() : null;
+
+    private static AdoConfigurationException Invalid(string path, CultureInfo culture) =>
+        new(Messages.Get(AdoMessage.InvalidConfiguration, culture, path));
 
     private static void SetOrRemove(JsonObject node, string name, JsonNode? value)
     {

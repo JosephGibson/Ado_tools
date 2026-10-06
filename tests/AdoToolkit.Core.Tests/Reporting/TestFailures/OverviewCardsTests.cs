@@ -49,6 +49,31 @@ public sealed class OverviewCardsTests
         Assert.Contains("<span class=\"glance-line\">Timed out after 3000 ms waiting for #submit</span></a></li>", card, StringComparison.Ordinal);
     }
 
+    // The errors that the most tests had in any failed attempt: AddToCart had CheckTitle's error once,
+    // so that error counts two tests although it is the primary error of one. Generic errors stay out.
+    [Fact]
+    public void MostCommonErrorsCountEveryTestThatHadTheError()
+    {
+        string overview = Overview(TestFailureReportFixture.Render("bilingual"));
+        Assert.Equal(["2 #e-1"], Regex.Matches(Panel(overview, "Most common errors"), "<li><span class=\"glance-count\">([0-9]+)</span> <a class=\"glance-error\" href=\"(#e-[0-9]+)\">")
+            .Select(static m => m.Groups[1].Value + " " + m.Groups[2].Value));
+        Assert.Equal(["New and recurring", "Most common errors", "Generic errors", "Without an open bug", "By group"],
+            Regex.Matches(Glance(overview), "<div class=\"glance-panel\"><h3>([^<]+)</h3>").Select(static m => m.Groups[1].Value));
+    }
+
+    // The tests with a generic error, and among them those with no other error; the card opens the
+    // generic errors in By error, and is left out without them.
+    [Theory]
+    [InlineData("en-US", "Generic errors", "With a generic error", "Only generic errors")]
+    [InlineData("fr-CA", "Erreurs génériques", "Avec erreur générique", "Erreurs génériques seulement")]
+    public void GenericErrorsCountTheTestsTheyReached(string culture, string heading, string with, string only)
+    {
+        string card = Panel(Overview(TestFailureReportFixture.Render("bilingual", culture)), heading);
+        Assert.Contains("<ul class=\"glance-counts\"><li><a href=\"#generic-errors\">" + with + "</a> <strong>3</strong></li><li><span>" + only
+            + "</span> <strong>2</strong></li></ul></div>", card, StringComparison.Ordinal);
+        Assert.DoesNotContain("<h3>Generic errors</h3>", Overview(TestFailureReportFixture.Render("large")), StringComparison.Ordinal);
+    }
+
     // The tests that most need a bug: the longest failing first, then the new ones. An unread bug is
     // not an open bug, so GetOrder, whose only bug could not be read, leads.
     [Fact]

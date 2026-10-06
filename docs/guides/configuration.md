@@ -25,8 +25,8 @@ defaults apply.
   `Connect-Ado` again after changing a profile.
 - If the file is invalid, commands that read it fail with a configuration error.
   Examples are malformed JSON, a property named twice in the same object, a limit of
-  zero, an empty default branch, a default test plan ID of zero or an unsupported
-  authentication value.
+  zero, an empty default branch, a default test plan ID of zero, an unsupported
+  authentication value or an error rule without a pattern.
 - Unknown keys produce a warning and are kept when the file is saved.
 - A file with a newer `schemaVersion` than this version supports can be read but
   not saved.
@@ -57,7 +57,16 @@ defaults apply.
     "historyScope": "AllBranches"
   },
   "reporting": {
-    "culture": "fr-CA"
+    "culture": "fr-CA",
+    "errorRules": [
+      {
+        "name": "Home page did not load",
+        "patterns": [
+          "Home page did not load within * seconds",
+          "La page d'accueil ne s'est pas chargée en moins de * secondes"
+        ]
+      }
+    ]
   }
 }
 ```
@@ -127,6 +136,7 @@ instead, as it does for any error body that cannot be read.
 | Key | Default | Meaning | Parameter |
 | --- | --- | --- | --- |
 | `reporting.culture` | session UI culture | Report language, for example `en-US` or `fr-CA`. Cultures other than English or French fall back to English with a warning | `-Culture` |
+| `reporting.errorRules` | none | Rules that name errors of the failed-test report, merge their wordings and mark the ones that come from the environment as generic; see [Error rules](#error-rules) | none |
 
 Cmdlet messages and help always follow the session UI culture (`$PSUICulture`).
 
@@ -140,3 +150,90 @@ The cmdlets that read the defaults and limits above:
 [Get-AdoBuild](../commands/en-US/Get-AdoBuild.md),
 [Get-AdoBuildTestFailure](../commands/en-US/Get-AdoBuildTestFailure.md),
 [Export-AdoBuildTestFailure](../commands/en-US/Export-AdoBuildTestFailure.md).
+
+### Error rules
+
+The HTML report of `Export-AdoBuildTestFailure` groups the failed attempts of each test by
+error, and gives each test a primary error, as [Reading the report](build-report.md#reading-the-report)
+describes; its CSV file names that error in the columns `Primary error`, `Error kind`,
+`Error rule` and `Distinct errors`. The report recognizes the messages of MSTest, NUnit and
+xUnit, and the wait timeout of Selenium, in English and, for MSTest, in French. Error rules
+cover the rest:
+
+- they give an error a name, shown in the report;
+- they merge the wordings of one error, such as an English and a French message, or
+  messages that differ only by a value;
+- they mark the errors that come from the environment, such as a page or a server that did
+  not respond, as generic. The report lists generic errors after the others, and a test's
+  primary error is generic only when the test had no other error.
+
+```json
+"reporting": {
+  "errorRules": [
+    {
+      "name": "Home page did not load",
+      "patterns": [
+        "Home page did not load within * seconds",
+        "La page d'accueil ne s'est pas chargée en moins de * secondes"
+      ]
+    },
+    {
+      "name": "Login banner text",
+      "generic": false,
+      "patterns": [ "*Expected:<Welcome*" ]
+    }
+  ]
+}
+```
+
+| Key | Meaning |
+| --- | --- |
+| `name` | The name the report shows, 1–100 characters; spaces around it are dropped. Two rules cannot have the same name, ignoring case |
+| `patterns` | 1–20 patterns, each a string of 1–500 characters that is not only spaces. The rule matches an error when one of its patterns does |
+| `generic` | `true`, the default, marks the error as generic. With `false`, the rule only merges and names the errors it matches |
+
+How a pattern matches:
+
+- A pattern matches a whole line. `*` stands for any text, including none, and `?` for
+  exactly one character; no other character is special. To find text inside a line, start
+  and end the pattern with `*`, as in `*Expected:<Welcome*`.
+- Case, accents and typographic apostrophes do not count, and a run of spaces, tabs or
+  no-break spaces counts as one space: `chargee` matches `chargée`, and `'` matches `’`.
+  Spaces at both ends of a line are dropped.
+- A pattern is tried on the line that names the error, below a wrapper line such as MSTest's
+  "Test method … threw exception:", on the first line of the message, and on each inner
+  exception line without its leading `--->`. Each of these lines is tried as it is and without
+  its leading exception type, such as `System.TimeoutException: `. Only the first 20 lines of
+  a message are read.
+- Rules are tried in the order of the file, then the built-in rules. The first rule that
+  matches wins, before the recognized test framework messages: every error it matches becomes
+  one error in the report, under its name. A configured rule makes an error of its own, even
+  when its texts mean what a built-in rule means: to bring other wordings into a built-in
+  rule's error, copy that rule's texts into the configured rule, which then wins.
+- When the English and French wordings of one error are joined, as [Reading the
+  report](build-report.md#english-and-french-attempts) describes, and two rules named them, the
+  rule that comes first names the error: a configured rule before a built-in one.
+- Patterns are not regular expressions. Matching takes time in proportion to the length of
+  the lines, whatever the patterns.
+
+The built-in rules are all generic. They recognize the English messages of Windows, .NET,
+Chrome, chromedriver and Selenium; the CSV file names them by their ID.
+
+| ID | Name in the report | Texts recognized |
+| --- | --- | --- |
+| `ConnectionRefused` | **Connection refused** | "No connection could be made because the target machine actively refused it", `net::ERR_CONNECTION_REFUSED`, "Unable to connect to the remote server" |
+| `NameResolution` | **Host name not resolved** | "No such host is known", "The remote name could not be resolved", `net::ERR_NAME_NOT_RESOLVED` |
+| `ServerUnavailable` | **Server unavailable** | The status 502, 503 or 504, as `: 503 (` or `(503)`, on a line that names `HttpRequestException` or `WebException` or says "Response status code does not indicate success" or "The remote server returned an error" |
+| `WebDriverSession` | **WebDriver session failed** | A line that starts with "session not created", "invalid session id" or "no such window"; "chrome not reachable"; "disconnected: not connected to DevTools"; "The HTTP request to the remote WebDriver server for URL … timed out after … seconds"; "Timed out waiting for driver service to initialize after" |
+| `PageLoadTimeout` | **Page load timed out** | A line that starts with "timeout: Timed out receiving message from renderer" |
+
+Each text is found anywhere in a line unless the table says that the line starts with it.
+The French messages of Windows and .NET Framework (V-41) and the texts of chromedriver (V-42)
+are not confirmed at work.
+
+A file holds at most 100 rules. A rule that breaks a limit, or a value of the wrong type,
+is a configuration error that names its place, such as `reporting.errorRules[2].patterns[0]`.
+Like any invalid setting, it stops every command that reads the file until it is fixed. A
+key that a rule does not know produces a warning and is kept when the file is saved.
+`Get-AdoBuildTestFailure` and its table do not use the rules: they show each test's latest
+error.

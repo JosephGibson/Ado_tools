@@ -53,9 +53,12 @@ public sealed class ErrorTextTests
     // The largest report the guides describe: 200 failures, each with 7 English and 7 French attempts
     // that repeat its message and a 40-frame stack trace, with four attachments, dates and failure
     // fields per attempt. Now that no attempt refers to an earlier one for its text, it renders,
-    // validates, keeps every trace and every attempt closed, and stays within the size budget.
-    [Fact]
-    public void TwoHundredFailuresWithFourteenAttemptsRenderValidateAndStayWithinTheSizeBudget()
+    // validates, keeps every trace and every attempt closed, and stays within the size budget. With
+    // three errors per test, By error shows each test once more, muted, under each other error.
+    [Theory]
+    [InlineData(1)]
+    [InlineData(3)]
+    public void TwoHundredFailuresWithFourteenAttemptsRenderValidateAndStayWithinTheSizeBudget(int errors)
     {
         AdoBuildTestFailureSet grouped = TestFailureReportFixture.Set("grouped");
         DateTimeOffset clock = TestFailureReportFixture.Clock;
@@ -77,7 +80,9 @@ public sealed class ErrorTextTests
                 Number = n, Source = n == 1 ? AdoTestAttemptSource.Single : AdoTestAttemptSource.RunAttempt, RunId = 1000 + n, ResultId = 100000 + f * 20 + n,
                 Outcome = "Failed", OutcomeClass = AdoTestOutcomeClass.Failure, StartedDate = clock.AddMinutes(-50), CompletedDate = clock.AddMinutes(-49),
                 Duration = TimeSpan.FromSeconds(31.2), ComputerName = "SYNTHETIC-AGENT-07", FailureType = "Regression", ResolutionState = "Unresolved", FailingSinceBuildId = 399,
-                ErrorMessage = "OpenQA.Selenium.WebDriverTimeoutException : Timed out after 30 seconds waiting for element '#submit-" + f.ToString(CultureInfo.InvariantCulture) + "' to be clickable.",
+                ErrorMessage = "OpenQA.Selenium.WebDriverTimeoutException : Timed out after 30 seconds waiting for element '#submit-" + f.ToString(CultureInfo.InvariantCulture)
+                    // A letter is text, where a number would be a value: three errors that every test shares.
+                    + (errors == 1 ? "" : "-" + "abc"[n % errors]) + "' to be clickable.",
                 StackTrace = trace,
                 Attachments = [.. AttachmentNames.Select((name, k) => new AdoTestAttachment
                 {
@@ -95,7 +100,9 @@ public sealed class ErrorTextTests
         TestFailureReportValidator.Validate(new StringReader(html), model);
         Assert.Equal(200 * 14, Regex.Count(html, "<code class=\"lang-stacktrace\">"));
         Assert.DoesNotMatch("<details[^>]*\\sopen[\\s>=]", html);
+        Assert.Equal(200 * (errors - 1), Regex.Count(html, "<tr data-index-for=\"f-[0-9]+\" class=\"related\">"));
         long bytes = Encoding.UTF8.GetByteCount(html);
+        TestContext.Current.TestOutputHelper?.WriteLine("Errors per test: " + errors.ToString(CultureInfo.InvariantCulture) + ", bytes: " + bytes.ToString("N0", English));
         Assert.True(bytes < SizeBudget, "The report is " + bytes.ToString("N0", English) + " bytes.");
     }
 

@@ -6,6 +6,22 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.12.0 - 2026-10-06
+
+### Added
+
+- `reporting.errorRules` in the configuration file: named rules of wildcard patterns, in any language, that name the errors of the failed-test report, merge their wordings and mark the ones that come from the environment as generic.
+- `Export-AdoBuildTestFailure -Format Csv` adds four columns at the end of each row: the test's `Primary error`, its `Error kind`, `Specific` or `Generic`, the `Error rule` that named it, and the number of `Distinct errors` of its failed attempts.
+- `Get-AdoBuildTestFailure` keeps, for each earlier build of a test's history where it failed, the start of the error messages that its results listed, in `AdoTestHistoryEntry.ErrorMessages`, without a request more: the result listing now reads a ninth field, the error message, beside the eight of §15.9 step 3, and reads it leniently (V-39).
+- In the failed-test report, By error says for each test whether its previous failed build ended with the same primary error, read from the start of the messages that the build's results listed, and says nothing when the comparison could be wrong (V-39).
+
+### Changed
+
+- The failed-test report reads the error of every failed attempt: By error makes a group of each error that a test had, lists the test under its primary error and greyed under its other errors, joins the English and French wordings of one error, and sets generic errors, such as a server that does not respond, apart under a heading of their own.
+- In the Overview of the failed-test report, Most common errors counts every test that had an error in any failed attempt and leaves generic errors out, and a new Generic errors card counts the tests that had one; in Open bugs, Same error, not linked counts each test once.
+
+Details: [release notes](docs/release-0.12.0.md)
+
 ## 0.11.5 - 2026-10-05
 
 ### Changed
@@ -25,7 +41,7 @@ Details: [release notes](docs/release-0.11.5.md)
 - AdoToolkit no longer contacts only your Azure DevOps server. `Update-AdoToolkit`, and no other command, connects to `api.github.com`, `github.com` and `release-assets.githubusercontent.com` over HTTPS through the system proxy, and sends them no Windows credentials. The releases are still unsigned: the checksums catch a damaged or altered download, not who published it.
 - The update steps in the README, the getting-started guide, the `README.txt` of the portable bundle and the text of each GitHub release name `Update-AdoToolkit` for 0.11.0 and later.
 
-Details: [release notes](docs/release-0.11.0.md)
+Details: [release notes](docs/archive/release-0.11.0.md)
 
 ## 0.10.5 - 2026-10-05
 

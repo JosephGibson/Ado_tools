@@ -220,12 +220,113 @@ public sealed class ConfigurationStoreTests
         Assert.Null(loaded.Profiles["work"].DefaultTestPlanId);
     }
 
+    // reporting.errorRules: named rules of wildcard patterns, generic unless they say otherwise.
+    [Fact]
+    public void ErrorRulesAreReadWithTheirPatternsAndKind()
+    {
+        AdoConfiguration loaded = ConfigurationStore.Parse("""
+        {"reporting":{"errorRules":[
+          {"name":"Home page did not load","patterns":["Home page did not load within * seconds","La page d'accueil ne s'est pas chargée en moins de * secondes"]},
+          {"name":"Login banner text","generic":false,"patterns":["*Expected:<Welcome*"]}]}}
+        """, English);
+        Assert.Empty(loaded.Warnings);
+        Assert.Equal(["Home page did not load", "Login banner text"], loaded.Reporting.ErrorRules.Select(static rule => rule.Name));
+        Assert.Equal(["Home page did not load within * seconds", "La page d'accueil ne s'est pas chargée en moins de * secondes"], loaded.Reporting.ErrorRules[0].Patterns);
+        Assert.True(loaded.Reporting.ErrorRules[0].Generic);
+        Assert.False(loaded.Reporting.ErrorRules[1].Generic);
+        Assert.Empty(ConfigurationStore.Parse("{}", English).Reporting.ErrorRules);
+        Assert.Empty(ConfigurationStore.Parse("""{"reporting":{"errorRules":null}}""", English).Reporting.ErrorRules);
+    }
+
+    // The error names the rule and the property, since the guide's limits apply to each.
+    [Theory]
+    [InlineData("""{"errorRules":{}}""", "reporting.errorRules")]
+    [InlineData("""{"errorRules":[42]}""", "reporting.errorRules[0]")]
+    [InlineData("""{"errorRules":[{"patterns":["a"]}]}""", "reporting.errorRules[0].name")]
+    [InlineData("""{"errorRules":[{"name":"  ","patterns":["a"]}]}""", "reporting.errorRules[0].name")]
+    [InlineData("""{"errorRules":[{"name":7,"patterns":["a"]}]}""", "reporting.errorRules[0].name")]
+    [InlineData("""{"errorRules":[{"name":"A"}]}""", "reporting.errorRules[0].patterns")]
+    [InlineData("""{"errorRules":[{"name":"A","patterns":[]}]}""", "reporting.errorRules[0].patterns")]
+    [InlineData("""{"errorRules":[{"name":"A","patterns":"a"}]}""", "reporting.errorRules[0].patterns")]
+    [InlineData("""{"errorRules":[{"name":"A","patterns":["a"," "]}]}""", "reporting.errorRules[0].patterns[1]")]
+    [InlineData("""{"errorRules":[{"name":"A","patterns":[5]}]}""", "reporting.errorRules[0].patterns[0]")]
+    [InlineData("""{"errorRules":[{"name":"A","patterns":["a"],"generic":"yes"}]}""", "reporting.errorRules[0].generic")]
+    [InlineData("""{"errorRules":[{"name":"Home","patterns":["a"]},{"name":"HOME","patterns":["b"]}]}""", "reporting.errorRules[1].name")]
+    public void AnInvalidErrorRuleNamesItsPlace(string reporting, string path)
+    {
+        AdoConfigurationException error = Assert.Throws<AdoConfigurationException>(() => ConfigurationStore.Parse("{\"reporting\":" + reporting + "}", English));
+        Assert.Equal(Messages.Get(AdoMessage.InvalidConfiguration, English, path), error.Message);
+    }
+
+    // At most 100 rules, names of 100 characters, 20 patterns per rule and 500 characters per pattern.
+    [Fact]
+    public void ErrorRulesHaveLimits()
+    {
+        static string Rule(string name, int patterns, int length) =>
+            "{\"name\":\"" + name + "\",\"patterns\":[" + string.Join(',', Enumerable.Repeat("\"" + new string('x', length) + "\"", patterns)) + "]}";
+        static string Rules(IEnumerable<string> rules) => "{\"reporting\":{\"errorRules\":[" + string.Join(',', rules) + "]}}";
+        Assert.Equal(100, ConfigurationStore.Parse(Rules(Enumerable.Range(0, 100).Select(static index => Rule("R" + index.ToString(CultureInfo.InvariantCulture), 1, 1))), English)
+            .Reporting.ErrorRules.Count);
+        Assert.Throws<AdoConfigurationException>(() => ConfigurationStore.Parse(Rules(Enumerable.Range(0, 101).Select(static index => Rule("R" + index.ToString(CultureInfo.InvariantCulture), 1, 1))), English));
+        Assert.Single(ConfigurationStore.Parse(Rules([Rule(new string('n', 100), 20, 500)]), English).Reporting.ErrorRules);
+        Assert.Throws<AdoConfigurationException>(() => ConfigurationStore.Parse(Rules([Rule(new string('n', 101), 1, 1)]), English));
+        Assert.Throws<AdoConfigurationException>(() => ConfigurationStore.Parse(Rules([Rule("A", 21, 1)]), English));
+        Assert.Throws<AdoConfigurationException>(() => ConfigurationStore.Parse(Rules([Rule("A", 1, 501)]), English));
+    }
+
+    [Fact]
+    public void UnknownKeysOfAnErrorRuleWarnWithTheirPath()
+    {
+        AdoConfiguration loaded = ConfigurationStore.Parse("""{"reporting":{"errorRules":[{"name":"A","patterns":["a"],"color":"red"}]}}""", English);
+        Assert.Equal(["Unknown configuration property retained: reporting.errorRules[0].color"], loaded.Warnings);
+    }
+
+    // Rules set only through the typed options are written too; true, the default of generic, is not.
+    [Fact]
+    public void TypedErrorRulesAreWrittenAndReadBack()
+    {
+        AdoConfiguration typed = new()
+        {
+            Reporting = new ReportingOptions
+            {
+                ErrorRules = [new ErrorRuleOptions { Name = "Home", Patterns = ["Home*"] }, new ErrorRuleOptions { Name = "Banner", Patterns = ["*Welcome*", "*Bienvenue*"], Generic = false }],
+            },
+        };
+        byte[] bytes = ConfigurationStore.Serialize(typed);
+        AdoConfiguration parsed = ConfigurationStore.Parse(Encoding.UTF8.GetString(bytes), English);
+        Assert.Equal(["Home", "Banner"], parsed.Reporting.ErrorRules.Select(static rule => rule.Name));
+        Assert.Equal(["*Welcome*", "*Bienvenue*"], parsed.Reporting.ErrorRules[1].Patterns);
+        Assert.Equal([true, false], parsed.Reporting.ErrorRules.Select(static rule => rule.Generic));
+        JsonNode written = JsonNode.Parse(bytes)!["reporting"]!["errorRules"]!;
+        Assert.Null(written[0]!["generic"]);
+        Assert.False(written[1]!["generic"]!.GetValue<bool>());
+        // No rule, and none in the file: the key stays out.
+        Assert.Null(JsonNode.Parse(ConfigurationStore.Serialize(new AdoConfiguration()))!["reporting"]!["errorRules"]);
+    }
+
     // A file written before the defaults existed saves byte for byte as it was read.
     [Fact]
     public void FileWithoutProfileDefaultsSavesUnchanged()
     {
         using TestDirectory directory = TestDirectory.WithConfigurationPath();
         string original = JsonNode.Parse(CompleteConfiguration)!.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(directory.ConfigPath, original);
+        ConfigurationStore store = new();
+        store.Save(store.Load(English), English);
+        Assert.Equal(original, File.ReadAllText(directory.ConfigPath));
+    }
+
+    // Without rules, the key stays as the file wrote it: absent, null or empty.
+    [Theory]
+    [InlineData("")]
+    [InlineData(",\"errorRules\":null")]
+    [InlineData(",\"errorRules\":[]")]
+    public void FileWithoutErrorRulesSavesUnchanged(string rules)
+    {
+        using TestDirectory directory = TestDirectory.WithConfigurationPath();
+        int start = CompleteConfiguration.IndexOf(",\"errorRules\":[", StringComparison.Ordinal);
+        string json = CompleteConfiguration[..start] + rules + "}}";
+        string original = JsonNode.Parse(json)!.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(directory.ConfigPath, original);
         ConfigurationStore store = new();
         store.Save(store.Load(English), English);
@@ -284,7 +385,11 @@ public sealed class ConfigurationStoreTests
      "testResults":{"historyCount":20,"historyScope":"AllBranches","maximumReportedFailures":50,"maximumHistoryRequests":60,
                     "maximumAttachmentBytes":1000,"maximumTotalAttachmentBytes":2000,"maximumInlineJsonBytes":300,"maximumInlineTotalBytes":400,
                     "maximumConcurrentRequests":3},
-     "reporting":{"culture":"fr-CA"}}
+     "reporting":{"culture":"fr-CA","errorRules":[
+       {"name":"Home page did not load","patterns":["Home page did not load within * seconds","La page d'accueil ne s'est pas chargée en moins de * secondes"],
+        "note":"kept"},
+       {"name":"Login banner text","generic":false,"patterns":["*Expected:<Welcome*"]},
+       {"name":"Server busy","generic":true,"patterns":["*503*"]}]}}
     """;
 
     [Fact]

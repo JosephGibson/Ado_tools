@@ -97,6 +97,32 @@ public static class StackTraceLexer
         return null;
     }
 
+    // The frames whose method starts with the prefix, each with its line number when the trace has
+    // one, from the first lines of the trace: at most maximumFrames. The keywords of a French trace
+    // (à, dans, ligne) read as the English ones, so both languages give the same frames.
+    internal static IReadOnlyList<(string Method, int? Line)> Frames(string text, string prefix, int maximumFrames, int maximumLines = 64)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentException.ThrowIfNullOrEmpty(prefix);
+        List<(string Method, int? Line)> frames = [];
+        int start = 0;
+        for (int line = 0; line < maximumLines && start < text.Length && frames.Count < maximumFrames; line++)
+        {
+            int end = text.IndexOfAny(['\r', '\n'], start);
+            if (end < 0) end = text.Length;
+            Match frame = Frame.Match(text[start..end]);
+            if (frame.Success && frame.Groups["method"].Value.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                Match location = Location.Match(frame.Groups["tail"].Value);
+                int? number = location.Success && int.TryParse(location.Groups["line"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out int value)
+                    ? value : null;
+                frames.Add((frame.Groups["method"].Value.TrimEnd(), number));
+            }
+            start = end < text.Length && text[end] == '\r' && end + 1 < text.Length && text[end + 1] == '\n' ? end + 2 : end + 1;
+        }
+        return frames;
+    }
+
     private static void AddGroup(List<CodeToken> tokens, Match match, string group, CodeTokenKind kind) =>
         Tokenize.WithUrls(tokens, kind, match.Groups[group].Value);
 

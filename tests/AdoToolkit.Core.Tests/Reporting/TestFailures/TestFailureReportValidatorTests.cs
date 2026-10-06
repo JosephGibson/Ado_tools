@@ -19,6 +19,8 @@ public sealed class TestFailureReportValidatorTests
     [InlineData("sha256-", "sha256-wrong")]
     [InlineData("</html>", "")]
     [InlineData("<body>", "<body onclick=\"x()\">")]
+    // An in-page link must reach an element of the page.
+    [InlineData("href=\"#e-1\"", "href=\"#e-99\"")]
     public void CorruptionFailsValidation(string before, string after)
     {
         var model = TestFailureReportFixture.Model("flaky");

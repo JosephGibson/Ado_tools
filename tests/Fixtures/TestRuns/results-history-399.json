@@ -5,7 +5,8 @@
       "id": 311,
       "outcome": "Failed",
       "automatedTestName": "Contoso.Web.Tests.CartTests.AddsItem",
-      "automatedTestStorage": "Contoso.Web.Tests.dll"
+      "automatedTestStorage": "Contoso.Web.Tests.dll",
+      "errorMessage": "Cart count was 0 after adding an item"
     }
   ]
 }

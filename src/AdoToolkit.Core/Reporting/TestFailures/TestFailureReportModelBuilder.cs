@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Resources;
 using AdoToolkit.Core.Configuration;
 using AdoToolkit.Core.Connections;
+using AdoToolkit.Core.Reporting.Errors;
 using AdoToolkit.Core.TestRuns;
 
 namespace AdoToolkit.Core.Reporting.TestFailures;
@@ -39,15 +40,18 @@ public static class TestFailureReportModelBuilder
             return attempt.WithAttachments(Array.AsReadOnly(kept));
         }
         bool flakyExcluded = !options.IncludeFlaky && set.Failures.Any(f => f.Classification == AdoTestFailureClassification.Flaky);
-        AdoTestFailure[] failures = set.Failures.Where(f => options.IncludeFlaky || f.Classification != AdoTestFailureClassification.Flaky)
-            .OrderBy(f => f.Classification == AdoTestFailureClassification.Failed ? 0 : 1)
+        // Report order: failed tests first, so the flaky tests left out are the last ones.
+        AdoTestFailure[] ordered = [.. set.Failures.OrderBy(f => f.Classification == AdoTestFailureClassification.Failed ? 0 : 1)
             .ThenBy(f => f.Storage, StringComparer.Ordinal).ThenBy(f => f.TestName, StringComparer.Ordinal)
-            .ThenBy(f => f.Attempts.Count == 0 ? 0 : f.Attempts[0].ResultId).Select((f, index) => new AdoTestFailure
+            .ThenBy(f => f.Attempts.Count == 0 ? 0 : f.Attempts[0].ResultId)];
+        AdoTestFailure[] failures = ordered.Where(f => options.IncludeFlaky || f.Classification != AdoTestFailureClassification.Flaky)
+            .Select((f, index) => new AdoTestFailure
             {
                 Ordinal = index + 1, Classification = f.Classification, TestName = f.TestName, ShortName = f.ShortName,
                 Storage = f.Storage, Title = f.Title, Attempts = Array.AsReadOnly(f.Attempts.OrderBy(a => a.Number).Select(Windowed).ToArray()),
                 TestCase = f.TestCase, Bugs = Array.AsReadOnly(f.Bugs.OrderBy(b => b.Id).ToArray()), History = Array.AsReadOnly(f.History.ToArray()), Owner = f.Owner, Priority = f.Priority, CollectionUri = collection,
             }).ToArray();
+        PipelineGrouping grouping = PipelineGrouping.Create(set.Runs, failures.SelectMany(f => f.Attempts).Select(a => a.RunId));
         return new TestFailureReportModel
         {
             Build = set.Build, Culture = culture, GeneratedAt = options.GeneratedAt, ToolkitVersion = options.ToolkitVersion,
@@ -64,7 +68,11 @@ public static class TestFailureReportModelBuilder
             CommitUrl = AdoWebLinks.Commit(collection, project, set.Build.RepositoryType, set.Build.RepositoryId, set.Build.SourceVersion),
             AttachmentsListed = set.AttachmentsListed,
             AttachmentRunIds = inWindow, AttachmentWindowStart = windowStart, OmittedAttachmentCount = omitted, FlakyExcluded = flakyExcluded,
-            Grouping = PipelineGrouping.Create(set.Runs, failures.SelectMany(f => f.Attempts).Select(a => a.RunId)),
+            Grouping = grouping,
+            // Every failure, shown or not, so -IncludeFlaky changes which rows show and never which
+            // errors exist. The groups are the report's: an attempt of a flaky test left out, in a run
+            // that is not listed, belongs to no group.
+            Errors = ErrorClassifier.Classify(ordered, grouping, BuiltInErrorRules.AfterConfigured(options.ErrorRules)),
         };
     }
 
@@ -94,6 +102,7 @@ public static class TestFailureReportModelBuilder
             BuildUrl = model.BuildUrl, ResultsUrl = model.ResultsUrl, DefinitionUrl = model.DefinitionUrl, CommitUrl = model.CommitUrl,
             LocalAttachments = local, AttachmentsListed = model.AttachmentsListed, AttachmentRunIds = model.AttachmentRunIds, AttachmentWindowStart = model.AttachmentWindowStart,
             OmittedAttachmentCount = model.OmittedAttachmentCount, FlakyExcluded = model.FlakyExcluded, Grouping = model.Grouping,
+            Errors = model.Errors,
         };
     }
 }

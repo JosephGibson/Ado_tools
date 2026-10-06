@@ -1,3 +1,5 @@
+using AdoToolkit.Core.Configuration;
+
 namespace AdoToolkit.Core.Reporting.TestFailures;
 
 public sealed class TestFailureExportOptions
@@ -21,6 +23,8 @@ public sealed class TestFailureExportOptions
     // Attachments are listed and downloaded only for runs started within this many days before GeneratedAt.
     public int AttachmentWindowDays { get; init; } = TestFailureReportOptions.DefaultAttachmentWindowDays;
     public bool IncludeFlaky { get; init; }
+    // reporting.errorRules, tried before the built-in rules.
+    public IReadOnlyList<ErrorRuleOptions> ErrorRules { get; init; } = [];
     public bool Open { get; init; }
     public required DateTimeOffset GeneratedAt { get; init; }
     public required string ToolkitVersion { get; init; }

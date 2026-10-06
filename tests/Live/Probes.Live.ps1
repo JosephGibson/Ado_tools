@@ -86,16 +86,7 @@ function Test-AdoProbeFailed {
     return ([string] (Get-AdoLivePropertyValue $Result 'outcome')) -in @('Failed', 'Error', 'Timeout', 'Aborted')
 }
 
-# A run with a failed result, by its statistics; the first run when none has statistics.
-function Select-AdoProbeFailingRun {
-    param([AllowEmptyCollection()][object[]] $Run = @())
-    $failing = @($Run | Where-Object { @(Get-AdoLivePropertyValue $_ 'runStatistics') | Where-Object { Test-AdoProbeFailed $_ } })
-    if ($failing.Count -gt 0) { return $failing[0] }
-    if ($Run.Count -gt 0) { return $Run[0] }
-    return $null
-}
-
-$items = @('V-28', 'V-34', 'V-35', 'V-36')
+$items = @('V-28', 'V-34', 'V-35', 'V-36', 'V-39')
 $buildId = 0
 $rerunId = 0
 if ([string]::IsNullOrWhiteSpace($env:ADOTOOLKIT_LIVE_PROFILE)) {
@@ -135,7 +126,7 @@ try {
     # V-34: one listing page with details from a run with failures, then the result read alone for
     # up to five of its failed results.
     try {
-        $run = Select-AdoProbeFailingRun -Run $runs
+        $run = Select-AdoLiveFailingRun -Run $runs
         if (-not $hasBuild) { Write-AdoProbeResult 'INCONCLUSIVE V-34 TEST_BUILD_REQUIRED' }
         elseif ($null -eq $run) { Write-AdoProbeResult 'INCONCLUSIVE V-34 NO_RUNS_FOR_BUILD' }
         else {
@@ -161,9 +152,44 @@ try {
     }
     catch { Write-AdoProbeResult 'FAIL V-34 CHECK_FAILED' }
 
+    # V-39: one result page listed without details, as pass 1 and the history read list it, from a
+    # run with failures, then the result read alone for up to five of its failed results: whether
+    # the listing carries the start of each error message.
+    try {
+        $run = Select-AdoLiveFailingRun -Run $runs
+        if (-not $hasBuild) { Write-AdoProbeResult 'INCONCLUSIVE V-39 TEST_BUILD_REQUIRED' }
+        elseif ($null -eq $run) { Write-AdoProbeResult 'INCONCLUSIVE V-39 NO_RUNS_FOR_BUILD' }
+        else {
+            $base = Get-AdoProbeResultBase -Run $run
+            $listed = @((Get-AdoProbeJson -Uri ($base + '?api-version=6.0&detailsToInclude=None&%24top=1000')).value)
+            $failed = @($listed | Where-Object { Test-AdoProbeFailed $_ })
+            $messages = @($failed | ForEach-Object { [string] (Get-AdoLivePropertyValue $_ 'errorMessage') } | Where-Object { $_.Length -gt 0 })
+            $counts = [ordered]@{ LISTED = $listed.Count; FAILED = $failed.Count; WITH_MESSAGE = $messages.Count; COMPARED = 0; AGREE = 0; CUT = 0; SHORT = 0
+                MESSAGES_AT_4000 = @($messages | Where-Object { $_.Length -eq 4000 }).Count }
+            foreach ($result in @($failed | Select-Object -First 5)) {
+                $detail = Get-AdoProbeJson -Uri ($base + '/' + ([int] $result.id).ToString([cultureinfo]::InvariantCulture) + '?api-version=6.0&detailsToInclude=' + $details)
+                $agreement = Get-AdoLiveListedMessageAgreement -Listed $result -Detail $detail
+                if (-not $agreement.HasMessage) { continue }
+                $counts.COMPARED++
+                if ($agreement.Agree) { $counts.AGREE++ }
+                if ($agreement.Cut) { $counts.CUT++ }
+                if ($agreement.Short) { $counts.SHORT++ }
+            }
+            $note = Format-AdoLiveCounts $counts
+            # A message cut before 4,000 characters agrees, but the report would read it as whole.
+            if ($failed.Count -eq 0) { Write-AdoProbeResult "INCONCLUSIVE V-39 NO_FAILED_RESULT_LISTED $note" }
+            elseif ($counts.COMPARED -eq 0) { Write-AdoProbeResult "INCONCLUSIVE V-39 NO_MESSAGE_TO_COMPARE $note" }
+            elseif ($messages.Count -eq 0) { Write-AdoProbeResult "FAIL V-39 NO_MESSAGE_LISTED $note" }
+            elseif ($counts.AGREE -lt $counts.COMPARED) { Write-AdoProbeResult "FAIL V-39 LISTED_MESSAGES_DIFFER $note" }
+            elseif ($counts.SHORT -gt 0) { Write-AdoProbeResult "FAIL V-39 LISTED_MESSAGES_CUT_SHORT $note" }
+            else { Write-AdoProbeResult "PASS V-39 LISTED_MESSAGES_AGREE $note" }
+        }
+    }
+    catch { Write-AdoProbeResult 'FAIL V-39 CHECK_FAILED' }
+
     # V-35: one result page asked for with gzip, read as it came over the wire.
     try {
-        $run = Select-AdoProbeFailingRun -Run $runs
+        $run = Select-AdoLiveFailingRun -Run $runs
         if (-not $hasBuild) { Write-AdoProbeResult 'INCONCLUSIVE V-35 TEST_BUILD_REQUIRED' }
         elseif ($null -eq $run) { Write-AdoProbeResult 'INCONCLUSIVE V-35 NO_RUNS_FOR_BUILD' }
         else {

@@ -107,6 +107,7 @@
       all('.attempt-group', card).forEach(node => node.classList.toggle('is-match', node.querySelector('.attempt.is-match') !== null));
     });
     all('.error-cluster').forEach(cluster => { cluster.hidden = all('tr[data-index-for]', cluster).every(row => row.hidden); });
+    all('.cluster-section').forEach(section => { section.hidden = all('.error-cluster[data-generic]').every(cluster => cluster.hidden); });
     chips.forEach(([chip, kind]) => chip.setAttribute('aria-pressed', String(pressed(kind))));
     updateCount();
     if (current?.hidden) select(null);

@@ -91,7 +91,7 @@ public sealed class ExportAdoBuildTestFailureCommand : AdoCmdletBase, IDisposabl
             Culture = Culture, ConfiguredCulture = configuration.Reporting.Culture, SessionCulture = MessageCulture,
             Format = Format, Path = resolvedPath, CreateDirectory = createDirectory, NoClobber = NoClobber, SkipAttachments = SkipAttachments, Open = Open,
             AllRunAttachments = AllRunAttachments, AttachmentWindowDays = AttachmentWindowDays, IncludeFlaky = IncludeFlaky,
-            MaximumInlineJsonBytes = configuration.TestResults.MaximumInlineJsonBytes,
+            MaximumInlineJsonBytes = configuration.TestResults.MaximumInlineJsonBytes, ErrorRules = configuration.Reporting.ErrorRules,
             GeneratedAt = DateTimeOffset.Now,
             ToolkitVersion = typeof(ExportAdoBuildTestFailureCommand).Assembly.GetName().Version!.ToString(),
         });

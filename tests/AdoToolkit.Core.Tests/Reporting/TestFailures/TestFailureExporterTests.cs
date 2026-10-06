@@ -2,6 +2,7 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using AdoToolkit.Core.Http;
 using AdoToolkit.Core.IO;
+using AdoToolkit.Core.Reporting.Errors;
 using AdoToolkit.Core.Reporting.TestFailures;
 using AdoToolkit.Core.Tests.Http;
 using AdoToolkit.Core.Tests.TestRuns;
@@ -300,6 +301,25 @@ public sealed class TestFailureExporterTests
         }
     }
 
+    // The error rules of the configuration reach the report through the export options.
+    [Fact]
+    public async Task ErrorRulesOfTheOptionsReachTheReport()
+    {
+        using TestDirectory directory = new();
+        (AdoBuildTestFailureSet set, FakeHttpMessageHandler handler, HttpClient client) = await Retrieve();
+        using (handler)
+        using (client)
+        {
+            TestFailureExporter exporter = new(new RecordingLauncher());
+            TestFailureExportPlan plan = exporter.Prepare(set, Options(directory.Root, skip: true,
+                rules: [new ErrorRuleOptions { Name = "Totals", Patterns = ["Expected total * but found *"] }]));
+            ErrorClass totals = Assert.Single(plan.Model.Errors.Classes, static error => error.Rule is not null);
+            Assert.Equal("Totals", totals.Rule!.Name);
+            Assert.True(totals.IsGeneric);
+            Assert.DoesNotContain(exporter.Prepare(set, Options(directory.Root, skip: true)).Model.Errors.Classes, static error => error.Rule is not null);
+        }
+    }
+
     // The export's lines in the order written, each with its numbers.
     private static List<(AdoMessage Step, long[] Values)> ExportLines(CapturingLog log)
     {
@@ -317,11 +337,11 @@ public sealed class TestFailureExporterTests
 
     private static TestFailureExportOptions Options(string? path, bool skip = false, bool noClobber = false, bool open = false,
         string culture = "en-US", DateTimeOffset? generated = null, bool createDirectory = false, bool allRuns = false,
-        TestFailureReportFormat format = TestFailureReportFormat.Html) => new()
+        TestFailureReportFormat format = TestFailureReportFormat.Html, IReadOnlyList<ErrorRuleOptions>? rules = null) => new()
         {
             Culture = culture, SessionCulture = Session, Path = path, SkipAttachments = skip, NoClobber = noClobber, Open = open,
             GeneratedAt = generated ?? Generated, ToolkitVersion = "5.4.0-test", CreateDirectory = createDirectory,
-            AllRunAttachments = allRuns, Format = format,
+            AllRunAttachments = allRuns, Format = format, ErrorRules = rules ?? [],
         };
 
     private static TestFailureReportModel Model(AdoBuildTestFailureSet set) => TestFailureReportModelBuilder.Build(set,

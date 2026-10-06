@@ -38,7 +38,7 @@ public sealed class TestFailureExporter
         {
             Culture = options.Culture, ConfiguredCulture = options.ConfiguredCulture, SessionCulture = options.SessionCulture,
             GeneratedAt = options.GeneratedAt, ToolkitVersion = options.ToolkitVersion,
-            AttachmentWindowDays = options.AttachmentWindowDays, IncludeFlaky = options.IncludeFlaky,
+            AttachmentWindowDays = options.AttachmentWindowDays, IncludeFlaky = options.IncludeFlaky, ErrorRules = options.ErrorRules,
         });
         if (options.Format == TestFailureReportFormat.Csv) return PrepareCsv(set, model, options);
         if (options.Format != TestFailureReportFormat.Html) throw new ArgumentOutOfRangeException(nameof(options));

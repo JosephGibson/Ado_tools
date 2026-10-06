@@ -11,7 +11,8 @@ namespace AdoToolkit.Core.Tests.Reporting.TestFailures;
 public sealed class CsvTestFailureRendererTests
 {
     private const string Header = "Build,Ordinal,Test,Title,Classification,Attempts,Latest error,Owner,Priority,"
-        + "Test case ID,Test case state,Open bugs,Bug IDs,Bug states,New,Since";
+        + "Test case ID,Test case state,Open bugs,Bug IDs,Bug states,New,Since,Primary error,Error kind,Error rule,Distinct errors";
+    private const string Refused = "System.Net.Sockets.SocketException: No connection could be made because the target machine actively refused it.";
     private static readonly Uri Collection = new("https://ado.example.test/tfs/Collection/");
     private const string Project = "Synthetic Web";
     // Four hours behind UTC, so a build that finished at 02:00 UTC finished the day before here.
@@ -21,8 +22,30 @@ public sealed class CsvTestFailureRendererTests
     public void ColumnsKeepTheirNamesAndOrder()
     {
         Assert.Equal(["Build", "Ordinal", "Test", "Title", "Classification", "Attempts", "Latest error", "Owner", "Priority",
-            "Test case ID", "Test case state", "Open bugs", "Bug IDs", "Bug states", "New", "Since"], CsvTestFailureRenderer.Columns);
+            "Test case ID", "Test case state", "Open bugs", "Bug IDs", "Bug states", "New", "Since",
+            "Primary error", "Error kind", "Error rule", "Distinct errors"], CsvTestFailureRenderer.Columns);
         Assert.Equal(Header, string.Join(",", CsvTestFailureRenderer.Columns));
+    }
+
+    // The error columns: the whole message of the test's primary error, from the latest attempt that
+    // had it; whether that error is specific or generic; the rule that named it, a configured one by
+    // its name and a built-in one by its ID; and how many errors the failed attempts had.
+    [Fact]
+    public void ErrorColumnsNameThePrimaryErrorItsKindAndItsRule()
+    {
+        AdoTestFailure mixed = Failure("Synthetic.A.Mixed", errors: ["Expected 1, actual 2\nat line 2", "Expected 1, actual 3\nat line 3", Refused]);
+        AdoTestFailure refused = Failure("Synthetic.B.Refused", errors: [Refused]);
+        AdoTestFailure named = Failure("Synthetic.C.Named", errors: ["Home page did not load within 30 seconds"]);
+        AdoTestFailure silent = Failure("Synthetic.D.Silent", error: null);
+        List<string[]> rows = Cells(Render(Model(Set(mixed, refused, named, silent),
+            rules: [new ErrorRuleOptions { Name = "=Home page", Patterns = ["Home page did not load*"] }])));
+        // The latest error is the generic one; the primary error is the one of the most attempts.
+        Assert.Equal(Refused, rows[1][6]);
+        Assert.Equal(["Expected 1, actual 3\nat line 3", "Specific", "", "2"], rows[1][16..]);
+        Assert.Equal([Refused, "Generic", "ConnectionRefused", "1"], rows[2][16..]);
+        // A configured name is text, so a formula trigger is neutralized.
+        Assert.Equal(["Home page did not load within 30 seconds", "Generic", "'=Home page", "1"], rows[3][16..]);
+        Assert.Equal(["", "", "", "0"], rows[4][16..]);
     }
 
     [Fact]
@@ -58,9 +81,11 @@ public sealed class CsvTestFailureRendererTests
         const string error = "Assert.Equal() Failure\r\nExpected: 1, 2\nActual:   \"3\"";
         TestFailureReportModel model = Model(Set(Failure("Synthetic.Checkout.Totals", error: error, title: "Totals, \"net\" of tax")));
         string expected = "﻿" + Header + "\r\n" + string.Join(",", "401", "1", "Synthetic.Checkout.Totals", "\"Totals, \"\"net\"\" of tax\"",
-            "Failed", "1", "\"Assert.Equal() Failure\r\nExpected: 1, 2\nActual:   \"\"3\"\"\"", "", "", "", "", "0", "", "", "", "") + "\r\n";
+            "Failed", "1", "\"Assert.Equal() Failure\r\nExpected: 1, 2\nActual:   \"\"3\"\"\"", "", "", "", "", "0", "", "", "", "",
+            "\"Assert.Equal() Failure\r\nExpected: 1, 2\nActual:   \"\"3\"\"\"", "Specific", "", "1") + "\r\n";
         Assert.Equal(expected, Render(model));
         Assert.Equal(error, Cells(Render(model))[1][6]);
+        Assert.Equal(error, Cells(Render(model))[1][16]);
     }
 
     // A cell that a spreadsheet would read as a formula starts with an apostrophe instead. Integers
@@ -81,7 +106,7 @@ public sealed class CsvTestFailureRendererTests
             testCase: new AdoTestCaseLink { Id = 902, State = formula, IsResolved = true, WebUrl = new Uri(Collection, "Synthetic%20Web/_workitems/edit/902") },
             bugs: [Bug(2001, formula, isOpen: true)]);
         string[] row = Cells(Render(Model(Set(failure))))[1];
-        foreach (int text in new[] { 3, 6, 7, 10, 13 }) Assert.Equal("'" + formula, row[text]);
+        foreach (int text in new[] { 3, 6, 7, 10, 13, 16 }) Assert.Equal("'" + formula, row[text]);
         Assert.Equal("-2", row[8]);
         Assert.Equal("902", row[9]);
         Assert.Equal("1", row[11]);
@@ -168,11 +193,11 @@ public sealed class CsvTestFailureRendererTests
             Failure("Synthetic.D.NoComparison", history: History((401, AdoTestHistoryOutcome.Failed))),
             Failure("Synthetic.E.NotRunBefore", history: History((400, AdoTestHistoryOutcome.NotRun), (401, AdoTestHistoryOutcome.Failed)))));
         List<string[]> rows = Cells(Render(model));
-        Assert.Equal(["True", ""], rows[1][14..]);
-        Assert.Equal(["False", "2026-09-14"], rows[2][14..]);
-        Assert.Equal(["False", "20260915.2"], rows[3][14..]);
-        Assert.Equal(["", ""], rows[4][14..]);
-        Assert.Equal(["", ""], rows[5][14..]);
+        Assert.Equal(["True", ""], rows[1][14..16]);
+        Assert.Equal(["False", "2026-09-14"], rows[2][14..16]);
+        Assert.Equal(["False", "20260915.2"], rows[3][14..16]);
+        Assert.Equal(["", ""], rows[4][14..16]);
+        Assert.Equal(["", ""], rows[5][14..16]);
         // The report says Since and the same day, in its own culture.
         string html = TestFailureReportFixture.Render(model);
         Assert.Contains(SinkEncoding.Attribute(Messages.Get(AdoMessage.TestReportSince, CultureInfo.GetCultureInfo("en-US"),
@@ -279,14 +304,15 @@ public sealed class CsvTestFailureRendererTests
         }
         Assert.False(quoted);
         Assert.Empty(fields);
-        Assert.All(records, static record => Assert.Equal(16, record.Length));
+        Assert.All(records, static record => Assert.Equal(20, record.Length));
         return records;
     }
 
-    private static TestFailureReportModel Model(AdoBuildTestFailureSet set, string culture = "en-US") => TestFailureReportModelBuilder.Build(set,
-        new TestFailureReportOptions
+    private static TestFailureReportModel Model(AdoBuildTestFailureSet set, string culture = "en-US", IReadOnlyList<ErrorRuleOptions>? rules = null) =>
+        TestFailureReportModelBuilder.Build(set, new TestFailureReportOptions
         {
             Culture = culture, SessionCulture = CultureInfo.GetCultureInfo("en-US"), GeneratedAt = Clock, ToolkitVersion = "5.4.0-test", IncludeFlaky = true,
+            ErrorRules = rules ?? [],
         });
 
     private static AdoBuildTestFailureSet Set(params AdoTestFailure[] failures)
@@ -327,11 +353,15 @@ public sealed class CsvTestFailureRendererTests
         WebUrl = new Uri(Collection, "Synthetic%20Web/_workitems/edit/" + id.ToString(CultureInfo.InvariantCulture)),
     };
 
+    // One failed attempt with error, or one per message of errors.
     private static AdoTestFailure Failure(string name, string? error = "Expected 1, actual 2", string? title = null, int? priority = null,
-        AdoIdentityRef? owner = null, AdoTestHistoryEntry[]? history = null, AdoTestCaseLink? testCase = null, AdoTestBug[]? bugs = null) => new()
+        AdoIdentityRef? owner = null, AdoTestHistoryEntry[]? history = null, AdoTestCaseLink? testCase = null, AdoTestBug[]? bugs = null, string?[]? errors = null) => new()
     {
         Ordinal = 1, Classification = AdoTestFailureClassification.Failed, TestName = name, ShortName = name[(name.LastIndexOf('.') + 1)..],
         Title = title, Priority = priority, Owner = owner, History = history ?? [], TestCase = testCase, Bugs = bugs ?? [], CollectionUri = Collection,
-        Attempts = [new AdoTestAttempt { Number = 1, RunId = 201, ResultId = 11, Outcome = "Failed", OutcomeClass = AdoTestOutcomeClass.Failure, ErrorMessage = error }],
+        Attempts = [.. (errors ?? [error]).Select((message, index) => new AdoTestAttempt
+        {
+            Number = index + 1, RunId = 201, ResultId = 11 + index, Outcome = "Failed", OutcomeClass = AdoTestOutcomeClass.Failure, ErrorMessage = message,
+        })],
     };
 }

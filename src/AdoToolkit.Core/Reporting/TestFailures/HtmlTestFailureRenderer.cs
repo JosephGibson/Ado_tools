@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using AdoToolkit.Core.Connections;
 using AdoToolkit.Core.Reporting.Charts;
+using AdoToolkit.Core.Reporting.Errors;
 using AdoToolkit.Core.Reporting.Highlighting;
 using AdoToolkit.Core.TestRuns;
 
@@ -122,18 +123,21 @@ public static class HtmlTestFailureRenderer
     // The optional columns of a table of tests; number, test, class, trend, Test Case and the group
     // columns are always there.
     [Flags]
-    private enum Columns { None = 0, Bugs = 1, Error = 2, Values = 4, Source = 8 }
+    private enum Columns { None = 0, Bugs = 1, Error = 2, Values = 4, Source = 8, Errors = 16 }
 
     private sealed class Document(TestFailureReportModel model, TextWriter writer)
     {
         private const int GlanceItems = 3;
         private const int SampleCharacters = 1000, SampleLines = 12;
+        // Characters of an error's line when it names the error in a row.
+        private const int LabelCharacters = 60;
         // Characters beyond which a metadata value takes a whole row.
         private const int WideField = 48;
         private HashSet<string>? previews;
         private IReadOnlyList<BugEntry>? bugEntries;
         private IReadOnlyList<ErrorClusters.Cluster>? clusters;
         private Dictionary<int, ErrorClusters.Cluster>? clusterOf;
+        private Dictionary<ErrorClass, ErrorClusters.Cluster>? clusterOfError;
         private readonly Dictionary<int, TestFailureSignal?> signals = [];
         private CultureInfo Culture => model.Culture;
         private Uri Collection => model.Build.CollectionUri;
@@ -313,9 +317,20 @@ public static class HtmlTestFailureRenderer
             IReadOnlyList<AdoTestFailure> failures = model.Failures;
             int fresh = failures.Count(failure => Signal(failure) is { IsNew: true });
             int recurring = failures.Count(failure => Signal(failure) is { IsNew: false });
-            ErrorClusters.Cluster[] common = [.. Clusters.Where(static cluster => cluster.Key is not null && cluster.Members.Count > 1).Take(GlanceItems)];
+            // The specific errors that the most tests had in any failed attempt.
+            ErrorClusters.Cluster[] common = [.. Clusters.Where(static cluster => cluster.Error is not null && !cluster.IsGeneric && cluster.Members.Count > 1)
+                .OrderByDescending(static cluster => cluster.Members.Count).ThenBy(static cluster => cluster.Number).Take(GlanceItems)];
+            // The tests with a generic error, and those whose every error is generic.
+            int generic = 0, onlyGeneric = 0;
+            for (int index = 0; index < failures.Count; index++)
+            {
+                IReadOnlyList<ErrorProfileEntry> entries = model.Errors.Profiles[index].Entries;
+                if (!entries.Any(static entry => entry.Class.IsGeneric)) continue;
+                generic++;
+                if (entries.All(static entry => entry.Class.IsGeneric)) onlyGeneric++;
+            }
             bool tracked = failures.Any(static failure => failure.HasOpenBug);
-            if (fresh + recurring == 0 && common.Length == 0 && !tracked && !Grouping.IsGrouped) return;
+            if (fresh + recurring == 0 && common.Length == 0 && generic == 0 && !tracked && !Grouping.IsGrouped) return;
             W("<div class=\"glance\">\n");
             if (fresh + recurring > 0)
             {
@@ -337,10 +352,17 @@ public static class HtmlTestFailureRenderer
                 foreach (ErrorClusters.Cluster cluster in common)
                 {
                     W("<li><span class=\"glance-count\">" + N(cluster.Members.Count) + "</span> <a class=\"glance-error\" href=\"#e-" + N(cluster.Number) + "\">");
+                    if (cluster.Error?.Rule is { } rule) { W("<span class=\"glance-line\">"); T(RuleName(rule)); W("</span></a></li>"); continue; }
                     if (cluster.ExceptionType is { } type) { W("<code class=\"exception-type\">"); T(ErrorClusters.ShortType(type)); W("</code> "); }
                     W("<span class=\"glance-line\">"); T(PlainLine(cluster)); W("</span></a></li>");
                 }
                 W("</ol></div>\n");
+            }
+            if (generic > 0)
+            {
+                GlancePanel(L("GenericErrors"));
+                W("<ul class=\"glance-counts\"><li><a href=\"#generic-errors\">"); T(L("WithGenericError")); W("</a> <strong>" + N(generic) + "</strong></li><li><span>");
+                T(L("OnlyGenericErrors")); W("</span> <strong>" + N(onlyGeneric) + "</strong></li></ul></div>\n");
             }
             if (tracked)
             {
@@ -396,40 +418,142 @@ public static class HtmlTestFailureRenderer
         // A share as a CSS percentage, in the invariant culture: a comma would make it invalid.
         private static string Share(int count, int total) => (100d * count / Math.Max(1, total)).ToString("0.##", CultureInfo.InvariantCulture) + "%";
 
-        // The tests grouped by their latest error, largest group first. A group of two tests or more
-        // also says what its tests have in common and shows a sample of the message.
+        // The tests grouped by error: each error that a test had in a failed attempt is a group, with
+        // the tests whose primary error it is, then the other tests that had it, muted. Specific errors
+        // come first, then the generic ones under a heading of their own, then the tests without a
+        // message. A group of two tests or more, or of an error with several wordings, also says what
+        // its tests have in common and shows a sample of the message.
         private void ByError()
         {
             W("<section class=\"view\" id=\"by-error\" data-view>\n"); Heading(2, L("ByError"));
             if (model.Failures.Count == 0) { W("<p>"); T(L("NoFailures")); W("</p>\n</section>\n"); return; }
-            W("<p class=\"cluster-summary\">"); T(F(AdoMessage.TestReportLabelValue, L("DistinctErrors"), Clusters.Count(static cluster => cluster.Key is not null).ToString(Culture)));
+            int generic = Clusters.Count(static cluster => cluster.IsGeneric);
+            W("<p class=\"cluster-summary\">"); T(F(AdoMessage.TestReportLabelValue, L("DistinctErrors"), Clusters.Count(static cluster => cluster.Error is not null).ToString(Culture)));
+            if (generic > 0) { W(" · "); T(F(AdoMessage.TestReportLabelValue, L("Generic"), generic.ToString(Culture))); }
             W(" · "); T(F(AdoMessage.TestReportLabelValue, L("Tests"), model.Failures.Count.ToString(Culture))); W("</p>\n");
             W("<p data-no-matches hidden>"); T(L("NoMatches")); W("</p>\n<div class=\"table-scroll\"><table class=\"failure-table by-error\">\n");
-            Columns columns = Columns.Bugs | (Clusters.Any(static cluster => cluster.Varying.Count > 0) ? Columns.Values : Columns.None);
+            Columns columns = Columns.Bugs | Columns.Errors
+                | (Clusters.Any(static cluster => cluster.Varying.Count > 0 || (!cluster.SingleLayout && cluster.Members.Count > 1)) ? Columns.Values : Columns.None);
             TableHead(columns);
             int span = ColumnCount(columns);
+            bool section = false;
             foreach (ErrorClusters.Cluster cluster in Clusters)
             {
-                W("<tbody class=\"error-cluster\" id=\"e-" + N(cluster.Number) + "\"><tr class=\"cluster-heading\"><th scope=\"rowgroup\" colspan=\"" + N(span)
-                    + "\"><div class=\"cluster-head\"><span class=\"cluster-count\">");
-                T(cluster.Members.Count.ToString(Culture)); W("</span>");
-                if (cluster.ExceptionType is { } type) { W(" <code class=\"exception-type\" title=\""); T(type); W("\">"); T(ErrorClusters.ShortType(type)); W("</code>"); }
-                if (cluster.Key is null) { W(" <span class=\"cluster-line no-message\">"); T(L("NoErrorMessage")); W("</span>"); }
+                // The section row is a row group of the same table, like a group of the Runs table.
+                if (cluster.IsGeneric && !section)
+                {
+                    section = true;
+                    W("<tbody class=\"cluster-section\" id=\"generic-errors\"><tr class=\"group-heading\"><th scope=\"rowgroup\" colspan=\"" + N(span) + "\">");
+                    T(L("GenericErrors")); W(" <span class=\"section-note\">"); T(L("GenericNote")); W("</span></th></tr></tbody>\n");
+                }
+                W("<tbody class=\"error-cluster\" id=\"e-" + N(cluster.Number) + "\"" + (cluster.IsGeneric ? " data-generic" : "")
+                    + "><tr class=\"cluster-heading\"><th scope=\"rowgroup\" colspan=\"" + N(span) + "\"><div class=\"cluster-head\">");
+                ClusterCount(cluster);
+                // A rule names the cluster in place of the exception type, which then stays in the line.
+                if (cluster.Error?.Rule is { } rule)
+                { W(" <span class=\"cluster-rule\" title=\""); T(F(AdoMessage.TestReportLabelValue, L("Rule"), RuleName(rule))); W("\">"); T(RuleName(rule)); W("</span>"); }
+                else if (cluster.ExceptionType is { } type) { W(" <code class=\"exception-type\" title=\""); T(type); W("\">"); T(ErrorClusters.ShortType(type)); W("</code>"); }
+                if (cluster.Error is null) { W(" <span class=\"cluster-line no-message\">"); T(L("NoErrorMessage")); W("</span>"); }
                 else { W(" <code class=\"cluster-line\">"); ClusterLine(cluster); W("</code>"); }
                 W("</div></th></tr>\n");
-                if (cluster.Members.Count > 1) ClusterFacts(cluster, span);
+                if (cluster.Members.Count > 1 || cluster.Error is { Forms.Count: > 1 }) ClusterFacts(cluster, span);
                 foreach (ErrorClusters.Member member in cluster.Members)
-                    Row(member.Failure, columns, strip: false, values: (columns & Columns.Values) != 0 ? cluster.ValuesOf(member) : null);
+                    Row(member.Failure, columns, strip: false, values: (columns & Columns.Values) != 0 ? Values(cluster, member) : null, related: !member.IsPrimary, member: member);
                 W("</tbody>\n");
             }
             W("</table></div>\n</section>\n");
         }
 
-        private IReadOnlyList<ErrorClusters.Cluster> Clusters => clusters ??= ErrorClusters.Of(model.Failures);
+        // The tests whose primary error this is, then "+n" for the other tests that had it.
+        private void ClusterCount(ErrorClusters.Cluster cluster)
+        {
+            int others = cluster.Members.Count - cluster.PrimaryCount;
+            if (others == 0) { W("<span class=\"cluster-count\">"); T(cluster.PrimaryCount.ToString(Culture)); W("</span>"); return; }
+            W("<span class=\"cluster-count\" title=\"");
+            T(F(AdoMessage.TestReportLabelValue, L("AsPrimary"), cluster.PrimaryCount.ToString(Culture)) + " · " + F(AdoMessage.TestReportLabelValue, L("AsOther"), others.ToString(Culture)));
+            W("\">"); T(cluster.PrimaryCount.ToString(Culture)); W(" +"); T(others.ToString(Culture)); W("</span>");
+        }
 
+        // What differs in a member's line: the values of its varying slots when the members share a
+        // layout, else the whole line. A cluster of one test has nothing that differs.
+        private static IReadOnlyList<string> Values(ErrorClusters.Cluster cluster, ErrorClusters.Member member) =>
+            cluster.Members.Count < 2 || member.Entry is not { } entry ? []
+            : cluster.SingleLayout ? cluster.ValuesOf(member) : [entry.Latest.Form.Line];
+
+        // Where a test's error comes from: how many of its failed attempts had it, which of two equally
+        // frequent errors came later, or an attempt that did not fail. The primary row lists the test's
+        // other errors; a muted row links its primary error.
+        private void ErrorsCell(ErrorClusters.Member? member)
+        {
+            W("<td class=\"col-errors\">");
+            if (member?.Entry is { } entry)
+            {
+                ErrorProfile profile = member.Profile;
+                W("<span class=\"placement\">");
+                T(!entry.Latest.Failed ? L("NotFailedAttempt")
+                    : entry.Count == profile.FailedAttempts ? L("EveryFailedAttempt")
+                    : F(member.IsPrimary && profile.IsTie ? AdoMessage.TestReportAttemptsShareLater : AdoMessage.TestReportAttemptsShare, entry.Count, profile.FailedAttempts));
+                W("</span>");
+                ErrorProfileEntry[] others = member.IsPrimary ? [.. profile.Others] : [];
+                if (others.Length > 0)
+                {
+                    W(" <span class=\"other-errors\">");
+                    Labelled(L("OtherErrors"), () =>
+                    {
+                        for (int index = 0; index < others.Length; index++)
+                        {
+                            if (index > 0) W(", ");
+                            ErrorLink(others[index]); T(" ×" + others[index].Count.ToString(Culture));
+                        }
+                    });
+                    W("</span>");
+                }
+                else if (!member.IsPrimary && profile.Primary is { } primary)
+                { W(" <span class=\"other-errors\">"); Labelled(L("PrimaryError"), () => ErrorLink(primary)); W("</span>"); }
+                // The previous failed build had the same primary error, or another one.
+                if (member.IsPrimary && member.Comparison is { } comparison)
+                {
+                    W(" <span class=\"previous-error\">");
+                    T(F(comparison.Same ? AdoMessage.TestReportSameErrorInBuild : AdoMessage.TestReportOtherErrorInBuild, comparison.BuildNumber));
+                    W("</span>");
+                }
+            }
+            W("</td>");
+        }
+
+        private IReadOnlyList<ErrorClusters.Cluster> Clusters => clusters ??= ErrorClusters.Of(model);
+
+        // The cluster of a test's primary error, or of the tests without a message.
         private ErrorClusters.Cluster ClusterOf(AdoTestFailure failure) => (clusterOf ??= Clusters
-            .SelectMany(static cluster => cluster.Members.Select(member => (member.Failure.Ordinal, Cluster: cluster)))
+            .SelectMany(static cluster => cluster.Members.Where(static member => member.IsPrimary).Select(member => (member.Failure.Ordinal, Cluster: cluster)))
             .ToDictionary(static item => item.Ordinal, static item => item.Cluster))[failure.Ordinal];
+
+        private ErrorClusters.Cluster ClusterOf(ErrorClass error) => (clusterOfError ??= Clusters.Where(static cluster => cluster.Error is not null)
+            .ToDictionary(static cluster => cluster.Error!, static cluster => cluster))[error];
+
+        // A built-in rule by its name in the report language; a configured rule as the file names it.
+        private string RuleName(ErrorRule rule) => rule.BuiltInId is { } id ? L("Rule" + id) : rule.Name;
+
+        // An error in one line: its rule, else its line with the short exception type, cut.
+        private string ErrorLabel(ErrorClass error, ErrorSignature form)
+        {
+            if (error.Rule is { } rule) return RuleName(rule);
+            string line = form.PrefixType is { } type ? ErrorClusters.ShortType(type) + ": " + form.Line[Math.Min(form.PrefixLength, form.Line.Length)..] : form.Line;
+            return line.Length > LabelCharacters ? Shorten(line, LabelCharacters) + "…" : line;
+        }
+
+        // A link to an error's cluster, named by its label, with the test's own line as title.
+        private void ErrorLink(ErrorProfileEntry entry)
+        {
+            W("<a href=\"#e-" + N(ClusterOf(entry.Class).Number) + "\" title=\""); T(entry.Latest.Form.Line); W("\">"); T(ErrorLabel(entry.Class, entry.Latest.Form)); W("</a>");
+        }
+
+        // A label and a value written by value, as the report culture punctuates "Label: value".
+        private void Labelled(string label, Action value)
+        {
+            string[] parts = F(AdoMessage.TestReportLabelValue, label, "\u0001").Split('\u0001');
+            T(parts[0]); value(); T(parts[1]);
+        }
 
         // The first test's key line, without a leading exception type when the cluster shows it, with
         // each value that differs between the tests marked and titled with the values. Cut at the
@@ -437,9 +561,9 @@ public static class HtmlTestFailureRenderer
         private void ClusterLine(ErrorClusters.Cluster cluster)
         {
             ErrorClusters.Member first = cluster.Representative;
-            int skip = first.PrefixType is not null && first.PrefixType == cluster.ExceptionType ? first.PrefixLength : 0;
+            int skip = Skip(cluster);
             int left = MaximumSummaryCharacters;
-            foreach (ErrorClusters.Part part in first.Parts)
+            foreach (ErrorPart part in first.Parts)
             {
                 string text = part.Text;
                 if (skip >= text.Length) { skip -= text.Length; continue; }
@@ -459,10 +583,17 @@ public static class HtmlTestFailureRenderer
         // The same line as plain text, for the Overview.
         private static string PlainLine(ErrorClusters.Cluster cluster)
         {
-            ErrorClusters.Member first = cluster.Representative;
-            string line = string.Concat(first.Parts.Select(static part => part.Text));
-            if (first.PrefixType is not null && first.PrefixType == cluster.ExceptionType) line = line[first.PrefixLength..];
+            string line = string.Concat(cluster.Representative.Parts.Select(static part => part.Text));
+            line = line[Math.Min(Skip(cluster), line.Length)..];
             return line.Length > MaximumSummaryCharacters ? Shorten(line, MaximumSummaryCharacters) + "…" : line;
+        }
+
+        // The length of the leading exception type that the heading shows apart; a rule shows instead
+        // of the type, which then stays in the line.
+        private static int Skip(ErrorClusters.Cluster cluster)
+        {
+            ErrorClusters.Member first = cluster.Representative;
+            return cluster.Error?.Rule is null && first.PrefixType is not null && first.PrefixType == cluster.ExceptionType ? first.PrefixLength : 0;
         }
 
         // The values of one slot across the cluster's tests: five at most, then how many more.
@@ -489,11 +620,19 @@ public static class HtmlTestFailureRenderer
             }
             W("</span>");
             int fresh = tests.Count(test => Signal(test) is { IsNew: true }), recurring = tests.Count(test => Signal(test) is { IsNew: false });
-            if (fresh + recurring > 0)
+            // Of the tests whose primary error this is and whose previous failed build can be compared,
+            // those whose previous error was the same.
+            ErrorComparison[] compared = [.. cluster.Members.Where(static member => member.IsPrimary).Select(static member => member.Comparison).OfType<ErrorComparison>()];
+            if (fresh + recurring > 0 || compared.Length > 0)
             {
                 W("<span class=\"fact-group\">");
                 if (fresh > 0) { W("<span class=\"fact\">"); NewChip(L("NewTests")); W(" <strong>" + N(fresh) + "</strong></span>"); }
                 if (recurring > 0) { W("<span class=\"fact\"><span class=\"trend trend-since\">"); T(L("RecurringTests")); W("</span> <strong>" + N(recurring) + "</strong></span>"); }
+                if (compared.Length > 0)
+                {
+                    W("<span class=\"fact\">"); T(L("SameAsPrevious")); W(" <strong>");
+                    T(F(AdoMessage.TestReportCountOf, compared.Count(static comparison => comparison.Same), compared.Length)); W("</strong></span>");
+                }
                 W("</span>");
             }
             AdoTestBug[] open = [.. tests.SelectMany(static test => test.Bugs).Where(static bug => bug.Id > 0 && bug.IsOpen == true).DistinctBy(static bug => bug.Id).OrderBy(static bug => bug.Id)];
@@ -509,16 +648,35 @@ public static class HtmlTestFailureRenderer
             if (tracked < tests.Length) { W("<span class=\"fact fact-untracked\">"); T(L("WithoutOpenBug")); W(" <strong>" + N(tests.Length - tracked) + "</strong></span>"); }
             W("</span>");
             GroupFacts(tests);
+            // Wordings that pairing joined, with the test and the groups that joined the first two.
+            if (cluster.Error is { Forms.Count: > 1 } error)
+            {
+                W("<span class=\"fact-group\"><span class=\"fact\">"); T(L("Forms")); W(" <strong>" + N(error.Forms.Count) + "</strong></span>");
+                if (error.Pairings.Count > 0)
+                {
+                    ErrorPairing pairing = error.Pairings[0];
+                    W("<span class=\"fact\">");
+                    T(F(AdoMessage.TestReportPairedBy, model.Errors.Tests[pairing.Test].ShortName, GroupLabel(pairing.EnglishGroup), GroupLabel(pairing.FrenchGroup)));
+                    if (error.Pairings.Count > 1) W(" <span class=\"text-muted\">+" + N(error.Pairings.Count - 1) + "</span>");
+                    W("</span>");
+                }
+                W("</span>");
+            }
+            W("<span class=\"fact-group\">");
             if (cluster.Frame is { } frame)
             {
-                W("<span class=\"fact-group\"><span class=\"fact\">"); T(L("CommonFrame")); W(" <code title=\""); T(frame); W("\">"); T(ErrorClusters.ShortFrame(frame));
-                W("</code> <strong>" + N(cluster.FrameCount) + "</strong></span></span>");
+                W("<span class=\"fact\">"); T(L("CommonFrame")); W(" <code title=\""); T(frame); W("\">"); T(ErrorClusters.ShortFrame(frame));
+                W("</code> <strong>" + N(cluster.FrameCount) + "</strong></span>");
             }
+            // How far the error spreads: the classes of its tests.
+            int classes = tests.Select(static test => AttemptGrouper.ClassName(test.TestName)).Distinct(StringComparer.Ordinal).Count();
+            W("<span class=\"fact\">"); T(L("Classes")); W(" <strong>" + N(classes) + "</strong></span></span>");
             W("</div>");
-            AdoTestFailure first = cluster.Representative.Failure;
-            if (LatestErrorAttempt(first)?.ErrorMessage is { Length: > 0 } message)
+            // The latest attempt that had this error, which need not be the test's latest error.
+            ErrorClusters.Member first = cluster.Representative;
+            if (first.Attempt?.ErrorMessage is { Length: > 0 } message)
             {
-                W("<details class=\"cluster-sample\"><summary>"); T(F(AdoMessage.TestReportLabelValue, L("SampleMessage"), first.ShortName)); W("</summary>");
+                W("<details class=\"cluster-sample\"><summary>"); T(F(AdoMessage.TestReportLabelValue, L("SampleMessage"), first.Failure.ShortName)); W("</summary>");
                 Code(Sample(message), CodeLanguage.ErrorMessage); W("</details>");
             }
             W("</td></tr>\n");
@@ -632,20 +790,22 @@ public static class HtmlTestFailureRenderer
             return [.. model.Failures.Where(failure => !linked.Contains(failure.Ordinal) && failure.TestCase is { Id: > 0 } testCase && cases.Contains(testCase.Id))];
         }
 
-        // Tests that fail with the error of a test of the bug and are neither linked to it nor listed
-        // as of the same Test Case, with the cluster that holds most of them.
+        // Tests that had the primary error of a test of the bug in any failed attempt and are neither
+        // linked to it nor listed as of the same Test Case, each counted once, with the cluster that
+        // holds most of them; a tie goes to the first cluster.
         private (int Count, ErrorClusters.Cluster? Cluster) SameError(BugEntry entry, AdoTestFailure[] related)
         {
             HashSet<int> known = [.. entry.Tests.Select(static item => item.Failure.Ordinal), .. related.Select(static failure => failure.Ordinal)];
             (int Count, ErrorClusters.Cluster? Cluster) best = (0, null);
-            int total = 0;
-            foreach (ErrorClusters.Cluster cluster in entry.Tests.Select(item => ClusterOf(item.Failure)).Where(static cluster => cluster.Key is not null).Distinct())
+            HashSet<int> unlinked = [];
+            foreach (ErrorClusters.Cluster cluster in entry.Tests.Select(item => ClusterOf(item.Failure)).Where(static cluster => cluster.Error is not null).Distinct()
+                .OrderBy(static cluster => cluster.Number))
             {
-                int count = cluster.Members.Count(member => !known.Contains(member.Failure.Ordinal));
-                total += count;
-                if (count > best.Count) best = (count, cluster);
+                int[] tests = [.. cluster.Members.Select(static member => member.Failure.Ordinal).Where(ordinal => !known.Contains(ordinal))];
+                unlinked.UnionWith(tests);
+                if (tests.Length > best.Count) best = (tests.Length, cluster);
             }
-            return (total, best.Cluster);
+            return (unlinked.Count, best.Cluster);
         }
 
         // Number, Test Case, test, class, trend, then the optional open bugs, one column per group (or
@@ -659,17 +819,20 @@ public static class HtmlTestFailureRenderer
             else ColumnHead(L("Attempts"));
             if ((columns & Columns.Error) != 0) ColumnHead(L("LatestError"));
             if ((columns & Columns.Values) != 0) ColumnHead(L("Values"));
+            if ((columns & Columns.Errors) != 0) ColumnHead(L("Errors"));
             if ((columns & Columns.Source) != 0) ColumnHead(L("BugSource"));
             W("</tr></thead>\n");
         }
 
         private int ColumnCount(Columns columns) => 5 + (Grouping.IsGrouped ? Grouping.Labels.Count : 1)
             + ((columns & Columns.Bugs) != 0 ? 1 : 0) + ((columns & Columns.Error) != 0 ? 1 : 0) + ((columns & Columns.Values) != 0 ? 1 : 0)
-            + ((columns & Columns.Source) != 0 ? 1 : 0);
+            + ((columns & Columns.Errors) != 0 ? 1 : 0) + ((columns & Columns.Source) != 0 ? 1 : 0);
 
         // One test: each part in a column of its own, so parts line up from row to row. values are
-        // the parts of its error that differ in its cluster; source, when given, is how it is linked.
-        private void Row(AdoTestFailure failure, Columns columns, bool strip, string? source = null, IReadOnlyList<string>? values = null, bool related = false)
+        // the parts of its error that differ in its cluster; source, when given, is how it is linked;
+        // member is the test in a cluster of By error, which the Errors column reads.
+        private void Row(AdoTestFailure failure, Columns columns, bool strip, string? source = null, IReadOnlyList<string>? values = null, bool related = false,
+            ErrorClusters.Member? member = null)
         {
             string anchor = Anchor(failure);
             W("<tr data-index-for=\"" + anchor + "\"" + (related ? " class=\"related\"" : "") + ">"); Number(failure);
@@ -700,6 +863,7 @@ public static class HtmlTestFailureRenderer
                 if (values is { Count: > 0 }) { string text = string.Join(" · ", values); W("<span class=\"values\" title=\""); T(text); W("\">"); T(text); W("</span>"); }
                 W("</td>");
             }
+            if ((columns & Columns.Errors) != 0) ErrorsCell(member);
             if (source is not null) { W("<td class=\"col-source\">"); T(source); W("</td>"); }
             W("</tr>\n");
         }

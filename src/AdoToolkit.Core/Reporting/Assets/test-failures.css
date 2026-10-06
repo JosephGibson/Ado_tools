@@ -138,6 +138,13 @@ a.bug-new:hover, a.bug-new:focus-visible { background: color-mix(in srgb, var(--
 .exception-type { color: var(--text); font-weight: 600; }
 .cluster-line { color: var(--text); }
 .cluster-line.no-message { color: var(--text-muted); font-style: italic; }
+/* A rule names its error in place of the exception type; the generic errors open with a row of their own. */
+.cluster-rule { justify-self: start; padding: 0 var(--space-2); border: 1px solid var(--separator); border-radius: 4px; background: var(--surface-2); color: var(--text); font-size: var(--text-12); font-weight: 600; }
+.cluster-section .section-note { display: block; margin-top: 2px; color: var(--text-muted); font-size: var(--text-12); font-weight: 400; white-space: normal; }
+/* Errors: where a test's error came from, then its other errors, each linked to its group. */
+.col-errors { min-width: 12rem; color: var(--text-soft); font-size: var(--text-12); white-space: normal; }
+.other-errors, .previous-error { display: block; }
+.other-errors a { overflow-wrap: anywhere; }
 .error-var { text-decoration: underline dotted; text-underline-offset: .2em; cursor: help; }
 .cluster-facts td { padding: 0 var(--space-3) var(--space-3) calc(3rem + 2 * var(--space-3)); background: var(--surface); white-space: normal; overflow-wrap: anywhere; }
 .facts { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-4); font-size: var(--text-12); color: var(--text-muted); }

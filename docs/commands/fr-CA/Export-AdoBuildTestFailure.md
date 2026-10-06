@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-05-2026
+ms.date: 10-06-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -43,8 +43,9 @@ précédent; la date est le jour où le premier build de cette suite d’échecs
 pastille mène aux résultats de tests de ce build et son titre indique le nombre de builds
 consécutifs. Rien n’est indiqué lorsque le build précédent n’a pas pu être lu, n’a pas exécuté
 le test ou l’a terminé avec un autre résultat. Sous le tableau, des encadrés résument le
-build, soit les tests nouveaux et récurrents, les erreurs les plus fréquentes, les tests sans
-bogue ouvert et, lorsque les tentatives sont regroupées, chaque groupe. Séries et historique
+build, soit les tests nouveaux et récurrents, les erreurs les plus fréquentes, les tests avec
+une erreur générique, les tests sans bogue ouvert et, lorsque les tentatives sont regroupées,
+chaque groupe. Séries et historique
 présente l’historique des exécutions sous forme de graphique et de tableau des builds, puis
 liste les séries de tests du build avec leur ID, les numéros de
 tentative qu’elles ont, de la phase, du travail ou de l’instance du travail, leur durée, leurs
@@ -58,10 +59,19 @@ pour un bogue lu en entier, le jour où il a été ouvert, Nouveau lorsqu’il l
 en file du build, et la personne à qui il est assigné ou Non assigné, et ses pièces jointes,
 chaque nom de fichier une seule fois, tiré de la dernière tentative qui l’a. Le champ En échec
 depuis d’une tentative nomme ce build par son numéro lorsqu’il figure dans l’historique. Par
-erreur regroupe les mêmes lignes sous leur dernière erreur, sans tenir compte des URL, des
-GUID, des chemins, des ID hexadécimaux ni des nombres; chaque groupe nomme son type d’exception
-et marque les parties de sa ligne qui diffèrent d’un test à l’autre, et un groupe de deux tests
-ou plus indique ce que ses tests ont en commun et présente un exemple du premier message.
+erreur regroupe les mêmes lignes selon l’erreur. Chaque erreur d’une tentative en échec forme
+un groupe, sans tenir compte des URL, des GUID, des chemins, des ID hexadécimaux, des nombres,
+de la casse, des accents ni des valeurs qu’indique un message de framework reconnu, comme une
+valeur réelle, et les formulations anglaise et française d’une même erreur forment un seul
+groupe lorsqu’un test a échoué avec les deux au même endroit. Un test est listé sous son erreur
+principale, la plus fréquente des siennes une fois les erreurs génériques mises à part, et
+atténué sous ses autres erreurs; sa colonne Erreurs indique combien de tentatives en échec ont
+eu l’erreur et mène aux autres. Les erreurs génériques, que nomme une règle intégrée ou une
+règle générique de reporting.errorRules, suivent les autres sous leur propre titre. Chaque
+groupe nomme son type d’exception ou sa règle et affiche la ligne de son premier test, avec les
+lignes Expected et Actual d’un message xUnit ou NUnit reconnu, en marquant les parties qui
+diffèrent d’un test à l’autre; un groupe de deux tests ou plus, ou d’une erreur à plusieurs
+formulations, indique ce que ses tests ont en commun et présente un exemple de message.
 Bogues ouverts s’ouvre sur une ligne qui compte les bogues qu’elle liste et combien d’entre eux
 ont été ouverts après la mise en file du build, le second décompte étant omis lorsque le build
 n’a pas d’heure de mise en file, puis liste chaque bogue une fois, sur une ligne avec le jour
@@ -171,7 +181,8 @@ rien et n’a besoin d’aucune connexion, et `-SkipAttachments`, `-AllRunAttach
 d’en-tête, puis une ligne par test du rapport, dans l’ordre du rapport, les tests instables
 n’étant inclus qu’avec `-IncludeFlaky`. Les colonnes, dans cet ordre, sont Build, Ordinal,
 Test, Title, Classification, Attempts, Latest error, Owner, Priority, Test case ID,
-Test case state, Open bugs, Bug IDs, Bug states, New et Since. Build est l’ID du build et
+Test case state, Open bugs, Bug IDs, Bug states, New, Since, Primary error, Error kind,
+Error rule et Distinct errors. Build est l’ID du build et
 Ordinal, le numéro du test dans le rapport. Test est le nom complet du test. Classification
 vaut Failed ou Flaky. Attempts compte les tentatives du test. Latest error est le message
 entier de l’erreur dont le tableau du rapport affiche la première ligne, avec ses sauts de
@@ -185,7 +196,13 @@ autres cas, soit lorsque ce build n’a pas pu être lu, n’a pas exécuté le 
 un autre résultat.
 Since est le jour, au format yyyy-MM-dd, où le premier build de cette suite d’échecs s’est
 terminé, dans le fuseau horaire de l’ordinateur qui exécute l’exportation, ou le numéro de ce
-build lorsque le jour n’est pas connu; il reste vide sauf si New vaut False.
+build lorsque le jour n’est pas connu; il reste vide sauf si New vaut False. Primary error
+est le message entier de l’erreur principale du test, celle sous laquelle Par erreur liste
+le test, tiré de la dernière tentative qui l’a eue. Error kind vaut Specific, ou Generic pour
+une erreur que nomme une règle générique. Error rule nomme la règle qui a nommé cette erreur,
+soit une règle de reporting.errorRules par son nom, soit une règle intégrée par son ID, comme
+ConnectionRefused. Distinct errors compte les erreurs des tentatives en échec du test. Pour un
+test sans message d’erreur, les trois premières sont vides et Distinct errors vaut 0.
 
 Les noms de l’en-tête sont en anglais dans toutes les cultures. Les nombres et True ou False
 suivent la culture invariante, et les dates sont au format yyyy-MM-dd; le texte d’Azure DevOps
@@ -392,7 +409,7 @@ HelpMessage: ''
 
 ### -IncludeFlaky
 
-Inclut les tests instables, qui ont échoué puis réussi dans chaque phase, travail ou série de tests nommée. Sans ce paramètre, ils sont omis du rapport et seulement comptés dans son en-tête, et un fichier CSV n’a aucune ligne pour eux.
+Inclut les tests instables, qui ont échoué puis réussi dans chaque phase, travail ou série de tests nommée. Sans ce paramètre, ils sont omis du rapport et seulement comptés dans son en-tête, et un fichier CSV n’a aucune ligne pour eux; un test omis peut quand même être celui qui a réuni deux formulations d’une erreur dans Par erreur.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -534,7 +551,7 @@ Le rapport ou le fichier CSV validé et enregistré. Lorsque des pièces jointes
 
 ## NOTES
 
-Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. La façon dont Server 2020 répond à plusieurs téléchargements simultanés n’a pas été confirmée au travail (V-33). Avec -Verbose, chaque étape de l’exportation écrit une ligne indiquant sa durée en millisecondes : les téléchargements des pièces jointes, avec les fichiers écrits et les requêtes envoyées; le rapport produit, avec sa taille en octets; la vérification du rapport; et sa mise en place, qui supprime aussi les dossiers de pièces jointes antérieurs. Lorsque rien n’est téléchargé, la ligne des téléchargements reste à sa place avec 0 fichier et 0 requête. Une dernière ligne indique le build, les pièces jointes téléchargées, les requêtes et la durée écoulée. Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase, de travail et de série utilisés pour le regroupement et le suffixe de nouvelle tentative des noms de série (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27). Le fait que Server 2020 renvoie la date de création et la personne assignée d’un bogue dans une projection de champs d’un lot d’éléments de travail n’a pas été observé au travail (V-37); sans eux, la ligne d’un bogue n’affiche ni jour, ni marque ✦, ni personne assignée, sans avertissement.
+Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. La façon dont Server 2020 répond à plusieurs téléchargements simultanés n’a pas été confirmée au travail (V-33). Avec -Verbose, chaque étape de l’exportation écrit une ligne indiquant sa durée en millisecondes : les téléchargements des pièces jointes, avec les fichiers écrits et les requêtes envoyées; le rapport produit, avec sa taille en octets; la vérification du rapport; et sa mise en place, qui supprime aussi les dossiers de pièces jointes antérieurs. Lorsque rien n’est téléchargé, la ligne des téléchargements reste à sa place avec 0 fichier et 0 requête. Une dernière ligne indique le build, les pièces jointes téléchargées, les requêtes et la durée écoulée. Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase, de travail et de série utilisés pour le regroupement et le suffixe de nouvelle tentative des noms de série (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27). Le fait que Server 2020 renvoie la date de création et la personne assignée d’un bogue dans une projection de champs d’un lot d’éléments de travail n’a pas été observé au travail (V-37); sans eux, la ligne d’un bogue n’affiche ni jour, ni marque ✦, ni personne assignée, sans avertissement. Dans Par erreur, la ligne d’un test indique aussi si les messages d’erreur que son précédent build en échec a répertoriés comprennent une formulation de son erreur principale, d’après les ErrorMessages de son historique; rien n’est indiqué lorsque la comparaison pourrait être erronée, et le fait que Server 2020 répertorie les messages n’a pas été confirmé au travail (V-39). Les textes français de Windows et de .NET Framework dont les règles génériques intégrées auraient besoin (V-41) et les textes de chromedriver (V-42) ne sont pas confirmés au travail, pas plus que les textes de MSTest que les agents produisent dans chaque langue, dont dépend la réunion des formulations anglaises et françaises (V-40).
 
 ## RELATED LINKS
 

@@ -12,11 +12,19 @@ internal static class TestFailureReportFixture
     internal const string Hostile = "</script><script>alert('fixture-only')</script> <img src=x onerror=fixture()> \" & ../CON 日本語 « L’été : 1 234 ! »";
     internal static readonly DateTimeOffset Clock = new(2026, 9, 16, 13, 30, 0, TimeSpan.Zero);
 
-    // Reviewed reports show every failure; the default flaky exclusion has its own tests.
-    internal static TestFailureReportOptions Options(string culture) => new()
-    { Culture = culture, SessionCulture = CultureInfo.GetCultureInfo("en-US"), GeneratedAt = Clock, ToolkitVersion = "5.3.0-test", IncludeFlaky = true };
+    // The configured rule of the bilingual variant: one generic error in both languages.
+    internal static readonly IReadOnlyList<ErrorRuleOptions> BilingualRules =
+        [new ErrorRuleOptions { Name = "Test data reset", Patterns = ["*Test data reset failed*", "*réinitialisation des données de test a échoué*"] }];
 
-    internal static TestFailureReportModel Model(string variant = "failed", string culture = "en-US") => TestFailureReportModelBuilder.Build(Set(variant), Options(culture));
+    // Reviewed reports show every failure; the default flaky exclusion has its own tests.
+    internal static TestFailureReportOptions Options(string culture, IReadOnlyList<ErrorRuleOptions>? rules = null) => new()
+    {
+        Culture = culture, SessionCulture = CultureInfo.GetCultureInfo("en-US"), GeneratedAt = Clock, ToolkitVersion = "5.3.0-test", IncludeFlaky = true,
+        ErrorRules = rules ?? [],
+    };
+
+    internal static TestFailureReportModel Model(string variant = "failed", string culture = "en-US") =>
+        TestFailureReportModelBuilder.Build(Set(variant), Options(culture, variant == "bilingual" ? BilingualRules : null));
 
     internal static string Render(string variant = "failed", string culture = "en-US") => Render(Model(variant, culture));
 
@@ -31,6 +39,7 @@ internal static class TestFailureReportFixture
     {
         if (variant == "grouped") return GroupedSet();
         if (variant == "large") return LargeSet();
+        if (variant == "bilingual") return BilingualSet();
         bool hostile = variant == "hostile";
         bool partial = variant == "partial";
         bool flaky = variant == "flaky";
@@ -102,6 +111,123 @@ internal static class TestFailureReportFixture
             Runs = [Run(200, "Tests_EN", 1, Clock.AddDays(-10)), Run(201, "Tests_EN", 2, Clock.AddMinutes(-20)), Run(202, "Tests_FR", 1, Clock.AddMinutes(-19)),
                 Run(203, "Tests_FR", 2, Clock.AddMinutes(-10))],
             Summary = summary, History = [summary], Failures = failures, FailedCount = 2, Status = AdoTestFailureStatus.Complete,
+            RetrievedAt = Clock.AddMinutes(-1), CollectionUri = Collection,
+        };
+    }
+
+    // An English stage and a French stage, two runs each, whose MSTest texts show their language.
+    // CheckTitle fails in both languages at one place, so its two forms are one error; AddToCart had
+    // that error once and another three times, and ShowBanner's Cart and Panier stay apart from it.
+    // OpenHome's own texts pair through the MSTest wrapper. SubmitOrder had generic errors only, as
+    // LoadReport, which the configured rule names; ConfirmOrder had a generic error once. UpdateAvatar
+    // has no message. Bug 6101 tracks CheckTitle only.
+    private static AdoBuildTestFailureSet BilingualSet()
+    {
+        AdoTestRun Run(int id, string stage, int attempt) => new()
+        {
+            Id = id, Name = "Synthetic " + stage, BuildId = 421, State = "Completed", StartedDate = Clock.AddMinutes(-40 + 8 * (id - 500)), StageName = stage,
+            PhaseName = "UiTests", JobName = "__default", PipelineAttempt = attempt, TotalTests = 120, PassedTests = 112, TeamProject = Project, CollectionUri = Collection,
+        };
+        // Frames of the test's own code, in the language of the stage.
+        string Trace(bool french, params (string Method, string File, int Line)[] frames) => string.Join('\n', frames.Select(frame => french
+            ? @"   à Synthetic.Shop." + frame.Method + @"() dans C:\agent\_work\5\s\" + frame.File + ":ligne " + frame.Line.ToString(CultureInfo.InvariantCulture)
+            : @"   at Synthetic.Shop." + frame.Method + @"() in C:\agent\_work\5\s\" + frame.File + ":line " + frame.Line.ToString(CultureInfo.InvariantCulture)));
+        const string Welcome = "Assert.AreEqual failed. Expected:<Welcome>. Actual:<Error>. ";
+        const string Bienvenue = "Échec de Assert.AreEqual. Attendu : <Bienvenue>, Réel : <Erreur>. ";
+        (string Method, string File, int Line) title = ("Pages.HomePage.CheckTitle", @"Pages\HomePage.cs", 42);
+        // Per test: its name, then its English and French attempts, null for a pass; a failure is a
+        // message and a trace for each language.
+        (string Name, (string? Message, (string Method, string File, int Line)[] Frames)?[] Attempts)[] specs =
+        [
+            ("HomeTests.CheckTitle", [(Welcome, [title, ("HomeTests.CheckTitle", "HomeTests.cs", 18)]), (Welcome, [title, ("HomeTests.CheckTitle", "HomeTests.cs", 18)]),
+                (Bienvenue, [title, ("HomeTests.CheckTitle", "HomeTests.cs", 18)]), (Bienvenue, [title, ("HomeTests.CheckTitle", "HomeTests.cs", 18)])]),
+            ("HomeTests.ShowBanner", [("Assert.AreEqual failed. Expected:<Cart>. Actual:<Error>. ", [("Pages.HomePage.CheckBanner", @"Pages\HomePage.cs", 57), ("HomeTests.ShowBanner", "HomeTests.cs", 25)]),
+                null,
+                ("Échec de Assert.AreEqual. Attendu : <Panier>, Réel : <Erreur>. ", [("Pages.HomePage.CheckBanner", @"Pages\HomePage.cs", 57), ("HomeTests.ShowBanner", "HomeTests.cs", 25)]),
+                ("Échec de Assert.AreEqual. Attendu : <Panier>, Réel : <Erreur>. ", [("Pages.HomePage.CheckBanner", @"Pages\HomePage.cs", 57), ("HomeTests.ShowBanner", "HomeTests.cs", 25)])]),
+            ("HomeTests.OpenHome", [
+                ("Test method Synthetic.Shop.HomeTests.OpenHome threw exception: \r\nSynthetic.Shop.HomePageException: Home page did not load within 30 seconds",
+                    [("Pages.HomePage.Open", @"Pages\HomePage.cs", 12), ("HomeTests.OpenHome", "HomeTests.cs", 31)]),
+                ("Test method Synthetic.Shop.HomeTests.OpenHome threw exception: \r\nSynthetic.Shop.HomePageException: Home page did not load within 45 seconds",
+                    [("Pages.HomePage.Open", @"Pages\HomePage.cs", 12), ("HomeTests.OpenHome", "HomeTests.cs", 31)]),
+                ("La méthode de test Synthetic.Shop.HomeTests.OpenHome a levé une exception : \r\nSynthetic.Shop.HomePageException: La page d’accueil ne s’est pas chargée en moins de 30 secondes",
+                    [("Pages.HomePage.Open", @"Pages\HomePage.cs", 12), ("HomeTests.OpenHome", "HomeTests.cs", 31)]),
+                ("La méthode de test Synthetic.Shop.HomeTests.OpenHome a levé une exception : \r\nSynthetic.Shop.HomePageException: La page d’accueil ne s’est pas chargée en moins de 30 secondes",
+                    [("Pages.HomePage.Open", @"Pages\HomePage.cs", 12), ("HomeTests.OpenHome", "HomeTests.cs", 31)])]),
+            ("CartTests.AddToCart", [(Welcome, [title, ("CartTests.AddToCart", "CartTests.cs", 40)]),
+                ("Synthetic.Shop.CartException: Cart is empty after adding 3 items", [("Pages.CartPage.Add", @"Pages\CartPage.cs", 88), ("CartTests.AddToCart", "CartTests.cs", 44)]),
+                ("Synthetic.Shop.CartException: Le panier est vide après l’ajout de 3 articles", [("Pages.CartPage.Add", @"Pages\CartPage.cs", 88), ("CartTests.AddToCart", "CartTests.cs", 44)]),
+                ("Synthetic.Shop.CartException: Le panier est vide après l’ajout de 3 articles", [("Pages.CartPage.Add", @"Pages\CartPage.cs", 88), ("CartTests.AddToCart", "CartTests.cs", 44)])]),
+            ("CheckoutTests.SubmitOrder", [
+                ("OpenQA.Selenium.WebDriverException: The HTTP request to the remote WebDriver server for URL http://selenium.example.test:4444/session/5f0c/element timed out after 60 seconds.",
+                    [("Pages.CheckoutPage.Submit", @"Pages\CheckoutPage.cs", 77), ("CheckoutTests.SubmitOrder", "CheckoutTests.cs", 21)]),
+                ("System.Net.Http.HttpRequestException: Response status code does not indicate success: 503 (Service Unavailable).",
+                    [("Api.OrdersClient.Create", @"Api\OrdersClient.cs", 30), ("CheckoutTests.SubmitOrder", "CheckoutTests.cs", 23)]),
+                ("OpenQA.Selenium.WebDriverException: The HTTP request to the remote WebDriver server for URL http://selenium.example.test:4444/session/9a1e/element timed out after 60 seconds.",
+                    [("Pages.CheckoutPage.Submit", @"Pages\CheckoutPage.cs", 77), ("CheckoutTests.SubmitOrder", "CheckoutTests.cs", 21)]),
+                ("OpenQA.Selenium.WebDriverException: The HTTP request to the remote WebDriver server for URL http://selenium.example.test:4444/session/9a1e/element timed out after 60 seconds.",
+                    [("Pages.CheckoutPage.Submit", @"Pages\CheckoutPage.cs", 77), ("CheckoutTests.SubmitOrder", "CheckoutTests.cs", 21)])]),
+            ("CheckoutTests.ConfirmOrder", [
+                ("System.Net.Sockets.SocketException: No connection could be made because the target machine actively refused it. (orders.example.test:5001)",
+                    [("Api.OrdersClient.Confirm", @"Api\OrdersClient.cs", 48), ("CheckoutTests.ConfirmOrder", "CheckoutTests.cs", 50)]),
+                ("Assert.IsTrue failed. Confirmation banner missing", [("Pages.CheckoutPage.Confirm", @"Pages\CheckoutPage.cs", 95), ("CheckoutTests.ConfirmOrder", "CheckoutTests.cs", 52)]),
+                ("Échec de Assert.IsTrue. Confirmation banner missing", [("Pages.CheckoutPage.Confirm", @"Pages\CheckoutPage.cs", 95), ("CheckoutTests.ConfirmOrder", "CheckoutTests.cs", 52)]),
+                ("Échec de Assert.IsTrue. Confirmation banner missing", [("Pages.CheckoutPage.Confirm", @"Pages\CheckoutPage.cs", 95), ("CheckoutTests.ConfirmOrder", "CheckoutTests.cs", 52)])]),
+            ("ReportTests.LoadReport", [
+                ("Synthetic.Shop.SeedException: Test data reset failed: database is locked", [("Data.Seeder.Reset", @"Data\Seeder.cs", 14), ("ReportTests.LoadReport", "ReportTests.cs", 12)]),
+                null,
+                ("Synthetic.Shop.SeedException: La réinitialisation des données de test a échoué : base de données verrouillée",
+                    [("Data.Seeder.Reset", @"Data\Seeder.cs", 14), ("ReportTests.LoadReport", "ReportTests.cs", 12)]),
+                ("Synthetic.Shop.SeedException: La réinitialisation des données de test a échoué : base de données verrouillée",
+                    [("Data.Seeder.Reset", @"Data\Seeder.cs", 14), ("ReportTests.LoadReport", "ReportTests.cs", 12)])]),
+            ("ProfileTests.UpdateAvatar", [(null, []), (null, []), (null, []), (null, [])]),
+        ];
+        int[] runs = [500, 501, 502, 503];
+        AdoTestRun[] stageRuns = [Run(500, "Tests_EN", 1), Run(501, "Tests_EN", 2), Run(502, "Tests_FR", 1), Run(503, "Tests_FR", 2)];
+        // The build before failed CheckTitle with the same error and AddToCart with another one, both
+        // in the English stage; the listing sent the start of each message.
+        string english = PipelineGrouping.Create(stageRuns).KeyOf(500);
+        AdoTestHistoryEntry[] History(string? previous) => previous is null ? [] :
+        [
+            new AdoTestHistoryEntry { BuildId = 420, BuildNumber = "20261005.9", Outcome = AdoTestHistoryOutcome.Failed, WebUrl = Untrusted,
+                ErrorMessages = [previous], ErrorMessageKeys = [english] },
+            new AdoTestHistoryEntry { BuildId = 421, BuildNumber = "20261006.2", Outcome = AdoTestHistoryOutcome.Failed, IsCurrent = true, WebUrl = Untrusted },
+        ];
+        List<AdoTestFailure> failures = [];
+        for (int index = 0; index < specs.Length; index++)
+        {
+            (string name, var attempts) = specs[index];
+            failures.Add(new AdoTestFailure
+            {
+                // Every test fails in the last run of the French stage.
+                Ordinal = index + 1, Classification = AdoTestFailureClassification.Failed,
+                TestName = "Synthetic.Shop." + name, ShortName = name.Split('.')[^1], Storage = "Synthetic.Shop.Tests.dll", CollectionUri = Collection,
+                Bugs = name == "HomeTests.CheckTitle" ? [Bug(6101, "Home title shows the error page", "Active", "InProgress", true, associated: false, linked: true,
+                    created: Clock.AddDays(-2), assignee: "Nadia Roy")] : [],
+                History = History(name switch
+                {
+                    "HomeTests.CheckTitle" => Welcome,
+                    "CartTests.AddToCart" => "Synthetic.Shop.CartException: Cart total is negative",
+                    _ => null,
+                }),
+                Attempts = [.. attempts.Select((attempt, at) => new AdoTestAttempt
+                {
+                    Number = at + 1, Source = at == 0 ? AdoTestAttemptSource.Single : AdoTestAttemptSource.RunAttempt, RunId = runs[at], ResultId = 100 * (index + 1) + at,
+                    Outcome = attempt is null ? "Passed" : "Failed", OutcomeClass = attempt is null ? AdoTestOutcomeClass.Pass : AdoTestOutcomeClass.Failure,
+                    StartedDate = Clock.AddMinutes(-40 + 8 * at), CompletedDate = Clock.AddMinutes(-40 + 8 * at).AddSeconds(9), Duration = TimeSpan.FromSeconds(9),
+                    ComputerName = "SYNTHETIC-AGENT-0" + (at < 2 ? "1" : "2"), ErrorMessage = attempt?.Message,
+                    StackTrace = attempt is { Frames.Length: > 0 } failed ? Trace(at >= 2, failed.Frames) : null,
+                })],
+            });
+        }
+        AdoBuildTestSummary summary = Summary(421, true, true, failures.Count, 0);
+        return new AdoBuildTestFailureSet
+        {
+            Build = new AdoBuild { Id = 421, BuildNumber = "20261006.2", Definition = new AdoBuildDefinitionRef { Id = 12, Name = "Synthetic UI tests" },
+                SourceBranch = "refs/heads/main", Result = "failed", QueueTime = Clock.AddMinutes(-45), FinishTime = Clock.AddMinutes(-5),
+                TeamProject = Project, CollectionUri = Collection, WebUrl = Untrusted },
+            Runs = stageRuns,
+            Summary = summary, History = [summary], Failures = failures, FailedCount = failures.Count, Status = AdoTestFailureStatus.Complete,
             RetrievedAt = Clock.AddMinutes(-1), CollectionUri = Collection,
         };
     }

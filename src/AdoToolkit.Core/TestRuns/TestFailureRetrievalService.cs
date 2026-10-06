@@ -61,6 +61,8 @@ public sealed class TestFailureRetrievalService
         AutomatedTestStorage = result.AutomatedTestStorage,
         TestCaseTitle = result.TestCaseTitle,
         ResultGroupType = result.ResultGroupType,
+        // Only a failure's message is kept, and only its start.
+        ErrorMessage = OutcomeClassifier.Classify(result.Outcome) == AdoTestOutcomeClass.Failure ? ErrorMessageStart.Of(result.ErrorMessage) : null,
     };
 
     public async Task<AdoBuildTestFailureSet> GetAsync(AdoBuild build, TestFailureQuery query, CultureInfo culture,
@@ -439,6 +441,9 @@ public sealed class TestFailureRetrievalService
         if (!identity.IsGrouped) return Array.Empty<AdoTestHistoryEntry>();
         List<AdoTestHistoryEntry> cells = [];
         foreach (HistoryEntry entry in entries)
+        {
+            // The current build's attempts carry their whole messages.
+            HistoryErrors? errors = !entry.IsCurrent && entry.Data.IsAvailable && entry.Data.Errors.TryGetValue(identity, out HistoryErrors? found) ? found : null;
             cells.Add(new AdoTestHistoryEntry
             {
                 BuildId = entry.Build.Id,
@@ -448,7 +453,11 @@ public sealed class TestFailureRetrievalService
                     : AdoTestHistoryOutcome.NotRun,
                 IsCurrent = entry.IsCurrent,
                 WebUrl = AdoWebLinks.Build(connection.CollectionUri, project, entry.Build.Id),
+                ErrorMessages = errors?.Starts ?? [],
+                ErrorMessagesDropped = errors?.Dropped ?? false,
+                ErrorMessageKeys = errors?.Keys ?? [],
             });
+        }
         return cells.AsReadOnly();
     }
 

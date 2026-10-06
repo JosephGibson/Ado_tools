@@ -33,13 +33,19 @@ public static partial class TestFailureReportValidator
         bool inCard = false, assetSeen = false;
         List<string> scripts = [];
         HashSet<string> ids = new(StringComparer.Ordinal);
+        // Every in-page link must reach an element, such as the cluster that a row links.
+        HashSet<string> fragments = new(StringComparer.Ordinal);
         foreach ((string name, Dictionary<string, string> attributes, string? body) in Tags(reader, model))
         {
             string? Attribute(string key) => attributes.GetValueOrDefault(key);
             if (attributes.Keys.Any(key => key.StartsWith("on", StringComparison.OrdinalIgnoreCase))) Invalid(model);
             if (Attribute("id") is { } id && !ids.Add(id)) Invalid(model);
             bool local = attributes.ContainsKey("data-local-file");
-            if (Attribute("href") is { } href) links.Check(href, local, image: false);
+            if (Attribute("href") is { } href)
+            {
+                links.Check(href, local, image: false);
+                if (href.StartsWith('#')) fragments.Add(href[1..]);
+            }
             else if (Attribute("src") is { } source) links.Check(source, local, image: name == "img");
             else if (local) Invalid(model);
             switch (name)
@@ -100,7 +106,8 @@ public static partial class TestFailureReportValidator
             }
         }
         if (roots != 1 || generators != 1 || policies != 1 || ended != 1 || inCard || cards != model.Failures.Count || closedCards != cards ||
-            scripts.Count == 0 || scripts.Distinct(StringComparer.Ordinal).Count() != scripts.Count || policy != ContentSecurityPolicy.Create(scripts)) Invalid(model);
+            scripts.Count == 0 || scripts.Distinct(StringComparer.Ordinal).Count() != scripts.Count || policy != ContentSecurityPolicy.Create(scripts)
+            || !fragments.IsSubsetOf(ids)) Invalid(model);
         links.EnsureAllLinked();
     }
 

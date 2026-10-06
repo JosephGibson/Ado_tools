@@ -157,6 +157,23 @@ public sealed class BugsViewTests
         Assert.Matches(@"\.failure-table tr\.related \.col-test a \{ font-weight: 400; \}", html);
     }
 
+    // Same error starts from the primary error of each linked test and counts, once, every other test
+    // that had one of those errors in a failed attempt; it opens the error that holds the most of them.
+    [Fact]
+    public void SameErrorCountsEachTestThatHadALinkedTestsErrorOnce()
+    {
+        // In the bilingual fixture AddToCart had CheckTitle's error once.
+        Assert.Contains("<a class=\"fact fact-untracked\" href=\"#e-1\">Same error, not linked <strong>1</strong></a>",
+            Entry(View(TestFailureReportFixture.Render("bilingual")), 6101), StringComparison.Ordinal);
+        // Two linked tests with two errors, and a third test that had both: one test, not two.
+        AdoTestBug bug = Read(7001, result: true);
+        TestFailureReportModel model = Build("en-US", Failure("First", ["Error one", "Error one"], bug), Failure("Second", ["Error two", "Error two"], bug),
+            Failure("Third", ["Error one", "Error two"]));
+        string html = TestFailureReportFixture.Render(model);
+        TestFailureReportValidator.Validate(new StringReader(html), model);
+        Assert.Contains("<a class=\"fact fact-untracked\" href=\"#e-1\">Same error, not linked <strong>1</strong></a>", Entry(View(html), 7001), StringComparison.Ordinal);
+    }
+
     // Reruns share their parent result's bugs, so coverage counts results. A bug on every failed result
     // says only how it is linked, and so does one linked through the Test Case too.
     [Fact]
@@ -358,11 +375,17 @@ public sealed class BugsViewTests
 
     private static AdoTestBug Unread(int id) => new() { Id = id, IsAssociatedWithResult = true, WebUrl = TestFailureReportFixture.Untrusted };
 
-    private static AdoTestFailure Failure(string name, params AdoTestBug[] bugs) => new()
+    private static AdoTestFailure Failure(string name, params AdoTestBug[] bugs) => Failure(name, ["Failed " + name], bugs);
+
+    // One failed attempt per message.
+    private static AdoTestFailure Failure(string name, string[] messages, params AdoTestBug[] bugs) => new()
     {
         Ordinal = 1, Classification = AdoTestFailureClassification.Failed, ShortName = name, TestName = "Synthetic.BugTests." + name, Storage = "Synthetic.Tests.dll",
         CollectionUri = TestFailureReportFixture.Collection, Bugs = bugs,
-        Attempts = [new AdoTestAttempt { Number = 1, RunId = 201, ResultId = 11, Outcome = "Failed", OutcomeClass = AdoTestOutcomeClass.Failure, ErrorMessage = "Failed " + name }],
+        Attempts = [.. messages.Select((message, index) => new AdoTestAttempt
+        {
+            Number = index + 1, RunId = 201, ResultId = 11 + index, Outcome = "Failed", OutcomeClass = AdoTestOutcomeClass.Failure, ErrorMessage = message,
+        })],
     };
 
     private static TestFailureReportModel Build(string culture, params AdoTestFailure[] failures) => Build(culture, true, failures);

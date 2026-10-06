@@ -130,11 +130,11 @@ page.
 
 | View | What it shows |
 | --- | --- |
-| Overview | One row per failed test, each part in a column of its own: its status and number, Test Case number, name, class, trend, the lowest-numbered open bug that tracks it with **+N** when there are more, one status column per group of attempts, and the first line of its latest error. Under the table, cards describe the whole build: how many tests are **New**, **Recurring** or have **No comparison**; the **Most common errors** of two tests or more, each opening its group in By error; how many tests are **Without an open bug**, with the three that most need one; and, in a grouped build, per group how many tests failed, were flaky or failed only there. A card that would be empty is left out, and the filters act on the table only |
+| Overview | One row per failed test, each part in a column of its own: its status and number, Test Case number, name, class, trend, the lowest-numbered open bug that tracks it with **+N** when there are more, one status column per group of attempts, and the first line of its latest error. Under the table, cards describe the whole build: how many tests are **New**, **Recurring** or have **No comparison**; the **Most common errors**, the three errors that the most tests had in any failed attempt, two tests at least, each opening its group in By error; **Generic errors**, how many tests had one and how many had nothing else, opening them in By error; how many tests are **Without an open bug**, with the three that most need one; and, in a grouped build, per group how many tests failed, were flaky or failed only there. Generic errors are left out of the most common ones. A card that would be empty is left out, and the filters act on the table only |
 | Runs and history | First the run history: a chart with the failed count above each bar, and the same numbers as a table of builds where **This run** marks this build. Then the build's test runs with their ID, stage, job, the attempt numbers that the runs have (stage, job or job instance), start, duration, test counts with the passed and failed ones marked `✓` and `✕`, the number of reported tests, and how many attachments are listed and downloaded, or **Not listed** for a set gathered with `-SkipAttachments`. In a grouped build each group of runs has its own heading; the latest run is marked and runs outside the attachment window are greyed. Last, a table with one row per reported test, its outcome in each build and its trend |
 | Details | One card per test: its class and name, Test Case number and title, links and full name, then its run history, its open bugs with title and state and, for a bug that was read whole, the day it was filed, **✦ New** and its assignee, and its attachments, then its metadata and its attempts |
-| By error | The same rows, grouped under their latest error, largest group first, with the number of distinct errors above the table. Each group names its exception type and the error line of its first test; a part of the line that differs between the tests is underlined, and resting the pointer on it lists the values. A group of two tests or more also says how many tests failed or were flaky, how many are new or recurring, how many have an open bug and which bugs, how many fail in each group of attempts, and the frame of the tests' own code where they fail, when they share one; a closed **Sample message** shows the start of the first test's message. The **Values** column shows each test's own values. Tests without an error message come last |
-| Open bugs | A summary line counts the bugs this view lists, as the tab does, and how many of them were opened after the build was queued; the second count is left out when the build has no queue time. Then one entry per bug, on one line: how many tests are linked to it, its number, title and state, the day it was filed, **✦ New** when it was filed after the build was queued, who it is assigned to or **Unassigned**, its work item type and project when they are not a Bug of the build's project, then what it covers: **Linked tests**, **Same Test Case, not linked**, **Same error, not linked**, which opens that group in By error, and, in a grouped build, how many of its tests fail in each group. Then a row for each test linked to it, saying whether the link comes from a test result, the Test Case or both; a link through test results that reaches only some of a test's failed results says how many, such as **Test result: 1 of 4 failed results**. Tests that share a Test Case with a linked test but not the bug follow, greyed. The bug with the most tests comes first, and a test with several bugs appears under each. Bugs that could not be read come last, marked **Not read**. A last group lists the tests **Without an open bug**. The tab shows the number of bugs |
+| By error | The same rows, grouped by error. Every error that a test had in a failed attempt is a group: first the tests whose primary error it is, then, greyed, the other tests that had it. A test's primary error is its most frequent error among its failed attempts, generic errors aside, and the latest one on a tie; a test with generic errors only takes the most frequent of them. Specific errors come first, the error that is the primary error of the most tests first; then the **Generic errors**, under a heading of their own; then the tests without an error message. Above the table are the numbers of distinct and of generic errors. Each group shows how many tests have it as their primary error, **+N** for the others, its exception type or the rule that named it, and the error line of its first test, with the Expected and Actual lines of a recognized xUnit or NUnit message and the test author's own lines; a part of the line that differs between the tests is underlined, and resting the pointer on it lists the values. A group of two tests or more, or of an error with several wordings, also says how many tests failed or were flaky, how many are new or recurring, how many have an open bug and which bugs, how many fail in each group of attempts, how many **Forms** the error has and which test joined them, the frame of the tests' own code where they fail, when they share one, and in how many **Classes** its tests are; a closed **Sample message** shows the start of the latest attempt of its first test that had the error, at most 12 lines and 1,000 characters. The **Values** column shows each test's own values, or its own line when the tests' lines differ in more than values. The **Errors** column says where the error comes from, such as **3 of 4 failed attempts** or **Every failed attempt**, then lists the test's other errors, each linked to its group; a greyed row links the test's primary error |
+| Open bugs | A summary line counts the bugs this view lists, as the tab does, and how many of them were opened after the build was queued; the second count is left out when the build has no queue time. Then one entry per bug, on one line: how many tests are linked to it, its number, title and state, the day it was filed, **✦ New** when it was filed after the build was queued, who it is assigned to or **Unassigned**, its work item type and project when they are not a Bug of the build's project, then what it covers: **Linked tests**, **Same Test Case, not linked**, **Same error, not linked**, the other tests that had the primary error of a linked test in any failed attempt, each counted once, which opens the group that holds the most of them in By error, and, in a grouped build, how many of its tests fail in each group. Then a row for each test linked to it, saying whether the link comes from a test result, the Test Case or both; a link through test results that reaches only some of a test's failed results says how many, such as **Test result: 1 of 4 failed results**. Tests that share a Test Case with a linked test but not the bug follow, greyed. The bug with the most tests comes first, and a test with several bugs appears under each. Bugs that could not be read come last, marked **Not read**. A last group lists the tests **Without an open bug**. The tab shows the number of bugs |
 | Diagnostics | Shown only when something could not be retrieved: one line per diagnostic, errors first, then warnings, then information, with the number of each in the heading |
 
 In the Overview, By error and Open bugs tables, each group cell reads `✕ 7/7`: `✕` means the
@@ -165,6 +165,21 @@ build's test results. Rest the pointer on it to read how many builds in a row, f
 "3 in a row since 20260914.2". A build that is not in the history is named by its number,
 such as **Since build 20260901.4**. Nothing is said when the build before this one could not
 be read, did not run the test or ended it with another outcome, such as not executed.
+
+In By error, the **Errors** column of a test's row also compares its primary error with the
+errors of its previous failed build, the latest earlier build of the history where it failed or
+was flaky. The comparison reads the start of the error messages that the results of that build
+listed, up to five different ones, without a request more; whether Azure DevOps Server 2020
+lists them is not confirmed at work (V-39). **Same error in build 20260915.2** says that one of
+them is a wording of the test's primary error. **Other error in build 20260915.2** says that
+none is, and is said only when it can be trusted: the error is not recognized by the frame of
+the test's own code, which a listing does not carry; a message that differs was listed whole,
+not cut at 4,000 characters as Azure DevOps Services cuts listed messages, and came from a stage
+or job where the test had its primary error this time; and the build listed no more than five
+different messages for the test. Otherwise, and when that build listed no message, nothing is
+said. The facts of a group count the tests whose previous error was the same. A test rerun
+inside its task gets no comparison: its failed attempts are sub-results, which a listing does
+not include.
 
 A card says the same after its run history: one chip per build, oldest first, with the day the
 build finished. The chips are told apart by glyph and shape as well as colour: filled for
@@ -223,6 +238,36 @@ $set.Runs | Format-Table Id, Name, StageName, PhaseName, JobName, PipelineAttemp
 
 `PhaseName` is what a YAML pipeline calls the job; `JobName` is the matrix or parallel
 instance, `__default` when there is none.
+
+In By error, the English and the French wording of one error can make one group. The report
+recognizes the messages of MSTest 2, 3 and 4 in both languages, and those of NUnit, xUnit and
+the wait timeout of Selenium, which are written in English only. A recognized message is read
+by what identifies it, such as its expected value, so the English and French forms of one
+assertion are one error when that text is the same, as with `Assert.IsTrue` and one message.
+When it differs, as with `Expected:<Welcome>` and `Attendu : <Bienvenue>`, and for any other
+two wordings, they become one error when one test failed with them at the same place in an
+English group and in a French group: the same exception type and the same frames of the test's
+own code, with their line numbers. A group is
+English or French by the MSTest texts in it; a group with none, or with both, pairs with no
+other. The error's facts then name the test and the groups that joined the wordings, such as
+**Paired by SubmitOrder (Tests_EN, Tests_FR)**. Two wordings that one group shows are never
+joined, and neither are two groups of the same language. Whether the agents produce these
+MSTest texts in each language is not confirmed at work (V-40). An error rule joins wordings in
+any case: see [Error rules](configuration.md#error-rules).
+
+### Generic errors
+
+Some failures come from the environment rather than from the test: a page or a server that
+does not respond, a browser session that is lost. The report sets them apart as generic
+errors, so that they do not hide what the tests themselves report. Built-in rules recognize
+a refused connection, a host name that does not resolve, the HTTP statuses 502, 503 and 504,
+a WebDriver session that was lost or never created, and a page that did not load, in the
+English messages of Windows, .NET, Chrome and Selenium; `reporting.errorRules` adds others, in
+any language, as [Error rules](configuration.md#error-rules) describes. A test that had a
+generic error and another one is listed under the other one, whichever was more frequent, and
+appears greyed under the generic error. The French messages of Windows and .NET Framework and
+the texts of the browser drivers are not confirmed at work (V-41, V-42); a configured rule
+covers them meanwhile.
 
 ### Search
 
@@ -331,9 +376,17 @@ The columns, in this order:
 | `Bug states` | Their states, in the same order; a bug that could not be read has an empty state |
 | `New` | `True` when the build before this one ran the test and it passed, `False` when the test also failed or was flaky in the build before, empty otherwise: when that build could not be read, did not run the test or ended it with another outcome |
 | `Since` | When `New` is `False`, the day, as `yyyy-MM-dd`, that the first build of that run of failures finished, in your computer's time zone; that build's number when the day is not known |
+| `Primary error` | The whole message of the test's primary error, the error that By error lists the test under, from the latest attempt that had it; empty for a test without an error message |
+| `Error kind` | `Specific`, or `Generic` for an error that a generic rule names; empty without an error message |
+| `Error rule` | The rule that named the primary error: a rule of `reporting.errorRules` by its name, a built-in rule by its ID, such as `ConnectionRefused`; empty when no rule matched |
+| `Distinct errors` | How many errors the test's failed attempts had, the English and French wordings of one error counting once |
 
 `New` and `Since` are the trend of the report, and `Open bugs` the count the report uses to
-tell tracked tests from the others.
+tell tracked tests from the others. `Primary error` and `Latest error` differ when the test's
+latest attempt failed with another error than most of its attempts, or with a generic one. The
+IDs of the built-in rules are `ConnectionRefused`, `NameResolution`, `ServerUnavailable`,
+`WebDriverSession` and `PageLoadTimeout`; [Error rules](configuration.md#error-rules) says
+what each recognizes.
 
 The file is made for machines. The header names are English whatever the culture; numbers,
 `True` and `False` use the invariant culture, and dates are `yyyy-MM-dd`. Azure DevOps text
@@ -360,7 +413,7 @@ and the file origin is **65001: Unicode (UTF-8)**, then choose **Load**.
 | `-SkipAttachments` | Downloads nothing; attachments of runs inside the window are still listed with name, size and a link |
 | `-AllRunAttachments` | Also downloads the larger JSON and text files from every run inside the window, not only from the most recent run. `-SkipAttachments` takes precedence if both switches are supplied |
 | `-AttachmentWindowDays` | Days, 1–365, in which a run must have started for its attachments to appear. Default 7 |
-| `-IncludeFlaky` | Includes flaky tests; by default they are left out and only counted in the header |
+| `-IncludeFlaky` | Includes flaky tests; by default they are left out and only counted in the header, although a test left out can still be the one that joined two wordings of an error in By error |
 | `-Path` | A directory, or an `.html` file path for a single build. With `-Format Csv`, an existing directory, or a `.csv` file path in one for a single build |
 | `-Format Csv` | Writes one flat CSV file per build instead of the report, and downloads nothing. See [A CSV file for a spreadsheet](#a-csv-file-for-a-spreadsheet) |
 | `-Culture fr-CA` | Report language. Defaults to the configured, then the session, culture |

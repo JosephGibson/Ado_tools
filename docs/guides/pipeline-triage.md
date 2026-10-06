@@ -153,7 +153,13 @@ cancellation still stop the retrieval:
 Downloads folder as `Build-<id>-TestFailures.html`. Its views are an overview table with
 cards that sum up the build, the run history with the build's runs, one card per test with
 every attempt, the same rows grouped by error, the open bugs with the tests linked to each,
-and diagnostics when something could not be retrieved. In the overview and by-error tables,
+and diagnostics when something could not be retrieved. Grouped by error, every error of every
+failed attempt is a group: a test is listed under its primary error and greyed under its other
+errors, the English and French wordings of one error make one group when one test failed with
+both at the same place or a rule names them, and generic errors, such
+as a server that does not respond, come after the others under a heading of their own;
+`reporting.errorRules` names more of them (see [Error rules](configuration.md#error-rules)).
+In the overview and by-error tables,
 a test with an open bug shows the lowest-numbered one as a red chip in its **Open bugs**
 column, each card lists the test's open bugs, and **Without an open bug** shows only the
 tests that still need one; the overview's cards and the last group of the Open bugs view
@@ -188,7 +194,7 @@ See [Configuration](configuration.md#settings) for the limits.
 | `-SkipAttachments` | Downloads nothing; attachments are only listed |
 | `-AllRunAttachments` | Also downloads the larger JSON and text files of every run inside the attachment window |
 | `-AttachmentWindowDays` | Days, 1–365, in which a run must have started for its attachments to appear. Default 7 |
-| `-IncludeFlaky` | Includes flaky tests; by default they are only counted in the header |
+| `-IncludeFlaky` | Includes flaky tests; by default they are only counted in the header, although a test left out can still be the one that joined two wordings of an error |
 | `-Path` | Directory, or an `.html` file path when one build is exported. A missing directory is created when the report is written |
 | `-Format Csv` | Writes one flat CSV file per build instead of the report and downloads nothing. `-Path` must then name an existing directory or, for a single build, a `.csv` file in one. See [A CSV file for a spreadsheet](build-report.md#a-csv-file-for-a-spreadsheet) |
 | `-Culture` | Report language, for example `fr-CA` |

@@ -1,11 +1,13 @@
+using AdoToolkit.Core.Reporting.Errors;
 using AdoToolkit.Core.Reporting.Highlighting;
 using AdoToolkit.Core.Reporting.TestFailures;
 using AdoToolkit.Core.TestRuns;
 
 namespace AdoToolkit.Core.Tests.Reporting.TestFailures;
 
-// How By error, the Overview and Open bugs group tests: by the key line of the latest error, with
-// every URL, GUID, path, hexadecimal ID and number as a placeholder of its kind.
+// How By error, the Overview and Open bugs group tests: one cluster per error that the classifier
+// found in the failed attempts, and the key line with every URL, GUID, path, hexadecimal ID and
+// number as a placeholder of its kind.
 public sealed class ErrorClustersTests
 {
     [Theory]
@@ -91,19 +93,22 @@ public sealed class ErrorClustersTests
         Assert.Null(StackTraceLexer.FirstFrame(Trace, "Other."));
     }
 
-    // The large fixture: clusters of 4, 3 and three of 2, then single tests, and last the test without
-    // a message. Ties follow the first test's ordinal.
+    // The large fixture: each test failed with one error, so clusters of 4, 3 and three of 2, then
+    // single tests, and last the test without a message. Ties follow the first test's ordinal.
     [Fact]
     public void ClustersComeLargestFirstWithWhatTheirTestsShare()
     {
         TestFailureReportModel model = TestFailureReportFixture.Model("large");
-        IReadOnlyList<ErrorClusters.Cluster> clusters = ErrorClusters.Of(model.Failures);
+        IReadOnlyList<ErrorClusters.Cluster> clusters = ErrorClusters.Of(model);
         Assert.Equal([4, 3, 2, 2, 2, 1, 1, 1], clusters.Select(static cluster => cluster.Members.Count));
+        Assert.Equal([4, 3, 2, 2, 2, 1, 1, 1], clusters.Select(static cluster => cluster.PrimaryCount));
         Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8], clusters.Select(static cluster => cluster.Number));
         Assert.Equal([1, 3, 13], clusters.Skip(2).Take(3).Select(static cluster => cluster.Representative.Failure.Ordinal));
-        Assert.Null(clusters[^1].Key);
+        Assert.Null(clusters[^1].Error);
         Assert.Equal("UpdateAvatar", Assert.Single(clusters[^1].Members).Failure.ShortName);
-        Assert.All(clusters.SkipLast(1), static cluster => Assert.NotNull(cluster.Key));
+        Assert.All(clusters.SkipLast(1), static cluster => Assert.NotNull(cluster.Error));
+        Assert.All(clusters, static cluster => Assert.False(cluster.IsGeneric));
+        Assert.All(clusters.SelectMany(static cluster => cluster.Members), static member => Assert.True(member.IsPrimary));
 
         // Timeouts after 3000, 4500 and 30000 ms: one slot differs, its values in test order.
         ErrorClusters.Cluster timeouts = clusters[0];
@@ -122,6 +127,77 @@ public sealed class ErrorClustersTests
         Assert.Null(search.ExceptionType);
         Assert.Equal(2, search.Varying.Count);
         Assert.Equal((null, 0), (search.Frame, search.FrameCount));
+    }
+
+    // Every error that a shown test had is a cluster. A test sits under its primary error and comes
+    // back, as another error's member, under each of its other errors. Specific errors come first, by
+    // the tests whose primary error they are, then by all their tests; then the generic errors; then
+    // the tests without a message.
+    [Fact]
+    public void EveryErrorIsAClusterAndATestComesBackUnderItsOtherErrors()
+    {
+        IReadOnlyList<ErrorClusters.Cluster> clusters = ErrorClusters.Of(TestFailureReportFixture.Model("bilingual"));
+        Assert.Equal(["CheckTitle", "AddToCart", "ConfirmOrder", "OpenHome", "ShowBanner", "SubmitOrder", "LoadReport", "ConfirmOrder", "SubmitOrder", "UpdateAvatar"],
+            clusters.Select(static cluster => cluster.Representative.Failure.ShortName));
+        Assert.Equal([1, 1, 1, 1, 1, 1, 1, 0, 0, 1], clusters.Select(static cluster => cluster.PrimaryCount));
+        Assert.Equal([2, 1, 1, 1, 1, 1, 1, 1, 1, 1], clusters.Select(static cluster => cluster.Members.Count));
+        Assert.Equal([false, false, false, false, false, true, true, true, true, false], clusters.Select(static cluster => cluster.IsGeneric));
+        Assert.Equal(["WebDriverSession", null, "ConnectionRefused", "ServerUnavailable"], clusters.Skip(5).Take(4).Select(static cluster => cluster.Error!.Rule!.BuiltInId));
+        Assert.Equal("Test data reset", clusters[6].Error!.Rule!.Name);
+        Assert.Null(clusters[^1].Error);
+
+        // CheckTitle failed with the English and the French form of one assertion at one place: one
+        // error, which AddToCart had once. Its primary members come first.
+        ErrorClusters.Cluster welcome = clusters[0];
+        Assert.Equal(2, welcome.Error!.Forms.Count);
+        Assert.Equal([("CheckTitle", true), ("AddToCart", false)], welcome.Members.Select(static member => (member.Failure.ShortName, member.IsPrimary)));
+        // Each member shows its latest attempt with the error: the forms share a layout, so their
+        // expected and actual values line up and differ.
+        Assert.Equal([4, 1], welcome.Members.Select(static member => member.Entry!.Latest.AttemptNumber));
+        Assert.Equal(2, welcome.Varying.Count);
+        Assert.Equal(["Bienvenue", "Welcome"], welcome.Values(welcome.Varying.Min()));
+        Assert.Equal(["Welcome", "Error"], welcome.ValuesOf(welcome.Members[1]));
+        Assert.Equal(("Synthetic.Shop.Pages.HomePage.CheckTitle", 2), (welcome.Frame, welcome.FrameCount));
+
+        // OpenHome's two wordings are its own texts, which pairing joined; one test shows one of them,
+        // so nothing differs.
+        ErrorClusters.Cluster home = clusters[3];
+        Assert.Equal(2, home.Error!.Forms.Count);
+        Assert.Equal("OpenHome", Assert.Single(home.Members).Failure.ShortName);
+        Assert.Empty(home.Varying);
+    }
+
+    // Members of two layouts, such as the two wordings that a rule joins, mark nothing.
+    [Fact]
+    public void MembersOfTwoLayoutsShowNoValuesThatDiffer()
+    {
+        AdoTestFailure Failure(int ordinal, string message) => new()
+        {
+            Ordinal = ordinal, Classification = AdoTestFailureClassification.Failed, ShortName = "T" + ordinal.ToString(CultureInfo.InvariantCulture),
+            TestName = "Synthetic.Layout.T" + ordinal.ToString(CultureInfo.InvariantCulture), CollectionUri = TestFailureReportFixture.Collection,
+            Attempts = [new AdoTestAttempt { Number = 1, RunId = 201, ResultId = ordinal, Outcome = "Failed", OutcomeClass = AdoTestOutcomeClass.Failure, ErrorMessage = message }],
+        };
+        AdoTestFailure[] failures = [Failure(1, "Home page did not load within 30 seconds"), Failure(2, "La page d'accueil ne s'est pas chargée en moins de 45 secondes")];
+        ErrorClassification errors = ErrorClassifier.Classify(failures, PipelineGrouping.None,
+            BuiltInErrorRules.AfterConfigured([new ErrorRuleOptions { Name = "Home", Patterns = ["Home page did not load*", "La page d'accueil ne s'est pas chargée*"] }]));
+        ErrorClusters.Cluster home = Assert.Single(ErrorClusters.Of(failures, errors));
+        Assert.Equal(2, home.Members.Count);
+        Assert.False(home.SingleLayout);
+        Assert.Empty(home.Varying);
+    }
+
+    // A test's other errors, the most frequent first, each with its cluster.
+    [Fact]
+    public void AMemberKnowsItsOtherErrorsAndWhereTheyAre()
+    {
+        IReadOnlyList<ErrorClusters.Cluster> clusters = ErrorClusters.Of(TestFailureReportFixture.Model("bilingual"));
+        ErrorClusters.Member cart = clusters[1].Members[0];
+        Assert.True(cart.IsPrimary);
+        Assert.Equal((3, 4), (cart.Entry!.Count, cart.Profile.FailedAttempts));
+        Assert.Same(clusters[0], Assert.Single(ErrorClusters.ClustersOf(clusters, cart.Profile.Others)));
+        // The muted member under the error it had once points back to its primary error.
+        ErrorClusters.Member muted = clusters[0].Members[1];
+        Assert.Same(clusters[1], ErrorClusters.ClustersOf(clusters, [muted.Profile.Primary!])[0]);
     }
 
     private static AdoTestAttempt Attempt(string? message, string? trace) => new()

@@ -36,6 +36,10 @@ public sealed class RunHistoryTests
         Assert.Equal([AdoTestHistoryOutcome.Unavailable, AdoTestHistoryOutcome.Failed, AdoTestHistoryOutcome.Passed,
             AdoTestHistoryOutcome.Failed], cart.History.Select(static cell => cell.Outcome));
         Assert.True(cart.History[^1].IsCurrent);
+        // A failed result of an earlier build keeps the start of its listed message; the current build
+        // and the builds where the test passed, did not run or could not be read keep none.
+        Assert.Equal(["", "", "Expected 19,99.", ""], totals.History.Select(static cell => string.Join("|", cell.ErrorMessages)));
+        Assert.Equal(["", "Cart count was 0 after adding an item", "", ""], cart.History.Select(static cell => string.Join("|", cell.ErrorMessages)));
         // Each bar equals the tally of the cells it displays.
         AssertBarsMatchCells(set);
         AdoDiagnostic diagnostic = Assert.Single(set.Diagnostics, item => item.Code == DiagnosticCodes.HistoryUnavailable);
@@ -243,7 +247,7 @@ public sealed class RunHistoryTests
         + "\"automatedTestStorage\":\"Contoso.Web.Tests.dll\",\"testCaseTitle\":\"Adds an item to the cart\","
         + "\"testCase\":{\"id\":\"1010\"}},"
         + "{\"id\":11,\"outcome\":\"Failed\",\"automatedTestName\":\"Contoso.Orders.Tests.OrderTests.Totals\","
-        + "\"automatedTestStorage\":\"Contoso.Orders.Tests.dll\",\"testCaseTitle\":\"Computes order totals\"}]}";
+        + "\"automatedTestStorage\":\"Contoso.Orders.Tests.dll\",\"testCaseTitle\":\"Computes order totals\",\"errorMessage\":\"Expected 19,99.\"}]}";
 
     private const string TotalsDetail = "{\"id\":11,\"outcome\":\"Failed\","
         + "\"automatedTestName\":\"Contoso.Orders.Tests.OrderTests.Totals\","

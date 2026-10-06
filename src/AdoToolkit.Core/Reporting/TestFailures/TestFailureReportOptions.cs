@@ -1,3 +1,5 @@
+using AdoToolkit.Core.Configuration;
+
 namespace AdoToolkit.Core.Reporting.TestFailures;
 
 public sealed class TestFailureReportOptions
@@ -13,4 +15,6 @@ public sealed class TestFailureReportOptions
     public int AttachmentWindowDays { get; init; } = DefaultAttachmentWindowDays;
     // Flaky tests are left out unless requested; FlakyCount still counts them.
     public bool IncludeFlaky { get; init; }
+    // reporting.errorRules, tried before the built-in rules.
+    public IReadOnlyList<ErrorRuleOptions> ErrorRules { get; init; } = [];
 }

@@ -30,6 +30,8 @@ internal sealed class PipelineGrouping
 
     internal string KeyOf(int runId) => runKeys[runId];
 
+    internal string? TryKeyOf(int runId) => runKeys.TryGetValue(runId, out string? key) ? key : null;
+
     // Extra run IDs (attempts whose run is not listed) join the group of runs without names.
     internal static PipelineGrouping Create(IEnumerable<AdoTestRun> runs, IEnumerable<int>? extraRunIds = null)
     {

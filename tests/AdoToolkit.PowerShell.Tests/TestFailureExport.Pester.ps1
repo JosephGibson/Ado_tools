@@ -48,11 +48,12 @@ BeforeAll {
         )
     }
     # The response lists are positional, so retrieval and downloads send one request at a time.
-    # Extra settings are the body of testResults.
+    # Extra settings are the body of testResults; Reporting, when given, is the body of reporting.
     function Set-SequentialConfiguration {
-        param([string] $TestResults)
+        param([string] $TestResults, [string] $Reporting)
         $settings = '"maximumConcurrentRequests":1' + $(if ($TestResults) { ',' + $TestResults })
-        Set-Content -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Encoding utf8 -Value ('{"schemaVersion":1,"testResults":{' + $settings + '}}')
+        $reportingSection = if ($Reporting) { ',"reporting":{' + $Reporting + '}' } else { '' }
+        Set-Content -LiteralPath $env:ADOTOOLKIT_CONFIG_PATH -Encoding utf8 -Value ('{"schemaVersion":1,"testResults":{' + $settings + '}' + $reportingSection + '}')
     }
     # Of 5001 PNG, 5002 JSON, 5003 HTML, 5004 and 5005 other bytes, only the JSON is ever requested.
     function Get-ContentResponses {
@@ -427,7 +428,9 @@ Describe 'Failed-test report export' {
 
     # -Format Csv links no attachment, so it requests nothing and needs no connection, whatever the
     # attachment switches say. Without -Format, and with -Format Html, the export is the HTML report.
+    # The error rules of the configuration name the errors they match.
     It 'keeps HTML as the default and writes one CSV file with -Format Csv' {
+        Set-SequentialConfiguration -Reporting '"errorRules":[{"name":"Totals","patterns":["Expected total * but found *"]}]'
         $server = Start-FakeAdoServer -Responses (@(@{ Body = Get-TestRunFixture 'build-401.json' }) + (Get-TwoRunResponses -LatestAttachments))
         try {
             Connect-Ado -CollectionUrl $server.Uri -Project 'Équipe Web' -WarningAction SilentlyContinue | Out-Null
@@ -449,10 +452,17 @@ Describe 'Failed-test report export' {
             $rows = @(Import-Csv -LiteralPath $csv.FullName -Encoding utf8)
             $rows.Count | Should -Be @($set.Failures | Where-Object { $_.Classification -eq 'Failed' }).Count
             $rows[0].PSObject.Properties.Name | Should -Be @('Build', 'Ordinal', 'Test', 'Title', 'Classification', 'Attempts', 'Latest error',
-                'Owner', 'Priority', 'Test case ID', 'Test case state', 'Open bugs', 'Bug IDs', 'Bug states', 'New', 'Since')
+                'Owner', 'Priority', 'Test case ID', 'Test case state', 'Open bugs', 'Bug IDs', 'Bug states', 'New', 'Since',
+                'Primary error', 'Error kind', 'Error rule', 'Distinct errors')
             $rows[0].Build | Should -Be '401'
             $rows[0].Ordinal | Should -Be '1'
             $rows[0].Classification | Should -Be 'Failed'
+            $named = @($rows | Where-Object 'Error rule' -eq 'Totals')
+            $named.Count | Should -Be 1
+            $named[0].'Primary error' | Should -Be 'Expected total 19,99 but found 19.99.'
+            $named[0].'Error kind' | Should -Be 'Generic'
+            $named[0].'Distinct errors' | Should -Be '1'
+            @($rows | Where-Object 'Error kind' -eq 'Specific').Count | Should -Be ($rows.Count - 1)
 
             $default = $set | Export-AdoBuildTestFailure -Path $outputDirectory -SkipAttachments 6> $null
             $default.FullName | Should -Be (Join-Path $outputDirectory 'Build-401-TestFailures.html')

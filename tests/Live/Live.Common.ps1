@@ -325,6 +325,39 @@ function Get-AdoLiveListedDetailAgreement {
     }
 }
 
+# V-39: whether a result listed without details carries the start of the error message that the
+# result read alone carries. HasMessage when the read has a message; Agree when the listed message
+# is not empty and begins the read's, line breaks aside; Cut when it is also shorter; Short when it
+# was cut before 4,000 characters. Booleans only: no text is returned.
+function Get-AdoLiveListedMessageAgreement {
+    param([Parameter(Mandatory = $true)][object] $Listed, [Parameter(Mandatory = $true)][object] $Detail)
+    $listedText = ([string] (Get-AdoLivePropertyValue $Listed 'errorMessage')).Replace("`r`n", "`n")
+    $detailText = ([string] (Get-AdoLivePropertyValue $Detail 'errorMessage')).Replace("`r`n", "`n")
+    $agree = $listedText.Length -gt 0 -and $detailText.StartsWith($listedText, [StringComparison]::Ordinal)
+    $cut = $agree -and $listedText.Length -lt $detailText.Length
+    return [pscustomobject]@{
+        HasMessage = $detailText.Length -gt 0
+        Agree = $agree
+        Cut = $cut
+        # Cut before the 4,000 characters at which the report starts to doubt a listed start (V-34).
+        Short = $cut -and $listedText.Length -lt 4000
+    }
+}
+
+# The run that a probe reads: one with a failed result by its statistics, else by its unanalyzed
+# tests, which Server 2020 sends in place of statistics (V-19), else the first run.
+function Select-AdoLiveFailingRun {
+    param([AllowEmptyCollection()][object[]] $Run = @())
+    $failing = @($Run | Where-Object {
+            @(Get-AdoLivePropertyValue $_ 'runStatistics') | Where-Object { ([string] (Get-AdoLivePropertyValue $_ 'outcome')) -in @('Failed', 'Error', 'Timeout', 'Aborted') }
+        })
+    if ($failing.Count -gt 0) { return $failing[0] }
+    $unanalyzed = @($Run | Where-Object { [int] (Get-AdoLivePropertyValue $_ 'unanalyzedTests') -gt 0 })
+    if ($unanalyzed.Count -gt 0) { return $unanalyzed[0] }
+    if ($Run.Count -gt 0) { return $Run[0] }
+    return $null
+}
+
 # V-35: the decoded length of a body as it came over the wire, by its content encoding. Only gzip
 # and deflate are decoded; anything else counts as it came.
 function Get-AdoLiveDecodedLength {

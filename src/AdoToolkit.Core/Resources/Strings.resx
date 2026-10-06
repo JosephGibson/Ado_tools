@@ -315,6 +315,33 @@
   <data name="TestReportResultsCovered" xml:space="preserve"><value>{0} of {1} failed results</value></data>
   <data name="TestReportSince" xml:space="preserve"><value>Since {0}</value></data>
   <data name="TestReportSinceBuild" xml:space="preserve"><value>Since build {0}</value></data>
+  <data name="TestReportErrors" xml:space="preserve"><value>Errors</value></data>
+  <data name="TestReportGeneric" xml:space="preserve"><value>Generic</value></data>
+  <data name="TestReportGenericErrors" xml:space="preserve"><value>Generic errors</value></data>
+  <data name="TestReportGenericNote" xml:space="preserve"><value>These errors match a generic rule, built in or set in reporting.errorRules, and usually come from the environment rather than from the test. A test that also had another error is listed under that error, and appears here muted.</value></data>
+  <data name="TestReportAsPrimary" xml:space="preserve"><value>As the primary error</value></data>
+  <data name="TestReportAsOther" xml:space="preserve"><value>As another error</value></data>
+  <data name="TestReportPrimaryError" xml:space="preserve"><value>Primary error</value></data>
+  <data name="TestReportOtherErrors" xml:space="preserve"><value>Other errors</value></data>
+  <data name="TestReportAttemptsShare" xml:space="preserve"><value>{0} of {1} failed attempts</value></data>
+  <data name="TestReportAttemptsShareLater" xml:space="preserve"><value>{0} of {1} failed attempts, later than an equally frequent error</value></data>
+  <data name="TestReportEveryFailedAttempt" xml:space="preserve"><value>Every failed attempt</value></data>
+  <data name="TestReportNotFailedAttempt" xml:space="preserve"><value>From an attempt that did not fail</value></data>
+  <data name="TestReportClasses" xml:space="preserve"><value>Classes</value></data>
+  <data name="TestReportForms" xml:space="preserve"><value>Forms</value></data>
+  <data name="TestReportPairedBy" xml:space="preserve"><value>Paired by {0} ({1}, {2})</value></data>
+  <data name="TestReportRule" xml:space="preserve"><value>Rule</value></data>
+  <data name="TestReportWithGenericError" xml:space="preserve"><value>With a generic error</value></data>
+  <data name="TestReportOnlyGenericErrors" xml:space="preserve"><value>Only generic errors</value></data>
+  <data name="TestReportSameErrorInBuild" xml:space="preserve"><value>Same error in build {0}</value></data>
+  <data name="TestReportOtherErrorInBuild" xml:space="preserve"><value>Other error in build {0}</value></data>
+  <data name="TestReportSameAsPrevious" xml:space="preserve"><value>Same error in the previous failed build</value></data>
+  <data name="TestReportCountOf" xml:space="preserve"><value>{0} of {1}</value></data>
+  <data name="TestReportRuleConnectionRefused" xml:space="preserve"><value>Connection refused</value></data>
+  <data name="TestReportRuleNameResolution" xml:space="preserve"><value>Host name not resolved</value></data>
+  <data name="TestReportRuleServerUnavailable" xml:space="preserve"><value>Server unavailable</value></data>
+  <data name="TestReportRuleWebDriverSession" xml:space="preserve"><value>WebDriver session failed</value></data>
+  <data name="TestReportRulePageLoadTimeout" xml:space="preserve"><value>Page load timed out</value></data>
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Export failed-test report</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Export failed-test report and download attachments to {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Downloading attachments: {0} of {1}</value></data>

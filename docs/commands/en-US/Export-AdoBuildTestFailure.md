@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-05-2026
+ms.date: 10-06-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -41,8 +41,8 @@ test also failed or was flaky in the build before; the date is the day the first
 run of failures finished, the chip links to that build's test results, and its title says how
 many builds in a row. Nothing is said when the build before this one could not be read, did
 not run the test or ended it with another outcome. Under the table, cards sum up the build:
-new and recurring tests, the most common errors, the tests without an open bug and, when
-attempts are grouped, each group. Runs
+new and recurring tests, the most common errors, the tests with a generic error, the tests
+without an open bug and, when attempts are grouped, each group. Runs
 and history shows the run history as a chart and as a table of builds, then lists the build's
 test runs with their ID, the attempt numbers that they have, of the stage, the job or the job
 instance, their duration, test counts, reported tests and listed and downloaded attachments,
@@ -53,11 +53,17 @@ its open bugs, each as a chip linked to the work item with its title and state, 
 that was read whole, the day it was filed, New when it was filed after the build was queued,
 and who it is assigned to or Unassigned; and its attachments, each file name once, from the
 last attempt that has it. An attempt's Failing since names that build by its number when it is
-in the history. By error groups the same rows under their latest error, ignoring URLs, GUIDs,
-paths, hexadecimal IDs and numbers; each group names its exception type and marks the parts of
-its line that differ between its tests, and a group of two tests or more says what its tests
-share and shows a sample of the first message. Open bugs opens on a line counting the bugs it
-lists and how many of them were opened after the build was queued, the second count left out
+in the history. By error groups the same rows by error: each error of a failed attempt is a
+group, ignoring URLs, GUIDs, paths, hexadecimal IDs, numbers, case and accents, and the values that a recognized framework message reports, such as an actual value, and the English and French
+wordings of one error are one group when one test failed with both at the same place. A test is
+listed under its primary error, its most frequent one with generic errors aside, and greyed under
+its other errors; its Errors column says how many failed attempts had the error and links the
+others. Generic errors, which a built-in rule or a generic rule of reporting.errorRules names, follow the others
+under a heading of their own. Each group names its exception type or its rule and shows the
+line of its first test, with the Expected and Actual lines of a recognized xUnit or NUnit
+message, marking the parts that differ between its tests; a group of two tests or more, or of
+an error with several wordings, says what its tests share and shows a sample message. Open bugs
+opens on a line counting the bugs it lists and how many of them were opened after the build was queued, the second count left out
 when the build has no queue time, then lists each bug once, on one line with the day it was
 filed, who has it and what it covers, then the tests linked to it, and says whether each link
 comes from a test result, the Test Case or both, and how many failed results a link through
@@ -149,7 +155,8 @@ or a script. It links no attachment, so it downloads nothing and needs no connec
 effect on it. The file holds one header row, then one row per test of the report, in report
 order, flaky tests included only with `-IncludeFlaky`. The columns, in this order, are
 Build, Ordinal, Test, Title, Classification, Attempts, Latest error, Owner, Priority,
-Test case ID, Test case state, Open bugs, Bug IDs, Bug states, New and Since. Build is the
+Test case ID, Test case state, Open bugs, Bug IDs, Bug states, New, Since, Primary error,
+Error kind, Error rule and Distinct errors. Build is the
 build ID and Ordinal the test's number in the report. Test is the full test name.
 Classification is Failed or Flaky. Attempts counts the test's attempts. Latest error is the
 whole message of the error that the report's table shows the first line of, with its line
@@ -161,7 +168,13 @@ before this one ran the test and it passed, False when the test also failed or w
 the build before, and empty otherwise: when that build could not be read, did not run the
 test or ended it with another outcome. Since is the day, as yyyy-MM-dd, that the first build
 of that run of failures finished, in the time zone of the computer that runs the export, or
-that build's number when the day is not known; it is empty unless New is False.
+that build's number when the day is not known; it is empty unless New is False. Primary
+error is the whole message of the test's primary error, the one that By error lists the test
+under, from the latest attempt that had it. Error kind is Specific, or Generic for an error
+that a generic rule names. Error rule names the rule that named that error: a rule of
+reporting.errorRules by its name, a built-in rule by its ID, such as ConnectionRefused.
+Distinct errors counts the errors of the test's failed attempts. For a test without an error
+message, the first three are empty and Distinct errors is 0.
 
 The header names are English in every culture. Numbers and True or False use the invariant
 culture, and dates are yyyy-MM-dd; Azure DevOps text is written as the server sent it. The
@@ -366,7 +379,7 @@ HelpMessage: ''
 
 ### -IncludeFlaky
 
-Includes flaky tests, which failed and then passed in every stage, job or named test run. Without it they are left out of the report and only counted in its header, and a CSV file has no row for them.
+Includes flaky tests, which failed and then passed in every stage, job or named test run. Without it they are left out of the report and only counted in its header, and a CSV file has no row for them; a test left out can still be the one that joined two wordings of an error in By error.
 
 ```yaml
 Type: System.Management.Automation.SwitchParameter
@@ -508,7 +521,7 @@ The committed report or CSV file. When attachments were downloaded, its Attachme
 
 ## NOTES
 
-Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Downloaded attachments are work data and stay on this machine. How Server 2020 answers several downloads at once has not been confirmed at work (V-33). With -Verbose, each step of the export writes one line with its milliseconds: the attachment downloads, with the files written and the requests sent; the rendered report, with its size in bytes; the check of the report; and its move into place, which also removes earlier attachment folders. When nothing is downloaded, the downloads line keeps its place with 0 files and 0 requests. A last line gives the build, the downloaded attachments, the requests and the elapsed time. Attachment routes, version and fields await server confirmation (V-23), as do the stage, job and run names used for grouping and the run name retry suffix (V-19), and browser behavior from local files awaits confirmation under the work browser policy (V-27). Whether Server 2020 returns the bug's creation date and assignee in a work item batch field projection has not been observed at work (V-37); without them a bug's line shows no day, no ✦ marker and no assignee, with no warning.
+Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Downloaded attachments are work data and stay on this machine. How Server 2020 answers several downloads at once has not been confirmed at work (V-33). With -Verbose, each step of the export writes one line with its milliseconds: the attachment downloads, with the files written and the requests sent; the rendered report, with its size in bytes; the check of the report; and its move into place, which also removes earlier attachment folders. When nothing is downloaded, the downloads line keeps its place with 0 files and 0 requests. A last line gives the build, the downloaded attachments, the requests and the elapsed time. Attachment routes, version and fields await server confirmation (V-23), as do the stage, job and run names used for grouping and the run name retry suffix (V-19), and browser behavior from local files awaits confirmation under the work browser policy (V-27). Whether Server 2020 returns the bug's creation date and assignee in a work item batch field projection has not been observed at work (V-37); without them a bug's line shows no day, no ✦ marker and no assignee, with no warning. In By error, a test's row also says whether the error messages that its previous failed build listed include a wording of its primary error, from the ErrorMessages of its history; nothing is said when the comparison could be wrong, and whether Server 2020 lists the messages has not been confirmed at work (V-39). The French texts of Windows and .NET Framework that the built-in generic rules would need (V-41) and the texts of chromedriver (V-42) are not confirmed at work, and neither are the MSTest texts that the agents produce in each language, on which the joining of English and French wordings depends (V-40).
 
 ## RELATED LINKS
 

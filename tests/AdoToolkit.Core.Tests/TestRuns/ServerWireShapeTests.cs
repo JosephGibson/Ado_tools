@@ -53,16 +53,18 @@ public sealed class ServerWireShapeTests
         Assert.Equal("$.testRun.id", Assert.IsType<JsonException>(error.InnerException).Path);
     }
 
-    // Pass 1 reads the fields of §15.9 step 3 and skips every other field of a listed result unread,
-    // so a field it does not use can neither fail the listing nor cost its parsing.
+    // Pass 1 reads the fields of §15.9 step 3, and the error message that history compares (D-8),
+    // and skips every other field of a listed result unread, so a field it does not use can neither
+    // fail the listing nor cost its parsing.
     [Fact]
-    public async Task ResultListingsReadOnlyThePass1Fields()
+    public async Task ResultListingsReadOnlyThePass1FieldsAndTheErrorMessage()
     {
         using FakeHttpMessageHandler handler = new TestRunFixture()
             .RouteBody("""
                 {"count":1,"value":[{"id":1,"outcome":"Failed","automatedTestName":"Contoso.Web.Tests.CartTests.AddsItem",
                 "automatedTestStorage":"Contoso.Web.Tests.dll","testCaseTitle":"Adds an item","resultGroupType":"rerun",
-                "startedDate":"2026-09-15T10:00:00Z","testCase":{"id":"1010"},"testRun":{"id":"invalid"},"durationInMs":"slow","owner":42}]}
+                "startedDate":"2026-09-15T10:00:00Z","testCase":{"id":"1010"},"testRun":{"id":"invalid"},"durationInMs":"slow","owner":42,
+                "errorMessage":"Expected:<3>. Actual:<2>.\r\nat line 2"}]}
                 """, "/Runs/201/results", "%24skip=0&")
             .Handler();
         using HttpClient client = new(handler);
@@ -72,6 +74,31 @@ public sealed class ServerWireShapeTests
             (result.Id, result.Outcome, result.AutomatedTestName, result.AutomatedTestStorage, result.TestCaseTitle, result.ResultGroupType));
         Assert.Equal(new DateTimeOffset(2026, 9, 15, 10, 0, 0, TimeSpan.Zero), result.StartedDate);
         Assert.Equal("1010", result.TestCase!.Id);
+        Assert.Equal("Expected:<3>. Actual:<2>.\r\nat line 2", result.ErrorMessage);
+        Assert.Equal(9, typeof(TestResultListingDto).GetProperties().Length);
+    }
+
+    // An error message that is not a string reads as no message: one odd value must not fail the
+    // listing, and with it the build or its history.
+    [Theory]
+    [InlineData("42")]
+    [InlineData("true")]
+    [InlineData("""{"text":"Expected 1"}""")]
+    [InlineData("""["Expected 1"]""")]
+    [InlineData("null")]
+    // A string that cannot be read: half of a surrogate pair, escaped.
+    [InlineData("\"Expected \\ud83d\"")]
+    public async Task AnErrorMessageThatIsNotAStringReadsAsNone(string value)
+    {
+        using FakeHttpMessageHandler handler = new TestRunFixture()
+            .RouteBody("""{"count":1,"value":[{"id":1,"outcome":"Failed","errorMessage":""" + value + ""","automatedTestName":"Contoso.A"}]}""",
+                "/Runs/201/results", "%24skip=0&")
+            .Handler();
+        using HttpClient client = new(handler);
+        TestResultListingDto result = Assert.Single(await Service(client).GetResultsAsync(TestRunFixture.Project, 201,
+            CultureInfo.InvariantCulture, TestContext.Current.CancellationToken));
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal("Contoso.A", result.AutomatedTestName);
     }
 
     [Fact]

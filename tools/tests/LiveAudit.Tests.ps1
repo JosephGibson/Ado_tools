@@ -747,9 +747,69 @@ Describe 'Live probes with synthetic data only' {
         Should -Invoke Get-AdoProbeJson -Exactly -Times 1 -ParameterFilter { $Uri -match '/Runs/301/Results/5/attachments\?api-version=6\.0-preview\.1&testSubResultId=1$' }
     }
 
+    It 'V-39 compares the start of the listed message with the message read alone' {
+        $detail = [pscustomobject]@{ id = 1; errorMessage = "CustomerMu`r`nCustomerNu" }
+        $same = Get-AdoLiveListedMessageAgreement -Listed ([pscustomobject]@{ id = 1; errorMessage = "CustomerMu`nCustomerNu" }) -Detail $detail
+        @($same.HasMessage, $same.Agree, $same.Cut) | Should -Be @($true, $true, $false)
+        # A message that the listing cut still begins the one read alone; cut before 4,000 characters,
+        # it is short, which the report would not see as a cut.
+        $cut = Get-AdoLiveListedMessageAgreement -Listed ([pscustomobject]@{ id = 1; errorMessage = 'CustomerMu' }) -Detail $detail
+        @($cut.HasMessage, $cut.Agree, $cut.Cut, $cut.Short) | Should -Be @($true, $true, $true, $true)
+        $long = Get-AdoLiveListedMessageAgreement -Listed ([pscustomobject]@{ id = 1; errorMessage = 'C' * 4000 }) -Detail ([pscustomobject]@{ id = 1; errorMessage = 'C' * 4100 })
+        @($long.Cut, $long.Short) | Should -Be @($true, $false)
+        $same.Short | Should -BeFalse
+        # No listed message, or another one, does not agree; a read without a message has nothing to compare.
+        $none = Get-AdoLiveListedMessageAgreement -Listed ([pscustomobject]@{ id = 1 }) -Detail $detail
+        @($none.HasMessage, $none.Agree, $none.Cut) | Should -Be @($true, $false, $false)
+        (Get-AdoLiveListedMessageAgreement -Listed ([pscustomobject]@{ id = 1; errorMessage = 'CustomerXi' }) -Detail $detail).Agree | Should -BeFalse
+        (Get-AdoLiveListedMessageAgreement -Listed ([pscustomobject]@{ id = 1 }) -Detail ([pscustomobject]@{ id = 1; errorMessage = $null })).HasMessage | Should -BeFalse
+    }
+
+    It 'V-39 reports <Verdict> with counts only' -TestCases @(
+        @{ Listing = 'Whole'; Verdict = 'PASS V-39 LISTED_MESSAGES_AGREE LISTED=3 FAILED=2 WITH_MESSAGE=2 COMPARED=2 AGREE=2 CUT=0 SHORT=0 MESSAGES_AT_4000=0' }
+        @{ Listing = 'Cut'; Verdict = 'PASS V-39 LISTED_MESSAGES_AGREE LISTED=3 FAILED=2 WITH_MESSAGE=2 COMPARED=2 AGREE=2 CUT=2 SHORT=0 MESSAGES_AT_4000=2' }
+        # A cut before 4,000 characters: the report would read the start as whole.
+        @{ Listing = 'Short'; Verdict = 'FAIL V-39 LISTED_MESSAGES_CUT_SHORT LISTED=3 FAILED=2 WITH_MESSAGE=2 COMPARED=2 AGREE=2 CUT=2 SHORT=2 MESSAGES_AT_4000=0' }
+        @{ Listing = 'None'; Verdict = 'FAIL V-39 NO_MESSAGE_LISTED LISTED=3 FAILED=2 WITH_MESSAGE=0 COMPARED=2 AGREE=0 CUT=0 SHORT=0 MESSAGES_AT_4000=0' }
+        @{ Listing = 'Other'; Verdict = 'FAIL V-39 LISTED_MESSAGES_DIFFER LISTED=3 FAILED=2 WITH_MESSAGE=2 COMPARED=2 AGREE=0 CUT=0 SHORT=0 MESSAGES_AT_4000=0' }
+        @{ Listing = 'Passed'; Verdict = 'INCONCLUSIVE V-39 NO_FAILED_RESULT_LISTED LISTED=3 FAILED=0 WITH_MESSAGE=0 COMPARED=0 AGREE=0 CUT=0 SHORT=0 MESSAGES_AT_4000=0' }
+        @{ Listing = 'Silent'; Verdict = 'INCONCLUSIVE V-39 NO_MESSAGE_TO_COMPARE LISTED=3 FAILED=2 WITH_MESSAGE=0 COMPARED=0 AGREE=0 CUT=0 SHORT=0 MESSAGES_AT_4000=0' }
+    ) {
+        param($Listing, $Verdict)
+        Mock Get-AdoProbeJson {
+            param($Uri)
+            $long = 'C' * 4100
+            if ($Uri -match '/results/[0-9]+\?') { return [pscustomobject]@{ id = 1; outcome = 'Failed'; errorMessage = $(if ($Listing -eq 'Silent') { $null } else { $long }) } }
+            $message = switch ($Listing) { 'Whole' { $long } 'Cut' { $long.Substring(0, 4000) } 'Short' { $long.Substring(0, 1000) } 'Other' { 'CustomerOmicron' } default { $null } }
+            $failed = if ($Listing -eq 'Passed') { 'Passed' } else { 'Failed' }
+            [pscustomobject]@{ value = @(
+                    [pscustomobject]@{ id = 1; outcome = $failed; errorMessage = $message }
+                    [pscustomobject]@{ id = 2; outcome = 'Passed' }
+                    [pscustomobject]@{ id = 3; outcome = $(if ($Listing -eq 'Passed') { 'Passed' } else { 'Timeout' }); errorMessage = $message }) }
+        }
+        $lines = @(. (Get-LiveSection 'Probes' 'LISTED_MESSAGES_DIFFER'))
+        $lines | Should -Be @($Verdict)
+        $lines -join "`n" | Should -Not -Match 'Customer'
+        Should -Invoke Get-AdoProbeJson -Exactly -Times 1 -ParameterFilter { $Uri -match '/Runs/201/results\?api-version=6\.0&detailsToInclude=None&%24top=1000$' }
+        Should -Invoke Get-AdoProbeJson -Exactly -Times $(if ($Listing -eq 'Passed') { 0 } else { 2 }) -ParameterFilter {
+            $Uri -match '/Runs/201/results/[13]\?api-version=6\.0&detailsToInclude=Iterations%2CWorkItems%2CSubResults$' }
+    }
+
+    # Server 2020 sends run aggregates, not statistics, as observed at work (V-19): a run with
+    # unanalyzed tests has failures.
+    It 'picks a run with failures by its statistics, else by its unanalyzed tests, else the first run' {
+        $passed = [pscustomobject]@{ id = 1; unanalyzedTests = 0 }
+        $aggregated = [pscustomobject]@{ id = 2; unanalyzedTests = 3 }
+        $counted = [pscustomobject]@{ id = 3; runStatistics = @([pscustomobject]@{ outcome = 'Failed'; count = 1 }) }
+        (Select-AdoLiveFailingRun -Run @($passed, $aggregated, $counted)).id | Should -Be 3
+        (Select-AdoLiveFailingRun -Run @($passed, $aggregated)).id | Should -Be 2
+        (Select-AdoLiveFailingRun -Run @($passed)).id | Should -Be 1
+        Select-AdoLiveFailingRun -Run @() | Should -BeNullOrEmpty
+    }
+
     It 'gives every probe one verdict, after its route notes, and leaves out the checks already settled' {
-        Get-AdoLivePendingCheck -Id @('V-28', 'V-34', 'V-35', 'V-36') -Line @('NOTE V-28 TEST_HISTORY PRESENT RELEASED=6.0 MAX=6.0', 'PASS V-28 ROUTES_PRESENT LOCATIONS=4 ABSENT=0',
-            'FAIL V-34 CHECK_FAILED') | Should -Be @('V-35', 'V-36')
+        Get-AdoLivePendingCheck -Id @('V-28', 'V-34', 'V-35', 'V-36', 'V-39') -Line @('NOTE V-28 TEST_HISTORY PRESENT RELEASED=6.0 MAX=6.0', 'PASS V-28 ROUTES_PRESENT LOCATIONS=4 ABSENT=0',
+            'FAIL V-34 CHECK_FAILED') | Should -Be @('V-35', 'V-36', 'V-39')
     }
 }
 

@@ -140,7 +140,7 @@ The folder is not named `TestResults` (DD-024).
 | `TestRuns/attachments-result.json`, `TestRuns/attachments-empty.json` | Attachment lists: one of each kind (`.PNG`, `.json`, `.htm`, unknown extension, no extension) and an empty list | V-23 |
 | `TestRuns/attachments-hostile.json` | Hostile attachment names: traversal, a device name, a closing script tag, quotes, absolute and UNC paths, a stream and a trailing dot | V-23 |
 | `TestRuns/build-401.json`, `TestRuns/builds-history.json` | The build, and its history window: the current build and three earlier ones, newest first | V-25 |
-| `TestRuns/runs-history-400.json`, `TestRuns/results-history-400.json`, `TestRuns/runs-history-399.json`, `TestRuns/results-history-399.json` | Two readable history builds; one ran only one of the two reported tests | V-19, V-20 |
+| `TestRuns/runs-history-400.json`, `TestRuns/results-history-400.json`, `TestRuns/runs-history-399.json`, `TestRuns/results-history-399.json` | Two readable history builds; one ran only one of the two reported tests; each failed result lists its error message | V-19, V-20, V-39 |
 | `TestRuns/stack-english.txt`, `TestRuns/stack-french.txt` | Stack traces: frames with and without paths, headers, inner-exception and rethrow separators, async and generic types, URLs, unsafe schemes | V-29 |
 | `TestRuns/messages.txt` | Assertion messages of MSTest, NUnit and xUnit, French markers, quoted text, numbers and URLs | V-29 |
 | `TestRuns/hostile-text.txt` | Tags, closing script tags, event attributes, quotes, traversal and reserved names, combining characters, French spacing | V-29 |
@@ -185,6 +185,7 @@ have no other format. They change only through the `update-goldens` skill.
 | `Reports/testfailures-hostile.*` | Closing script tags, handler text, quoted attributes, traversal names, unsafe response URLs, French spacing, an invalid Test Case reference | V-16, V-26, V-29 |
 | `Reports/testfailures-grouped.*` | English and French stages, a run outside the attachment window, a passing retry, a repeated message and trace, text and JSON attachments, a Resolved bug linked through the Test Case | V-19, V-22, V-30 |
 | `Reports/testfailures-large.*` | Sixteen tests in two stages with ten builds of history: error clusters that differ in numbers, paths and GUIDs, an MSTest first line, a shared helper frame, new, recurring and flaky tests, a bug that covers some failed results, a test of the same Test Case left out, an unread bug, a Timeout outcome, attachments on several attempts and one too large | V-19, V-22, V-30 |
+| `Reports/testfailures-bilingual.*` | English and French stages that MSTest's texts tell apart: one assertion in both languages joined by pairing, a test's other error shown muted, two errors that are no test's primary error, the test's own texts paired through MSTest's wrapper, built-in generic errors, a configured generic rule, tests with generic errors only, a test without a message, and a bug whose error an unlinked test shares | V-19, V-40 |
 
 In an HTML golden, of either report, the script body is `__SCRIPT_ASSET__` and its CSP hash
 is `sha256-__SCRIPT_SHA256__`; an exported report carries the real script and hash.

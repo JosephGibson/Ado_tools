@@ -1,32 +1,40 @@
 using System.Text;
 using System.Text.RegularExpressions;
-using AdoToolkit.Core.Reporting.Highlighting;
+using AdoToolkit.Core.Reporting.Errors;
 using AdoToolkit.Core.TestRuns;
 
 namespace AdoToolkit.Core.Reporting.TestFailures;
 
-// Failures grouped by their latest error, for By error, the Overview and Open bugs. The key line is
-// the whole first line of the latest error or, after MSTest's "Test method X threw exception:", the
-// exception header below it. Each URL, GUID, path, hexadecimal ID and number in it becomes a slot,
-// and lines whose literal text and slot kinds match share a cluster, so "after 30012 ms" and
-// "after 30020 ms" group together. Everything comes from the model; nothing is requested.
+// The tests grouped by error, for By error, the Overview and Open bugs: one cluster for each error
+// that the classifier found in a shown test's failed attempts, and one for the tests without an
+// error message. A test is a member of the cluster of each error it had; it is the primary member
+// of one of them. Everything comes from the model; nothing is requested.
+//
+// Key keeps the 0.8.5 key of one line, which the console's grouping and the tests still use: each
+// URL, GUID, path, hexadecimal ID and number in it becomes a slot, so "after 30012 ms" and
+// "after 30020 ms" share a key.
 internal static partial class ErrorClusters
 {
-    // Error lines read for a key line or an exception type; the rest of a long message is detail.
-    private const int MaximumScannedLines = 20;
-
     // Text, or one slot of a key line: Slot is -1 for literal text.
     internal sealed record Part(string Text, int Slot);
 
     internal sealed class Member
     {
         internal required AdoTestFailure Failure { get; init; }
-        internal required IReadOnlyList<Part> Parts { get; init; }
-        // The leading "Type:" of the key line and its length with the space after it, or null and 0.
-        internal string? PrefixType { get; init; }
-        internal int PrefixLength { get; init; }
-        internal string? ExceptionType { get; init; }
+        internal required ErrorProfile Profile { get; init; }
+        // The test's entry for the cluster's error; null in the cluster of tests without a message.
+        internal ErrorProfileEntry? Entry { get; init; }
+        // The attempt whose message the member shows: the latest one with the cluster's error.
+        internal AdoTestAttempt? Attempt { get; init; }
         internal string? Frame { get; init; }
+        // The test's primary error against its previous failed build, or null.
+        internal ErrorComparison? Comparison { get; init; }
+        internal bool IsPrimary => Entry is null || ReferenceEquals(Entry, Profile.Primary);
+        internal IReadOnlyList<ErrorPart> Parts => Entry?.Latest.Form.Parts ?? [];
+        // The leading "Type:" of the key line and its length with the space after it, or null and 0.
+        internal string? PrefixType => Entry?.Latest.Form.PrefixType;
+        internal int PrefixLength => Entry?.Latest.Form.PrefixLength ?? 0;
+        internal string? ExceptionType => Entry?.Latest.ExceptionType;
     }
 
     internal sealed class Cluster
@@ -34,13 +42,18 @@ internal static partial class ErrorClusters
         // From 1 in display order; the cluster's anchor is e-Number.
         internal required int Number { get; init; }
         // Null for the tests without an error message.
-        internal required string? Key { get; init; }
+        internal required ErrorClass? Error { get; init; }
+        // The primary members first, each group in report order.
         internal required IReadOnlyList<Member> Members { get; init; }
-        // Slots whose value is not the same in every member.
+        internal required int PrimaryCount { get; init; }
+        // Slots whose value is not the same in every member; empty unless the members share a layout.
         internal required IReadOnlySet<int> Varying { get; init; }
+        // The members show one layout: one template or one tokenized line, whose slots line up.
+        internal bool SingleLayout { get; init; } = true;
         internal string? ExceptionType { get; init; }
         internal string? Frame { get; init; }
         internal int FrameCount { get; init; }
+        internal bool IsGeneric => Error?.IsGeneric == true;
         internal Member Representative => Members[0];
 
         // The values of one slot, each once, in member order.
@@ -52,43 +65,70 @@ internal static partial class ErrorClusters
             [.. member.Parts.Where(part => part.Slot >= 0 && Varying.Contains(part.Slot)).Select(static part => part.Text)];
     }
 
-    internal static IReadOnlyList<Cluster> Of(IReadOnlyList<AdoTestFailure> failures)
+    // The clusters of a report: specific errors, by the tests whose primary error they are, then by
+    // all their tests; then the generic errors in the same order; then the tests without a message.
+    // Ties follow the first test's ordinal.
+    internal static IReadOnlyList<Cluster> Of(TestFailureReportModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        return Of(model.Failures, model.Errors);
+    }
+
+    // errors classified a list whose first entries are failures, in that order.
+    internal static IReadOnlyList<Cluster> Of(IReadOnlyList<AdoTestFailure> failures, ErrorClassification errors)
     {
         ArgumentNullException.ThrowIfNull(failures);
-        List<(string? Key, Member Member)> items = [];
-        foreach (AdoTestFailure failure in failures)
+        ArgumentNullException.ThrowIfNull(errors);
+        if (errors.Profiles.Count < failures.Count) throw new ArgumentException(null, nameof(errors));
+        Dictionary<ErrorClass, List<Member>> byError = [];
+        List<Member> silent = [];
+        for (int index = 0; index < failures.Count; index++)
         {
-            AdoTestAttempt? attempt = HtmlTestFailureRenderer.LatestErrorAttempt(failure);
-            string? line = KeyLine(attempt?.ErrorMessage);
-            string? key = null;
-            IReadOnlyList<Part> parts = [];
-            if (line is not null) (key, parts) = Tokenize(line);
-            Match prefix = line is null ? Match.Empty : Prefix().Match(line);
-            items.Add((key, new Member
+            AdoTestFailure failure = failures[index];
+            ErrorProfile profile = errors.Profiles[index];
+            if (profile.Primary is null) { silent.Add(new Member { Failure = failure, Profile = profile }); continue; }
+            ErrorComparison? comparison = index < errors.Comparisons.Count ? errors.Comparisons[index] : null;
+            foreach (ErrorProfileEntry entry in profile.Entries)
             {
-                Failure = failure, Parts = parts,
-                PrefixType = prefix.Success ? prefix.Groups["type"].Value : null, PrefixLength = prefix.Success ? prefix.Length : 0,
-                ExceptionType = ExceptionType(attempt), Frame = RootFrame(failure, attempt),
-            }));
+                AdoTestAttempt? attempt = failure.Attempts.FirstOrDefault(candidate => candidate.Number == entry.Latest.AttemptNumber);
+                if (!byError.TryGetValue(entry.Class, out List<Member>? members)) byError[entry.Class] = members = [];
+                members.Add(new Member
+                {
+                    Failure = failure, Profile = profile, Entry = entry, Attempt = attempt, Frame = ErrorText.RootFrame(failure, attempt), Comparison = comparison,
+                });
+            }
         }
-        var groups = items.GroupBy(static item => item.Key, StringComparer.Ordinal)
-            .OrderBy(static group => group.Key is null ? 1 : 0).ThenByDescending(static group => group.Count())
-            .ThenBy(static group => group.First().Member.Failure.Ordinal).ToArray();
+        List<(ErrorClass? Error, Member[] Members)> ordered = [.. byError
+            .Select(static pair => (Error: pair.Key, Members: (Member[])[.. pair.Value.Where(static member => member.IsPrimary), .. pair.Value.Where(static member => !member.IsPrimary)]))
+            .OrderBy(static item => item.Error.IsGeneric ? 1 : 0)
+            .ThenByDescending(static item => item.Members.Count(static member => member.IsPrimary)).ThenByDescending(static item => item.Members.Length)
+            .ThenBy(static item => item.Members.Min(static member => member.Failure.Ordinal)).ThenBy(static item => item.Error.Id)
+            .Select(static item => ((ErrorClass?)item.Error, item.Members))];
+        if (silent.Count > 0) ordered.Add((null, [.. silent]));
         List<Cluster> clusters = [];
-        foreach (var group in groups)
+        foreach ((ErrorClass? error, Member[] members) in ordered)
         {
-            Member[] members = [.. group.Select(static item => item.Member)];
-            HashSet<int> varying = [.. members[0].Parts.Where(static part => part.Slot >= 0).Select(static part => part.Slot)
+            bool single = members.Select(static member => member.Entry?.Latest.Form.Layout).Distinct(StringComparer.Ordinal).Count() == 1;
+            HashSet<int> varying = !single ? [] : [.. members[0].Parts.Where(static part => part.Slot >= 0).Select(static part => part.Slot)
                 .Where(slot => members.Select(member => member.Parts.FirstOrDefault(part => part.Slot == slot)?.Text).Distinct(StringComparer.Ordinal).Skip(1).Any())];
             (string? frame, int frameCount) = MostCommon(members.Select(static member => member.Frame));
             clusters.Add(new Cluster
             {
-                Number = clusters.Count + 1, Key = group.Key, Members = members, Varying = varying,
+                Number = clusters.Count + 1, Error = error, Members = members, PrimaryCount = members.Count(static member => member.IsPrimary),
+                Varying = varying, SingleLayout = single,
                 ExceptionType = MostCommon(members.Select(static member => member.ExceptionType)).Value,
                 Frame = frameCount >= 2 ? frame : null, FrameCount = frameCount >= 2 ? frameCount : 0,
             });
         }
         return clusters;
+    }
+
+    // The cluster of each entry's error, in the entries' order.
+    internal static IReadOnlyList<Cluster> ClustersOf(IReadOnlyList<Cluster> clusters, IEnumerable<ErrorProfileEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(clusters);
+        ArgumentNullException.ThrowIfNull(entries);
+        return [.. entries.Select(entry => clusters.First(cluster => ReferenceEquals(cluster.Error, entry.Class)))];
     }
 
     // The key of one line; equal keys mean one cluster.
@@ -98,32 +138,11 @@ internal static partial class ErrorClusters
         return Tokenize(Clean(line)).Key;
     }
 
-    // The first non-empty line, trimmed, without control characters. When it ends with a colon and
-    // the next non-empty line is an exception header, as after MSTest's "Test method X threw
-    // exception:", that header is the key line: the first line names the test, not the error.
-    internal static string? KeyLine(string? message)
-    {
-        if (string.IsNullOrEmpty(message)) return null;
-        string? first = null;
-        foreach (string raw in Lines(message))
-        {
-            string line = Clean(raw).Trim();
-            if (line.Length == 0) continue;
-            if (first is null)
-            {
-                if (!line.EndsWith(':')) return line;
-                first = line;
-                continue;
-            }
-            return Header().IsMatch(line) ? line : first;
-        }
-        return first;
-    }
+    // The key line of a message (ErrorText.KeyLine).
+    internal static string? KeyLine(string? message) => ErrorText.KeyLine(message);
 
-    // The innermost exception type of the message, else of the trace: the last "Type:" at the start
-    // of a line or after "--->".
-    internal static string? ExceptionType(AdoTestAttempt? attempt) =>
-        attempt is null ? null : LastType(attempt.ErrorMessage) ?? LastType(attempt.StackTrace);
+    // The innermost exception type of the message, else of the trace (ErrorText.ExceptionType).
+    internal static string? ExceptionType(AdoTestAttempt? attempt) => ErrorText.ExceptionType(attempt);
 
     // The type name without its namespace.
     internal static string ShortType(string type)
@@ -142,25 +161,6 @@ internal static partial class ErrorClusters
         int last = name.LastIndexOf('.');
         int previous = last > 0 ? name.LastIndexOf('.', last - 1) : -1;
         return name[(previous + 1)..] + "()";
-    }
-
-    // The first frame of the trace in the test's own root namespace, the first segment of its
-    // automated name: library frames such as Selenium's are not in the framework list.
-    private static string? RootFrame(AdoTestFailure failure, AdoTestAttempt? attempt)
-    {
-        if (attempt?.StackTrace is not { Length: > 0 } trace || failure.TestName is not { } name) return null;
-        int dot = name.IndexOf('.', StringComparison.Ordinal);
-        if (dot <= 0 || !Identifier().IsMatch(name[..dot])) return null;
-        return StackTraceLexer.FirstFrame(trace, name[..(dot + 1)]);
-    }
-
-    private static string? LastType(string? text)
-    {
-        if (string.IsNullOrEmpty(text)) return null;
-        string? type = null;
-        foreach (string line in Lines(text))
-            foreach (Match match in TypeHeader().Matches(line.Trim())) type = match.Groups["type"].Value;
-        return type;
     }
 
     private static (string? Value, int Count) MostCommon(IEnumerable<string?> values)
@@ -197,39 +197,11 @@ internal static partial class ErrorClusters
         return (key.ToString(), parts);
     }
 
-    // The first lines of a text, without their line breaks.
-    private static IEnumerable<string> Lines(string text)
-    {
-        int start = 0;
-        for (int line = 0; line < MaximumScannedLines && start < text.Length; line++)
-        {
-            int end = text.IndexOfAny(['\r', '\n'], start);
-            if (end < 0) end = text.Length;
-            yield return text[start..end];
-            start = end < text.Length && text[end] == '\r' && end + 1 < text.Length && text[end + 1] == '\n' ? end + 2 : end + 1;
-        }
-    }
-
-    private static string Clean(string line) => Control().Replace(line, string.Empty);
+    private static string Clean(string line) => ErrorText.Clean(line);
 
     [GeneratedRegex(@"(?<url>https?://[^\s""'<>]+)|(?<guid>\b[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}\b)|(?<path>\b[A-Za-z]:\\[^\s""'<>|*?]*|\\\\[^\s""'<>|*?]+|(?<![\w.:/~-])/(?:[\w.@%+~-]+/)+[\w.@%+~-]*)|(?<hex>\b0[xX][0-9a-fA-F]+\b|\b(?=[0-9a-fA-F]*[0-9])(?=[0-9a-fA-F]*[a-fA-F])[0-9a-fA-F]{8,}\b)|(?<number>[0-9]+(?:[.,][0-9]+)*)", RegexOptions.CultureInvariant)]
     private static partial Regex Variable();
 
-    [GeneratedRegex(@"^(?:--->\s*)?[\p{L}_][\p{L}\p{N}_.+`]*(?:Exception|Error)\s*:", RegexOptions.CultureInvariant)]
-    private static partial Regex Header();
-
-    [GeneratedRegex(@"(?:^|--->\s*)(?<type>[\p{L}_][\p{L}\p{N}_.+`]*(?:Exception|Error))\s*:", RegexOptions.CultureInvariant)]
-    private static partial Regex TypeHeader();
-
-    [GeneratedRegex(@"^(?<type>[\p{L}_][\p{L}\p{N}_.+`]*(?:Exception|Error))\s*:\s*", RegexOptions.CultureInvariant)]
-    private static partial Regex Prefix();
-
     [GeneratedRegex(@"\.<(?<name>[^>]+)>d__[0-9]+\.MoveNext$", RegexOptions.CultureInvariant)]
     private static partial Regex AsyncStateMachine();
-
-    [GeneratedRegex(@"^[\p{L}_][\p{L}\p{N}_]*$", RegexOptions.CultureInvariant)]
-    private static partial Regex Identifier();
-
-    [GeneratedRegex(@"[\p{Cc}-[\t]]", RegexOptions.CultureInvariant)]
-    private static partial Regex Control();
 }

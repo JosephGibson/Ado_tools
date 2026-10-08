@@ -6,6 +6,19 @@ notes, which list every change, the validation evidence and the known limitation
 section of a version also opens the text of its
 [GitHub release](https://github.com/JosephGibson/Ado_tools/releases).
 
+## 0.12.5 - 2026-10-08
+
+### Added
+
+- The failed-test report recognizes Playwright's assertions, grouped by kind, expected value, the test's own message and the locator read from the call log, and shows the element or page that each timeout waited for.
+- Playwright's action timeout is a generic error: By error lists it under Generic errors as Playwright timeout, with each test's element in Values, so a test's assertion failures stay its primary error.
+
+### Changed
+
+- By error is denser: each group heading and test row takes one line, cut at the width of the table with the whole text on hover, and a group's facts and sample share one row.
+
+Details: [release notes](docs/release-0.12.5.md)
+
 ## 0.12.0 - 2026-10-06
 
 ### Added
@@ -28,7 +41,7 @@ Details: [release notes](docs/release-0.12.0.md)
 
 - The module itself is unchanged apart from its version number: the cmdlets, the reports, the help and the configuration file are those of 0.11.0. This version changes the tools and the procedures that develop and release AdoToolkit.
 
-Details: [release notes](docs/release-0.11.5.md)
+Details: [release notes](docs/archive/release-0.11.5.md)
 
 ## 0.11.0 - 2026-10-05
 

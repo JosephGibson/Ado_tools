@@ -128,6 +128,33 @@ public sealed class ErrorClassifierTests
         Assert.Equal([1], profiles[0].Others.Select(static entry => entry.Count));
     }
 
+    // Playwright's action timeout is generic: a test that mostly timed out and once failed an assertion
+    // has the assertion as its primary error, and the timeouts of several tests are one error whatever
+    // element each waited for, each with its own.
+    [Fact]
+    public void PlaywrightTimeoutsAreOneGenericErrorBehindTheAssertions()
+    {
+        static string Timeout(string locator) => "System.TimeoutException : Timeout 30000ms exceeded.\r\nCall log:\r\n  - waiting for " + locator;
+        const string Badge = "Microsoft.Playwright.PlaywrightException : Locator expected to have text '1'\r\nBut was: '0' \r\nCall log:\r\n"
+            + "  - Expect \"ToHaveTextAsync\" with timeout 5000ms\r\n  - waiting for Locator(\"#cart-badge\")";
+        const string Apply = "GetByRole(AriaRole.Button, new() { Name = \"Apply\" })";
+        ErrorClassification result = Classify(
+            Test("AddToCart", Attempt(1, English, Timeout("Locator(\"#add-to-cart\")")), Attempt(2, French, Timeout("Locator(\"#add-to-cart\")")), Attempt(3, English, Badge)),
+            Test("PlaceOrder", Attempt(1, English, Timeout("Locator(\"#place-order\")")), Attempt(2, French, Timeout("Locator(\"#place-order\")"))),
+            Test("ApplyCoupon", Attempt(1, French, Timeout(Apply))));
+        ErrorProfile cart = result.Profiles[0];
+        Assert.Equal("Playwright.Expect", cart.Primary!.Class.Forms[0].TemplateId);
+        Assert.Equal((1, 3, false), (cart.Primary.Count, cart.FailedAttempts, cart.IsTie));
+        ErrorClass timeouts = Assert.Single(result.Classes, static error => error.IsGeneric);
+        Assert.Equal("PlaywrightTimeout", timeouts.Rule!.BuiltInId);
+        ErrorProfileEntry other = Assert.Single(cart.Others);
+        Assert.Same(timeouts, other.Class);
+        Assert.Equal(2, other.Count);
+        Assert.All(result.Profiles.Skip(1), profile => Assert.Same(timeouts, profile.Primary!.Class));
+        Assert.Equal(["Locator(\"#add-to-cart\")", "Locator(\"#place-order\")", Apply],
+            result.Profiles.Select(profile => profile.Entries.Single(entry => ReferenceEquals(entry.Class, timeouts)).Latest.Form.Parts.Single(static part => part.Slot == 6).Text));
+    }
+
     // The same tests give the same classes, in the same order, every time.
     [Fact]
     public void ClassificationIsDeterministic()

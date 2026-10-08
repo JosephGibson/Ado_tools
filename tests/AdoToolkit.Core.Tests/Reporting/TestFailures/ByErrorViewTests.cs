@@ -21,16 +21,19 @@ public sealed class ByErrorViewTests
         Assert.Contains("</h2>\n<p class=\"cluster-summary\">" + summary + "</p>\n", view, StringComparison.Ordinal);
         Assert.Equal(["e-1", "e-2", "e-3", "e-4", "e-5", "e-6", "e-7", "e-8"], Regex.Matches(view, "<tbody class=\"error-cluster\" id=\"(e-[0-9]+)\">").Select(static m => m.Groups[1].Value));
         // The line of the first test without its exception type, which shows by its short name with the
-        // full name as title; each value that differs is marked and titled with every value.
+        // full name as title; each value that differs is marked and titled with every value, and the
+        // line's title holds all of it.
         Assert.Contains("<div class=\"cluster-head\"><span class=\"cluster-count\">4</span> <code class=\"exception-type\" title=\"System.TimeoutException\">TimeoutException</code> "
-            + "<code class=\"cluster-line\">Timed out after <span class=\"error-var\" title=\"" + differs + "3000, 4500, 30000\">3000</span> ms waiting for #submit</code></div>",
+            + "<code class=\"cluster-line\" title=\"Timed out after 3000 ms waiting for #submit\">Timed out after <span class=\"error-var\" title=\"" + differs
+            + "3000, 4500, 30000\">3000</span> ms waiting for #submit</code></div>",
             Cluster(view, 1), StringComparison.Ordinal);
-        Assert.Contains("<code class=\"cluster-line\">Could not find file &#x27;<span class=\"error-var\" title=\"" + differs
+        Assert.Contains("<code class=\"cluster-line\" title=\"Could not find file &#x27;/home/agent/work/3/s/out/invoices.json&#x27;.\">Could not find file &#x27;"
+            + "<span class=\"error-var\" title=\"" + differs
             + @"/home/agent/work/3/s/out/invoices.json, C:\agent\_work\7\s\data\customers.json, C:\agent\_work\12\s\data\orders-1.json"">/home/agent/work/3/s/out/invoices.json</span>&#x27;.</code>",
             Cluster(view, 2), StringComparison.Ordinal);
         // No type: the line is the error's first line, with two values that differ.
-        Assert.Contains("<span class=\"cluster-count\">2</span> <code class=\"cluster-line\">Expected <span class=\"error-var\" title=\"" + differs + "4, 12\">4</span> results but found "
-            + "<span class=\"error-var\" title=\"" + differs + "0, 9\">0</span>.</code>", Cluster(view, 5), StringComparison.Ordinal);
+        Assert.Contains("<span class=\"cluster-count\">2</span> <code class=\"cluster-line\" title=\"Expected 4 results but found 0.\">Expected <span class=\"error-var\" title=\""
+            + differs + "4, 12\">4</span> results but found <span class=\"error-var\" title=\"" + differs + "0, 9\">0</span>.</code>", Cluster(view, 5), StringComparison.Ordinal);
         // The tests without an error message come last.
         Assert.Contains("<span class=\"cluster-count\">1</span> <span class=\"cluster-line no-message\">" + model.Labels["NoErrorMessage"] + "</span>", Cluster(view, 8), StringComparison.Ordinal);
     }
@@ -69,6 +72,45 @@ public sealed class ByErrorViewTests
         Assert.Contains("<details class=\"cluster-sample\"><summary>Sample message: AddItem</summary>", Cluster(view, 1), StringComparison.Ordinal);
     }
 
+    // A group's heading, its facts and each of its tests take one line: the heading's parts sit in one
+    // row whose line is cut at the width of the table, the sample ends the facts row and takes the
+    // full width under it when opened, and the Errors cell is one line with all of it as title. A
+    // printed page has no hover, so there the cut lines wrap.
+    [Fact]
+    public void AGroupsHeadingFactsAndRowsEachTakeOneLine()
+    {
+        string css = TestFailureAssets.Read("test-failures.css");
+        foreach (string rule in new[]
+        {
+            ".cluster-head { display: flex; align-items: baseline; gap: var(--space-3); contain: inline-size; }",
+            ".cluster-head > .cluster-line { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }",
+            ".cluster-sample[open] { flex-basis: 100%; contain: inline-size; }",
+            // The sample keeps the text colour that the muted facts would give it, and a closed
+            // summary wraps, so a long test name cannot widen the table.
+            ".cluster-sample { color: var(--text); }",
+            ".cluster-sample > summary { color: var(--link); font-size: var(--text-12); }",
+            ".cluster-sample[open] > summary { width: max-content; max-width: 100%; }",
+            ".col-errors { width: 100%; min-width: 12rem; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+            ".col-errors:focus-within { white-space: normal;",
+        })
+            Assert.Contains(rule, css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".other-errors, .previous-error { display: block; }", css, StringComparison.Ordinal);
+        string print = css[css.IndexOf("@media print", StringComparison.Ordinal)..];
+        Assert.Contains(".cluster-head > .cluster-line, .col-errors { white-space: normal; overflow: visible;", print, StringComparison.Ordinal);
+
+        TestFailureReportModel model = TestFailureReportFixture.Model("bilingual");
+        string view = View(TestFailureReportFixture.Render(model));
+        // The sample is the last part of the facts row.
+        string facts = Section(Cluster(view, 1), "<tr class=\"cluster-facts\">", "</tr>");
+        Assert.Matches(new Regex("^<tr class=\"cluster-facts\"><td colspan=\"10\"><div class=\"facts\"><span class=\"fact-group\">.*<details class=\"cluster-sample\">"
+            + "<summary>Sample message: CheckTitle</summary>.*</details></div></td>$", RegexOptions.Singleline), facts);
+        // The Errors cell holds its parts on one line, between middle dots.
+        string row = Section(Cluster(view, 1), "<tr data-index-for=", "</tr>");
+        Assert.EndsWith("<td class=\"col-errors\" title=\"Every failed attempt · Same error in build 20261005.9\"><span class=\"placement\">Every failed attempt</span> · "
+            + "<span class=\"previous-error\">Same error in build 20261005.9</span></td>", row, StringComparison.Ordinal);
+        Assert.DoesNotContain("<br", view, StringComparison.Ordinal);
+    }
+
     // The sample is the first test's message up to 12 lines and 1,000 characters; the card holds all of it.
     [Fact]
     public void TheSampleIsTheStartOfTheFirstTestsMessage()
@@ -90,7 +132,7 @@ public sealed class ByErrorViewTests
         string start = "Lookup " + new string('x', 230) + " ";
         TestFailureReportModel model = Model(Failure(1, "A", start + "123456789 failed"), Failure(2, "B", start + "987654321 failed"));
         string heading = Cluster(View(TestFailureReportFixture.Render(model)), 1);
-        Assert.Contains("<code class=\"cluster-line\">" + start + "…</code>", heading, StringComparison.Ordinal);
+        Assert.Contains("<code class=\"cluster-line\" title=\"" + start + "123456789 failed\">" + start + "…</code>", heading, StringComparison.Ordinal);
         Assert.DoesNotContain("error-var", heading, StringComparison.Ordinal);
 
         // A value that fits is marked whole, and the cut falls in the text after it.
@@ -107,8 +149,8 @@ public sealed class ByErrorViewTests
     {
         string large = View(TestFailureReportFixture.Render("large"));
         Assert.Contains("<th scope=\"col\">Tests_FR</th><th scope=\"col\">Values</th><th scope=\"col\">Errors</th></tr></thead>", large, StringComparison.Ordinal);
-        Assert.Contains("<td class=\"col-values\"><span class=\"values\" title=\"4 · 0\">4 · 0</span></td><td class=\"col-errors\">", Cluster(large, 5), StringComparison.Ordinal);
-        Assert.Contains("<td class=\"col-values\"></td><td class=\"col-errors\">", Cluster(large, 4), StringComparison.Ordinal);
+        Assert.Contains("<td class=\"col-values\"><span class=\"values\" title=\"4 · 0\">4 · 0</span></td><td class=\"col-errors\"", Cluster(large, 5), StringComparison.Ordinal);
+        Assert.Contains("<td class=\"col-values\"></td><td class=\"col-errors\"", Cluster(large, 4), StringComparison.Ordinal);
         string failed = View(TestFailureReportFixture.Render("failed"));
         Assert.DoesNotContain("Values", failed, StringComparison.Ordinal);
         Assert.Contains("<th scope=\"col\">Open bugs</th><th scope=\"col\">Attempts</th><th scope=\"col\">Errors</th></tr></thead>", failed, StringComparison.Ordinal);
@@ -145,9 +187,10 @@ public sealed class ByErrorViewTests
     public void ARuleNamesTheClusterItMade(string culture, string title, string name, string configured)
     {
         string view = View(TestFailureReportFixture.Render("bilingual", culture));
+        const string Line = "OpenQA.Selenium.WebDriverException: The HTTP request to the remote WebDriver server for URL "
+            + "http://selenium.example.test:4444/session/9a1e/element timed out after 60 seconds.";
         Assert.Contains("<div class=\"cluster-head\"><span class=\"cluster-count\">1</span> <span class=\"cluster-rule\" title=\"" + title + "\">" + name + "</span> "
-            + "<code class=\"cluster-line\">OpenQA.Selenium.WebDriverException: The HTTP request to the remote WebDriver server for URL "
-            + "http://selenium.example.test:4444/session/9a1e/element timed out after 60 seconds.</code></div>", Cluster(view, 6), StringComparison.Ordinal);
+            + "<code class=\"cluster-line\" title=\"" + Line + "\">" + Line + "</code></div>", Cluster(view, 6), StringComparison.Ordinal);
         Assert.Contains("<span class=\"cluster-rule\" title=\"" + configured + "\">Test data reset</span>", Cluster(view, 7), StringComparison.Ordinal);
         // An error that is no test's primary error counts its tests as another error.
         Assert.Contains("<span class=\"cluster-count\" title=\"" + (culture == "en-US" ? "As the primary error: 0 · As another error: 1" : "Comme erreur principale : 0 · Comme autre erreur : 1")
@@ -164,23 +207,26 @@ public sealed class ByErrorViewTests
         string cart = "f-" + model.Failures.Single(static failure => failure.ShortName == "AddToCart").Ordinal.ToString(CultureInfo.InvariantCulture);
         const string Welcome = "Assert.AreEqual failed. Expected:&lt;Welcome&gt;. Actual:&lt;Error&gt;.";
         Assert.Contains("<tr data-index-for=\"" + cart + "\">", Cluster(view, 2), StringComparison.Ordinal);
-        Assert.EndsWith("<td class=\"col-values\"></td><td class=\"col-errors\"><span class=\"placement\">3 of 4 failed attempts</span> "
-            + "<span class=\"other-errors\">Other errors: <a href=\"#e-1\" title=\"" + Welcome + "\">" + Welcome + "</a> ×1</span> "
+        Assert.EndsWith("<td class=\"col-values\"></td><td class=\"col-errors\" title=\"3 of 4 failed attempts · Other errors: " + Welcome + " ×1 · Other error in build 20261005.9\">"
+            + "<span class=\"placement\">3 of 4 failed attempts</span> · <span class=\"other-errors\">Other errors: <a href=\"#e-1\" title=\"" + Welcome + "\">" + Welcome + "</a> ×1</span> · "
             + "<span class=\"previous-error\">Other error in build 20261005.9</span></td></tr>\n", Cluster(view, 2), StringComparison.Ordinal);
         string muted = Section(Cluster(view, 1), "<tr data-index-for=\"" + cart + "\" class=\"related\">", "</tr>");
-        Assert.EndsWith("<td class=\"col-values\"><span class=\"values\" title=\"Welcome · Error\">Welcome · Error</span></td><td class=\"col-errors\">"
-            + "<span class=\"placement\">1 of 4 failed attempts</span> <span class=\"other-errors\">Primary error: <a href=\"#e-2\" "
-            + "title=\"Synthetic.Shop.CartException: Le panier est vide après l’ajout de 3 articles\">CartException: Le panier est vide après l’ajout de 3 article…</a></span></td>",
+        // The cell's title holds the label uncut.
+        const string Cart = "CartException: Le panier est vide après l’ajout de 3 article…";
+        Assert.EndsWith("<td class=\"col-values\"><span class=\"values\" title=\"Welcome · Error\">Welcome · Error</span></td><td class=\"col-errors\" "
+            + "title=\"1 of 4 failed attempts · Primary error: CartException: Le panier est vide après l’ajout de 3 articles\"><span class=\"placement\">1 of 4 failed attempts</span> · "
+            + "<span class=\"other-errors\">Primary error: <a href=\"#e-2\" "
+            + "title=\"Synthetic.Shop.CartException: Le panier est vide après l’ajout de 3 articles\">" + Cart + "</a></span></td>",
             muted, StringComparison.Ordinal);
         // The heading counts the test as another error; the muted row follows the primary ones.
         Assert.Contains("<span class=\"cluster-count\" title=\"As the primary error: 1 · As another error: 1\">1 +1</span>", Cluster(view, 1), StringComparison.Ordinal);
         Assert.True(Cluster(view, 1).IndexOf("class=\"related\"", StringComparison.Ordinal) > Cluster(view, 1).IndexOf("<tr data-index-for=", StringComparison.Ordinal));
         // A generic other error is named by its rule.
-        Assert.Contains("<span class=\"placement\">3 of 4 failed attempts</span> <span class=\"other-errors\">Other errors: <a href=\"#e-8\" "
+        Assert.Contains("<span class=\"placement\">3 of 4 failed attempts</span> · <span class=\"other-errors\">Other errors: <a href=\"#e-8\" "
             + "title=\"System.Net.Sockets.SocketException: No connection could be made because the target machine actively refused it. (orders.example.test:5001)\">Connection refused</a> ×1</span>",
             Cluster(view, 3), StringComparison.Ordinal);
         // An error of every failed attempt says so rather than "4 of 4".
-        Assert.Contains("<td class=\"col-errors\"><span class=\"placement\">Every failed attempt</span></td>", Cluster(view, 4), StringComparison.Ordinal);
+        Assert.Contains("<td class=\"col-errors\" title=\"Every failed attempt\"><span class=\"placement\">Every failed attempt</span></td>", Cluster(view, 4), StringComparison.Ordinal);
         Assert.Contains("<td class=\"col-errors\"></td>", Cluster(view, 10), StringComparison.Ordinal);
     }
 
@@ -214,7 +260,7 @@ public sealed class ByErrorViewTests
         AdoTestFailure tie = Failure(1, "Tie", ("Payment service returned no token", true), ("Cart total is negative", true));
         AdoTestFailure passed = Failure(2, "Passed", (null, true), ("Retried after a warning: stale element", false));
         string view = View(TestFailureReportFixture.Render(Model(tie, passed)));
-        Assert.Contains("<span class=\"placement\">1 of 2 failed attempts, later than an equally frequent error</span> <span class=\"other-errors\">Other errors: "
+        Assert.Contains("<span class=\"placement\">1 of 2 failed attempts, later than an equally frequent error</span> · <span class=\"other-errors\">Other errors: "
             + "<a href=\"#e-3\" title=\"Payment service returned no token\">Payment service returned no token</a> ×1</span>", view, StringComparison.Ordinal);
         Assert.Contains("<span class=\"placement\">From an attempt that did not fail</span>", view, StringComparison.Ordinal);
     }
@@ -237,8 +283,8 @@ public sealed class ByErrorViewTests
     public void EachRowComparesItsErrorWithThePreviousFailedBuild(string culture, string same, string other, string fact)
     {
         string view = View(TestFailureReportFixture.Render("bilingual", culture));
-        Assert.Contains("</span> <span class=\"previous-error\">" + same + "</span></td>", Cluster(view, 1), StringComparison.Ordinal);
-        Assert.Contains("</span> <span class=\"previous-error\">" + other + "</span></td>", Cluster(view, 2), StringComparison.Ordinal);
+        Assert.Contains("</span> · <span class=\"previous-error\">" + same + "</span></td>", Cluster(view, 1), StringComparison.Ordinal);
+        Assert.Contains("</span> · <span class=\"previous-error\">" + other + "</span></td>", Cluster(view, 2), StringComparison.Ordinal);
         Assert.Contains("<span class=\"fact\">" + fact + " <strong>" + (culture == "en-US" ? "1 of 1" : "1 sur 1") + "</strong></span>", Cluster(view, 1), StringComparison.Ordinal);
         Assert.DoesNotContain("previous-error", Section(Cluster(view, 1), "class=\"related\"", "</tr>"), StringComparison.Ordinal);
         // Without a listed message, nothing is said.
@@ -255,7 +301,7 @@ public sealed class ByErrorViewTests
         string html = TestFailureReportFixture.Render(model);
         TestFailureReportValidator.Validate(new StringReader(html), model);
         Assert.Contains("<code class=\"exception-type\" title=\"System.Net.Http.HttpRequestException\">HttpRequestException</code> "
-            + "<code class=\"cluster-line\">Connection refused · Expected: 0 · But was:  3</code>", View(html), StringComparison.Ordinal);
+            + "<code class=\"cluster-line\" title=\"Connection refused · Expected: 0 · But was:  3\">Connection refused · Expected: 0 · But was:  3</code>", View(html), StringComparison.Ordinal);
         Assert.Contains(">HttpRequestException: Connection refused · Expected: 0 · But…</a> ×1", View(html), StringComparison.Ordinal);
         Assert.Contains("<span class=\"glance-line\">Connection refused · Expected: 0 · But was:  3</span>", html, StringComparison.Ordinal);
     }

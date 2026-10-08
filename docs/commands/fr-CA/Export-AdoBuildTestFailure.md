@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: fr-CA
 Module Name: AdoToolkit
-ms.date: 10-06-2026
+ms.date: 10-08-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -63,14 +63,18 @@ erreur regroupe les mêmes lignes selon l’erreur. Chaque erreur d’une tentat
 un groupe, sans tenir compte des URL, des GUID, des chemins, des ID hexadécimaux, des nombres,
 de la casse, des accents ni des valeurs qu’indique un message de framework reconnu, comme une
 valeur réelle, et les formulations anglaise et française d’une même erreur forment un seul
-groupe lorsqu’un test a échoué avec les deux au même endroit. Un test est listé sous son erreur
+groupe lorsqu’un test a échoué avec les deux au même endroit. L’URL de page qu’attend une
+assertion Playwright compte cependant par son chemin, sans l’hôte, la requête ni le fragment, et
+sans tenir compte d’un segment qui n’est qu’un nombre ou un ID. Un test est listé sous son erreur
 principale, la plus fréquente des siennes une fois les erreurs génériques mises à part, et
-atténué sous ses autres erreurs; sa colonne Erreurs indique combien de tentatives en échec ont
-eu l’erreur et mène aux autres. Les erreurs génériques, que nomme une règle intégrée ou une
+atténué sous ses autres erreurs; sa colonne Erreurs indique sur une ligne combien de tentatives
+en échec ont eu l’erreur et mène aux autres. Les erreurs génériques, que nomme une règle intégrée ou une
 règle générique de reporting.errorRules, suivent les autres sous leur propre titre. Chaque
-groupe nomme son type d’exception ou sa règle et affiche la ligne de son premier test, avec les
-lignes Expected et Actual d’un message xUnit ou NUnit reconnu, en marquant les parties qui
-diffèrent d’un test à l’autre; un groupe de deux tests ou plus, ou d’une erreur à plusieurs
+groupe nomme son type d’exception ou sa règle et affiche sur une ligne, coupée à la largeur du
+tableau et entière lorsque le pointeur s’y arrête, la ligne de son premier test, avec les lignes
+Expected et Actual d’un message xUnit ou NUnit reconnu et, pour un message Playwright reconnu,
+l’élément qu’il a attendu, lu dans son journal des appels, en marquant les parties qui diffèrent
+d’un test à l’autre; un groupe de deux tests ou plus, ou d’une erreur à plusieurs
 formulations, indique ce que ses tests ont en commun et présente un exemple de message.
 Bogues ouverts s’ouvre sur une ligne qui compte les bogues qu’elle liste et combien d’entre eux
 ont été ouverts après la mise en file du build, le second décompte étant omis lorsque le build
@@ -551,7 +555,7 @@ Le rapport ou le fichier CSV validé et enregistré. Lorsque des pièces jointes
 
 ## NOTES
 
-Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. La façon dont Server 2020 répond à plusieurs téléchargements simultanés n’a pas été confirmée au travail (V-33). Avec -Verbose, chaque étape de l’exportation écrit une ligne indiquant sa durée en millisecondes : les téléchargements des pièces jointes, avec les fichiers écrits et les requêtes envoyées; le rapport produit, avec sa taille en octets; la vérification du rapport; et sa mise en place, qui supprime aussi les dossiers de pièces jointes antérieurs. Lorsque rien n’est téléchargé, la ligne des téléchargements reste à sa place avec 0 fichier et 0 requête. Une dernière ligne indique le build, les pièces jointes téléchargées, les requêtes et la durée écoulée. Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase, de travail et de série utilisés pour le regroupement et le suffixe de nouvelle tentative des noms de série (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27). Le fait que Server 2020 renvoie la date de création et la personne assignée d’un bogue dans une projection de champs d’un lot d’éléments de travail n’a pas été observé au travail (V-37); sans eux, la ligne d’un bogue n’affiche ni jour, ni marque ✦, ni personne assignée, sans avertissement. Dans Par erreur, la ligne d’un test indique aussi si les messages d’erreur que son précédent build en échec a répertoriés comprennent une formulation de son erreur principale, d’après les ErrorMessages de son historique; rien n’est indiqué lorsque la comparaison pourrait être erronée, et le fait que Server 2020 répertorie les messages n’a pas été confirmé au travail (V-39). Les textes français de Windows et de .NET Framework dont les règles génériques intégrées auraient besoin (V-41) et les textes de chromedriver (V-42) ne sont pas confirmés au travail, pas plus que les textes de MSTest que les agents produisent dans chaque langue, dont dépend la réunion des formulations anglaises et françaises (V-40).
+Nécessite PowerShell 7.6 sous Windows et Azure DevOps Server 2020. Les pièces jointes téléchargées sont des données de travail et restent sur cet ordinateur. La façon dont Server 2020 répond à plusieurs téléchargements simultanés n’a pas été confirmée au travail (V-33). Avec -Verbose, chaque étape de l’exportation écrit une ligne indiquant sa durée en millisecondes : les téléchargements des pièces jointes, avec les fichiers écrits et les requêtes envoyées; le rapport produit, avec sa taille en octets; la vérification du rapport; et sa mise en place, qui supprime aussi les dossiers de pièces jointes antérieurs. Lorsque rien n’est téléchargé, la ligne des téléchargements reste à sa place avec 0 fichier et 0 requête. Une dernière ligne indique le build, les pièces jointes téléchargées, les requêtes et la durée écoulée. Les routes, la version et les champs des pièces jointes restent à confirmer sur le serveur (V-23), tout comme les noms de phase, de travail et de série utilisés pour le regroupement et le suffixe de nouvelle tentative des noms de série (V-19), et le comportement des navigateurs avec des fichiers locaux reste à confirmer selon la stratégie du navigateur au travail (V-27). Le fait que Server 2020 renvoie la date de création et la personne assignée d’un bogue dans une projection de champs d’un lot d’éléments de travail n’a pas été observé au travail (V-37); sans eux, la ligne d’un bogue n’affiche ni jour, ni marque ✦, ni personne assignée, sans avertissement. Dans Par erreur, la ligne d’un test indique aussi si les messages d’erreur que son précédent build en échec a répertoriés comprennent une formulation de son erreur principale, d’après les ErrorMessages de son historique; rien n’est indiqué lorsque la comparaison pourrait être erronée, et le fait que Server 2020 répertorie les messages n’a pas été confirmé au travail (V-39). Les textes français de Windows et de .NET Framework dont les règles génériques intégrées auraient besoin (V-41) et les textes de chromedriver (V-42) ne sont pas confirmés au travail, pas plus que les textes de MSTest que les agents produisent dans chaque langue, dont dépend la réunion des formulations anglaises et françaises (V-40), ni le fait que la version de Playwright des agents écrive les formes que le rapport reconnaît et garde le journal des appels dans son message d’erreur (V-43).
 
 ## RELATED LINKS
 

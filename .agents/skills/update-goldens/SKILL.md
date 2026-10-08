@@ -5,13 +5,13 @@ description: Regenerate and review tests/Fixtures/Reports after an intended chan
 
 # Update report goldens
 
-The 54 goldens in `tests/Fixtures/Reports/` are written only by these tests:
+The 56 goldens in `tests/Fixtures/Reports/` are written only by these tests:
 
 | Test | Goldens |
 | --- | --- |
 | `GoldenReportTests` | 30 HTML/Markdown/JSON reports; 4 HTML-only rich/detailed reports |
 | `MultiCaseDocumentTests.MultiCaseDocumentMatchesReviewedGolden` | 6 multi-case reports |
-| `GoldenTestFailureReportTests` | 14 failed-test HTML reports |
+| `GoldenTestFailureReportTests` | 16 failed-test HTML reports |
 
 1. Write the change's own regression test and make the product change. Golden differences
    show changed bytes, not correctness.

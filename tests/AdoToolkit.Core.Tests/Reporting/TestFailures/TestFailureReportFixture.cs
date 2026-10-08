@@ -40,6 +40,7 @@ internal static class TestFailureReportFixture
         if (variant == "grouped") return GroupedSet();
         if (variant == "large") return LargeSet();
         if (variant == "bilingual") return BilingualSet();
+        if (variant == "playwright") return PlaywrightSet();
         bool hostile = variant == "hostile";
         bool partial = variant == "partial";
         bool flaky = variant == "flaky";
@@ -227,6 +228,79 @@ internal static class TestFailureReportFixture
                 SourceBranch = "refs/heads/main", Result = "failed", QueueTime = Clock.AddMinutes(-45), FinishTime = Clock.AddMinutes(-5),
                 TeamProject = Project, CollectionUri = Collection, WebUrl = Untrusted },
             Runs = stageRuns,
+            Summary = summary, History = [summary], Failures = failures, FailedCount = failures.Count, Status = AdoTestFailureStatus.Complete,
+            RetrievedAt = Clock.AddMinutes(-1), CollectionUri = Collection,
+        };
+    }
+
+    // Playwright 1.63.0 in two browser stages, the first with a retry, in the forms its package writes
+    // (see ErrorTemplates). Its action timeouts are one generic error behind each test's assertion:
+    // PlaceOrder and ShowReviews had it as another error, AddToCart had nothing else, and AddCoupon's
+    // messages kept no call log, so the group's first test names no element. FilterByBrand finds no
+    // element; OpenOrder and ReorderLast expect one page under two hosts; ShowReviews passed its own
+    // message and timed out once while navigating.
+    private static AdoBuildTestFailureSet PlaywrightSet()
+    {
+        AdoTestRun Run(int id, string stage, int attempt) => new()
+        {
+            Id = id, Name = "Synthetic " + stage, BuildId = 431, State = "Completed", StartedDate = Clock.AddMinutes(-30 + 8 * (id - 600)), StageName = stage,
+            PhaseName = "UiTests", JobName = "__default", PipelineAttempt = attempt, TotalTests = 64, PassedTests = 57, TeamProject = Project, CollectionUri = Collection,
+        };
+        const string Timeout = "System.TimeoutException : Timeout 30000ms exceeded.";
+        static string Clicking(string locator, string element) => Timeout + "\nCall log:\n  - waiting for " + locator + "\n    - locator resolved to " + element
+            + "\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is not enabled\n    - retrying click action\n      - waiting 500ms";
+        static string Expecting(string assertion, string title, string? locator, string log) => "Microsoft.Playwright.PlaywrightException : " + assertion
+            + "\nCall log:\n  - Expect \"" + title + "\" with timeout 5000ms" + (locator is null ? "" : "\n  - waiting for " + locator) + log;
+        static string Order(string host, int id) => Expecting("Page URL expected to be 'https://" + host + "/orders/" + id.ToString(CultureInfo.InvariantCulture)
+            + "'\nBut was: 'https://" + host + "/cart' ", "ToHaveURLAsync", null, "\n    9 × unexpected value \"https://" + host + "/cart\"");
+        string placeOrder = Clicking("Locator(\"#place-order\")", "<button disabled id=\"place-order\">Place order</button>");
+        string addToCart = Clicking("GetByRole(AriaRole.Button, new() { Name = \"Add to cart\" })", "<button disabled class=\"add-to-cart\">Add to cart</button>");
+        string status = Expecting("Locator expected to have text 'Order placed'\nBut was: 'Payment pending' ", "ToHaveTextAsync", "Locator(\"#order-status\")",
+            "\n    9 × locator resolved to <p id=\"order-status\">Payment pending</p>\n      - unexpected value \"Payment pending\"");
+        string brand = Expecting("Locator expected to be visible\nError: element(s) not found ", "ToBeVisibleAsync", "GetByTestId(\"brand-filter\")", "");
+        string reviews = Expecting("Reviews list after the page loads\n\nLocator expected to have count '5'\nBut was: '0' ", "ToHaveCountAsync", "Locator(\".review\")",
+            "\n    9 × unexpected value \"0\"");
+        string navigation = Timeout + "\nCall log:\n  - navigating to \"https://store.example.test/products/88/reviews\", waiting until \"load\"";
+        string Trace(string page, int line, string test) =>
+            "   at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 args, Boolean keepNulls, Nullable`1 timeout)\n"
+            + "   at Synthetic.Store.Pages." + page + @"() in C:\agent\_work\9\s\src\Pages\" + page.Split('.')[0] + ".cs:line " + line.ToString(CultureInfo.InvariantCulture) + "\n"
+            + "   at Synthetic.Store." + test + @"() in C:\agent\_work\9\s\tests\" + test.Split('.')[0] + ".cs:line 30";
+        // Per test: its name, the page method where it fails, and its attempts in runs 600 to 602, null for a pass.
+        (string Name, string Page, int Line, string?[] Attempts)[] specs =
+        [
+            ("CheckoutTests.PlaceOrder", "CheckoutPage.PlaceOrderAsync", 61, [placeOrder, placeOrder, status]),
+            ("CartTests.AddCoupon", "CartPage.AddCouponAsync", 44, [Timeout, Timeout, Timeout]),
+            ("CartTests.AddToCart", "CartPage.AddAsync", 27, [addToCart, addToCart, addToCart]),
+            ("SearchTests.FilterByBrand", "SearchPage.FilterAsync", 35, [brand, brand, brand]),
+            ("OrdersTests.OpenOrder", "OrdersPage.OpenAsync", 19, [Order("store.example.test", 4411), null, Order("store.example.test", 4411)]),
+            ("OrdersTests.ReorderLast", "OrdersPage.ReorderAsync", 52, [Order("store-eu.example.test", 4412), Order("store-eu.example.test", 4412), Order("store-eu.example.test", 4412)]),
+            ("ProductTests.ShowReviews", "ProductPage.OpenReviewsAsync", 73, [navigation, reviews, reviews]),
+        ];
+        int[] runs = [600, 601, 602];
+        List<AdoTestFailure> failures = [];
+        for (int index = 0; index < specs.Length; index++)
+        {
+            var spec = specs[index];
+            failures.Add(new AdoTestFailure
+            {
+                Ordinal = index + 1, Classification = AdoTestFailureClassification.Failed,
+                TestName = "Synthetic.Store." + spec.Name, ShortName = spec.Name.Split('.')[^1], Storage = "Synthetic.Store.Tests.dll", CollectionUri = Collection,
+                Attempts = [.. spec.Attempts.Select((message, at) => new AdoTestAttempt
+                {
+                    Number = at + 1, Source = at == 0 ? AdoTestAttemptSource.Single : AdoTestAttemptSource.RunAttempt, RunId = runs[at], ResultId = 100 * (index + 1) + at,
+                    Outcome = message is null ? "Passed" : "Failed", OutcomeClass = message is null ? AdoTestOutcomeClass.Pass : AdoTestOutcomeClass.Failure,
+                    StartedDate = Clock.AddMinutes(-30 + 8 * at), CompletedDate = Clock.AddMinutes(-30 + 8 * at).AddSeconds(31), Duration = TimeSpan.FromSeconds(31),
+                    ComputerName = "SYNTHETIC-AGENT-0" + (at < 2 ? "1" : "2"), ErrorMessage = message, StackTrace = message is null ? null : Trace(spec.Page, spec.Line, spec.Name),
+                })],
+            });
+        }
+        AdoBuildTestSummary summary = Summary(431, true, true, failures.Count, 0);
+        return new AdoBuildTestFailureSet
+        {
+            Build = new AdoBuild { Id = 431, BuildNumber = "20261007.4", Definition = new AdoBuildDefinitionRef { Id = 14, Name = "Synthetic Playwright tests" },
+                SourceBranch = "refs/heads/main", Result = "failed", QueueTime = Clock.AddMinutes(-35), FinishTime = Clock.AddMinutes(-5),
+                TeamProject = Project, CollectionUri = Collection, WebUrl = Untrusted },
+            Runs = [Run(600, "UI_Chromium", 1), Run(601, "UI_Chromium", 2), Run(602, "UI_Firefox", 1)],
             Summary = summary, History = [summary], Failures = failures, FailedCount = failures.Count, Status = AdoTestFailureStatus.Complete,
             RetrievedAt = Clock.AddMinutes(-1), CollectionUri = Collection,
         };

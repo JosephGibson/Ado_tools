@@ -296,6 +296,7 @@ public enum AdoMessage
     TestReportRuleServerUnavailable,
     TestReportRuleWebDriverSession,
     TestReportRulePageLoadTimeout,
+    TestReportRulePlaywrightTimeout,
     ExportTestFailureReport,
     ExportTestFailureReportWithAttachments,
     ProgressAttachmentDownload,

@@ -342,6 +342,7 @@
   <data name="TestReportRuleServerUnavailable" xml:space="preserve"><value>Server unavailable</value></data>
   <data name="TestReportRuleWebDriverSession" xml:space="preserve"><value>WebDriver session failed</value></data>
   <data name="TestReportRulePageLoadTimeout" xml:space="preserve"><value>Page load timed out</value></data>
+  <data name="TestReportRulePlaywrightTimeout" xml:space="preserve"><value>Playwright timeout</value></data>
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Export failed-test report</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Export failed-test report and download attachments to {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Downloading attachments: {0} of {1}</value></data>

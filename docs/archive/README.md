@@ -28,6 +28,7 @@ documentation starts at the [README](../../README.md).
 | [release-0.10.0.md](release-0.10.0.md) | 0.10.0 release notes: `Export-AdoBuildTestFailure -Format Csv`, one formula-safe CSV file per build, and the manual Excel check |
 | [release-0.10.5.md](release-0.10.5.md) | 0.10.5 release notes: the quality pass, 22 review fixes with plain-text console tables and typed errors for bodies that do not decompress, and faster tests |
 | [release-0.11.0.md](release-0.11.0.md) | 0.11.0 release notes: `Update-AdoToolkit`, the newest GitHub release installed beside the running copy after checking both of its SHA-256 checksums, and V-38 |
+| [release-0.11.5.md](release-0.11.5.md) | 0.11.5 release notes: change fragments written with each change, three scripts that prepare, check and finish a release, the slim release skill and an isolated lint; no product change |
 
 Release notes for the current and the previous version are in `docs/`.
 
@@ -48,5 +49,6 @@ Comments in `src/`, `tests/` and `tools/`, test tags and cmdlet help notes cite 
 | `V-37` | `System.CreatedDate` and `System.AssignedTo` in a work item batch field projection, and the shape of the identity, under [Known limitations](release-0.9.15.md#known-limitations) in the 0.9.15 notes |
 | `V-38` | Whether the work network's proxy lets `Update-AdoToolkit` reach `api.github.com`, `github.com` and `release-assets.githubusercontent.com`, checked by `tests/Live/Update.Live.ps1`, under [Known limitations](release-0.11.0.md#known-limitations) in the 0.11.0 notes |
 | `V-39` to `V-42` | The error classifier of the failed-test report on Server 2020 and its agents: the error message in result listings, checked by `tests/Live/Probes.Live.ps1`, the MSTest texts in each language, the French Windows and .NET Framework texts, and the browser driver texts, under [Known limitations](../release-0.12.0.md#known-limitations) in the 0.12.0 notes |
+| `V-43` | Whether the Playwright version on the agents writes the message forms that the error classifier reads, and whether the stored error message keeps the call log, under [Known limitations](../release-0.12.5.md#known-limitations) in the 0.12.5 notes |
 | `S0-n` to `S5-n` | An [acceptance criterion](ado-toolkit-spec.md#22-delivery-slices-and-acceptance-criteria), §22; also a test tag |
 | `F01` to `F16` | A finding in [plans/server-2020-audit-fixes.md](plans/server-2020-audit-fixes.md) |

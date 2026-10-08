@@ -4,7 +4,7 @@ external help file: AdoToolkit.PowerShell.dll-Help.xml
 HelpUri: ''
 Locale: en-US
 Module Name: AdoToolkit
-ms.date: 10-06-2026
+ms.date: 10-08-2026
 PlatyPS schema version: 2024-05-01
 title: Export-AdoBuildTestFailure
 ---
@@ -55,13 +55,17 @@ and who it is assigned to or Unassigned; and its attachments, each file name onc
 last attempt that has it. An attempt's Failing since names that build by its number when it is
 in the history. By error groups the same rows by error: each error of a failed attempt is a
 group, ignoring URLs, GUIDs, paths, hexadecimal IDs, numbers, case and accents, and the values that a recognized framework message reports, such as an actual value, and the English and French
-wordings of one error are one group when one test failed with both at the same place. A test is
+wordings of one error are one group when one test failed with both at the same place. The page
+URL that a Playwright assertion expects counts by its path, though, without host, query or
+fragment, and ignoring a segment that is only a number or an ID. A test is
 listed under its primary error, its most frequent one with generic errors aside, and greyed under
-its other errors; its Errors column says how many failed attempts had the error and links the
-others. Generic errors, which a built-in rule or a generic rule of reporting.errorRules names, follow the others
-under a heading of their own. Each group names its exception type or its rule and shows the
-line of its first test, with the Expected and Actual lines of a recognized xUnit or NUnit
-message, marking the parts that differ between its tests; a group of two tests or more, or of
+its other errors; its Errors column says on one line how many failed attempts had the error and
+links the others. Generic errors, which a built-in rule or a generic rule of reporting.errorRules names, follow the others
+under a heading of their own. Each group names its exception type or its rule and shows on one
+line, cut at the width of the table and whole when the pointer rests on it, the line of its
+first test, with the Expected and Actual lines of a recognized xUnit or NUnit message and, for a
+recognized Playwright message, the element it waited for, read from its call log, marking the
+parts that differ between its tests; a group of two tests or more, or of
 an error with several wordings, says what its tests share and shows a sample message. Open bugs
 opens on a line counting the bugs it lists and how many of them were opened after the build was queued, the second count left out
 when the build has no queue time, then lists each bug once, on one line with the day it was
@@ -521,7 +525,7 @@ The committed report or CSV file. When attachments were downloaded, its Attachme
 
 ## NOTES
 
-Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Downloaded attachments are work data and stay on this machine. How Server 2020 answers several downloads at once has not been confirmed at work (V-33). With -Verbose, each step of the export writes one line with its milliseconds: the attachment downloads, with the files written and the requests sent; the rendered report, with its size in bytes; the check of the report; and its move into place, which also removes earlier attachment folders. When nothing is downloaded, the downloads line keeps its place with 0 files and 0 requests. A last line gives the build, the downloaded attachments, the requests and the elapsed time. Attachment routes, version and fields await server confirmation (V-23), as do the stage, job and run names used for grouping and the run name retry suffix (V-19), and browser behavior from local files awaits confirmation under the work browser policy (V-27). Whether Server 2020 returns the bug's creation date and assignee in a work item batch field projection has not been observed at work (V-37); without them a bug's line shows no day, no ✦ marker and no assignee, with no warning. In By error, a test's row also says whether the error messages that its previous failed build listed include a wording of its primary error, from the ErrorMessages of its history; nothing is said when the comparison could be wrong, and whether Server 2020 lists the messages has not been confirmed at work (V-39). The French texts of Windows and .NET Framework that the built-in generic rules would need (V-41) and the texts of chromedriver (V-42) are not confirmed at work, and neither are the MSTest texts that the agents produce in each language, on which the joining of English and French wordings depends (V-40).
+Requires PowerShell 7.6 on Windows and Azure DevOps Server 2020. Downloaded attachments are work data and stay on this machine. How Server 2020 answers several downloads at once has not been confirmed at work (V-33). With -Verbose, each step of the export writes one line with its milliseconds: the attachment downloads, with the files written and the requests sent; the rendered report, with its size in bytes; the check of the report; and its move into place, which also removes earlier attachment folders. When nothing is downloaded, the downloads line keeps its place with 0 files and 0 requests. A last line gives the build, the downloaded attachments, the requests and the elapsed time. Attachment routes, version and fields await server confirmation (V-23), as do the stage, job and run names used for grouping and the run name retry suffix (V-19), and browser behavior from local files awaits confirmation under the work browser policy (V-27). Whether Server 2020 returns the bug's creation date and assignee in a work item batch field projection has not been observed at work (V-37); without them a bug's line shows no day, no ✦ marker and no assignee, with no warning. In By error, a test's row also says whether the error messages that its previous failed build listed include a wording of its primary error, from the ErrorMessages of its history; nothing is said when the comparison could be wrong, and whether Server 2020 lists the messages has not been confirmed at work (V-39). The French texts of Windows and .NET Framework that the built-in generic rules would need (V-41) and the texts of chromedriver (V-42) are not confirmed at work, and neither are the MSTest texts that the agents produce in each language, on which the joining of English and French wordings depends (V-40), nor whether the Playwright version on the agents writes the forms that the report recognizes and keeps the call log in its error message (V-43).
 
 ## RELATED LINKS
 

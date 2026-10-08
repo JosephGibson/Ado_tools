@@ -29,6 +29,11 @@ internal static class BuiltInErrorRules
             "*Timed out waiting for driver service to initialize after*"], true, "WebDriverSession"),
         // chromedriver's page load timeout (V-42).
         new("PageLoadTimeout", ["timeout: Timed out receiving message from renderer*"], true, "PageLoadTimeout"),
+        // Playwright's action timeout, the driver's "Timeout {0}ms exceeded." in Microsoft.Playwright
+        // 1.41.2 and 1.63.0, which the environment causes more often than the test. A wait for an
+        // event, "… exceeded while waiting for event …", stays specific: a download or a popup that
+        // never comes says something about the test.
+        new("PlaywrightTimeout", ["Timeout *ms exceeded."], true, "PlaywrightTimeout"),
     ];
 
     // The rules of one report: the configured ones in file order, compiled for that report, then the

@@ -2,7 +2,7 @@
 
 PowerShell toolkit for Azure DevOps Server 2020: compiled C# cmdlets for work items, Test Case reports, bulk test export, and pipeline failure triage.
 
-**Version 0.12.0** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
+**Version 0.12.5** · Windows · PowerShell 7.6 · Azure DevOps Server 2020 · English and French
 
 AdoToolkit is a compiled PowerShell module for an on-premises Azure DevOps Server
 2020 collection. It signs in with your Windows identity and only reads from Azure

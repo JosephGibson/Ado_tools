@@ -109,7 +109,9 @@ internal static partial class ErrorClusters
         foreach ((ErrorClass? error, Member[] members) in ordered)
         {
             bool single = members.Select(static member => member.Entry?.Latest.Form.Layout).Distinct(StringComparer.Ordinal).Count() == 1;
-            HashSet<int> varying = !single ? [] : [.. members[0].Parts.Where(static part => part.Slot >= 0).Select(static part => part.Slot)
+            // The slots of every member, not of the first only: a member without a slot that others
+            // have, such as a timeout without its call log, has a different value there.
+            HashSet<int> varying = !single ? [] : [.. members.SelectMany(static member => member.Parts).Where(static part => part.Slot >= 0).Select(static part => part.Slot).Distinct()
                 .Where(slot => members.Select(member => member.Parts.FirstOrDefault(part => part.Slot == slot)?.Text).Distinct(StringComparer.Ordinal).Skip(1).Any())];
             (string? frame, int frameCount) = MostCommon(members.Select(static member => member.Frame));
             clusters.Add(new Cluster

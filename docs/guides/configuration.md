@@ -157,8 +157,8 @@ The HTML report of `Export-AdoBuildTestFailure` groups the failed attempts of ea
 error, and gives each test a primary error, as [Reading the report](build-report.md#reading-the-report)
 describes; its CSV file names that error in the columns `Primary error`, `Error kind`,
 `Error rule` and `Distinct errors`. The report recognizes the messages of MSTest, NUnit and
-xUnit, and the wait timeout of Selenium, in English and, for MSTest, in French. Error rules
-cover the rest:
+xUnit, the wait timeout of Selenium, and the timeouts and assertions of Playwright, in English
+and, for MSTest, in French. Error rules cover the rest:
 
 - they give an error a name, shown in the report;
 - they merge the wordings of one error, such as an English and a French message, or
@@ -217,7 +217,7 @@ How a pattern matches:
   the lines, whatever the patterns.
 
 The built-in rules are all generic. They recognize the English messages of Windows, .NET,
-Chrome, chromedriver and Selenium; the CSV file names them by their ID.
+Chrome, chromedriver, Selenium and Playwright; the CSV file names them by their ID.
 
 | ID | Name in the report | Texts recognized |
 | --- | --- | --- |
@@ -226,10 +226,36 @@ Chrome, chromedriver and Selenium; the CSV file names them by their ID.
 | `ServerUnavailable` | **Server unavailable** | The status 502, 503 or 504, as `: 503 (` or `(503)`, on a line that names `HttpRequestException` or `WebException` or says "Response status code does not indicate success" or "The remote server returned an error" |
 | `WebDriverSession` | **WebDriver session failed** | A line that starts with "session not created", "invalid session id" or "no such window"; "chrome not reachable"; "disconnected: not connected to DevTools"; "The HTTP request to the remote WebDriver server for URL … timed out after … seconds"; "Timed out waiting for driver service to initialize after" |
 | `PageLoadTimeout` | **Page load timed out** | A line that starts with "timeout: Timed out receiving message from renderer" |
+| `PlaywrightTimeout` | **Playwright timeout** | A line that is "Timeout …ms exceeded.", Playwright's action timeout, whatever element or page the action waited for; not "Timeout …ms exceeded while waiting for event …", a wait for an event such as a download |
 
-Each text is found anywhere in a line unless the table says that the line starts with it.
-The French messages of Windows and .NET Framework (V-41) and the texts of chromedriver (V-42)
-are not confirmed at work.
+Each text is found anywhere in a line unless the table says that the line starts with it or is
+it. The French messages of Windows and .NET Framework (V-41), the texts of chromedriver (V-42)
+and the Playwright forms on the agents (V-43) are not confirmed at work.
+
+A configured rule with the pattern `Timeout *ms exceeded.` and `"generic": false` keeps
+Playwright's timeouts among the specific errors, under its own name, since a configured rule
+comes first.
+
+Two failures that can come from the environment are left to a configured rule, because the
+report cannot tell when they do: a browser that closed or crashed, which a test that closes its
+own page causes too, and a deadlock in the database that the tests use, whose wording depends on
+the database. Rules for them could read as follows; the deadlock text is SQL Server's, so adapt
+it to your database and its language:
+
+```json
+"reporting": {
+  "errorRules": [
+    {
+      "name": "Browser closed",
+      "patterns": [ "Target page, context or browser has been closed*", "Target crashed*" ]
+    },
+    {
+      "name": "Database deadlock",
+      "patterns": [ "*chosen as the deadlock victim*" ]
+    }
+  ]
+}
+```
 
 A file holds at most 100 rules. A rule that breaks a limit, or a value of the wrong type,
 is a configuration error that names its place, such as `reporting.errorRules[2].patterns[0]`.

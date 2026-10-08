@@ -6,16 +6,17 @@ namespace AdoToolkit.Core.Reporting.Errors;
 // English and in French where the framework writes both. Each form was read from a package, never
 // written from memory: MSTest.TestFramework and MSTest.TestAdapter 2.2.10, 3.11.1 and 4.4.1 (their
 // fr resources, and messages captured under en-US and fr-FR), NUnit 3.14.0 and 4.6.1, xunit.assert
-// 2.9.3, xunit.v3.assert 4.0.1, and Selenium.WebDriver and Selenium.Support 4.50.0. NUnit, xUnit and
-// Selenium write English only. Patterns run on folded lines (FoldedText): lower case, no accents,
-// one space for a run of spaces.
+// 2.9.3, xunit.v3.assert 4.0.1, Selenium.WebDriver and Selenium.Support 4.50.0, and Microsoft.Playwright
+// 1.41.2 and 1.63.0 (the string literals of its assembly and its driver, and the client source at
+// those tags). NUnit, xUnit, Selenium and Playwright write English only. Patterns run on folded lines
+// (FoldedText): lower case, no accents, one space for a run of spaces.
 internal static class ErrorTemplates
 {
     private const RegexOptions Options = RegexOptions.CultureInvariant | RegexOptions.NonBacktracking;
     // Lines after the head that a multi-line template reads.
     private const int MaximumFollowingLines = 10;
     // Slots by role, the same in every form of a template so that their values line up.
-    private const int ExpectedSlot = 0, ActualSlot = 1, MessageSlot = 2, ExtraSlot = 3, SecondExtraSlot = 4, ExpressionSlot = 5;
+    private const int ExpectedSlot = 0, ActualSlot = 1, MessageSlot = 2, ExtraSlot = 3, SecondExtraSlot = 4, ExpressionSlot = 5, TargetSlot = 6;
     private static readonly (string Group, int Slot)[] Holes =
         [("e", ExpectedSlot), ("a", ActualSlot), ("m", MessageSlot), ("d", ExtraSlot), ("x", ExtraSlot), ("y", SecondExtraSlot), ("n", ExtraSlot), ("t", SecondExtraSlot)];
 
@@ -39,7 +40,8 @@ internal static class ErrorTemplates
     {
         ArgumentNullException.ThrowIfNull(lines);
         if (start < 0 || start >= lines.Count) return null;
-        return Adapter(lines, start) ?? Classic(lines, start) ?? Modern(lines, start) ?? Xunit(lines, start) ?? NUnit(lines, start) ?? Wait(lines, start);
+        return Adapter(lines, start) ?? Classic(lines, start) ?? Modern(lines, start) ?? Xunit(lines, start) ?? PlaywrightExpect(lines, start) ?? NUnit(lines, start)
+            ?? Wait(lines, start) ?? PlaywrightTimeout(lines, start);
     }
 
     // MSTest adapter failures around a test (Resource UTA_*): initialization, cleanup and timeout,
@@ -319,6 +321,176 @@ internal static class ErrorTemplates
         return new TemplateMatch { Id = "Selenium.WaitTimeout", Language = ErrorLanguage.Neutral, Parts = parts, Identity = [message], IsLocated = message.Length == 0 };
     }
 
+    // Playwright 1.41.2 and 1.63.0 put the call log after the message (Connection.FormatCallLog):
+    // "\nCall log:\n  - " and the entries joined by "\n  - " (1.41.2), or "\nCall log:\n" and the
+    // entries the driver compressed, each "  - text" or, for a repeated run, "  9 × text" (1.63.0,
+    // compressCallLog). Trimmed, an entry reads "- text" or "9 × text". The entry that names what a
+    // call waited for is "waiting for {locator}", with " to be {state}" for a wait for a selector, or
+    // "navigating to \"{url}\", waiting until \"{state}\"" (the driver's frames).
+    private static readonly Regex PlaywrightCallLog = new(@"^call log:$", Options);
+    private static readonly Regex PlaywrightEntry = new(@"^(?:- |[0-9]+ × )(?<v>waiting for|navigating to) (?<t>.*)$", Options);
+
+    // An action that runs out of time: System.TimeoutException with the driver's "Timeout {0}ms
+    // exceeded." (progress, both versions) and the call log (Connection.ParseException), or the
+    // client's "Timeout {0}ms exceeded while waiting for event \"{1}\"" (Waiter). Its first line says
+    // nothing of what it waited for; the call log does.
+    private static readonly Regex PlaywrightTimeoutHead = new(
+        @"^(?:[a-z_][a-z0-9_.+`]*(?:exception|error) ?: )?timeout (?<n>[0-9]+)ms exceeded(?:\.| while waiting for event ""(?<x>.*)"")$", Options);
+
+    private static TemplateMatch? PlaywrightTimeout(ErrorLines lines, int start)
+    {
+        FoldedText line = lines.Folded(start);
+        Match head = PlaywrightTimeoutHead.Match(line.Text);
+        if (!head.Success) return null;
+        List<ErrorPart> parts = [];
+        AddParts(parts, line, head, [("n", ExtraSlot)]);
+        string target = string.Empty;
+        if (PlaywrightTarget(lines, start, true) is ({ } entryLine, { } entry))
+        {
+            AddParts(parts, entryLine, entry, [("t", TargetSlot)], entry.Groups["v"].Index);
+            target = Key(entry.Groups["v"].Value + " " + entry.Groups["t"].Value);
+        }
+        string waited = Key(head.Groups["x"]);
+        return new TemplateMatch
+        {
+            Id = "Playwright.Timeout", Language = ErrorLanguage.Neutral, Parts = parts, Identity = [waited, target],
+            IsLocated = waited.Length == 0 && target.Length == 0,
+        };
+    }
+
+    // An assertion (AssertionsBase.ExpectImplAsync) throws PlaywrightException: the test's own message
+    // and an empty line first when it passed one (1.63.0); the assertion's message, which starts
+    // "Locator expected", "Page expected", "Page title expected" or "Page URL expected", "expected not
+    // to" when negated; in 1.63.0, a line with the driver's message, "Error: " first (Frame.ExpectAsync);
+    // then " '{expected}'\nBut was: '{actual}' " when there is an expected value, else " "; then the
+    // call log, whose first entry is the assertion with its timeout, Expect "ToBeVisibleAsync" with
+    // timeout 5000ms (1.63.0) or LocatorAssertions.ToBeVisibleAsync with timeout 5000ms (1.41.2), and
+    // whose next one names the locator. With the driver's message, the expected value ends that line.
+    // A name in quotes, as in "to have attribute 'name'", belongs to the assertion; a value may span
+    // lines, so its closing quote can be missing.
+    private static readonly Regex PlaywrightExpectHead = new(
+        @"^(?:[a-z_][a-z0-9_.+`]*(?:exception|error) ?: )?(?<k>(?:locator|page|page title|page url) expected [^']*?(?:(?:attribute|property) '[^']*')?)(?: '(?<e>.*?)'?)?$",
+        Options);
+    private static readonly Regex PlaywrightErrorLine = new(@"^error: (?<d>.*?)(?: '(?<e>.*)')?$", Options);
+    private static readonly Regex PlaywrightActual = new(@"^but was: '(?<a>.*?)'?$", Options);
+    private const string PlaywrightException = "Microsoft.Playwright.PlaywrightException";
+
+    private static TemplateMatch? PlaywrightExpect(ErrorLines lines, int start)
+    {
+        // Only a PlaywrightException, which every test framework prints with its type: a test
+        // author's message that starts like an assertion is the framework's. The head opens the
+        // line where the form starts, or, after the test's own message of however many lines, the
+        // last line before the call log that reads as one.
+        if (!string.Equals(ErrorText.Prefix(lines.Lines[start]).Type, PlaywrightException, StringComparison.Ordinal)) return null;
+        int head = PlaywrightExpectHead.IsMatch(lines.Folded(start).Text) ? start : -1;
+        for (int index = start + 1; index < lines.Count && index <= start + MaximumFollowingLines; index++)
+        {
+            string text = lines.Folded(index).Text;
+            if (PlaywrightCallLog.IsMatch(text)) break;
+            if (PlaywrightExpectHead.IsMatch(text)) head = index;
+        }
+        if (head < 0) return null;
+        FoldedText headLine = lines.Folded(head);
+        Match match = PlaywrightExpectHead.Match(headLine.Text);
+        List<ErrorPart> parts = [];
+        List<string> message = [];
+        for (int index = start; index < head; index++)
+        {
+            if (parts.Count > 0) parts.Add(new ErrorPart(" · ", -1));
+            parts.Add(new ErrorPart(lines.Lines[index], -1));
+            message.Add(Key(lines.Folded(index).Text));
+        }
+        AddParts(parts, headLine, match, [("e", ExpectedSlot)]);
+        string kind = match.Groups["k"].Value;
+        Group expected = match.Groups["e"];
+
+        (FoldedText Line, Match Match)? error = null, actual = null, target = null;
+        bool log = false;
+        for (int index = head + 1; index < lines.Count && index <= head + MaximumFollowingLines; index++)
+        {
+            FoldedText line = lines.Folded(index);
+            if (log)
+            {
+                if (PlaywrightTarget(line, false) is { } entry) { target = (line, entry); break; }
+                continue;
+            }
+            if (PlaywrightCallLog.IsMatch(line.Text)) log = true;
+            else if (error is null && actual is null && PlaywrightErrorLine.Match(line.Text) is { Success: true } errorMatch) error = (line, errorMatch);
+            else if (actual is null && PlaywrightActual.Match(line.Text) is { Success: true } actualMatch) actual = (line, actualMatch);
+        }
+        // Without an expected value in the head, the error line ends with it: it shows after the head.
+        bool moved = !expected.Success && error is (_, { } carried) && carried.Groups["e"] is { Success: true, Length: > 0 };
+        if (moved && error is ({ } errorLine, { } found))
+        {
+            expected = found.Groups["e"];
+            // Contiguous cuts: a combining mark at the end of the value, which folding drops, stays in it.
+            int open = expected.Index - 2, close = expected.Index + expected.Length;
+            parts.Add(new ErrorPart(errorLine.Original[errorLine.OriginalStart(open)..errorLine.OriginalStart(expected.Index)], -1));
+            parts.Add(new ErrorPart(errorLine.Original[errorLine.OriginalStart(expected.Index)..errorLine.OriginalStart(close)], ExpectedSlot));
+            parts.Add(new ErrorPart(errorLine.Original[errorLine.OriginalStart(close)..errorLine.OriginalEnd(close + 1)], -1));
+        }
+        string targetKey = string.Empty;
+        if (target is ({ } targetLine, { } targetMatch))
+        {
+            AddParts(parts, targetLine, targetMatch, [("t", TargetSlot)], targetMatch.Groups["v"].Index);
+            targetKey = Key(targetMatch.Groups["t"]);
+        }
+        if (actual is ({ } actualLine, { } actualFound)) AddParts(parts, actualLine, actualFound, [("a", ActualSlot)]);
+        if (error is ({ } shownLine, { } shown)) AddParts(parts, shownLine, shown, [("d", ExtraSlot)], 0, moved ? shown.Groups["e"].Index - 2 : -1);
+        string expectedKey = !expected.Success || expected.Length == 0 ? string.Empty
+            : kind is "page url expected to be" or "page url expected not to be" ? PathKey(expected.Value) : Key(expected.Value);
+        return new TemplateMatch
+        {
+            Id = "Playwright.Expect", Language = ErrorLanguage.Neutral, Parts = parts,
+            Identity = [Key(kind), expectedKey, string.Join('\n', message), targetKey],
+            // An assertion that names no value, no locator and no message of the test's own is told
+            // apart by the test's frame, as a condition is.
+            IsLocated = expectedKey.Length == 0 && message.Count == 0 && targetKey.Length == 0,
+        };
+    }
+
+    // The call log's first entry that names what the call waited for, within reach after the head.
+    private static (FoldedText? Line, Match? Match) PlaywrightTarget(ErrorLines lines, int head, bool navigation)
+    {
+        bool log = false;
+        for (int index = head + 1; index < lines.Count && index <= head + MaximumFollowingLines; index++)
+        {
+            FoldedText line = lines.Folded(index);
+            if (!log) log = PlaywrightCallLog.IsMatch(line.Text);
+            else if (PlaywrightTarget(line, navigation) is { } entry) return (line, entry);
+        }
+        return (null, null);
+    }
+
+    private static Match? PlaywrightTarget(FoldedText line, bool navigation)
+    {
+        Match entry = PlaywrightEntry.Match(line.Text);
+        if (!entry.Success || (!navigation && entry.Groups["v"].Value != "waiting for")) return null;
+        // Before it acts, 1.63.0 waits for a pending navigation to finish: that entry names no element.
+        return entry.Groups["t"].Value.EndsWith("navigation to finish...", StringComparison.Ordinal) ? null : entry;
+    }
+
+    // A URL that an assertion expects, keyed by its path, without scheme, host, query or fragment: the
+    // host changes between environments, the path says which page. A segment is a slot only when the
+    // whole of it is a number, a GUID or a hexadecimal ID as ErrorText reads them, so /orders/1234 and
+    // /orders/1235 are one page, and /oauth2/callback and /saml2/callback two.
+    private static readonly Regex UrlAuthority = new(@"^[a-z][a-z0-9+.-]*://[^/?#]*", Options);
+
+    private static string PathKey(string folded)
+    {
+        Match authority = UrlAuthority.Match(folded);
+        string path = authority.Success ? folded[authority.Length..] : folded;
+        int end = path.IndexOfAny(['?', '#']);
+        if (end >= 0) path = path[..end];
+        path = path.TrimEnd('/');
+        IEnumerable<string> segments = path.Split('/').Select(static segment =>
+        {
+            (string key, IReadOnlyList<ErrorPart> parts) = ErrorText.Tokenize(FoldedText.Of(segment));
+            return parts is [{ Slot: >= 0 }] ? key : segment;
+        });
+        return "url:" + string.Join('/', segments);
+    }
+
     // The first line after start, within the template's reach, that the pattern matches.
     private static (FoldedText? Line, Match? Match) Following(ErrorLines lines, int start, Regex pattern)
     {
@@ -331,10 +503,12 @@ internal static class ErrorTemplates
     }
 
     // The parts of one line from a match of its folded text: each hole the match found is a slot, the
-    // text around them is literal, and every part is cut from the line as sent.
-    private static void AddParts(List<ErrorPart> parts, FoldedText line, Match match, (string Group, int Slot)[]? holes = null)
+    // text around them is literal, and every part is cut from the line as sent. from and to bound the
+    // folded text shown; to is -1 for the end of the line.
+    private static void AddParts(List<ErrorPart> parts, FoldedText line, Match match, (string Group, int Slot)[]? holes = null, int from = 0, int to = -1)
     {
         if (parts.Count > 0) parts.Add(new ErrorPart(" · ", -1));
+        int position = from == 0 ? 0 : line.OriginalStart(from), limit = to < 0 ? line.Original.Length : line.OriginalEnd(to);
         List<(int Start, int End, int Slot)> found = [];
         foreach ((string group, int slot) in holes ?? Holes)
         {
@@ -343,15 +517,14 @@ internal static class ErrorTemplates
             found.Add((line.OriginalStart(hole.Index), line.OriginalEnd(hole.Index + hole.Length), slot));
         }
         found.Sort(static (left, right) => left.Start.CompareTo(right.Start));
-        int position = 0;
         foreach ((int start, int end, int slot) in found)
         {
-            if (start < position) continue;
+            if (start < position || end > limit) continue;
             if (start > position) parts.Add(new ErrorPart(line.Original[position..start], -1));
             parts.Add(new ErrorPart(line.Original[start..end], slot));
             position = end;
         }
-        if (position < line.Original.Length) parts.Add(new ErrorPart(line.Original[position..], -1));
+        if (position < limit) parts.Add(new ErrorPart(line.Original[position..limit], -1));
     }
 
     private static string Key(Group group) => group.Success ? Key(group.Value) : string.Empty;

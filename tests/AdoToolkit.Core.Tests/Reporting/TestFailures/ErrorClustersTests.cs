@@ -186,6 +186,28 @@ public sealed class ErrorClustersTests
         Assert.Empty(home.Varying);
     }
 
+    // The slots that vary come from every member: a first member whose timeout kept no call log hides
+    // none of the others' elements, and its own Values are the values it has.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ASlotThatTheFirstMemberLacksStillVaries(bool bareFirst)
+    {
+        const string Bare = "System.TimeoutException : Timeout 45000ms exceeded.";
+        static string Logged(string locator) => "System.TimeoutException : Timeout 30000ms exceeded.\r\nCall log:\r\n  - waiting for " + locator;
+        string[] messages = bareFirst ? [Bare, Logged("Locator(\"#place-order\")"), Logged("Locator(\"#coupon\")")]
+            : [Logged("Locator(\"#place-order\")"), Bare, Logged("Locator(\"#coupon\")")];
+        AdoTestFailure[] failures = [.. messages.Select(static (message, index) => TestWith(index + 1, message))];
+        ErrorClusters.Cluster timeouts = Assert.Single(ErrorClusters.Of(failures, ErrorClassifier.Classify(failures, PipelineGrouping.None, BuiltInErrorRules.All)));
+        Assert.Equal("PlaywrightTimeout", timeouts.Error!.Rule!.BuiltInId);
+        Assert.True(timeouts.SingleLayout);
+        Assert.Equal([3, 6], timeouts.Varying.Order());
+        Assert.Equal(["Locator(\"#place-order\")", "Locator(\"#coupon\")"], timeouts.Values(6));
+        ErrorClusters.Member bare = timeouts.Members.Single(static member => member.Parts.All(static part => part.Slot != 6));
+        Assert.Equal(["45000"], timeouts.ValuesOf(bare));
+        Assert.Equal(["30000", "Locator(\"#coupon\")"], timeouts.ValuesOf(timeouts.Members[2]));
+    }
+
     // A test's other errors, the most frequent first, each with its cluster.
     [Fact]
     public void AMemberKnowsItsOtherErrorsAndWhereTheyAre()
@@ -203,5 +225,12 @@ public sealed class ErrorClustersTests
     private static AdoTestAttempt Attempt(string? message, string? trace) => new()
     {
         Number = 1, RunId = 201, ResultId = 11, Outcome = "Failed", OutcomeClass = AdoTestOutcomeClass.Failure, ErrorMessage = message, StackTrace = trace,
+    };
+
+    private static AdoTestFailure TestWith(int ordinal, string message) => new()
+    {
+        Ordinal = ordinal, Classification = AdoTestFailureClassification.Failed, ShortName = "T" + ordinal.ToString(CultureInfo.InvariantCulture),
+        TestName = "Synthetic.Shop.T" + ordinal.ToString(CultureInfo.InvariantCulture), CollectionUri = TestFailureReportFixture.Collection,
+        Attempts = [new AdoTestAttempt { Number = 1, RunId = 201, ResultId = ordinal, Outcome = "Failed", OutcomeClass = AdoTestOutcomeClass.Failure, ErrorMessage = message }],
     };
 }

@@ -133,7 +133,7 @@ page.
 | Overview | One row per failed test, each part in a column of its own: its status and number, Test Case number, name, class, trend, the lowest-numbered open bug that tracks it with **+N** when there are more, one status column per group of attempts, and the first line of its latest error. Under the table, cards describe the whole build: how many tests are **New**, **Recurring** or have **No comparison**; the **Most common errors**, the three errors that the most tests had in any failed attempt, two tests at least, each opening its group in By error; **Generic errors**, how many tests had one and how many had nothing else, opening them in By error; how many tests are **Without an open bug**, with the three that most need one; and, in a grouped build, per group how many tests failed, were flaky or failed only there. Generic errors are left out of the most common ones. A card that would be empty is left out, and the filters act on the table only |
 | Runs and history | First the run history: a chart with the failed count above each bar, and the same numbers as a table of builds where **This run** marks this build. Then the build's test runs with their ID, stage, job, the attempt numbers that the runs have (stage, job or job instance), start, duration, test counts with the passed and failed ones marked `✓` and `✕`, the number of reported tests, and how many attachments are listed and downloaded, or **Not listed** for a set gathered with `-SkipAttachments`. In a grouped build each group of runs has its own heading; the latest run is marked and runs outside the attachment window are greyed. Last, a table with one row per reported test, its outcome in each build and its trend |
 | Details | One card per test: its class and name, Test Case number and title, links and full name, then its run history, its open bugs with title and state and, for a bug that was read whole, the day it was filed, **✦ New** and its assignee, and its attachments, then its metadata and its attempts |
-| By error | The same rows, grouped by error. Every error that a test had in a failed attempt is a group: first the tests whose primary error it is, then, greyed, the other tests that had it. A test's primary error is its most frequent error among its failed attempts, generic errors aside, and the latest one on a tie; a test with generic errors only takes the most frequent of them. Specific errors come first, the error that is the primary error of the most tests first; then the **Generic errors**, under a heading of their own; then the tests without an error message. Above the table are the numbers of distinct and of generic errors. Each group shows how many tests have it as their primary error, **+N** for the others, its exception type or the rule that named it, and the error line of its first test, with the Expected and Actual lines of a recognized xUnit or NUnit message and the test author's own lines; a part of the line that differs between the tests is underlined, and resting the pointer on it lists the values. A group of two tests or more, or of an error with several wordings, also says how many tests failed or were flaky, how many are new or recurring, how many have an open bug and which bugs, how many fail in each group of attempts, how many **Forms** the error has and which test joined them, the frame of the tests' own code where they fail, when they share one, and in how many **Classes** its tests are; a closed **Sample message** shows the start of the latest attempt of its first test that had the error, at most 12 lines and 1,000 characters. The **Values** column shows each test's own values, or its own line when the tests' lines differ in more than values. The **Errors** column says where the error comes from, such as **3 of 4 failed attempts** or **Every failed attempt**, then lists the test's other errors, each linked to its group; a greyed row links the test's primary error |
+| By error | The same rows, grouped by error. Every error that a test had in a failed attempt is a group: first the tests whose primary error it is, then, greyed, the other tests that had it. A test's primary error is its most frequent error among its failed attempts, generic errors aside, and the latest one on a tie; a test with generic errors only takes the most frequent of them. Specific errors come first, the error that is the primary error of the most tests first; then the **Generic errors**, under a heading of their own; then the tests without an error message. Above the table are the numbers of distinct and of generic errors. Each group's heading is one line: how many tests have it as their primary error, **+N** for the others, its exception type or the rule that named it, and the error line of its first test, with the Expected and Actual lines of a recognized xUnit or NUnit message, what a recognized Playwright message expected, waited for and received, and the test author's own lines. The line is cut at the width of the table; rest the pointer on it to read it whole. A part of the line that differs between the tests is underlined, and resting the pointer on it lists the values. A group of two tests or more, or of an error with several wordings, also says on one row, which wraps only when it does not fit, how many tests failed or were flaky, how many are new or recurring, how many have an open bug and which bugs, how many fail in each group of attempts, how many **Forms** the error has and which test joined them, the frame of the tests' own code where they fail, when they share one, and in how many **Classes** its tests are; a closed **Sample message** ends that row and, opened, shows under it the start of the latest attempt of its first test that had the error, at most 12 lines and 1,000 characters. The **Values** column shows each test's own values, or its own line when the tests' lines differ in more than values. The **Errors** column says on one line where the error comes from, such as **3 of 4 failed attempts** or **Every failed attempt**, then lists the test's other errors, each linked to its group, and the previous failed build, between middle dots; a greyed row links the test's primary error. That line is cut at the width of the table too: rest the pointer on it to read it whole, or move to one of its links with the keyboard to show the whole cell. In print, the group's line and the **Errors** cell wrap |
 | Open bugs | A summary line counts the bugs this view lists, as the tab does, and how many of them were opened after the build was queued; the second count is left out when the build has no queue time. Then one entry per bug, on one line: how many tests are linked to it, its number, title and state, the day it was filed, **✦ New** when it was filed after the build was queued, who it is assigned to or **Unassigned**, its work item type and project when they are not a Bug of the build's project, then what it covers: **Linked tests**, **Same Test Case, not linked**, **Same error, not linked**, the other tests that had the primary error of a linked test in any failed attempt, each counted once, which opens the group that holds the most of them in By error, and, in a grouped build, how many of its tests fail in each group. Then a row for each test linked to it, saying whether the link comes from a test result, the Test Case or both; a link through test results that reaches only some of a test's failed results says how many, such as **Test result: 1 of 4 failed results**. Tests that share a Test Case with a linked test but not the bug follow, greyed. The bug with the most tests comes first, and a test with several bugs appears under each. Bugs that could not be read come last, marked **Not read**. A last group lists the tests **Without an open bug**. The tab shows the number of bugs |
 | Diagnostics | Shown only when something could not be retrieved: one line per diagnostic, errors first, then warnings, then information, with the number of each in the heading |
 
@@ -240,8 +240,9 @@ $set.Runs | Format-Table Id, Name, StageName, PhaseName, JobName, PipelineAttemp
 instance, `__default` when there is none.
 
 In By error, the English and the French wording of one error can make one group. The report
-recognizes the messages of MSTest 2, 3 and 4 in both languages, and those of NUnit, xUnit and
-the wait timeout of Selenium, which are written in English only. A recognized message is read
+recognizes the messages of MSTest 2, 3 and 4 in both languages, and those of NUnit, xUnit, the
+wait timeout of Selenium and the timeouts and assertions of Playwright, which are written in
+English only. A recognized message is read
 by what identifies it, such as its expected value, so the English and French forms of one
 assertion are one error when that text is the same, as with `Assert.IsTrue` and one message.
 When it differs, as with `Expected:<Welcome>` and `Attendu : <Bienvenue>`, and for any other
@@ -255,19 +256,41 @@ joined, and neither are two groups of the same language. Whether the agents prod
 MSTest texts in each language is not confirmed at work (V-40). An error rule joins wordings in
 any case: see [Error rules](configuration.md#error-rules).
 
+The first line of a Playwright message does not say what failed: `Timeout 30000ms exceeded.`
+reads the same whatever element the action waited for. The report reads the element from the
+call log that Playwright adds to its message: the locator that the action or the assertion
+waited for, or the page it was navigating to. Two assertions are one error when they are of one
+kind, such as `Locator expected to have text`, and expect the same value of the same element,
+with the same message of the test's own, whatever value they received; numbers and IDs aside,
+as everywhere in By error. An expected page URL counts by its path, since its host changes between environments,
+and a part of the path that is a number or an ID counts as a value, so `/orders/4411` and
+`/orders/4412` are one page. An action timeout whose message kept no call log still joins
+**Playwright timeout**, with no element in its **Values**. An assertion that names no expected
+value, no element and no message of the test's own, as when its message kept no call log, is told
+apart by the frame of the test's own code, as an `Assert.IsTrue` without a message is. The forms
+were read from Playwright for .NET 1.41.2 and
+1.63.0; whether the version on the agents writes them, and whether the result keeps the call
+log in its error message, is not confirmed at work (V-43).
+
 ### Generic errors
 
 Some failures come from the environment rather than from the test: a page or a server that
 does not respond, a browser session that is lost. The report sets them apart as generic
 errors, so that they do not hide what the tests themselves report. Built-in rules recognize
 a refused connection, a host name that does not resolve, the HTTP statuses 502, 503 and 504,
-a WebDriver session that was lost or never created, and a page that did not load, in the
-English messages of Windows, .NET, Chrome and Selenium; `reporting.errorRules` adds others, in
-any language, as [Error rules](configuration.md#error-rules) describes. A test that had a
+a WebDriver session that was lost or never created, a page that did not load, and a Playwright
+action that ran out of time, in the English messages of Windows, .NET, Chrome, Selenium and
+Playwright; `reporting.errorRules` adds others, in any language, as
+[Error rules](configuration.md#error-rules) describes. A test that had a
 generic error and another one is listed under the other one, whichever was more frequent, and
-appears greyed under the generic error. The French messages of Windows and .NET Framework and
-the texts of the browser drivers are not confirmed at work (V-41, V-42); a configured rule
-covers them meanwhile.
+appears greyed under the generic error. Playwright's timeouts make one group, **Playwright
+timeout**, whatever element each action waited for: its **Values** column shows each test's
+element, read from the call log. A test whose attempts mostly timed out and once failed an
+assertion is listed under the assertion. A wait for an event that never came, such as a
+download, is not part of it: it says something about the test. The French messages of Windows
+and .NET Framework and the texts of the browser drivers are not confirmed at work (V-41,
+V-42), and neither are the Playwright forms on the agents (V-43); a configured rule covers them
+meanwhile.
 
 ### Search
 
@@ -385,8 +408,8 @@ The columns, in this order:
 tell tracked tests from the others. `Primary error` and `Latest error` differ when the test's
 latest attempt failed with another error than most of its attempts, or with a generic one. The
 IDs of the built-in rules are `ConnectionRefused`, `NameResolution`, `ServerUnavailable`,
-`WebDriverSession` and `PageLoadTimeout`; [Error rules](configuration.md#error-rules) says
-what each recognizes.
+`WebDriverSession`, `PageLoadTimeout` and `PlaywrightTimeout`;
+[Error rules](configuration.md#error-rules) says what each recognizes.
 
 The file is made for machines. The header names are English whatever the culture; numbers,
 `True` and `False` use the invariant culture, and dates are `yyyy-MM-dd`. Azure DevOps text

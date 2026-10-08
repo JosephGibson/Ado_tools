@@ -454,7 +454,8 @@ public static class HtmlTestFailureRenderer
                 { W(" <span class=\"cluster-rule\" title=\""); T(F(AdoMessage.TestReportLabelValue, L("Rule"), RuleName(rule))); W("\">"); T(RuleName(rule)); W("</span>"); }
                 else if (cluster.ExceptionType is { } type) { W(" <code class=\"exception-type\" title=\""); T(type); W("\">"); T(ErrorClusters.ShortType(type)); W("</code>"); }
                 if (cluster.Error is null) { W(" <span class=\"cluster-line no-message\">"); T(L("NoErrorMessage")); W("</span>"); }
-                else { W(" <code class=\"cluster-line\">"); ClusterLine(cluster); W("</code>"); }
+                // The stylesheet cuts the line at the width of the table; its title holds all of it.
+                else { W(" <code class=\"cluster-line\" title=\""); T(WholeLine(cluster)); W("\">"); ClusterLine(cluster); W("</code>"); }
                 W("</div></th></tr>\n");
                 if (cluster.Members.Count > 1 || cluster.Error is { Forms.Count: > 1 }) ClusterFacts(cluster, span);
                 foreach (ErrorClusters.Member member in cluster.Members)
@@ -482,42 +483,43 @@ public static class HtmlTestFailureRenderer
 
         // Where a test's error comes from: how many of its failed attempts had it, which of two equally
         // frequent errors came later, or an attempt that did not fail. The primary row lists the test's
-        // other errors; a muted row links its primary error.
+        // other errors; a muted row links its primary error. One line, which the stylesheet cuts at the
+        // width of the table; the cell's title holds all of it.
         private void ErrorsCell(ErrorClusters.Member? member)
         {
-            W("<td class=\"col-errors\">");
-            if (member?.Entry is { } entry)
+            if (member?.Entry is not { } entry) { W("<td class=\"col-errors\"></td>"); return; }
+            ErrorProfile profile = member.Profile;
+            string placement = !entry.Latest.Failed ? L("NotFailedAttempt")
+                : entry.Count == profile.FailedAttempts ? L("EveryFailedAttempt")
+                : F(member.IsPrimary && profile.IsTie ? AdoMessage.TestReportAttemptsShareLater : AdoMessage.TestReportAttemptsShare, entry.Count, profile.FailedAttempts);
+            ErrorProfileEntry[] others = member.IsPrimary ? [.. profile.Others] : [];
+            ErrorProfileEntry? primary = member.IsPrimary ? null : profile.Primary;
+            // The previous failed build had the same primary error, or another one.
+            string? previous = member.IsPrimary && member.Comparison is { } comparison
+                ? F(comparison.Same ? AdoMessage.TestReportSameErrorInBuild : AdoMessage.TestReportOtherErrorInBuild, comparison.BuildNumber) : null;
+            // The title holds the labels uncut.
+            List<string> whole = [placement];
+            if (others.Length > 0)
+                whole.Add(F(AdoMessage.TestReportLabelValue, L("OtherErrors"),
+                    string.Join(", ", others.Select(other => ErrorLabel(other.Class, other.Latest.Form, true) + " ×" + other.Count.ToString(Culture)))));
+            else if (primary is not null) whole.Add(F(AdoMessage.TestReportLabelValue, L("PrimaryError"), ErrorLabel(primary.Class, primary.Latest.Form, true)));
+            if (previous is not null) whole.Add(previous);
+            W("<td class=\"col-errors\" title=\""); T(string.Join(" · ", whole)); W("\"><span class=\"placement\">"); T(placement); W("</span>");
+            if (others.Length > 0)
             {
-                ErrorProfile profile = member.Profile;
-                W("<span class=\"placement\">");
-                T(!entry.Latest.Failed ? L("NotFailedAttempt")
-                    : entry.Count == profile.FailedAttempts ? L("EveryFailedAttempt")
-                    : F(member.IsPrimary && profile.IsTie ? AdoMessage.TestReportAttemptsShareLater : AdoMessage.TestReportAttemptsShare, entry.Count, profile.FailedAttempts));
-                W("</span>");
-                ErrorProfileEntry[] others = member.IsPrimary ? [.. profile.Others] : [];
-                if (others.Length > 0)
+                W(" · <span class=\"other-errors\">");
+                Labelled(L("OtherErrors"), () =>
                 {
-                    W(" <span class=\"other-errors\">");
-                    Labelled(L("OtherErrors"), () =>
+                    for (int index = 0; index < others.Length; index++)
                     {
-                        for (int index = 0; index < others.Length; index++)
-                        {
-                            if (index > 0) W(", ");
-                            ErrorLink(others[index]); T(" ×" + others[index].Count.ToString(Culture));
-                        }
-                    });
-                    W("</span>");
-                }
-                else if (!member.IsPrimary && profile.Primary is { } primary)
-                { W(" <span class=\"other-errors\">"); Labelled(L("PrimaryError"), () => ErrorLink(primary)); W("</span>"); }
-                // The previous failed build had the same primary error, or another one.
-                if (member.IsPrimary && member.Comparison is { } comparison)
-                {
-                    W(" <span class=\"previous-error\">");
-                    T(F(comparison.Same ? AdoMessage.TestReportSameErrorInBuild : AdoMessage.TestReportOtherErrorInBuild, comparison.BuildNumber));
-                    W("</span>");
-                }
+                        if (index > 0) W(", ");
+                        ErrorLink(others[index]); T(" ×" + others[index].Count.ToString(Culture));
+                    }
+                });
+                W("</span>");
             }
+            else if (primary is not null) { W(" · <span class=\"other-errors\">"); Labelled(L("PrimaryError"), () => ErrorLink(primary)); W("</span>"); }
+            if (previous is not null) { W(" · <span class=\"previous-error\">"); T(previous); W("</span>"); }
             W("</td>");
         }
 
@@ -534,12 +536,12 @@ public static class HtmlTestFailureRenderer
         // A built-in rule by its name in the report language; a configured rule as the file names it.
         private string RuleName(ErrorRule rule) => rule.BuiltInId is { } id ? L("Rule" + id) : rule.Name;
 
-        // An error in one line: its rule, else its line with the short exception type, cut.
-        private string ErrorLabel(ErrorClass error, ErrorSignature form)
+        // An error in one line: its rule, else its line with the short exception type, cut unless whole.
+        private string ErrorLabel(ErrorClass error, ErrorSignature form, bool whole = false)
         {
             if (error.Rule is { } rule) return RuleName(rule);
             string line = form.PrefixType is { } type ? ErrorClusters.ShortType(type) + ": " + form.Line[Math.Min(form.PrefixLength, form.Line.Length)..] : form.Line;
-            return line.Length > LabelCharacters ? Shorten(line, LabelCharacters) + "…" : line;
+            return whole || line.Length <= LabelCharacters ? line : Shorten(line, LabelCharacters) + "…";
         }
 
         // A link to an error's cluster, named by its label, with the test's own line as title.
@@ -580,11 +582,17 @@ public static class HtmlTestFailureRenderer
             }
         }
 
+        // The line that ClusterLine shows, uncut.
+        private static string WholeLine(ErrorClusters.Cluster cluster)
+        {
+            string line = string.Concat(cluster.Representative.Parts.Select(static part => part.Text));
+            return line[Math.Min(Skip(cluster), line.Length)..];
+        }
+
         // The same line as plain text, for the Overview.
         private static string PlainLine(ErrorClusters.Cluster cluster)
         {
-            string line = string.Concat(cluster.Representative.Parts.Select(static part => part.Text));
-            line = line[Math.Min(Skip(cluster), line.Length)..];
+            string line = WholeLine(cluster);
             return line.Length > MaximumSummaryCharacters ? Shorten(line, MaximumSummaryCharacters) + "…" : line;
         }
 
@@ -606,7 +614,8 @@ public static class HtmlTestFailureRenderer
         }
 
         // What the tests of a cluster share: outcome, trend, bugs, groups and the frame where they
-        // fail, then a sample of the first test's message.
+        // fail, then, in the same row, a sample of the first test's message, which takes the full width
+        // under the row when it is opened.
         private void ClusterFacts(ErrorClusters.Cluster cluster, int span)
         {
             AdoTestFailure[] tests = [.. cluster.Members.Select(static member => member.Failure)];
@@ -671,7 +680,6 @@ public static class HtmlTestFailureRenderer
             // How far the error spreads: the classes of its tests.
             int classes = tests.Select(static test => AttemptGrouper.ClassName(test.TestName)).Distinct(StringComparer.Ordinal).Count();
             W("<span class=\"fact\">"); T(L("Classes")); W(" <strong>" + N(classes) + "</strong></span></span>");
-            W("</div>");
             // The latest attempt that had this error, which need not be the test's latest error.
             ErrorClusters.Member first = cluster.Representative;
             if (first.Attempt?.ErrorMessage is { Length: > 0 } message)
@@ -679,7 +687,7 @@ public static class HtmlTestFailureRenderer
                 W("<details class=\"cluster-sample\"><summary>"); T(F(AdoMessage.TestReportLabelValue, L("SampleMessage"), first.Failure.ShortName)); W("</summary>");
                 Code(Sample(message), CodeLanguage.ErrorMessage); W("</details>");
             }
-            W("</td></tr>\n");
+            W("</div></td></tr>\n");
         }
 
         // The start of a message: at most SampleLines lines and SampleCharacters characters, then a

@@ -342,6 +342,7 @@
   <data name="TestReportRuleServerUnavailable" xml:space="preserve"><value>Serveur indisponible</value></data>
   <data name="TestReportRuleWebDriverSession" xml:space="preserve"><value>Échec de la session WebDriver</value></data>
   <data name="TestReportRulePageLoadTimeout" xml:space="preserve"><value>Délai de chargement de la page dépassé</value></data>
+  <data name="TestReportRulePlaywrightTimeout" xml:space="preserve"><value>Délai d’attente Playwright dépassé</value></data>
   <data name="ExportTestFailureReport" xml:space="preserve"><value>Exporter le rapport des tests en échec</value></data>
   <data name="ExportTestFailureReportWithAttachments" xml:space="preserve"><value>Exporter le rapport des tests en échec et télécharger les pièces jointes dans {0}</value></data>
   <data name="ProgressAttachmentDownload" xml:space="preserve"><value>Téléchargement des pièces jointes : {0} de {1}</value></data>
